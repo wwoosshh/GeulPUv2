@@ -97,7 +97,7 @@ def main():
     빠르게 = "--빠르게" in sys.argv
     극단 = "--극단" in sys.argv
     줄타일만 = "--줄타일만" in sys.argv          # 32단계 — 줄 타일 판만(행 1 … 8)
-    자리수 = 1 if "--자리하나" in sys.argv else 2    # 33단계 — 같은 최적화의 대조 V1(커널생성 --자리하나 의 모듈)
+    자리수 = 1 if ("--자리하나" in sys.argv or "--빠른" in sys.argv) else 2    # 33단계 V1 · GeulPUv2 빠른 계약 F1(커널생성 --빠른 의 모듈)
     dr = 시험장치.드라이버()
     mod = dr.모듈(open(ptx, "rb").read())
     fn = {}
