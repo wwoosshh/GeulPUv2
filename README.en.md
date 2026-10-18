@@ -397,7 +397,8 @@ backends are packaged only after their bytes are checked against the build hashe
     and 0.94 / 0.96 / 1.03 / 1.17× for Llama-3.1-8B Q4_K_M (512 / 2048 / 4096 / 8192 tokens). The slowdown at long contexts is the
     attention, which still has two digits. The exact mode took 1.16–1.46× in the same run.
   - Qwen2.5-7B / 14B (Q8_0 · Q4_0 · k-quants) decode at parity with llama.cpp (0.970–1.012× its time), 1.11–1.17× the bandwidth floor
-    (llama.cpp: 1.13–1.19×). Decoding is bound by reading the weights, so the extra arithmetic hides behind it.
+    (llama.cpp: 1.13–1.19×). Decoding is bound by reading the weights, so the extra arithmetic hides behind it. Fast-mode decoding
+    takes 0.993–0.998× the exact mode's time (stage 2 — short context, 2048 and 8192).
   - Exact-mode prompts were faster only when short (stage 30): 7B Q4_0 took 0.85× (32 tokens), 1.03× (128), 1.11× (2048) and 1.27× (8192) the time of the latest
     official llama.cpp release (b11567, same GGUF), Q8_0 0.85–1.30× and k-quants 0.95–1.56× (same run, stage 30). At equal optimization the two-digit activations double
     the integer tensor-core work of llama.cpp's 8-bit activations, and the attention's exact sums and written exp add more; the ratio grows

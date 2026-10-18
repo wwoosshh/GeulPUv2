@@ -184,6 +184,15 @@ def 자리바이트(x, 자리수=2):
     return 바이트, M0
 
 
+def q자리바이트(qr):
+    """RoPE 뒤 q 의 자리 둘 바이트 · 정보 M_0 — 자리바이트(qr) 와 같고, 2b단계 F1A 의 QKV 면 흉내(정수계약.어텐션자리로)."""
+    Dg, E = C.어텐션자리로(np.asarray(qr, f32), "q")
+    n, w = Dg.shape[1], Dg.shape[2]
+    바이트 = C.낱말차례(Dg.reshape(2, n, w // 32, 32)).reshape(2, n, w).astype(np.int8)
+    M0 = (((137 + E) << 23) + 4194304).astype(np.int64).astype(np.int32)
+    return 바이트, M0
+
+
 def 참조(X, 최대길이, cos, sin):
     n = X.shape[0]
     위치 = np.arange(n)
@@ -192,7 +201,7 @@ def 참조(X, 최대길이, cos, sin):
     kr = [C.rope(k[:, HD * g:HD * g + HD], cos, sin, 위치) for g in range(NKV)]
     vv = [np.ascontiguousarray(v[:, HD * g:HD * g + HD]) for g in range(NKV)]
     out = {}
-    out["q자리"], out["q정보"] = 자리바이트(qr)
+    out["q자리"], out["q정보"] = q자리바이트(qr)
     키들 = [C.키캐시(kr[g], 최대길이) for g in range(NKV)]
     값들 = [C.값캐시(vv[g], 최대길이) for g in range(NKV)]
     out["키"] = np.stack([a for a, _ in 키들])
@@ -229,6 +238,22 @@ def 무작위(n, 씨):
     return X.astype(f32)
 
 
+def 극단(n, 씨):
+    """2b단계 — 흉내 정리의 극단 경우(독립 검토): 머리마다 배율 2^[−60, 20](아주 작은 q · k 와 큰 값 — 점수가 짧은실수를 넘지 않는 데까지),
+    행마다 2^±20, 키의 큰 채널(× 2⁸), 영 블록, 비정규수 키 몇 칸."""
+    r = np.random.default_rng(씨)
+    X = r.standard_normal((n, QKV)).astype(np.float64)
+    X *= np.repeat(np.exp2(r.uniform(-60, 20, QKV // HD)), HD)[None, :]
+    X *= np.exp2(r.integers(-20, 21, n)).astype(np.float64)[:, None] ** (r.random(n) < 0.1)[:, None]
+    큰채널 = D + HD * np.arange(NKV)[:, None] + r.integers(0, HD, (NKV, 3))
+    X[:, 큰채널.reshape(-1)] *= 256.0
+    영 = r.random((n, QKV // 32)) < 0.02
+    X.reshape(n, QKV // 32, 32)[영] = 0.0
+    작은 = r.random((n, NKV * HD)) < 0.001
+    X[:, D:D + NKV * HD][작은] = np.ldexp(1.0, -140)
+    return np.clip(X, -2.0 ** 100, 2.0 ** 100).astype(f32)
+
+
 def 층0qkv(gguf, ids):
     """7B 층 0 의 q · k · v (bias 포함, RoPE 앞) — CPU 참조의 임베딩 · RMS · 행렬곱빠른(계약 그대로)."""
     g = GR.GGUF(gguf)
@@ -258,7 +283,9 @@ def 층0qkv(gguf, ids):
 
 def 채팅토큰(질문):
     import 토크나이저 as TK
-    tk = TK.Qwen토크나이저(os.path.join(ROOT, "모델", "qwen2.5-0.5b-instruct"))
+    # Qwen2.5 의 BPE(vocab.json · merges.txt — 7B 와 같다). GeulPUv2 에는 모델/ 이 없어, 옆의 연구 저장소 GeulPU 의 것을 읽기만 한다
+    후보 = [os.path.join(ROOT, "모델", "qwen2.5-0.5b-instruct"), os.path.join(ROOT, "..", "GeulPU", "모델", "qwen2.5-0.5b-instruct")]
+    tk = TK.Qwen토크나이저(next((p for p in 후보 if os.path.exists(os.path.join(p, "vocab.json"))), 후보[0]))
     return tk.나누기(TK.채팅틀([{"role": "user", "content": 질문}]))
 
 
@@ -267,8 +294,13 @@ def main():
     ptx, gguf, 출력 = sys.argv[1:4]
     빠르게 = "--빠르게" in sys.argv
     global O자리수
-    if "--자리하나" in sys.argv:                 # 33단계 — 같은 최적화의 대조 V1(커널생성 --자리하나 의 모듈)
+    if "--자리하나" in sys.argv or "--빠른" in sys.argv:     # 33단계 V1 · GeulPUv2 빠른 계약 F1(커널생성 --빠른) — 접기의 출력이 자리 하나
         O자리수 = 1
+    if "--어텐션" in sys.argv:                  # GeulPUv2 2b단계 — F1A 흉내(커널생성 --어텐션한자리 KV · QKV 의 모듈)
+        변형 = sys.argv[sys.argv.index("--어텐션") + 1]
+        assert 변형 in ("KV", "QKV"), 변형
+        C.어텐션한자리 = 변형.lower()
+        print("F1A 흉내:", 변형, flush=True)
     모양두기(gguf)
     print(f"모양: 너비 {D} · 머리 {NH} · KV 머리 {NKV} (GQA {NH // NKV})", flush=True)
     k = 글커널(ptx)
@@ -291,6 +323,11 @@ def main():
                                            "생성 판 행 4": [(0, 1024), (1024, 1022)] + [(s, min(4, n - s), "조각") for s in range(2046, n, 4)]}))
         if k.넷:
             경우들[-1][3]["생성 판 넷"] = [(0, 1024), (1024, 1000)] + [(s, 1, "넷") for s in range(2024, n)]
+        Xe = 극단(600, 26)                        # 2b단계 — 흉내 정리의 극단 경우
+        경우들.append(("극단 600", Xe, 1024, {"한 번에": [(0, 600)], "나눠서": [(0, 250), (250, 350)],
+                                         "생성 판 행 1": [(0, 560)] + [(s, 1, "조각") for s in range(560, 600)]}))
+        if k.넷:
+            경우들[-1][3]["생성 판 넷"] = [(0, 560)] + [(s, 1, "넷") for s in range(560, 600)]
         for qi, 질문 in enumerate(질문들):
             ids = 채팅토큰(질문)
             Xr = 층0qkv(gguf, ids)

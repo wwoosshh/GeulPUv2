@@ -368,6 +368,7 @@ bcrypt · advapi32)과 그래픽 드라이버의 DLL뿐입니다.
     1.16 ~ 1.46배.
   - 생성은 llama.cpp 와 같은 급이다: 7B · 14B 가 0.970 ~ 1.012배 시간(Q8_0 · Q4_0 · k-양자화 — [23](https://github.com/wwoosshh/GeulPU/blob/main/문서/23단계.md) ·
     [24](https://github.com/wwoosshh/GeulPU/blob/main/문서/24단계.md) · [26단계](https://github.com/wwoosshh/GeulPU/blob/main/문서/26단계.md)). 생성은 가중치를 읽는 시간이 정하므로 더 든 셈이 그 뒤에 숨는다.
+    빠른 모드의 생성은 정밀 모드의 0.993 ~ 0.998배 시간이다(2단계 — 문맥 짧을 때 · 2048 · 8192).
   - 정밀 모드의 프롬프트는 짧을 때만 빨랐다(30단계): 7B Q4_0 이 llama.cpp 최신 공식 릴리스(b11567, 같은 GGUF)의 0.85배(32 토큰) · 1.03배(128) ·
     1.11배(2048) · 1.27배(8192) 시간이고, Q8_0 은 0.85 ~ 1.30배, k-양자화는 0.95 ~ 1.56배다(같은 실행 — [30단계](https://github.com/wwoosshh/GeulPU/blob/main/문서/30단계.md)). 활성값을 자리
     둘(16비트)로 두는 계약이라 같은 최적화라면 행렬곱의 정수 텐서 일이 활성값 8비트인 llama.cpp 의 두 배이고, 어텐션의 정확한 합 ·
