@@ -1,0 +1,171 @@
+(* 쿠다층 — 쿠다.gl 의 감싼 함수(31단계에 떼어 냄). 바깥 선언(cu… 함수)은 포함한 쪽이 먼저 둔다: 쿠다.gl 은 쿠다선언.gl(nvcuda.dll ·
+   리눅스는 libcuda.so.1), 벌칸.gl 은 같은 이름 · 같은 서명의 함수를 Vulkan(vulkan-1.dll) 위에 짠 벌칸쿠다.gl. *)
+
+(* 결과가 0(CUDA_SUCCESS)이 아니면 무엇이 실패했는지 알리고 끝낸다 — 조용한 실패는 없다 *)
+[중간정수 코드를 문자열 무엇으로 쿠다확인]는 {
+    코드 != 0이면 {
+        문자열 글 = 없음.
+        cuGetErrorString(코드, &글).
+        글 == 없음이면 { 글 = "(알 수 없음)". }
+        파일에_쓰기(표준오류(), "CUDA 드라이버 오류 %lld: %s — %s\n", 코드 으로 정수, 무엇, 글).
+        1로 종료하다.
+    }
+}
+
+(* PTX 의 이름: 라틴 이름은 그대로, 그 밖은 "_G" + UTF-8 바이트의 16진수(글ptx.py · PTX.gl 과 같은 규칙) *)
+[문자열 이름을 PTX이름]는 -> 문자열 {
+    정수 n = 글자수(이름).
+    참거짓 라틴 = n > 0.
+    반복 (정수 k는 0부터 n 전까지) {
+        정수 c = 이름[k] & 255.
+        참거짓 글자 = (c >= 65 그리고 c <= 90) 또는 (c >= 97 그리고 c <= 122) 또는 c == 95.
+        참거짓 숫자 = c >= 48 그리고 c <= 57.
+        (아닌 글자 그리고 (k == 0 또는 아닌 숫자))이면 { 라틴 = 거짓. }
+    }
+    라틴이면 { 반환 문자열_복제(이름). }
+    문자열 바뀐이름 = 할당(2 * n + 3).
+    바뀐이름[0] = 95. 바뀐이름[1] = 71.
+    문자열 수 = "0123456789abcdef".
+    반복 (정수 k2는 0부터 n 전까지) {
+        정수 c2 = 이름[k2] & 255.
+        바뀐이름[2 + 2 * k2] = 수[c2 >> 4].
+        바뀐이름[3 + 2 * k2] = 수[c2 & 15].
+    }
+    바뀐이름[2 + 2 * n] = 0.
+    반환 바뀐이름.
+}
+
+(* ===== 드라이버 (엔진/글gpt2.py 의 드라이버) ===== *)
+공허 참조 쿠다문맥 = 없음.
+중간정수 쿠다장치 = 0.
+정수목록 참조 쿠다할당들.            (* 잡은 장치 주소들 — 닫을 때 돌려준다 *)
+
+[쿠다열기]는 {
+    cuInit(0)를 "cuInit"으로 쿠다확인하다.
+    cuDeviceGet(&쿠다장치, 0)를 "cuDeviceGet"으로 쿠다확인하다.
+    cuDevicePrimaryCtxRetain(&쿠다문맥, 쿠다장치)를 "cuDevicePrimaryCtxRetain"으로 쿠다확인하다.
+    cuCtxSetCurrent(쿠다문맥)를 "cuCtxSetCurrent"으로 쿠다확인하다.
+    쿠다할당들 = 정수목록_만들기().
+}
+
+(* 다른 스레드가 연 쿠다 문맥을 이 스레드에서도 쓴다 *)
+[쿠다이스레드]는 { cuCtxSetCurrent(쿠다문맥)를 "cuCtxSetCurrent"으로 쿠다확인하다. }
+
+[중간정수 속성을 장치속성]는 -> 정수 {
+    중간정수 v = 0.
+    cuDeviceGetAttribute(&v, 속성, 쿠다장치)를 "cuDeviceGetAttribute"으로 쿠다확인하다.
+    반환 v.
+}
+
+[장치이름]는 -> 문자열 {
+    문자열 b = 할당(256).
+    cuDeviceGetName(b, 256, 쿠다장치)를 "cuDeviceGetName"으로 쿠다확인하다.
+    반환 b.
+}
+
+(* 장치 메모리 — 0 으로 채워서 (파이썬 호스트의 할당과 같다) *)
+[정수 바이트수를 장치할당]는 -> 정수 {
+    정수 p = 0.
+    정수 n = 바이트수.
+    n < 1이면 { n = 1. }
+    cuMemAlloc_v2(&p, n)를 "cuMemAlloc"으로 쿠다확인하다.
+    cuMemsetD8_v2(p, 0, n)를 "cuMemsetD8"으로 쿠다확인하다.
+    정수목록_추가(쿠다할당들, p).
+    반환 p.
+}
+
+(* 34단계 — 장치가 한 번에 잡을 수 있는 바이트. Vulkan 층(벌칸쿠다.gl)은 GeulPU 의 속성 10001 에 maxMemoryAllocationSize ·
+   maxBufferSize 의 작은 쪽을 MiB 로 준다(AMD 는 2 GiB). CUDA 는 그 속성을 모른다(오류) — 한도 없음(2⁶²) *)
+[장치할당한도]는 -> 정수 {
+    중간정수 v = 0.
+    중간정수 r = cuDeviceGetAttribute(&v, 10001, 쿠다장치).
+    (r != 0 또는 v <= 0)이면 { 반환 4611686018427387904. }
+    반환 (v 으로 정수) * 1048576.
+}
+
+(* 24단계 — 장치의 남은 메모리(바이트) *)
+[장치남은바이트]는 -> 정수 {
+    정수 남음 = 0.
+    정수 전체 = 0.
+    cuMemGetInfo_v2(&남음, &전체)를 "cuMemGetInfo"으로 쿠다확인하다.
+    반환 남음.
+}
+
+[정수 주소를 정수 바이트수를 장치영]는 { cuMemsetD8_v2(주소, 0, 바이트수)를 "cuMemsetD8"으로 쿠다확인하다. }
+
+[정수 대상을 공허 참조 원본을 정수 바이트수를 올리기]는 {
+    바이트수 > 0이면 { cuMemcpyHtoD_v2(대상, 원본, 바이트수)를 "cuMemcpyHtoD"으로 쿠다확인하다. }
+}
+
+[공허 참조 대상을 정수 원본을 정수 바이트수를 내리기]는 {
+    바이트수 > 0이면 { cuMemcpyDtoH_v2(대상, 원본, 바이트수)를 "cuMemcpyDtoH"으로 쿠다확인하다. }
+}
+
+[맞추기]는 { cuCtxSynchronize()를 "cuCtxSynchronize"으로 쿠다확인하다. }
+
+[공허 참조 ptx를 모듈올리기]는 -> 공허 참조 {
+    공허 참조 m = 없음.
+    cuModuleLoadData(&m, ptx)를 "cuModuleLoadData"으로 쿠다확인하다.
+    반환 m.
+}
+
+[공허 참조 모듈을 문자열 이름을 함수얻기]는 -> 공허 참조 {
+    공허 참조 f = 없음.
+    문자열 p = PTX이름(이름).
+    중간정수 r = cuModuleGetFunction(&f, 모듈, p).
+    r != 0이면 {
+        파일에_쓰기(표준오류(), "커널을 찾을 수 없다: %s (%s)\n", 이름, p).
+        r를 "cuModuleGetFunction"으로 쿠다확인하다.
+    }
+    반환 f.
+}
+
+(* 28단계 — 없으면 없음(앞 단계의 빌드처럼 그 판이 없는 모듈). 서식을 쓰지 않는다(일꾼 스레드에서 부른다) *)
+[공허 참조 모듈을 문자열 이름을 함수찾기]는 -> 공허 참조 {
+    공허 참조 f = 없음.
+    문자열 p = PTX이름(이름).
+    중간정수 r = cuModuleGetFunction(&f, 모듈, p).
+    해제(p).
+    r != 0이면 { 반환 없음. }
+    반환 f.
+}
+
+(* 모듈의 오류 칸 __geul_err (2c 범위 검사) — 0 이어야 한다 *)
+[공허 참조 모듈을 오류칸읽기]는 -> 정수 {
+    정수 p = 0.
+    정수 n = 0.
+    cuModuleGetGlobal_v2(&p, &n, 모듈, "__geul_err")를 "cuModuleGetGlobal"으로 쿠다확인하다.
+    중간정수 v = 0.
+    내리기(&v, p, 4).
+    반환 v.
+}
+
+[공허 참조 함수를 중간정수 스레드수를 점유]는 -> 정수 {
+    중간정수 b = 0.
+    cuOccupancyMaxActiveBlocksPerMultiprocessor(&b, 함수, 스레드수, 0)를 "cuOccupancyMaxActiveBlocksPerMultiprocessor"으로 쿠다확인하다.
+    반환 b.
+}
+
+[쿠다닫기]는 {
+    맞추기().
+    반복 (정수 k는 0부터 정수목록_길이(쿠다할당들) 전까지) { cuMemFree_v2(정수목록_값(쿠다할당들, k))를 "cuMemFree"으로 쿠다확인하다. }
+    정수목록_비우기(쿠다할당들).
+}
+
+(* ===== 이벤트로 재기 ===== *)
+[새이벤트]는 -> 공허 참조 {
+    공허 참조 e = 없음.
+    cuEventCreate(&e, 0)를 "cuEventCreate"으로 쿠다확인하다.
+    반환 e.
+}
+
+[공허 참조 이벤트를 이벤트기록]는 { cuEventRecord(이벤트, 없음)를 "cuEventRecord"으로 쿠다확인하다. }
+
+[공허 참조 시작을 공허 참조 끝을 이벤트사이]는 -> 실수 {
+    cuEventSynchronize(끝)를 "cuEventSynchronize"으로 쿠다확인하다.
+    짧은실수 ms = 0.0.
+    cuEventElapsedTime(&ms, 시작, 끝)를 "cuEventElapsedTime"으로 쿠다확인하다.
+    반환 ms 으로 실수.
+}
+
+[공허 참조 이벤트를 이벤트없애기]는 { cuEventDestroy_v2(이벤트)를 "cuEventDestroy"으로 쿠다확인하다. }

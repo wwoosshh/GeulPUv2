@@ -1,0 +1,46 @@
+(* 쿠다의 바깥 선언 — 리눅스: libcuda.so.1 의 드라이버 API (29단계, D-50). 윈도 판(../쿠다선언.gl)과 기호 · 서명이 같고
+   라이브러리 이름만 다르다. WSL2 에서는 /usr/lib/wsl/lib 의 것(윈도 드라이버와 함께 온다). *)
+
+외부 "libcuda.so.1" "cuInit" [중간정수 깃발을 cuInit]는 -> 중간정수.
+외부 "libcuda.so.1" "cuDeviceGet" [공허 참조 장치를 중간정수 번호를 cuDeviceGet]는 -> 중간정수.
+외부 "libcuda.so.1" "cuDeviceGetName" [공허 참조 버퍼를 중간정수 길이를 중간정수 장치를 cuDeviceGetName]는 -> 중간정수.
+외부 "libcuda.so.1" "cuDeviceGetAttribute" [공허 참조 값을 중간정수 속성을 중간정수 장치를 cuDeviceGetAttribute]는 -> 중간정수.
+외부 "libcuda.so.1" "cuDevicePrimaryCtxRetain" [공허 참조 문맥을 중간정수 장치를 cuDevicePrimaryCtxRetain]는 -> 중간정수.
+외부 "libcuda.so.1" "cuCtxSetCurrent" [공허 참조 문맥을 cuCtxSetCurrent]는 -> 중간정수.
+외부 "libcuda.so.1" "cuCtxSynchronize" [cuCtxSynchronize]는 -> 중간정수.
+외부 "libcuda.so.1" "cuModuleLoadData" [공허 참조 모듈을 공허 참조 이미지를 cuModuleLoadData]는 -> 중간정수.
+외부 "libcuda.so.1" "cuModuleGetFunction" [공허 참조 함수를 공허 참조 모듈을 공허 참조 이름을 cuModuleGetFunction]는 -> 중간정수.
+외부 "libcuda.so.1" "cuModuleGetGlobal_v2" [공허 참조 주소를 공허 참조 바이트수를 공허 참조 모듈을 공허 참조 이름을 cuModuleGetGlobal_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemAlloc_v2" [공허 참조 주소를 정수 바이트수를 cuMemAlloc_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemFree_v2" [정수 주소를 cuMemFree_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemsetD8_v2" [정수 주소를 중간정수 값을 정수 바이트수를 cuMemsetD8_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemcpyHtoD_v2" [정수 대상을 공허 참조 원본을 정수 바이트수를 cuMemcpyHtoD_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemcpyDtoH_v2" [공허 참조 대상을 정수 원본을 정수 바이트수를 cuMemcpyDtoH_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuLaunchKernel" [공허 참조 함수를 중간정수 gx를 중간정수 gy를 중간정수 gz를 중간정수 bx를 중간정수 by를 중간정수 bz를 중간정수 공유를 공허 참조 흐름을 공허 참조 인자들을 공허 참조 덤을 cuLaunchKernel]는 -> 중간정수.
+외부 "libcuda.so.1" "cuLaunchCooperativeKernel" [공허 참조 함수를 중간정수 gx를 중간정수 gy를 중간정수 gz를 중간정수 bx를 중간정수 by를 중간정수 bz를 중간정수 공유를 공허 참조 흐름을 공허 참조 인자들을 cuLaunchCooperativeKernel]는 -> 중간정수.
+외부 "libcuda.so.1" "cuOccupancyMaxActiveBlocksPerMultiprocessor" [공허 참조 블록수를 공허 참조 함수를 중간정수 스레드수를 정수 동적공유를 cuOccupancyMaxActiveBlocksPerMultiprocessor]는 -> 중간정수.
+외부 "libcuda.so.1" "cuEventCreate" [공허 참조 이벤트를 중간정수 깃발을 cuEventCreate]는 -> 중간정수.
+외부 "libcuda.so.1" "cuEventRecord" [공허 참조 이벤트를 공허 참조 흐름을 cuEventRecord]는 -> 중간정수.
+외부 "libcuda.so.1" "cuEventSynchronize" [공허 참조 이벤트를 cuEventSynchronize]는 -> 중간정수.
+외부 "libcuda.so.1" "cuEventElapsedTime" [공허 참조 밀리초를 공허 참조 시작을 공허 참조 끝을 cuEventElapsedTime]는 -> 중간정수.
+외부 "libcuda.so.1" "cuEventDestroy_v2" [공허 참조 이벤트를 cuEventDestroy_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGraphCreate" [공허 참조 그래프를 중간정수 깃발을 cuGraphCreate]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGraphAddKernelNode" [공허 참조 마디를 공허 참조 그래프를 공허 참조 기댐을 정수 기댐수를 공허 참조 인자를 cuGraphAddKernelNode]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGraphInstantiateWithFlags" [공허 참조 실행본을 공허 참조 그래프를 정수 깃발을 cuGraphInstantiateWithFlags]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGraphLaunch" [공허 참조 실행본을 공허 참조 흐름을 cuGraphLaunch]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGraphExecKernelNodeSetParams" [공허 참조 실행본을 공허 참조 마디를 공허 참조 인자를 cuGraphExecKernelNodeSetParams]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGraphExecDestroy" [공허 참조 실행본을 cuGraphExecDestroy]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGraphDestroy" [공허 참조 그래프를 cuGraphDestroy]는 -> 중간정수.
+외부 "libcuda.so.1" "cuGetErrorString" [중간정수 코드를 공허 참조 글을 cuGetErrorString]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemGetInfo_v2" [공허 참조 남음을 공허 참조 전체를 cuMemGetInfo_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuCtxCreate_v2" [공허 참조 문맥을 중간정수 깃발을 중간정수 장치를 cuCtxCreate_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemcpyPeer" [정수 대상을 공허 참조 대상문맥을 정수 원본을 공허 참조 원본문맥을 정수 바이트수를 cuMemcpyPeer]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemcpyPeerAsync" [정수 대상을 공허 참조 대상문맥을 정수 원본을 공허 참조 원본문맥을 정수 바이트수를 공허 참조 흐름을 cuMemcpyPeerAsync]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemcpyDtoHAsync_v2" [공허 참조 대상을 정수 원본을 정수 바이트수를 공허 참조 흐름을 cuMemcpyDtoHAsync_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemcpyHtoDAsync_v2" [정수 대상을 공허 참조 원본을 정수 바이트수를 공허 참조 흐름을 cuMemcpyHtoDAsync_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemHostAlloc" [공허 참조 주소를 정수 바이트수를 중간정수 깃발을 cuMemHostAlloc]는 -> 중간정수.
+외부 "libcuda.so.1" "cuStreamWaitEvent" [공허 참조 흐름을 공허 참조 이벤트를 중간정수 깃발을 cuStreamWaitEvent]는 -> 중간정수.
+외부 "libcuda.so.1" "cuDeviceCanAccessPeer" [공허 참조 될을 중간정수 장치를 중간정수 피어장치를 cuDeviceCanAccessPeer]는 -> 중간정수.
+외부 "libcuda.so.1" "cuCtxEnablePeerAccess" [공허 참조 피어문맥을 중간정수 깃발을 cuCtxEnablePeerAccess]는 -> 중간정수.
+외부 "libcuda.so.1" "cuDriverGetVersion" [공허 참조 판을 cuDriverGetVersion]는 -> 중간정수.
+외부 "libcuda.so.1" "cuFuncGetAttribute" [공허 참조 값을 중간정수 속성을 공허 참조 함수를 cuFuncGetAttribute]는 -> 중간정수.

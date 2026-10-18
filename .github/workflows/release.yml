@@ -1,0 +1,67 @@
+# GeulPU 릴리스(36단계) — 태그 v<판> 을 밀면 그 커밋의 소스에서 앱을 꾸려(앱/꾸리기.ps1 — 글 컴파일러 고정점 → 뒷단 · 서버 · 도구 · 관리자 ·
+# 진단 커널, 교차검증 기준의 빌드 해시와 견줌) zip 과 SHA256SUMS.txt 를 **초안** 릴리스로 올린다. 공개는 사람이 한다.
+# 손으로 돌리면(workflow_dispatch) 꾸린 것을 아티팩트로만 남긴다.
+name: 릴리스
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - name: GeulPU 받기
+        uses: actions/checkout@v7
+        with:
+          path: GeulPUv2
+      - name: 글 저장소의 고정 커밋 읽기
+        id: geul
+        shell: bash
+        run: echo "sha=$(tr -d '\r\n ' < GeulPUv2/시험/글저장소커밋.txt)" >> "$GITHUB_OUTPUT"
+      - name: 글 저장소 받기(research/gpu 의 고정 커밋)
+        uses: actions/checkout@v7
+        with:
+          repository: wwoosshh/geul-lang
+          ref: ${{ steps.geul.outputs.sha }}
+          path: geul-lang-v2
+      - name: 파이썬(글 컴파일러의 첫 빌드 — 참조 구현)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: 판과 태그 견주기
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $pan = [IO.File]::ReadAllText("GeulPUv2/앱/판.gl", [Text.Encoding]::UTF8)
+          if ($pan -notmatch '앱판 = "([^"]+)"') { throw '앱/판.gl 에서 판을 읽지 못했다' }
+          if ("v$($Matches[1])" -ne "${{ github.ref_name }}") { throw "태그 ${{ github.ref_name }} 와 앱/판.gl 의 판 $($Matches[1]) 이 다르다" }
+      - name: 꾸리기
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+        run: ./GeulPUv2/앱/꾸리기.ps1 -GeulRoot "$env:GITHUB_WORKSPACE/geul-lang-v2" -Out "$env:GITHUB_WORKSPACE/out"
+      - name: 꾸린 것 올리기(아티팩트)
+        uses: actions/upload-artifact@v7
+        with:
+          name: geulpu-windows-x64
+          path: |
+            out/*.zip
+            out/SHA256SUMS.txt
+            out/GeulPU-*/version.json
+      - name: 초안 릴리스
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          $notes = "**설치**: GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행하세요 — 설치 · 사용 안내는 [README](https://github.com/wwoosshh/GeulPU#설치). 바뀐 것은 바뀐것.md, 파일마다의 SHA-256 은 zip 안의 version.json."
+          $log = [IO.File]::ReadAllText("GeulPUv2/바뀐것.md", [Text.Encoding]::UTF8)
+          $m = [regex]::Match($log, "(?ms)^## $([regex]::Escape($ver))\b.*?(?=^## |\z)")
+          if ($m.Success) { $notes = $m.Value + "`n`n" + $notes }
+          $notes += "`n`n**English**: unzip GeulPU-$ver-windows-x64.zip and run GeulPU.exe. The app's screens are in English unless the browser is set to Korean (Settings → 언어 · Language). The install and usage guide is in [README.en.md](https://github.com/wwoosshh/GeulPUv2/blob/main/README.en.md)."
+          [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
+          gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --draft --title "GeulPU $ver" --notes-file "$env:RUNNER_TEMP/notes.md" "out/GeulPU-$ver-windows-x64.zip" "out/SHA256SUMS.txt"

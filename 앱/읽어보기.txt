@@ -1,0 +1,87 @@
+GeulPU — 내 PC의 그래픽카드로 돌리는 AI 채팅 (Windows x64)
+GeulPU — local AI chat on your own graphics card (Windows x64)
+
+English below.
+
+==== 한국어 ====
+
+시작하기
+  1. 이 폴더를 원하는 곳에 압축 해제합니다(예: C:\GeulPU). 경로에 한글이 있어도 됩니다.
+  2. GeulPU.exe를 실행하면 브라우저에 http://127.0.0.1:44544 가 열립니다.
+     - "Windows의 PC 보호" 창이 뜨면 [추가 정보] → [실행]을 누르세요(서명하지 않은 실행 파일이라 나타납니다).
+     - 검은 창(GeulPU)을 닫으면 앱이 종료됩니다.
+  3. [모델] → [모델 찾기]에서 모델을 고르고, 오른쪽 파일 목록에서 [다운로드]를 누릅니다. 처음이라면 'GeulPU 확인됨'
+     표시가 있는 모델(직접 돌려 본 파일)이 좋습니다. 이미 있는 GGUF 파일은 [GGUF 파일 추가]로 넣습니다.
+  4. [채팅]에서 모델을 고르고 메시지를 보냅니다. 처음 한 번은 이 GPU에 맞는 커널을 만드느라 1~3분 걸릴 수 있습니다.
+     Qwen3의 생각을 끄려면 오른쪽 위 [생성 설정] → '생각 과정 쓰기'를 끕니다.
+  5. [벤치마크]에서 하드웨어 진단 · 속도 측정 · 재현성 검증(기준 PC와 비트 단위로 같은지)을 실행하고, 결과를 zip으로
+     내보낼 수 있습니다.
+  6. 답 아래의 플라스크 단추(연구 패널)로 토큰마다의 확률 · 대안을 보고, 어느 걸음에서 다른 토큰으로 갈래를 내거나 다른
+     모델 · 프롬프트로 같은 답을 점수 매겨 견줍니다. 같은 값은 어느 PC · GPU에서 셈해도 비트까지 같습니다.
+     화면 그림과 함께 따라 하는 안내서: https://github.com/wwoosshh/GeulPU/blob/main/연구자안내.md
+  화면은 브라우저 언어를 따릅니다(한국어가 아니면 영어). [설정] → '언어 · Language'에서 바꿀 수 있습니다.
+
+필요한 것
+  - Windows 10 / 11(64비트), 최신 그래픽 드라이버.
+  - NVIDIA RTX 30 시리즈 이상은 CUDA로, 그 밖의 GPU(AMD 등)는 Vulkan으로 실행합니다.
+  - 그래픽 메모리: 작은 모델(Qwen3-1.7B · Llama-3.2-3B) 6 GB, 7B · 8B는 8 GB(Q4_K_M) · 12 GB(Q8_0), 14B는 12 GB 이상.
+  - 인터넷은 모델을 찾고 받을 때와 새 버전을 확인할 때만 씁니다.
+
+지원하는 모델
+  Qwen3(1.7B · 8B · 14B), Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(1.5B 이상), Llama 3.1 · 3.2(3B · 8B) ·
+  Mistral 7B v0.3과 그 미세조정 모델(같은 대화 틀) —
+  GGUF Q8_0 · Q4_K_M · Q5_K_M · Q6_K. 윈도의 AMD는 지금 Q8_0(과 순수 Q4_0) 파일만 실행합니다.
+
+데이터
+  모델 · 이 GPU용 커널 · 결과 · 설정은 %USERPROFILE%\GeulPU에 저장됩니다(버전을 바꿔도 그대로). 위치를 바꾸려면
+  GEULPU_HOME 환경 변수를 지정하세요. 문제가 생기면 그 안의 '기록' 폴더를 봅니다.
+  다른 프로그램은 http://127.0.0.1:44544/v1 (OpenAI 호환 API)로 쓸 수 있습니다 — 이 PC 안에서만 접속됩니다.
+
+새 버전 · 삭제
+  앱 화면이 GitHub의 최신 릴리스를 알려 줍니다. 앱을 끄고 새 zip을 압축 해제해 그 GeulPU.exe를 실행하면 됩니다
+  (모델은 다시 받지 않습니다). 삭제는 이 폴더를 지우면 되고, 받은 모델까지 지우려면 %USERPROFILE%\GeulPU도 지웁니다.
+  파일별 SHA-256은 version.json에, zip의 SHA-256은 릴리스의 SHA256SUMS.txt에 있습니다.
+
+자세한 안내 · 소스: https://github.com/wwoosshh/GeulPU
+
+==== English ====
+
+Getting started
+  1. Extract this folder anywhere (for example C:\GeulPU).
+  2. Run GeulPU.exe; your browser opens http://127.0.0.1:44544.
+     - If "Windows protected your PC" appears, click More info -> Run anyway (the executable is not code-signed).
+     - Closing the black console window (GeulPU) quits the app.
+  3. Open Models -> Find models, pick a model and click Download on a file in the list on the right. Models marked
+     "Verified by GeulPU" (files GeulPU has run itself) are a good start. Add GGUF files you already have with
+     "Add a GGUF file".
+  4. In Chat, pick the model and send a message. The first time, building kernels for your GPU can take 1-3 minutes.
+     To turn Qwen3's thinking off: Generation settings (top right) -> switch off Thinking.
+  5. Benchmark runs a hardware diagnosis, a speed test and a reproducibility check (bit-for-bit against the reference PC);
+     results export as a zip.
+  6. The flask button under an answer (research panel) shows each token's probability and alternatives; branch with
+     another token at any step, or score the same answer with another model or prompt. The values are bit-identical
+     on any PC or GPU. Step-by-step guide with screenshots: https://github.com/wwoosshh/GeulPU/blob/main/docs/research-guide.md
+  The screens follow your browser's language (English unless it prefers Korean); change it in Settings -> Language.
+
+Requirements
+  - Windows 10 / 11 (64-bit) and an up-to-date graphics driver.
+  - NVIDIA RTX 30 series or newer runs on CUDA; other GPUs (AMD, ...) run on Vulkan.
+  - Graphics memory: 6 GB for small models (Qwen3-1.7B, Llama-3.2-3B), 8 GB (Q4_K_M) or 12 GB (Q8_0) for 7B / 8B, 12 GB or more for 14B.
+  - The internet is used only to find and download models and to check for new versions.
+
+Supported models
+  Qwen3 (1.7B, 8B, 14B), Qwen2.5, Qwen2.5-Coder, DeepSeek-R1-Distill-Qwen (1.5B and up), Llama 3.1 / 3.2 (3B, 8B) and
+  Mistral 7B v0.3, and their fine-tunes (with the same chat templates) —
+  GGUF Q8_0, Q4_K_M, Q5_K_M, Q6_K. AMD on Windows currently runs Q8_0 (and pure Q4_0) files only.
+
+Data
+  Models, kernels built for this GPU, results and settings live in %USERPROFILE%\GeulPU (kept across versions); set the
+  GEULPU_HOME environment variable to move it. Logs are in its 기록 (logs) folder.
+  Other programs can use http://127.0.0.1:44544/v1 (OpenAI-compatible API) — reachable from this PC only.
+
+Updates and uninstall
+  The app shows when GitHub has a newer release. Quit the app, extract the new zip and run its GeulPU.exe (models are kept).
+  To uninstall, delete this folder; to delete the downloaded models too, also delete %USERPROFILE%\GeulPU.
+  Per-file SHA-256 values are in version.json; the zip's SHA-256 is in the release's SHA256SUMS.txt.
+
+Full guide and source: https://github.com/wwoosshh/GeulPU (English: README.en.md)

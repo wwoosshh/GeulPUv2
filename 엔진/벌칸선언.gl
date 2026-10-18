@@ -1,0 +1,53 @@
+(* 벌칸의 바깥 선언 — 윈도: vulkan-1.dll (그래픽 드라이버에 든 Vulkan 로더). 31단계 31h: 글(geul) 호스트가 nvcuda.dll 없이 돈다.
+   디스패치되는 핸들(인스턴스 · 물리 장치 · 장치 · 큐 · 명령 버퍼)은 공허 참조, 디스패치되지 않는 핸들(버퍼 · 메모리 · 셰이더 모듈 ·
+   파이프라인 · 배치 · 명령 풀 · 울타리 · 질의 풀)과 VkDeviceSize · size_t 는 정수(64 비트), VkResult · uint32_t · VkBool32 는 중간정수.
+   구조체는 바이트 버퍼에 자리(오프셋)로 쓴다 — 벌칸쿠다.gl. *)
+
+외부 "vulkan-1.dll" "vkCreateInstance" [공허 참조 만듦을 공허 참조 할당기를 공허 참조 인스턴스를 vkCreateInstance]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyInstance" [공허 참조 인스턴스를 공허 참조 할당기를 vkDestroyInstance]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkEnumeratePhysicalDevices" [공허 참조 인스턴스를 공허 참조 개수를 공허 참조 장치들을 vkEnumeratePhysicalDevices]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetPhysicalDeviceProperties2" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceProperties2]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetPhysicalDeviceQueueFamilyProperties" [공허 참조 물리를 공허 참조 개수를 공허 참조 속성을 vkGetPhysicalDeviceQueueFamilyProperties]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetPhysicalDeviceMemoryProperties" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceMemoryProperties]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetPhysicalDeviceFeatures2" [공허 참조 물리를 공허 참조 기능을 vkGetPhysicalDeviceFeatures2]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetInstanceProcAddr" [공허 참조 인스턴스를 문자열 이름을 vkGetInstanceProcAddr]는 -> 공허 참조.
+외부 "vulkan-1.dll" "vkCreateDevice" [공허 참조 물리를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 장치를 vkCreateDevice]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkEnumerateDeviceExtensionProperties" [공허 참조 물리를 공허 참조 층이름을 공허 참조 개수를 공허 참조 속성을 vkEnumerateDeviceExtensionProperties]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyDevice" [공허 참조 장치를 공허 참조 할당기를 vkDestroyDevice]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDeviceWaitIdle" [공허 참조 장치를 vkDeviceWaitIdle]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetDeviceQueue" [공허 참조 장치를 중간정수 족을 중간정수 번호를 공허 참조 큐를 vkGetDeviceQueue]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCreateBuffer" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 버퍼를 vkCreateBuffer]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyBuffer" [공허 참조 장치를 정수 버퍼를 공허 참조 할당기를 vkDestroyBuffer]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetBufferMemoryRequirements" [공허 참조 장치를 정수 버퍼를 공허 참조 요구를 vkGetBufferMemoryRequirements]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkAllocateMemory" [공허 참조 장치를 공허 참조 정보를 공허 참조 할당기를 공허 참조 메모리를 vkAllocateMemory]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkFreeMemory" [공허 참조 장치를 정수 메모리를 공허 참조 할당기를 vkFreeMemory]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkBindBufferMemory" [공허 참조 장치를 정수 버퍼를 정수 메모리를 정수 자리를 vkBindBufferMemory]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkMapMemory" [공허 참조 장치를 정수 메모리를 정수 자리를 정수 크기를 중간정수 깃발을 공허 참조 포인터를 vkMapMemory]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetBufferDeviceAddress" [공허 참조 장치를 공허 참조 정보를 vkGetBufferDeviceAddress]는 -> 정수.
+외부 "vulkan-1.dll" "vkCreateShaderModule" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 모듈을 vkCreateShaderModule]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyShaderModule" [공허 참조 장치를 정수 모듈을 공허 참조 할당기를 vkDestroyShaderModule]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCreatePipelineLayout" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 배치를 vkCreatePipelineLayout]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyPipelineLayout" [공허 참조 장치를 정수 배치를 공허 참조 할당기를 vkDestroyPipelineLayout]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCreateComputePipelines" [공허 참조 장치를 정수 캐시를 중간정수 개수를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 파이프를 vkCreateComputePipelines]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyPipeline" [공허 참조 장치를 정수 파이프를 공허 참조 할당기를 vkDestroyPipeline]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCreateCommandPool" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 풀을 vkCreateCommandPool]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyCommandPool" [공허 참조 장치를 정수 풀을 공허 참조 할당기를 vkDestroyCommandPool]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkAllocateCommandBuffers" [공허 참조 장치를 공허 참조 정보를 공허 참조 명령들을 vkAllocateCommandBuffers]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkBeginCommandBuffer" [공허 참조 명령을 공허 참조 정보를 vkBeginCommandBuffer]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkEndCommandBuffer" [공허 참조 명령을 vkEndCommandBuffer]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdBindPipeline" [공허 참조 명령을 중간정수 자리를 정수 파이프를 vkCmdBindPipeline]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdPushConstants" [공허 참조 명령을 정수 배치를 중간정수 단계를 중간정수 자리를 중간정수 크기를 공허 참조 값을 vkCmdPushConstants]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdDispatch" [공허 참조 명령을 중간정수 x를 중간정수 y를 중간정수 z를 vkCmdDispatch]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdPipelineBarrier" [공허 참조 명령을 중간정수 앞단계를 중간정수 뒤단계를 중간정수 깃발을 중간정수 메모리수를 공허 참조 메모리장벽을 중간정수 버퍼수를 공허 참조 버퍼장벽을 중간정수 그림수를 공허 참조 그림장벽을 vkCmdPipelineBarrier]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdCopyBuffer" [공허 참조 명령을 정수 원본을 정수 대상을 중간정수 개수를 공허 참조 구간들을 vkCmdCopyBuffer]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdFillBuffer" [공허 참조 명령을 정수 버퍼를 정수 자리를 정수 크기를 중간정수 값을 vkCmdFillBuffer]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkQueueSubmit" [공허 참조 큐를 중간정수 개수를 공허 참조 제출을 정수 울타리를 vkQueueSubmit]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCreateFence" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 울타리를 vkCreateFence]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyFence" [공허 참조 장치를 정수 울타리를 공허 참조 할당기를 vkDestroyFence]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkWaitForFences" [공허 참조 장치를 중간정수 개수를 공허 참조 울타리들을 중간정수 모두를 정수 기다림을 vkWaitForFences]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkResetFences" [공허 참조 장치를 중간정수 개수를 공허 참조 울타리들을 vkResetFences]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCreateQueryPool" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 풀을 vkCreateQueryPool]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkDestroyQueryPool" [공허 참조 장치를 정수 풀을 공허 참조 할당기를 vkDestroyQueryPool]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdResetQueryPool" [공허 참조 명령을 정수 풀을 중간정수 첫을 중간정수 개수를 vkCmdResetQueryPool]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkCmdWriteTimestamp" [공허 참조 명령을 중간정수 단계를 정수 풀을 중간정수 번호를 vkCmdWriteTimestamp]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetQueryPoolResults" [공허 참조 장치를 정수 풀을 중간정수 첫을 중간정수 개수를 정수 크기를 공허 참조 자료를 정수 걸음을 중간정수 깃발을 vkGetQueryPoolResults]는 -> 중간정수.

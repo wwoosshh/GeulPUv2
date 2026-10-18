@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>GeulPU</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div id="app">
+  <nav id="rail" aria-label="메뉴">
+    <div class="mark" aria-hidden="true">글</div>
+    <button class="rail-btn" data-view="chat" data-tip="채팅" aria-label="채팅"></button>
+    <button class="rail-btn" data-view="models" data-tip="모델" aria-label="모델"></button>
+    <button class="rail-btn" data-view="bench" data-tip="벤치마크" aria-label="벤치마크"></button>
+    <button class="rail-btn" data-view="device" data-tip="하드웨어" aria-label="하드웨어"></button>
+    <div class="rail-gap"></div>
+    <button class="rail-btn" data-view="settings" data-tip="설정" aria-label="설정"></button>
+  </nav>
+  <main id="main">
+    <div id="banner" hidden role="status"></div>
+
+    <section id="view-chat" class="view" aria-label="채팅">
+      <div id="scrim" hidden></div>
+      <aside id="convos" aria-label="채팅 목록">
+        <div class="convos-head">
+          <button class="btn" id="newroom" data-tip="Ctrl+Shift+O" data-tip-pos="bottom"></button>
+          <button class="icon-btn" id="hide-convos" data-tip="목록 닫기" data-tip-pos="bottom" aria-label="채팅 목록 닫기"></button>
+        </div>
+        <div id="roomlist"></div>
+        <div class="convos-foot">채팅은 이 브라우저에만 저장됩니다</div>
+      </aside>
+      <div id="chat">
+        <header id="chat-top">
+          <button class="icon-btn" id="show-convos" data-tip="채팅 목록" data-tip-pos="bottom" aria-label="채팅 목록 열기" hidden></button>
+          <button class="model-pill needs-conn" id="model-pill" aria-haspopup="menu" aria-expanded="false"></button>
+          <span class="model-state" id="model-state"></span>
+          <span class="grow"></span>
+          <button class="icon-btn" id="labbtn" data-tip="연구 패널" data-tip-pos="left" aria-label="연구 패널" aria-controls="lab" aria-expanded="false"></button>
+          <button class="icon-btn" id="optbtn" data-tip="생성 설정" data-tip-pos="left" aria-label="생성 설정" aria-haspopup="dialog" aria-expanded="false"></button>
+        </header>
+        <div id="msgs"></div>
+        <footer id="composer">
+          <button class="icon-btn" id="tobottom" aria-label="맨 아래로" hidden></button>
+          <div class="composer-box needs-conn">
+            <textarea id="input" rows="1" placeholder="메시지 입력" aria-label="메시지"></textarea>
+            <div class="composer-bar">
+              <span class="hint" id="composer-hint">Enter 보내기 · Shift+Enter 줄바꿈</span>
+              <span class="grow"></span>
+              <button class="send-btn" id="sendbtn" aria-label="보내기" disabled></button>
+            </div>
+          </div>
+        </footer>
+      </div>
+      <aside id="lab" aria-label="연구 패널" hidden></aside>
+    </section>
+
+    <section id="view-models" class="view" aria-label="모델"><div class="page" id="page-models"></div></section>
+    <section id="view-bench" class="view" aria-label="벤치마크"><div class="page" id="page-bench"></div></section>
+    <section id="view-device" class="view" aria-label="하드웨어"><div class="page" id="page-device"></div></section>
+    <section id="view-settings" class="view" aria-label="설정"><div class="page" id="page-settings"></div></section>
+
+    <footer id="statusbar" aria-label="상태"></footer>
+  </main>
+</div>
+<div id="modal" hidden><div class="box" id="modalbox" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div></div>
+<div id="toast" aria-live="polite"></div>
+<div id="sr-live" class="sr" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>
