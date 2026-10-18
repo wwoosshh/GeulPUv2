@@ -177,7 +177,8 @@ def 앞으로(g, 경우, 말=True, 끝행만=False):
             ws[0], bs[0] = 줄되돌리기(ws[0], NH, HD), 줄되돌리기(bs[0], NH, HD)
             ws[1], bs[1] = 줄되돌리기(ws[1], NKV, HD), 줄되돌리기(bs[1], NKV, HD)
         if all(w[0] == ws[0][0] and w[0] in ("Q8_0", "Q4_0") for w in ws):          # 22 · 23단계와 같은 길
-            qkv = C.행렬곱블라스(h, np.concatenate([w[1] for w in ws]), np.concatenate([w[2] for w in ws]), np.concatenate(bs))
+            qkv = C.행렬곱블라스(h, np.concatenate([w[1] for w in ws]), np.concatenate([w[2] for w in ws]), np.concatenate(bs),
+                              자리수=선형자리수)                                        # GeulPUv2 F1 — 이 길도 선형자리수(빠뜨렸던 것)
         else:                                                                           # 26단계 — 텐서마다 형식(열마다 따로라 값은 같다)
             qkv = np.concatenate([곱(h, w, b) for w, b in zip(ws, bs)], 1)
         del ws
