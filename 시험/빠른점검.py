@@ -288,6 +288,9 @@ def SASS(출력, ptxas, 병렬, 갱신):
     def 하나(항목):
         이름 = 항목[0]
         t0 = time.time()
+        if not os.path.exists(os.path.join(출력, 이름 + ".ptx")):
+            # 모듈 생성 · PTX 가 이미 못 미침으로 적혔다 — 여기서 멈추지 않고 그 모듈만 못 미침으로 적어 요약까지 간다
+            return 이름, -1, "PTX 가 없다 — 위의 [모듈 " + 이름 + "] 줄(생성 또는 PTX 실패)", 0.0
         임시 = tempfile.mkdtemp(prefix="geulpu_sass_")     # ptxas 는 ASCII 가 아닌 경로를 열지 못한다(Windows 의 ANSI 코드 페이지)
         try:
             shutil.copyfile(os.path.join(출력, 이름 + ".ptx"), os.path.join(임시, "m.ptx"))
