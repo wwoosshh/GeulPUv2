@@ -26,6 +26,7 @@ import gguf읽기 as GR       # noqa: E402
 import 정수계약 as C        # noqa: E402
 
 f32 = np.float32
+선형자리수 = 2          # GeulPUv2 빠른 계약 F1(--빠른): 선형층의 활성값 자리 하나 — 어텐션은 자리 둘 그대로
 
 
 def q8(g, name):
@@ -59,8 +60,8 @@ def 가중(g, name):
 def 곱(h, w, bias):
     """가중치의 형식에 맞는 CPU 참조 행렬곱(행렬곱블라스 · 행렬곱K블라스)."""
     if w[0] in ("Q8_0", "Q4_0"):
-        return C.행렬곱블라스(h, w[1], w[2], bias)
-    return C.행렬곱K블라스(h, w, bias)
+        return C.행렬곱블라스(h, w[1], w[2], bias, 자리수=선형자리수)
+    return C.행렬곱K블라스(h, w, bias, 자리수=선형자리수)
 
 
 def 다른칸(a, b):
@@ -78,8 +79,8 @@ def 자체시험(g):
         q = r.integers(-128, 128, (N, K), dtype=np.int64).astype(np.int8)
         d = (r.standard_normal((N, K // 32)) * 0.01).astype(np.float16).astype(f32)
         b = r.standard_normal(N).astype(f32)
-        a = C.행렬곱블라스(x, q, d, b)
-        c = C.행렬곱(x, q.T.astype(np.int64), d.T, b, 자리수=2)
+        a = C.행렬곱블라스(x, q, d, b, 자리수=선형자리수)
+        c = C.행렬곱(x, q.T.astype(np.int64), d.T, b, 자리수=선형자리수)
         결과.append({"꼴": f"무작위 M {M} · K {K} · N {N}", "다른 칸": 다른칸(a, c)})
     for t in (12, 13, 14):                                                   # 26단계 — k-양자화: 행렬곱K블라스 == 행렬곱K (무작위 블록)
         bb = {12: 144, 13: 176, 14: 210}[t]
@@ -93,7 +94,7 @@ def 자체시험(g):
             w = C.풀기K(t, raw, N, K)
             x = (r.standard_normal((M, K)) * 10.0 ** r.uniform(-3, 3, (M, 1))).astype(f32)
             b = r.standard_normal(N).astype(f32)
-            결과.append({"꼴": f"무작위 {w[0]} M {M} · K {K} · N {N}", "다른 칸": 다른칸(C.행렬곱K블라스(x, w, b), C.행렬곱K(x, w, b))})
+            결과.append({"꼴": f"무작위 {w[0]} M {M} · K {K} · N {N}", "다른 칸": 다른칸(C.행렬곱K블라스(x, w, b, 자리수=선형자리수), C.행렬곱K(x, w, b, 자리수=선형자리수))})
     for 이름 in ("blk.0.ffn_gate.weight", "blk.0.ffn_down.weight"):          # K 는 텐서에서(24단계 — 모양과 상관없이)
         w = 가중(g, 이름)
         if w[0] not in ("Q8_0", "Q4_0"):                                       # 26단계 — 파일의 k-양자화
@@ -101,13 +102,13 @@ def 자체시험(g):
             K = w[1].shape[1]
             x = (r.standard_normal((6, K)) * 0.5).astype(f32)
             결과.append({"꼴": f"{이름} ({w[0]}) 열 96 · K {K} · 행 6",
-                       "다른 칸": 다른칸(C.행렬곱K블라스(x, w, np.zeros(96, f32)), C.행렬곱K(x, w, np.zeros(96, f32)))})
+                       "다른 칸": 다른칸(C.행렬곱K블라스(x, w, np.zeros(96, f32), 자리수=선형자리수), C.행렬곱K(x, w, np.zeros(96, f32), 자리수=선형자리수))})
             continue
         q, d = w[1][:96], w[2][:96]
         K = q.shape[1]
         x = (r.standard_normal((6, K)) * 0.5).astype(f32)
-        a = C.행렬곱블라스(x, q, d, np.zeros(96, f32))
-        c = C.행렬곱(x, q.T.astype(np.int64), np.ascontiguousarray(d.T), np.zeros(96, f32), 자리수=2)
+        a = C.행렬곱블라스(x, q, d, np.zeros(96, f32), 자리수=선형자리수)
+        c = C.행렬곱(x, q.T.astype(np.int64), np.ascontiguousarray(d.T), np.zeros(96, f32), 자리수=선형자리수)
         결과.append({"꼴": f"{이름} 열 96 · K {K} · 행 6", "다른 칸": 다른칸(a, c)})
     for x in 결과:
         print("자체시험", x, flush=True)
@@ -213,7 +214,10 @@ def 앞으로(g, 경우, 말=True, 끝행만=False):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    gguf, 폴더, 출력 = sys.argv[1:4]
+    global 선형자리수
+    if "--빠른" in sys.argv:
+        선형자리수 = 1
+    gguf, 폴더, 출력 = [a for a in sys.argv[1:] if not a.startswith("--")][:3]
     g = GR.GGUF(gguf)
     결과 = {"자체시험": 자체시험(g)}
     if "--자체시험만" in sys.argv:

@@ -104,17 +104,21 @@ def 자리로(x, 자리수=4):
     xb = x.reshape(M, K // 32, 32)
     m = np.abs(xb).max(2)
     e = np.frexp(m.astype(np.float64))[1] - 1                 # m = 가수 · 2^e, 가수 ∈ [0.5, 1) → ⌊log₂ m⌋ = e − 1
+    if 자리수 == 1:
+        # GeulPUv2 빠른 계약 F1(문서/2단계.md): m · 2^(6 − E) < 127.5 이면 E 를 하나 줄여 최댓값을 64 ~ 127 에 둔다(|n| ≤ 127).
+        # m · 2^(6 − e) 는 2 의 거듭제곱을 곱한 것이라 fp64 에서 정확하다. 자르기 [−98, 100] 는 그 뒤.
+        e = e - (np.ldexp(m.astype(np.float64), 6 - e) < 127.5).astype(e.dtype)
     E = np.where(m > 0, np.clip(e, -98, 100), -98).astype(np.int64)
     s = np.ldexp(f32(1), (P - E)).astype(f32)
     n = np.rint(xb * s[:, :, None]).astype(np.int64)          # 짧은실수 곱(2 의 거듭제곱 — 정확) 뒤 가까운 정수(같으면 짝수)
-    assert np.abs(n).max() <= 2 ** (P + 1)
+    assert np.abs(n).max() <= (127 if 자리수 == 1 else 2 ** (P + 1))
     D = []
     for _ in range(자리수 - 1):
         d = ((n + 128) & 255) - 128
         D.append(d)
         n = (n - d) >> 8
     D.append(n)
-    assert np.abs(n).max() <= 64
+    assert np.abs(n).max() <= (127 if 자리수 == 1 else 64)
     return np.stack(D).reshape(자리수, M, K), E
 
 
@@ -600,14 +604,16 @@ def 풀기K(t, raw, N, K):
     return "Q6_K", q.reshape(N, K).astype(np.int8), a, None
 
 
-def 행렬곱K(x, w, 치우침):
+def 행렬곱K(x, w, 치우침, 자리수=2):
     """정수 블록 계약의 k-양자화 출력 [행][열] — 문서/계약.md 1절 그대로 칸마다(느린 참조 — 행렬곱K블라스 의 자체 시험용).
     Q4_K · Q5_K: 아래블록 j(= 활성값 블록 j)마다 S_j = Σ n · q, T_j = Σ n (정확), u_j = S_j · 2^(E − 13), w_j = T_j · 2^(E − 13) (정확),
     y ← 곱해더하기(u_j, a_j, y), y ← 곱해더하기(−w_j, b_j, y) (j 차례, 0 에서 — 사슬 하나), 출력 = y + 치우침.
-    Q6_K: 아래블록 k(16 칸)마다 S_k = Σ n · q, u_k = S_k · 2^(E_⌊k/2⌋ − 13), y ← 곱해더하기(u_k, a_k, y), 출력 = y + 치우침."""
+    Q6_K: 아래블록 k(16 칸)마다 S_k = Σ n · q, u_k = S_k · 2^(E_⌊k/2⌋ − 13), y ← 곱해더하기(u_k, a_k, y), 출력 = y + 치우침.
+    GeulPUv2 빠른 계약 F1(자리수 1): n 은 한 자리(|n| ≤ 127), 2^(E − 13) 대신 2^(E − 5) — 나머지 식 · 차례는 같다."""
     형식, q, a, b = w
-    D, E = 자리로(np.asarray(x, f32), 2)
-    n = (D[1] * 256 + D[0]).astype(np.int64)                                 # |n| ≤ 2¹⁴
+    D, E = 자리로(np.asarray(x, f32), 자리수)
+    n = (D[0] if 자리수 == 1 else D[1] * 256 + D[0]).astype(np.int64)     # |n| ≤ 2¹⁴ (자리 하나 127)
+    P = 8 * 자리수 - 3
     M, K = n.shape
     N = q.shape[0]
     L = 16 if 형식 == "Q6_K" else 32
@@ -615,7 +621,7 @@ def 행렬곱K(x, w, 치우침):
     y = np.zeros((M, N), f32)
     for j in range(K // L):
         S = n[:, L * j:L * j + L] @ qi[:, L * j:L * j + L].T                  # 정확한 정수 [M][N]
-        e = E[:, (L * j) // 32][:, None] - 13
+        e = E[:, (L * j) // 32][:, None] - P
         u = np.ldexp(S.astype(np.float64), e).astype(f32)                    # 정확(|S| < 2²⁴)
         y = fma32(u, np.broadcast_to(np.asarray(a, f32)[:, j][None, :], u.shape), y)
         if b is not None:
@@ -625,23 +631,25 @@ def 행렬곱K(x, w, 치우침):
     return 더(y, np.asarray(치우침, f32)[None, :])
 
 
-def 행렬곱K블라스(x, w, 치우침, 일꾼=8, 칸한도=1 << 25):
+def 행렬곱K블라스(x, w, 치우침, 일꾼=8, 칸한도=1 << 25, 자리수=2):
     """행렬곱K 와 같은 값(큰 모양의 CPU 참조). 블록 합 S 를 자리마다 짧은실수 행렬곱(BLAS)으로 — 자리 하나의 부분합이 정수로 2²⁴ 아래
-    (Q5_K: 128 · 31 · 32)라 어느 순서로 더해도 정확하다 — S = 256 · S₁ + S₀ 는 fp64 로(정확). 열을 덩이로 나눠 일꾼에게."""
+    (Q5_K: 128 · 31 · 32)라 어느 순서로 더해도 정확하다 — S = 256 · S₁ + S₀ 는 fp64 로(정확). 열을 덩이로 나눠 일꾼에게.
+    GeulPUv2 빠른 계약 F1(자리수 1): S = S₀, 척 2^(E − 5)."""
     from concurrent.futures import ThreadPoolExecutor
     형식, q, a, b = w
-    D, E = 자리로(np.asarray(x, f32), 2)
+    D, E = 자리로(np.asarray(x, f32), 자리수)
+    P = 8 * 자리수 - 3
     M, K = D.shape[1:]
     N = q.shape[0]
     L = 16 if 형식 == "Q6_K" else 32
     KL = K // L
-    Df = D.astype(f32).reshape(2, M, KL, L).transpose(0, 2, 1, 3).copy()              # [2][KL][M][L]
-    배 = np.ldexp(np.float64(1), (E - 13)).T[:, :, None]                              # [KB][M][1]
+    Df = D.astype(f32).reshape(자리수, M, KL, L).transpose(0, 2, 1, 3).copy()        # [자리수][KL][M][L]
+    배 = np.ldexp(np.float64(1), (E - P)).T[:, :, None]                               # [KB][M][1]
     if L == 16:
         배 = np.repeat(배, 2, axis=0)                                                  # 아래블록 k 는 활성값 블록 ⌊k/2⌋
     wT = None
     if b is not None:
-        n = (D[1] * 256 + D[0]).astype(np.int64)
+        n = (D[0] if 자리수 == 1 else D[1] * 256 + D[0]).astype(np.int64)
         wT = (n.reshape(M, KL, L).sum(2).T[:, :, None].astype(np.float64) * 배).astype(f32)     # [KL][M][1] (정확)
     덩이 = max(32, min(4096, 칸한도 // max(1, KL * M)) // 32 * 32)
     y = np.zeros((M, N), f32)
@@ -649,7 +657,10 @@ def 행렬곱K블라스(x, w, 치우침, 일꾼=8, 칸한도=1 << 25):
     def 열(n0):
         n1 = min(N, n0 + 덩이)
         qb = np.ascontiguousarray(np.asarray(q[n0:n1], f32).reshape(n1 - n0, KL, L).transpose(1, 2, 0))   # [KL][L][n]
-        S = np.matmul(Df[1], qb).astype(np.float64) * 256 + np.matmul(Df[0], qb).astype(np.float64)
+        if 자리수 == 1:
+            S = np.matmul(Df[0], qb).astype(np.float64)
+        else:
+            S = np.matmul(Df[1], qb).astype(np.float64) * 256 + np.matmul(Df[0], qb).astype(np.float64)
         u = (S * 배).astype(f32)                                                                           # [KL][M][n]
         ab = np.asarray(a[n0:n1], f32).T
         bb = None if b is None else np.asarray(b[n0:n1], f32).T

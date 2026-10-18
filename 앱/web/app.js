@@ -550,6 +550,11 @@ const DICT = {
   "자동 — 첫 번째 외장 GPU": "Auto — the first discrete GPU",
   "동시 처리 수": "Concurrent chats",
   "채팅마다 문맥 길이": "Context length per chat",
+  "계산 방식": "Computation mode",
+  "캡슐과 계산 방식이 다릅니다 — 설정의 계산 방식을 캡슐과 같게 하고 모델을 다시 불러오세요": "The capsule was made with a different computation mode — set Computation mode in Settings to match it and load the model again",
+  "빠름 — 8비트 활성값(llama.cpp와 같은 급)": "Fast — 8-bit activations (llama.cpp class)",
+  "정밀 — 계약의 자리 둘(연구용 정밀도)": "Exact — two-digit contract (research precision)",
+  "빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 계약의 정밀도 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
   "기본 폴더 사용": "Use the default folder",
   "모델 폴더": "Model folder",
   "저장했습니다 · 다음 실행부터 적용됩니다": "Saved · applies from the next start",
@@ -3976,6 +3981,7 @@ function saveSettings(note, recheck, delay, withDir, row) {
     const body = {
       gpu_layer: on ? on.dataset.v : 'auto', vulkan_device: vkSel ? vkSel.value : S.st.settings.vulkan_device || '', slots: num('#set-slots', 1, 8, 2), context: num('#set-ctx', 1024, 131072, 8192),
       update_check: page.querySelector('#set-upd').checked,
+      precision: (page.querySelector('#set-prec') || {}).value || S.st.settings.precision || 'fast',   // GeulPUv2 2단계 — 계산 방식
     };
     if (withDir) body.models_dir = page.querySelector('#set-mdir').value.trim();
     // 범위에 맞춘 값을 칸에도 다시 적는다(1~8 · 1024~131072)
@@ -4038,6 +4044,8 @@ function renderSettings(force) {
   };
   const slots = numIn('set-slots', 1, 8, 0, s.slots, T('동시 처리 수'));
   const ctx = numIn('set-ctx', 1024, 131072, 1024, s.context, T('채팅마다 문맥 길이'));
+  const precSel = h('select', { class: 'input', id: 'set-prec', 'aria-label': T('계산 방식'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-prec') },
+    [['fast', T('빠름 — 8비트 활성값(llama.cpp와 같은 급)')], ['exact', T('정밀 — 계약의 자리 둘(연구용 정밀도)')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.precision || 'fast') ? true : null }, tx)));
   const defDir = (a.data_dir || '') + '모델\\';
   const mdir = h('input', { type: 'text', id: 'set-mdir', value: s.models_dir || '', placeholder: T('기본 폴더 사용'), 'aria-label': T('모델 폴더') });
   const commitDir = () => { if (mdir.value.trim() !== (s.models_dir || '')) saveSettings(T('저장했습니다 · 다음 실행부터 적용됩니다'), false, 0, true, 'set-mdir'); };
@@ -4060,7 +4068,8 @@ function renderSettings(force) {
         row(T('GPU 백엔드'), T('자동은 NVIDIA GPU면 CUDA, 그 밖에는 Vulkan을 씁니다.'), seg, null, 'layer'),
         showVk ? row(T('Vulkan 장치', 'one'), T('GPU가 여러 개일 때 Vulkan으로 쓸 장치'), vkSel, null, 'vk') : null,
         row(T('동시 처리 수'), T('동시에 답할 수 있는 채팅 수(1~8) · 다음에 모델을 불러올 때 적용'), slots, null, 'set-slots'),
-        row(T('채팅마다 문맥 길이'), T('토큰 · 그래픽 메모리에 맞지 않으면 엔진이 자동으로 줄입니다. 다음에 모델을 불러올 때 적용'), ctx, null, 'set-ctx')),
+        row(T('채팅마다 문맥 길이'), T('토큰 · 그래픽 메모리에 맞지 않으면 엔진이 자동으로 줄입니다. 다음에 모델을 불러올 때 적용'), ctx, null, 'set-ctx'),
+        row(T('계산 방식'), T('빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 계약의 정밀도 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용'), precSel, null, 'set-prec')),
       h('div', { class: 'sec mt16' }, T('저장 위치')),
       h('div', { class: 'set-group' },
         row(T('모델 폴더'), T`다음 실행부터 적용됩니다. 기본: ${defDir}`, h('div', { class: 'row nowrap w100' }, mdir, pickDir), h('div', { class: 'set-err', id: 'set-mdir-err', hidden: true }), 'set-mdir'),
@@ -4113,7 +4122,7 @@ function traceAfter(asst, rp, rr, body) {
     v: 1, at: Date.now(), model: rp.model, sha256: (m && m.sha256) || '', name: m ? displayName(m) : rp.model, quant: m ? quantOf(m) : '',
     tpl: rp.tpl, req: { max: rp.max, temp: rp.temp, system: rp.system, think: rp.think }, seed: rr.seed || '', tokens: rr.gp.tokens,
     slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '',
-    layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', bodyHash: '',
+    layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', bodyHash: '',
   };
   if (Array.isArray(rr.gp.prompt_tokens) && rr.gp.prompt_tokens.length) tr.promptIds = rr.gp.prompt_tokens;   // 서버가 쓴 그대로
   TRACES[tid] = tr;
@@ -4593,7 +4602,7 @@ async function labBranch(i, alt) {
       TRACES[nt] = Object.assign({}, tr, {
         at: Date.now(), tokens: pre.concat(rr.gp.tokens), promptIds: an.prompt, branch: { from: tid, k: i, alt, max }, seed: tr.req.temp > 0 ? tr.seed : (rr.seed || ''),
         slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '', bodyHash: '',
-        layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '',
+        layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact',
       });
       asst.tid = nt;
       saveTraces();
@@ -4852,7 +4861,7 @@ function labCapsuleText(tid) {
     format: 'geulpu-capsule/1', created: new Date().toISOString(), contract: '5.2',
     app: { version: S.st ? S.st.app.version : '', commit: S.st ? S.st.app.commit : '' },
     model: { name: tr.name, quant: tr.quant, file: m ? String(m.path || '').split(/[\\/]/).pop() : '', size: m ? m.size : null, sha256: trSha(tr) },
-    made_on: { device: tr.device, layer: tr.layer },
+    made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact' },
     request: req,
     result: {
       tokens: cp.tokens, token_logprobs: an.lp.slice(o), entropy: an.ent.slice(o), top_ids: an.topIds.slice(o), top_logprobs: an.topLp.slice(o),
@@ -4919,6 +4928,7 @@ async function labCapsuleCheck(file) {
     fpOk = v.fp === cap.fingerprint.token && v.fpLogit === cap.fingerprint.logit;
   }
   const md = cap.made_on || {};
+  const precCap = md.precision || 'exact', precHere = (S.st && S.st.server.precision) || 'exact';
   const here = `${(S.st && S.st.device.name) || '-'} · ${LAYER[S.st && S.st.server.layer] || '-'}`;
   const where = T` (캡슐에 적힌 만든 곳 ${md.device || '-'} · ${LAYER[md.layer] || md.layer || '-'} → 여기 ${here})`;
   const ok = scoreOk && genOk && fpOk;
@@ -4926,7 +4936,8 @@ async function labCapsuleCheck(file) {
     ok, text: ok ? T`비트까지 같음 — ${fmtNum(n)}걸음의 로그확률 · 엔트로피 · 상위 ${k} · 로짓 해시, 다시 생성한 토큰, 지문` + where
       : [scoreOk ? null : T`점수 매기기가 걸음 ${d + 1}에서 다름`, genOk ? null : T('다시 생성한 토큰 · 로짓 해시가 다름'),
         !genOk && scoreOk && rq.temperature > 0 ? T('점수는 같으니 씨앗을 확인하세요 — 다른 도구로 다시 쓴 캡슐은 씨앗(64비트 정수)이 자리를 잃었을 수 있습니다') : null,
-        fpOk ? null : T('지문이 다름')].filter(Boolean).join(NB) + where,
+        fpOk ? null : T('지문이 다름'),
+        precCap !== precHere ? T('캡슐과 계산 방식이 다릅니다 — 설정의 계산 방식을 캡슐과 같게 하고 모델을 다시 불러오세요') : null].filter(Boolean).join(NB) + where,
   };
 }
 function labProvView(p) {
@@ -4983,7 +4994,7 @@ function labOut() {
     const fx = labFpOf(LAB.tid);
     const meta = {
       model: { name: tr.name, quant: tr.quant, sha256: trSha(tr) }, params: { temperature: tr.req.temp, max_tokens: labMax(tr), seed: tr.req.temp > 0 ? tr.seed : null, branch: tr.branch || null },
-      prompt_tokens: an.prompt, fingerprint: fx && fx.fp ? { token: fx.fp, logit: fx.fpLogit } : null, made_on: { device: tr.device, layer: tr.layer },
+      prompt_tokens: an.prompt, fingerprint: fx && fx.fp ? { token: fx.fp, logit: fx.fpLogit } : null, made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact' },
     };
     out.push(item(T('이 답의 토큰 표'), T`걸음마다 토큰 · 로그확률 · 확률 · 순위 · 엔트로피 · 여유 · 로짓 해시 · 상위 ${LAB_K}`, [
       dl('JSON', () => [base + '-answer-' + stamp() + '.json', json(head('answer', Object.assign({}, meta, { steps: labRows(an, tr.tokens) }))), 'application/json']),

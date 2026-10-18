@@ -72,7 +72,10 @@ def main():
     if cap.get("format") != "geulpu-capsule/1":
         sys.exit("GeulPU 재현 캡슐이 아니다")
     rq, rs = cap["request"], cap["result"]
-    결과 = {"캡슐": os.path.basename(a.캡슐), "모델": cap["model"], "만든 곳": cap.get("made_on"), "걸음": len(rs["tokens"])}
+    if (cap.get("made_on") or {}).get("precision") == "fast":
+        REF.선형자리수 = 1          # GeulPUv2 빠른 계약 F1(계약.md 1.2) — 선형층의 활성값 자리 하나
+    결과 = {"캡슐": os.path.basename(a.캡슐), "모델": cap["model"], "만든 곳": cap.get("made_on"), "걸음": len(rs["tokens"]),
+            "계약": "F1(선형 자리 하나)" if REF.선형자리수 == 1 else "정밀(자리 둘)"}
     if not a.해시건너뜀:
         t0 = time.time()
         h = 파일해시(a.모델)

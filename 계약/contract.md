@@ -74,6 +74,28 @@ How the kernels reach these values is free as long as the bits are the same. Sin
 
 Neither changes a single output bit — the stage-27 tests compare against the same CPU reference.
 
+### 1.2 Fast contract F1 — one-digit activations in linear layers (GeulPUv2 stage 2, [`문서/2단계.md`](../문서/2단계.md))
+
+Fast-mode modules (`커널생성 … --빠른`) keep the activations of the linear layers — the tile, row and row-tile kernels, the logit kernel,
+and the conversions that feed them (convert, RMS spread, SwiGLU and the fold's epilogue) — as **one digit**. Attention (RoPE's q, the
+KV cache and the e inside attention) keeps the two digits of section 2.
+
+1. E = ⌊log₂ max_k |x_k|⌋, and **if max · 2^(6 − E) < 127.5 then E ← E − 1** (on the float's bits: 23-bit mantissa < 0x7F0000). Then
+   clamp E to [−98, 100].
+2. n_k = round-to-nearest-even(x_k · 2^(5 − E)), |n| ≤ 127 — one digit (D₀ = n). The block maximum lands in 64 … 127.
+3. S = Σ_k n_k · q_k,n (exact integer sum — |S| < 2²² in every format), u = S · 2^(E − 5) (exact); after that the formulas and order of
+   sections 1 and 1.1 (for Q4_K · Q5_K, w = T · 2^(E − 5)).
+
+- Domain: block maximum |x| < 2¹⁰¹ (above it |n| would exceed 127 — two digits have the same property above 2¹⁰¹, and real
+  activations never get there).
+- The step is (0.996, 1.992] times llama.cpp's block maximum / 127 (its 8-bit activations) — about 2.15 times the error variance. The
+  exact mode's step is 1/128 – 1/256 of that.
+- Determinism, bit equality with the CPU reference and path invariance stay (exact integer sums in a fixed order). The CPU reference
+  is `정수계약.자리로 · 행렬곱블라스 · 행렬곱K · 행렬곱K블라스` with `자리수=1`.
+- How the kernels get there: with one digit every format keeps |S| < 2²², so the magic-number accumulator above also serves Q8_0,
+  Q5_K (centred by 8 like Q4_K — |S − 8T| ≤ 32·127·23) and Q6_K (per half — |4S| ≤ 16·127·128). The output bits are the same (the
+  kernel tests compare them with the CPU reference).
+
 ## 2. The integer KV contract — attention
 
 The q · k · v of the attention projection are converted with the same rule as section 1 (32-value blocks along the head dimension,
@@ -239,10 +261,11 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | Cache bytes | whether the KV cache filled by those paths equals the one filled one token at a time |
 | Conversation | chunks of different lengths fed and generated in turns equal one-shot processing, down to tokens and cache |
 | Long context | the new kernels against the CPU reference (two heads), against each other (all heads); megakernel vs separate kernels; split vs one-shot feeding |
-| 7B — head 128 | RoPEKV · group kernels · group fold · chunk kernels · chunk fold (2100 random rows · real values of 7B layer 0, five paths) against the CPU reference; row kernels (five weights × rows 1 … 4 × three epilogues); all rows of logits for three chat prompts + 16 generated tokens against the CPU reference's full forward pass; the five paths (decode graph · all at once · in four · one row at a time · again) — logits and KV cache |
+| 7B — head 128 ([`시험/머리128.py`](../시험/머리128.py) · [`시험/줄128.py`](../시험/줄128.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`엔진/시험_7B.gl`](../엔진/시험_7B.gl)) | RoPEKV · group kernels · group fold · chunk kernels · chunk fold (2100 random rows · real values of 7B layer 0, five paths) against the CPU reference; row kernels (five weights × rows 1 … 4 × three epilogues); all rows of logits for three chat prompts + 16 generated tokens against the CPU reference's full forward pass; the five paths (decode graph · all at once · in four · one row at a time · again) — logits and KV cache |
 | Qwen2 ([`시험/qwen2.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/qwen2.py)) | every linear kernel (row-major · column-major · row · batched-row) · RMSNorm · RoPE+KV · SwiGLU conversions · GQA attention (five kernels + the decode kernel) against the CPU reference; paths (all at once · one at a time · two pieces · split feeding · small chunks · conversation) — logits and cache; all rows of logits for three chat prompts, and the last row beyond position 1024, against the CPU reference's full forward pass; repeatability of the terminal runner; GPT-2 module source unchanged |
 | Qwen2 decode megakernel ([`시험/메가15.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/메가15.py)) | megakernel vs the stage-14 decode graph — logits and tokens at each of 64 steps for three chat prompts and contexts 1024 · 2100 · 8192, then the KV cache bytes; three turns of the runner's conversation (stopping inside the kernel at the end token) — tokens and cache; GPT-2 module source unchanged |
-| k-quants (stage 26) | every k-quant kernel (243 cases: 11 tile shapes × epilogues × formats, row kernels, embeddings) on real weights of three GGUF files; full forward passes of Q4_K_M · Q5_K_M · Q6_K against the CPU reference |
+| k-quants (stage 26 — [`시험/판26.py`](../시험/판26.py)) | every k-quant kernel (243 cases: 11 tile shapes × epilogues × formats, row kernels, embeddings) on real weights of three GGUF files; full forward passes of Q4_K_M · Q5_K_M · Q6_K against the CPU reference |
+| Fast contract F1 (GeulPUv2 stage 2 — [`시험/판23.py`](../시험/판23.py) · [`시험/판26.py`](../시험/판26.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`시험/품질.py`](../시험/품질.py)) | every linear kernel of the `--빠른` modules (Q8_0 · Q4_0 282 cases, Q4_K_M · Q5_K_M 81 cases — real 7B layer-0 weights, random and extreme activations) against the CPU reference with one digit; the five paths and every row's logits of three chat prompts against the CPU reference's full forward pass; the hidden loss relative to the exact mode (KL · top-1 agreement) compared with llama.cpp (criterion B′) |
 | Qwen3 (stage 37 — [`시험/머리정규화37.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/머리정규화37.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`시험/참조생성.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/참조생성.py)) | the head-norm kernel (rows 1 · 4 · 64 · 2048 × the weights of every layer of 8B, random and extreme values) against the CPU reference — v untouched; every row's logits of three chat prompts + 16 generated tokens for 1.7B · 8B (Q8_0 · Q4_K_M) · two synthetic 14B-shape models against the CPU reference's full forward pass; five-path, Vulkan and shared32-emulation summaries equal to CUDA; greedy generation with the CPU reference (not a criterion — compared with llama.cpp) |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
 | Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |

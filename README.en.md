@@ -132,13 +132,22 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, model folder, language, new-version notice. Changes are saved immediately.
+chat, **computation mode**, model folder, language, new-version notice. Changes are saved immediately.
+
+**Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded.
+- **Fast**: the activations entering the matrix multiplications are 8-bit (the same class as llama.cpp). Prompt processing is 1.3–1.6×
+  faster than Exact (CUDA · 7B · 8B), and the change in next-token probabilities is of the same order as llama.cpp's
+  ([문서/2단계.md](문서/2단계.md)).
+- **Exact**: the contract as it was up to 0.5.0 (16-bit activations — research precision).
+- Both modes match the contract's CPU reference bit for bit, and within one mode every path gives the same bits. The
+  reproducibility check and Vulkan devices always use Exact.
 
 ### 5. Research panel — per-token probabilities · intervene · compare · reproduce
 
 GeulPU's arithmetic is fixed by a written contract, so scoring the same text again gives **bit-identical** probabilities to those at
-generation time — whatever the number of concurrent requests, the cache, the GPU or the backend (CUDA · Vulkan). The difference
-between two runs therefore comes only from what you changed. Open the panel with the flask button at the top of the chat, or the
+generation time — whatever the number of concurrent requests, the cache, the GPU or the backend (CUDA · Vulkan), within one
+computation mode (Vulkan always computes Exact, so set the computation mode to Exact to compare with CUDA). The difference between two
+runs therefore comes only from what you changed. Open the panel with the flask button at the top of the chat, or the
 flask under an answer (answers received in this version onward — research records stay in this browser).
 
 **New to it? Start with the [research panel guide](docs/research-guide.md)** — seven experiments (where the model hesitated, branching,
@@ -168,7 +177,7 @@ top-p. The panel computes only when you look, so chat speed is unchanged.
 
 A capsule can be checked without a GPU, too — clone the repository (`pip install numpy`) and run
 `python -I 도구/캡슐확인.py <capsule.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
-and log-probabilities (a few minutes for 7B).
+and log-probabilities (a few minutes for 7B). A capsule records its computation mode and is checked in that mode.
 
 ### Use it from other programs (OpenAI-compatible API)
 
@@ -362,11 +371,12 @@ backends are packaged only after their bytes are checked against the build hashe
 
 ## What is different
 
-- **Precision is a written contract.** Activations are integers per 32-value block (two balanced base-256 digits, ±2¹⁴ of the block
-  maximum), the KV cache is block integers too, products are summed exactly on integer tensor cores, and exp is a written polynomial.
-  Every rounding point is fixed in the source, so the GPU result is **bit-identical** to the CPU reference implementation
-  ([`계약/정수계약.py`](계약/정수계약.py)). The only losses are the model file's own quantization and the roundings the contract writes
-  down — see [docs/contract.md](계약/contract.md).
+- **Precision is a written contract.** Activations are integers per 32-value block — two balanced base-256 digits (±2¹⁴ of the block
+  maximum) in the exact mode; in the fast mode (the default — [stage 2](문서/2단계.md), Korean) only the activations entering the matrix
+  multiplications have one digit (8 bits) —, the KV cache is two-digit block integers, products are summed exactly on integer tensor
+  cores, and exp is a written polynomial. Every rounding point is fixed in the source, so in both modes the GPU result is
+  **bit-identical** to the CPU reference implementation ([`계약/정수계약.py`](계약/정수계약.py)). The only losses are the model file's own
+  quantization and the roundings the contract writes down — see [docs/contract.md](계약/contract.md).
 - **The same bits whichever way it computes.** Feeding a prompt at once, in pieces, one token at a time, as a continuing conversation,
   or batched with other sentences gives identical results. Common engines change output bits with the amount of work computed
   together: llama.cpp's wikitext-2 perplexity varies from 15.8171 to 15.8200 with batch settings, while GeulPU gives the same value to
@@ -375,15 +385,20 @@ backends are packaged only after their bytes are checked against the build hashe
   outputs all changed with the number of concurrent requests on one PC ([교차검증](교차검증/)). Evaluation tools too: lm-evaluation-harness
   per-item results (arc_easy 500, gsm8k 100) were identical across num_concurrent 1 ↔ 8 and CUDA ↔ Vulkan (with the same setup,
   llama.cpp b11643 changed the generated text of 41 of 100 gsm8k items between 1 and 8 concurrent requests — [stage 38](https://github.com/wwoosshh/GeulPU/blob/main/문서/38단계.md)).
-- **A small hidden loss — measured on 0.5B.** Qwen2.5-0.5B-Instruct (Q8_0): the hidden loss (KL against an fp64 forward pass of the same
+- **The exact mode's hidden loss is small — measured on 0.5B.** Qwen2.5-0.5B-Instruct (Q8_0): the hidden loss (KL against an fp64 forward pass of the same
   weights) is 1/615 of llama.cpp's (a 461-token evaluation text) and 1/385 (wikitext-2, 148,920 tokens); its perplexity is
   indistinguishable from fp64 (relative −6.6 × 10⁻⁶), while llama.cpp's is 0.34% higher — the same order as the Q8_0 weight quantization
   itself (0.24%). How this was measured: [docs/hidden-loss.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/hidden-loss.md). 7B and 14B were not measured with the real engine
-  (see the simulation below).
-- **Speed — decoding at parity; compute-bound prompts pay for the extra precision.** On one RTX 4070 Ti:
+  (see the simulation below). The fast mode keeps the hidden loss at llama.cpp's level — measured against the exact mode, its
+  next-token KL is 0.65–0.98× llama.cpp's on k-quant 7B · 8B models and 2.2–2.4× on Q8_0 ([stage 2](문서/2단계.md)).
+- **Speed — fast-mode prompts beat llama.cpp up to 2048 tokens; decoding at parity.** On one RTX 4070 Ti:
+  - Fast mode (stage 2 — latest official llama.cpp b11719, same GGUF, median of three alternating rounds, llama.cpp at its fastest
+    setting per length): prompt time is 0.92 / 0.93 / 0.99 / 1.09× llama.cpp's for Qwen2.5-7B Q4_K_M, 0.74 / 0.77 / 0.83 / 0.95× for Q8_0
+    and 0.94 / 0.96 / 1.03 / 1.17× for Llama-3.1-8B Q4_K_M (512 / 2048 / 4096 / 8192 tokens). The slowdown at long contexts is the
+    attention, which still has two digits. The exact mode took 1.16–1.46× in the same run.
   - Qwen2.5-7B / 14B (Q8_0 · Q4_0 · k-quants) decode at parity with llama.cpp (0.970–1.012× its time), 1.11–1.17× the bandwidth floor
     (llama.cpp: 1.13–1.19×). Decoding is bound by reading the weights, so the extra arithmetic hides behind it.
-  - Prompts are faster only when short: 7B Q4_0 takes 0.85× (32 tokens), 1.03× (128), 1.11× (2048) and 1.27× (8192) the time of the latest
+  - Exact-mode prompts were faster only when short (stage 30): 7B Q4_0 took 0.85× (32 tokens), 1.03× (128), 1.11× (2048) and 1.27× (8192) the time of the latest
     official llama.cpp release (b11567, same GGUF), Q8_0 0.85–1.30× and k-quants 0.95–1.56× (same run, stage 30). At equal optimization the two-digit activations double
     the integer tensor-core work of llama.cpp's 8-bit activations, and the attention's exact sums and written exp add more; the ratio grows
     with length because of the attention.
@@ -434,9 +449,10 @@ reports, paper) lives in the [GeulPU repository](https://github.com/wwoosshh/Geu
 | [`앱/`](앱/) (app) | `관리자.gl` (GeulPU.exe) and its modules, `web/` (the UI — self-contained HTML · JS · CSS, Korean and English), `data/models.json` (the model catalog), `꾸리기.ps1` (release packaging), `읽어보기.txt` (the zip's README), `DESIGN.md` (design system). |
 | [`계약/`](계약/) (contract) | [계약.md](계약/계약.md) · [contract.md](계약/contract.md) — the precision contract. `정수계약.py` — its CPU reference implementation (every bit comparison is against it), `로그확률.py` — log-probabilities (§5.2) in Python, `gguf읽기.py`. |
 | [`도구/캡슐확인.py`](도구/캡슐확인.py) (tools) | Checks a research-panel reproduction capsule without a GPU, on the CPU reference. |
-| [`시험/`](시험/) (tests) | `빠른점검.py` (the quick check run by CI), `계약자체.py` (the contract's CPU self-tests), `참조7B.py` (the CPU reference forward pass for 7B — the end-to-end bit oracle), `뽑기.py` · `로그확률38.py` (sampling and log-probability contracts, Python vs geul), `서버28.py` · `로그확률서버38.py` (server regression tests: bits under concurrency, API, log-probabilities), `모듈해시.txt` · `SASS넘침.txt` · `글저장소커밋.txt`. |
+| [`시험/`](시험/) (tests) | `빠른점검.py` (the quick check run by CI), `계약자체.py` (the contract's CPU self-tests), `참조7B.py` (the CPU reference forward pass for 7B — the end-to-end bit oracle), `판23.py` · `판26.py` · `머리128.py` · `줄128.py` (each kernel against the CPU reference — on the GPU, via `쿠다드라이버.py`), `품질.py` (hidden loss relative to the exact mode, compared with llama.cpp), `뽑기.py` · `로그확률38.py` (sampling and log-probability contracts, Python vs geul), `서버28.py` · `로그확률서버38.py` (server regression tests: bits under concurrency, API, log-probabilities), `모듈해시.txt` · `SASS넘침.txt` · `글저장소커밋.txt`. |
+| [`재기/`](재기/) (measurements) | Speed and quality runs — `견주기2.sh` (prompt time of exact · fast · llama.cpp, order alternating by round) · `견주기요약.py`, `생성2.sh` (decode ms/token), `품질2.sh`, `라마.py` (llama.cpp's C API). The geul test and measurement programs are in `엔진/`: `시험_7B.gl` · `재기_7B.gl` · `재기_프롬프트.gl` · `재기_커널.gl` · `퍼플렉시티.gl`. |
 | [`교차검증/`](교차검증/) (cross-check) | The reference for the app's reproducibility check (Benchmark → cross-check): `expected.json` (the reference PC's outputs and build hashes) · `requests.json` (the 32 problems). Packaging compares the build hashes with it. |
-| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) — Korean. |
+| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan) — Korean. |
 | [`docs/`](docs/) | English documents — [research-guide.md](docs/research-guide.md) (research panel guide) · [glossary.md](docs/glossary.md) · `img/` (screenshots). |
 | [`연구자안내.md`](연구자안내.md) | The research panel guide in Korean. |
 

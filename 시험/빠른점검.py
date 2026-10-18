@@ -96,19 +96,21 @@ def 셸문법():
     if bash is None:
         알림("셸 문법", True, "GNU bash 가 없어 건너뜀")
         return
-    폴더 = os.path.join(ROOT, "공식실행")
-    if not os.path.isdir(폴더):
-        알림("셸 문법", True, "공식실행/ 이 없어 건너뜀(연구 저장소 GeulPU 에 있다)")
+    폴더들 = [d for d in ("공식실행", "재기") if os.path.isdir(os.path.join(ROOT, d))]   # GeulPUv2 2단계 — 재기/*.sh(견주기 · 생성 · 품질)
+    if not 폴더들:
+        알림("셸 문법", True, "공식실행/ · 재기/ 가 없어 건너뜀")
         return
     틀림 = []
     수 = 0
-    for 이름 in sorted(os.listdir(폴더)):
-        if 이름.endswith(".sh"):
-            수 += 1
-            r = subprocess.run([bash, "-n", 이름], capture_output=True, cwd=폴더)
-            if r.returncode != 0:
-                틀림.append(f"{이름}: {r.stderr.decode('utf-8', 'replace').strip()[:200]}")
-    알림("셸 문법", not 틀림, f"공식실행/*.sh {수} 개" + (f" — {틀림}" if 틀림 else ""))
+    for d in 폴더들:
+        폴더 = os.path.join(ROOT, d)
+        for 이름 in sorted(os.listdir(폴더)):
+            if 이름.endswith(".sh"):
+                수 += 1
+                r = subprocess.run([bash, "-n", 이름], capture_output=True, cwd=폴더)
+                if r.returncode != 0:
+                    틀림.append(f"{d}/{이름}: {r.stderr.decode('utf-8', 'replace').strip()[:200]}")
+    알림("셸 문법", not 틀림, f"{' · '.join(d + '/*.sh' for d in 폴더들)} {수} 개" + (f" — {틀림}" if 틀림 else ""))
 
 
 # ---- 2. 계약 자체 시험 ----
