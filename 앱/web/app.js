@@ -4070,8 +4070,8 @@ function renderSettings(force) {
         row(EN ? 'Language · 언어' : '언어 · Language', T('화면에 쓰는 말입니다. 바꾸면 화면을 다시 불러옵니다.'), langSel),
         row(T('새 버전 알림'), T('앱을 열 때 GitHub에서 최신 버전 번호만 확인합니다.'), h('label', { class: 'switch' }, upd, h('i')), null, 'set-upd'),
         row(`GeulPU v${a.version}`, `${a.commit ? T('커밋 ') + a.commit.slice(0, 7) : T('개발 빌드')}${a.built ? ' · ' + a.built.replace('T', ' ').replace('Z', ' UTC') : ''}${upTxt}`,
-          h('div', { class: 'row' }, h('a', { class: 'btn sm', href: 'https://github.com/wwoosshh/GeulPU/releases', target: '_blank', rel: 'noopener' }, T('릴리스'), I('ext', 's')),
-            h('a', { class: 'btn sm', href: 'https://github.com/wwoosshh/GeulPU', target: '_blank', rel: 'noopener' }, T('소스'), I('ext', 's')))),
+          h('div', { class: 'row' }, h('a', { class: 'btn sm', href: 'https://github.com/wwoosshh/GeulPUv2/releases', target: '_blank', rel: 'noopener' }, T('릴리스'), I('ext', 's')),
+            h('a', { class: 'btn sm', href: 'https://github.com/wwoosshh/GeulPUv2', target: '_blank', rel: 'noopener' }, T('소스'), I('ext', 's')))),
         row(T('API 주소'), T('다른 프로그램은 OpenAI 호환 API로 쓸 수 있습니다(이 PC 안에서만).'), h('div', { class: 'row nowrap' }, h('span', { class: 'mono small muted' }, `127.0.0.1:${a.port}/v1`),
           h('button', { class: 'icon-btn', 'data-tip': T('주소 복사'), 'data-tip-pos': 'left', 'aria-label': T('API 주소 복사'), onclick: () => copyText(`http://127.0.0.1:${a.port}/v1`).then(ok => ok && toast(T('복사했습니다'), 'ok')) }, I('copy')))))));
   if (focusV) { const b = page.querySelector(`.seg-ctl button[data-v="${focusV}"]`); if (b) b.focus(); }

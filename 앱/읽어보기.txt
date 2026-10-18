@@ -18,7 +18,7 @@ English below.
      내보낼 수 있습니다.
   6. 답 아래의 플라스크 단추(연구 패널)로 토큰마다의 확률 · 대안을 보고, 어느 걸음에서 다른 토큰으로 갈래를 내거나 다른
      모델 · 프롬프트로 같은 답을 점수 매겨 견줍니다. 같은 값은 어느 PC · GPU에서 셈해도 비트까지 같습니다.
-     화면 그림과 함께 따라 하는 안내서: https://github.com/wwoosshh/GeulPU/blob/main/연구자안내.md
+     화면 그림과 함께 따라 하는 안내서: https://github.com/wwoosshh/GeulPUv2/blob/main/연구자안내.md
   화면은 브라우저 언어를 따릅니다(한국어가 아니면 영어). [설정] → '언어 · Language'에서 바꿀 수 있습니다.
 
 필요한 것
@@ -42,7 +42,7 @@ English below.
   (모델은 다시 받지 않습니다). 삭제는 이 폴더를 지우면 되고, 받은 모델까지 지우려면 %USERPROFILE%\GeulPU도 지웁니다.
   파일별 SHA-256은 version.json에, zip의 SHA-256은 릴리스의 SHA256SUMS.txt에 있습니다.
 
-자세한 안내 · 소스: https://github.com/wwoosshh/GeulPU
+자세한 안내 · 소스: https://github.com/wwoosshh/GeulPUv2
 
 ==== English ====
 
@@ -60,7 +60,7 @@ Getting started
      results export as a zip.
   6. The flask button under an answer (research panel) shows each token's probability and alternatives; branch with
      another token at any step, or score the same answer with another model or prompt. The values are bit-identical
-     on any PC or GPU. Step-by-step guide with screenshots: https://github.com/wwoosshh/GeulPU/blob/main/docs/research-guide.md
+     on any PC or GPU. Step-by-step guide with screenshots: https://github.com/wwoosshh/GeulPUv2/blob/main/docs/research-guide.md
   The screens follow your browser's language (English unless it prefers Korean); change it in Settings -> Language.
 
 Requirements
@@ -84,4 +84,4 @@ Updates and uninstall
   To uninstall, delete this folder; to delete the downloaded models too, also delete %USERPROFILE%\GeulPU.
   Per-file SHA-256 values are in version.json; the zip's SHA-256 is in the release's SHA256SUMS.txt.
 
-Full guide and source: https://github.com/wwoosshh/GeulPU (English: README.en.md)
+Full guide and source: https://github.com/wwoosshh/GeulPUv2 (English: README.en.md)

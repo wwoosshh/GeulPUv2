@@ -1,10 +1,10 @@
 # The contract — what is lost, and only where
 
-*English version of [`문서/계약.md`](../문서/계약.md). Terms follow the [glossary](glossary.md).*
+*English version of [`문서/계약.md`](계약.md). Terms follow the [glossary](../docs/glossary.md).*
 
 Every computation in GeulPU writes its precision into the source. The GPU is left no discretion — not the rounding mode, not the
 order of additions, not approximate instructions — so under the same contract the GPU result is **bit-identical** to the CPU
-reference implementation ([`계약/정수계약.py`](../계약/정수계약.py)), and identical whichever way it is computed (all at once, in
+reference implementation ([`계약/정수계약.py`](정수계약.py)), and identical whichever way it is computed (all at once, in
 pieces, one token at a time, as a conversation, batched, or in the megakernel). Loss happens only at the places written below.
 
 ## 0. The PTX contract — what the compiler promises
@@ -12,7 +12,7 @@ pieces, one token at a time, as a conversation, batched, or in the megakernel). 
 - float32 additions, subtractions and multiplications are emitted with an explicit rounding mode (`.rn`), so the driver cannot fuse a
   multiply and an add into an FMA. A fused multiply-add exists only where the source writes `곱해더하기` (fma).
 - No approximate instructions (`ex2.approx` …). exp is a written polynomial ("written exp", below).
-- **float32 rule R — subnormal flush** (stage 31 — [`문서/31단계.md`](../문서/31단계.md)). Every float32 operation below follows this
+- **float32 rule R — subnormal flush** (stage 31 — [`문서/31단계.md`](https://github.com/wwoosshh/GeulPU/blob/main/문서/31단계.md)). Every float32 operation below follows this
   rule: multiplication, addition, subtraction, fma, division and square root — everywhere this document says "IEEE rounding".
   - A subnormal input (magnitude above 0 and below 2⁻¹²⁶) is read as a zero of the same sign.
   - The result is rounded to a 24-bit significand with an unbounded exponent (round to nearest, ties to even). If its magnitude is
@@ -158,7 +158,7 @@ The head-64 contract is unchanged. Three things differ at head size 128:
 Non-greedy generation picks the next token from one row of logits z (the V float32 values the engine produced) by this contract. All
 arithmetic is float64, rounded once per operation in the written order, with no fused multiply-add. The chosen token depends only on
 (that row of logits, the parameters, the seed, the step). The logits do not depend on the batch, the slot or how the prompt was fed
-(sections 1–4), so sampling does not either. The geul-language version is [`호스트/뽑기.gl`](../호스트/뽑기.gl); the Python version is
+(sections 1–4), so sampling does not either. The geul-language version is [`호스트/뽑기.gl`](../엔진/뽑기.gl); the Python version is
 [`시험/뽑기.py`](../시험/뽑기.py).
 
 Inputs: temperature T (≥ 0), top_k K (integer ≥ 0, 0 = off), top_p P (0 < P ≤ 1), min_p Q (0 ≤ Q < 1), seed s (u64), step i (0 for the
@@ -187,12 +187,12 @@ Defaults when a request omits a field are those of llama-server: T 0.8, K 40, P 
 returns it in `geulpu.seed`, so the response can be reproduced. The order differs from llama.cpp, which applies top-k, top-p and min-p
 to the temperature-1 distribution and the temperature last. This contract applies the temperature first (the Hugging Face order).
 
-### 5.2 Log-probabilities (stage 38 — the server, [`문서/38단계.md`](../문서/38단계.md))
+### 5.2 Log-probabilities (stage 38 — the server, [`문서/38단계.md`](https://github.com/wwoosshh/GeulPU/blob/main/문서/38단계.md))
 
 Log-probabilities (`logprobs`, `top_logprobs` and the scores of `echo`) are computed from one row of logits z (the V float32 values the
 engine produced) by this contract. All arithmetic is float64, rounded once per operation in the written order, with no fused
 multiply-add. The distribution is **the model's** (temperature 1, no filtering) — not the sampling distribution of section 5. The
-geul-language version is [`호스트/로그확률.gl`](../호스트/로그확률.gl); the Python version is [`계약/로그확률.py`](../계약/로그확률.py).
+geul-language version is [`호스트/로그확률.gl`](../엔진/로그확률.gl); the Python version is [`계약/로그확률.py`](로그확률.py).
 Because the logits do not depend on the batch, the slot or the path (generation step or prompt path), neither do the log-probabilities:
 the values received while generating are bit-identical to the values from scoring the same text with `echo`.
 
@@ -229,7 +229,7 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
   record written by the maker, not used in checking). [`도구/캡슐확인.py`](../도구/캡슐확인.py) checks it without a GPU, with this
   contract's CPU reference (sections 1–5): the same tokens, logit hashes, log-probabilities and fingerprints.
 
-## 6. What the tests check ([`시험/`](../시험/))
+## 6. What the tests check ([`시험/`](../시험))
 
 | Test | What |
 |---|---|
@@ -240,9 +240,9 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | Conversation | chunks of different lengths fed and generated in turns equal one-shot processing, down to tokens and cache |
 | Long context | the new kernels against the CPU reference (two heads), against each other (all heads); megakernel vs separate kernels; split vs one-shot feeding |
 | 7B — head 128 | RoPEKV · group kernels · group fold · chunk kernels · chunk fold (2100 random rows · real values of 7B layer 0, five paths) against the CPU reference; row kernels (five weights × rows 1 … 4 × three epilogues); all rows of logits for three chat prompts + 16 generated tokens against the CPU reference's full forward pass; the five paths (decode graph · all at once · in four · one row at a time · again) — logits and KV cache |
-| Qwen2 ([`시험/qwen2.py`](../시험/qwen2.py)) | every linear kernel (row-major · column-major · row · batched-row) · RMSNorm · RoPE+KV · SwiGLU conversions · GQA attention (five kernels + the decode kernel) against the CPU reference; paths (all at once · one at a time · two pieces · split feeding · small chunks · conversation) — logits and cache; all rows of logits for three chat prompts, and the last row beyond position 1024, against the CPU reference's full forward pass; repeatability of the terminal runner; GPT-2 module source unchanged |
-| Qwen2 decode megakernel ([`시험/메가15.py`](../시험/메가15.py)) | megakernel vs the stage-14 decode graph — logits and tokens at each of 64 steps for three chat prompts and contexts 1024 · 2100 · 8192, then the KV cache bytes; three turns of the runner's conversation (stopping inside the kernel at the end token) — tokens and cache; GPT-2 module source unchanged |
+| Qwen2 ([`시험/qwen2.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/qwen2.py)) | every linear kernel (row-major · column-major · row · batched-row) · RMSNorm · RoPE+KV · SwiGLU conversions · GQA attention (five kernels + the decode kernel) against the CPU reference; paths (all at once · one at a time · two pieces · split feeding · small chunks · conversation) — logits and cache; all rows of logits for three chat prompts, and the last row beyond position 1024, against the CPU reference's full forward pass; repeatability of the terminal runner; GPT-2 module source unchanged |
+| Qwen2 decode megakernel ([`시험/메가15.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/메가15.py)) | megakernel vs the stage-14 decode graph — logits and tokens at each of 64 steps for three chat prompts and contexts 1024 · 2100 · 8192, then the KV cache bytes; three turns of the runner's conversation (stopping inside the kernel at the end token) — tokens and cache; GPT-2 module source unchanged |
 | k-quants (stage 26) | every k-quant kernel (243 cases: 11 tile shapes × epilogues × formats, row kernels, embeddings) on real weights of three GGUF files; full forward passes of Q4_K_M · Q5_K_M · Q6_K against the CPU reference |
-| Qwen3 (stage 37 — [`시험/머리정규화37.py`](../시험/머리정규화37.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`시험/참조생성.py`](../시험/참조생성.py)) | the head-norm kernel (rows 1 · 4 · 64 · 2048 × the weights of every layer of 8B, random and extreme values) against the CPU reference — v untouched; every row's logits of three chat prompts + 16 generated tokens for 1.7B · 8B (Q8_0 · Q4_K_M) · two synthetic 14B-shape models against the CPU reference's full forward pass; five-path, Vulkan and shared32-emulation summaries equal to CUDA; greedy generation with the CPU reference (not a criterion — compared with llama.cpp) |
+| Qwen3 (stage 37 — [`시험/머리정규화37.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/머리정규화37.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`시험/참조생성.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/참조생성.py)) | the head-norm kernel (rows 1 · 4 · 64 · 2048 × the weights of every layer of 8B, random and extreme values) against the CPU reference — v untouched; every row's logits of three chat prompts + 16 generated tokens for 1.7B · 8B (Q8_0 · Q4_K_M) · two synthetic 14B-shape models against the CPU reference's full forward pass; five-path, Vulkan and shared32-emulation summaries equal to CUDA; greedy generation with the CPU reference (not a criterion — compared with llama.cpp) |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
-| Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS — see [reproduce.md](reproduce.md) |
+| Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |
