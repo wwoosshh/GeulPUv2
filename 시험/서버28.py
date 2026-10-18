@@ -1,7 +1,7 @@
 """28단계 시험 — 글(geul) 언어로 쓴 서버(호스트/서버.gl)를 띄워 28a(함께 돌아도 같은 비트)와 28c(API)를 본다. 표준 라이브러리만.
 
     python -I 시험/서버28.py <서버.exe> <모델.gguf> <작업폴더> [--슬롯 4] [--문맥 4096] [--포트 8093] [--일 a,c] [--출력 결과.json]
-                             [--시험7B 시험_7B.exe --ptx 모듈.ptx]
+                             [--시험7B 시험_7B.exe] [--ptx 모듈.ptx]   (--ptx 는 서버와 시험_7B 둘 다 — GeulPUv2: 빠른 모듈 등)
 
 28a: 요청 열둘(채팅 탐욕 넷 · 채팅 뽑기 다섯 · 토큰 프롬프트 탐욕 둘 · 두 차례 대화의 둘째)을
   (가) 슬롯 1 에 하나씩, (나) 슬롯 S 에 모두 한꺼번에, (다) 슬롯 S 에 거꾸로 · 씨앗을 둔 무작위 틈(0 ~ 2 초), (라) 슬롯 S 에 요청마다 둘씩 한꺼번에
@@ -158,7 +158,7 @@ def 일28a(a):
     기록 = os.path.join(a.작업, "기록28")
     결과 = {"차례": {}}
     # (가) 슬롯 1 — 하나씩(뽑기 · 토큰 프롬프트 요청은 기록)
-    sv = 서버(a.exe, a.gguf, a.포트, 1, a.문맥, 기록=기록, 로그=os.path.join(a.작업, "서버_가.log"))
+    sv = 서버(a.exe, a.gguf, a.포트, 1, a.문맥, 기록=기록, ptx=a.ptx, 로그=os.path.join(a.작업, "서버_가.log"))
     try:
         가 = {}
         for 이름, 길, 몸 in 요들:
@@ -183,7 +183,7 @@ def 일28a(a):
     결과["기록폴더"] = 기록
     전체 = 요들 + [("T2", "/v1/chat/completions", T2몸(T1답))]
     # (나) (다) (라) — 슬롯 S
-    sv = 서버(a.exe, a.gguf, a.포트, a.슬롯, a.문맥, 로그=os.path.join(a.작업, "서버_나다라.log"))
+    sv = 서버(a.exe, a.gguf, a.포트, a.슬롯, a.문맥, ptx=a.ptx, 로그=os.path.join(a.작업, "서버_나다라.log"))
     try:
         결과["차례"]["나"] = 보내기묶음(a.포트, 전체)
         r = random.Random(2028)
@@ -255,7 +255,7 @@ def 마견주기(a, 기록, R1, R2, 가):
 
 # ---------------------------------------------------------------- 28c
 def 일28c(a):
-    sv = 서버(a.exe, a.gguf, a.포트, a.슬롯, a.문맥, 로그=os.path.join(a.작업, "서버_다.log"))
+    sv = 서버(a.exe, a.gguf, a.포트, a.슬롯, a.문맥, ptx=a.ptx, 로그=os.path.join(a.작업, "서버_다.log"))
     결과 = {}
     def 판(번, 이름, 맞음, 덧=""):
         결과[f"{번} {이름}"] = bool(맞음)
@@ -310,7 +310,7 @@ def 일28c(a):
         e1 = 요청(p, "POST", "/v1/chat/completions", b"{bad json")
         e2 = 요청(p, "GET", "/nope")
         e3 = 요청(p, "POST", "/v1/chat/completions", {"messages": [{"role": "user", "content": "hi"}], "n": 2})
-        e4 = 요청(p, "POST", "/v1/chat/completions", {"messages": [{"role": "user", "content": "hi"}], "logprobs": True})
+        e4 = 요청(p, "POST", "/v1/chat/completions", {"messages": [{"role": "user", "content": "hi"}], "presence_penalty": 0.5})   # 38단계부터 logprobs 는 받는다
         e5 = 요청(p, "POST", "/v1/completions", {"prompt": [1] * a.문맥, "max_tokens": 1})
         오류맞음 = lambda r, c: r[0] == c and isinstance(r[1], dict) and "message" in r[1].get("error", {})
         판(9, "오류 다섯", 오류맞음(e1, 400) and 오류맞음(e2, 404) and 오류맞음(e3, 400) and 오류맞음(e4, 400) and 오류맞음(e5, 400))

@@ -132,7 +132,7 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, **computation mode**, model folder, language, new-version notice. Changes are saved immediately.
+chat, **computation mode**, **speculative decoding**, model folder, language, new-version notice. Changes are saved immediately.
 
 **Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded.
 - **Fast**: the activations entering the matrix multiplications are 8-bit (the same class as llama.cpp). Prompt processing is 1.3–1.6×
@@ -141,6 +141,12 @@ chat, **computation mode**, model folder, language, new-version notice. Changes 
 - **Exact**: the contract as it was up to 0.5.0 (16-bit activations — research precision).
 - Both modes match the contract's CPU reference bit for bit, and within one mode every path gives the same bits. The
   reproducibility check and Vulkan devices always use Exact.
+
+**Speculative decoding** — **On** (default) or Off. Looks up likely next tokens in the prompt and the answer so far (no draft model)
+and verifies several in one step. Because this engine gives the same bits whatever the number of rows in a step, **answers,
+log-probabilities and research-panel values are bit-identical to Off**, while answers that repeat pieces of the prompt — editing
+code, rewriting a document, quoting summaries — generate 3.5–4× faster (ordinary chat 1.0–1.5× — [문서/3단계.md](문서/3단계.md), Korean).
+Applies the next time a model is loaded.
 
 ### 5. Research panel — per-token probabilities · intervene · compare · reproduce
 
@@ -385,6 +391,12 @@ backends are packaged only after their bytes are checked against the build hashe
   outputs all changed with the number of concurrent requests on one PC ([교차검증](교차검증/)). Evaluation tools too: lm-evaluation-harness
   per-item results (arc_easy 500, gsm8k 100) were identical across num_concurrent 1 ↔ 8 and CUDA ↔ Vulkan (with the same setup,
   llama.cpp b11643 changed the generated text of 41 of 100 gsm8k items between 1 and 8 concurrent requests — [stage 38](https://github.com/wwoosshh/GeulPU/blob/main/문서/38단계.md)).
+- **Speculative decoding gives the same answers.** Thanks to the property above, the logits of a verification step (several rows)
+  are bit-identical to computing the tokens one by one, so greedy decoding and sampling (random numbers fixed by the step number)
+  produce the same tokens — with speculation on, the tokens, per-step logit hashes and log-probabilities equal those with it off
+  (tests: seventeen requests × correct, wrong and half-wrong drafts, four concurrent slots, CUDA and Vulkan — [stage 3](문서/3단계.md)).
+  In the same measurement, llama.cpp b11721's llama-server changed the answers of two of eight greedy requests (summary, math) when
+  `--spec-type ngram-simple` was switched on.
 - **The exact mode's hidden loss is small — measured on 0.5B.** Qwen2.5-0.5B-Instruct (Q8_0): the hidden loss (KL against an fp64 forward pass of the same
   weights) is 1/615 of llama.cpp's (a 461-token evaluation text) and 1/385 (wikitext-2, 148,920 tokens); its perplexity is
   indistinguishable from fp64 (relative −6.6 × 10⁻⁶), while llama.cpp's is 0.34% higher — the same order as the Q8_0 weight quantization
@@ -396,6 +408,10 @@ backends are packaged only after their bytes are checked against the build hashe
     setting per length): prompt time is 0.92 / 0.93 / 0.99 / 1.09× llama.cpp's for Qwen2.5-7B Q4_K_M, 0.74 / 0.77 / 0.83 / 0.95× for Q8_0
     and 0.94 / 0.96 / 1.03 / 1.17× for Llama-3.1-8B Q4_K_M (512 / 2048 / 4096 / 8192 tokens). The slowdown at long contexts is the
     attention, which still has two digits. The exact mode took 1.16–1.46× in the same run.
+  - Speculative decoding (stage 3 — on by default; Qwen2.5-7B Q4_K_M, fast mode, one slot, median of three rounds, generated tokens
+    per second): editing code 329 / 356, rewriting a document 389, a quoting summary 347 — 3.5–4.1× the 95 with speculation off and
+    1.2–2.5× llama.cpp b11721's fastest speculation (ngram-simple: 266 / 245 / 188 / 139). Ordinary chat: greedy 112, sampling 97,
+    math 144; translation 96 (no speculation: 95 — llama.cpp also 95).
   - Qwen2.5-7B / 14B (Q8_0 · Q4_0 · k-quants) decode at parity with llama.cpp (0.970–1.012× its time), 1.11–1.17× the bandwidth floor
     (llama.cpp: 1.13–1.19×). Decoding is bound by reading the weights, so the extra arithmetic hides behind it. Fast-mode decoding
     takes 0.993–0.998× the exact mode's time (stage 2 — short context, 2048 and 8192).
@@ -453,7 +469,7 @@ reports, paper) lives in the [GeulPU repository](https://github.com/wwoosshh/Geu
 | [`시험/`](시험/) (tests) | `빠른점검.py` (the quick check run by CI), `계약자체.py` (the contract's CPU self-tests), `참조7B.py` (the CPU reference forward pass for 7B — the end-to-end bit oracle), `판23.py` · `판26.py` · `머리128.py` · `줄128.py` (each kernel against the CPU reference — on the GPU, via `쿠다드라이버.py`), `품질.py` (hidden loss relative to the exact mode, compared with llama.cpp), `뽑기.py` · `로그확률38.py` (sampling and log-probability contracts, Python vs geul), `서버28.py` · `로그확률서버38.py` (server regression tests: bits under concurrency, API, log-probabilities), `모듈해시.txt` · `SASS넘침.txt` · `글저장소커밋.txt`. |
 | [`재기/`](재기/) (measurements) | Speed and quality runs — `견주기2.sh` (prompt time of exact · fast · llama.cpp, order alternating by round) · `견주기요약.py`, `생성2.sh` (decode ms/token), `품질2.sh`, `라마.py` (llama.cpp's C API). The geul test and measurement programs are in `엔진/`: `시험_7B.gl` · `재기_7B.gl` · `재기_프롬프트.gl` · `재기_커널.gl` · `퍼플렉시티.gl`. |
 | [`교차검증/`](교차검증/) (cross-check) | The reference for the app's reproducibility check (Benchmark → cross-check): `expected.json` (the reference PC's outputs and build hashes) · `requests.json` (the 32 problems). Packaging compares the build hashes with it. |
-| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan) — Korean. |
+| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan · [2c단계.md](문서/2c단계.md) — matmul kernels · [3단계.md](문서/3단계.md) — speculative decoding) — Korean. |
 | [`docs/`](docs/) | English documents — [research-guide.md](docs/research-guide.md) (research panel guide) · [glossary.md](docs/glossary.md) · `img/` (screenshots). |
 | [`연구자안내.md`](연구자안내.md) | The research panel guide in Korean. |
 

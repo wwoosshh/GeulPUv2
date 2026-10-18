@@ -555,6 +555,10 @@ const DICT = {
   "빠름 — 8비트 활성값(llama.cpp와 같은 급)": "Fast — 8-bit activations (llama.cpp class)",
   "정밀 — 계약의 자리 둘(연구용 정밀도)": "Exact — two-digit contract (research precision)",
   "빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 계약의 정밀도 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
+  "추측 디코딩": "Speculative decoding",
+  "켬 — 답은 같고, 되풀이가 많은 답이 빨라집니다": "On — same answers; repetitive answers get faster",
+  "끔": "Off",
+  "프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 걸음에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용": "Looks up likely next tokens in the prompt and the answer so far and verifies several in one step. Answers, log-probabilities and research-panel values are bit-identical to Off (editing code or rewriting documents gets faster). Applies the next time a model is loaded",
   "기본 폴더 사용": "Use the default folder",
   "모델 폴더": "Model folder",
   "저장했습니다 · 다음 실행부터 적용됩니다": "Saved · applies from the next start",
@@ -795,6 +799,7 @@ const DICT = {
   "갈래 — 걸음 {}": "branch — step {}",
   "토큰 {}개를 다시 셈하는 중(점수 매기기)": "Recomputing {0} {0|token|tokens} (scoring)",
   "온도 {} · 씨앗 {}": "temperature {} · seed {}",
+  "추측 초안 {}/{}개 받음": "speculative drafts accepted {}/{}",
   "토큰 {}개": "{0} {0|token|tokens}",
   "{}토큰/초": "{} tokens/s",
   "갈래 — 걸음 {}부터": "branch from step {}",
@@ -3982,6 +3987,7 @@ function saveSettings(note, recheck, delay, withDir, row) {
       gpu_layer: on ? on.dataset.v : 'auto', vulkan_device: vkSel ? vkSel.value : S.st.settings.vulkan_device || '', slots: num('#set-slots', 1, 8, 2), context: num('#set-ctx', 1024, 131072, 8192),
       update_check: page.querySelector('#set-upd').checked,
       precision: (page.querySelector('#set-prec') || {}).value || S.st.settings.precision || 'fast',   // GeulPUv2 2단계 — 계산 방식
+      speculative: ((page.querySelector('#set-spec') || {}).value || (S.st.settings.speculative === false ? 'off' : 'on')) !== 'off',   // GeulPUv2 3단계 — 추측 디코딩
     };
     if (withDir) body.models_dir = page.querySelector('#set-mdir').value.trim();
     // 범위에 맞춘 값을 칸에도 다시 적는다(1~8 · 1024~131072)
@@ -4046,6 +4052,8 @@ function renderSettings(force) {
   const ctx = numIn('set-ctx', 1024, 131072, 1024, s.context, T('채팅마다 문맥 길이'));
   const precSel = h('select', { class: 'input', id: 'set-prec', 'aria-label': T('계산 방식'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-prec') },
     [['fast', T('빠름 — 8비트 활성값(llama.cpp와 같은 급)')], ['exact', T('정밀 — 계약의 자리 둘(연구용 정밀도)')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.precision || 'fast') ? true : null }, tx)));
+  const specSel = h('select', { class: 'input', id: 'set-spec', 'aria-label': T('추측 디코딩'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-spec') },
+    [['on', T('켬 — 답은 같고, 되풀이가 많은 답이 빨라집니다')], ['off', T('끔')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.speculative === false ? 'off' : 'on') ? true : null }, tx)));
   const defDir = (a.data_dir || '') + '모델\\';
   const mdir = h('input', { type: 'text', id: 'set-mdir', value: s.models_dir || '', placeholder: T('기본 폴더 사용'), 'aria-label': T('모델 폴더') });
   const commitDir = () => { if (mdir.value.trim() !== (s.models_dir || '')) saveSettings(T('저장했습니다 · 다음 실행부터 적용됩니다'), false, 0, true, 'set-mdir'); };
@@ -4069,7 +4077,8 @@ function renderSettings(force) {
         showVk ? row(T('Vulkan 장치', 'one'), T('GPU가 여러 개일 때 Vulkan으로 쓸 장치'), vkSel, null, 'vk') : null,
         row(T('동시 처리 수'), T('동시에 답할 수 있는 채팅 수(1~8) · 다음에 모델을 불러올 때 적용'), slots, null, 'set-slots'),
         row(T('채팅마다 문맥 길이'), T('토큰 · 그래픽 메모리에 맞지 않으면 엔진이 자동으로 줄입니다. 다음에 모델을 불러올 때 적용'), ctx, null, 'set-ctx'),
-        row(T('계산 방식'), T('빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 계약의 정밀도 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용'), precSel, null, 'set-prec')),
+        row(T('계산 방식'), T('빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 계약의 정밀도 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용'), precSel, null, 'set-prec'),
+        row(T('추측 디코딩'), T('프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 걸음에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용'), specSel, null, 'set-spec')),
       h('div', { class: 'sec mt16' }, T('저장 위치')),
       h('div', { class: 'set-group' },
         row(T('모델 폴더'), T`다음 실행부터 적용됩니다. 기본: ${defDir}`, h('div', { class: 'row nowrap w100' }, mdir, pickDir), h('div', { class: 'set-err', id: 'set-mdir-err', hidden: true }), 'set-mdir'),
@@ -4122,6 +4131,7 @@ function traceAfter(asst, rp, rr, body) {
     v: 1, at: Date.now(), model: rp.model, sha256: (m && m.sha256) || '', name: m ? displayName(m) : rp.model, quant: m ? quantOf(m) : '',
     tpl: rp.tpl, req: { max: rp.max, temp: rp.temp, system: rp.system, think: rp.think }, seed: rr.seed || '', tokens: rr.gp.tokens,
     slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '',
+    spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,   // GeulPUv2 3단계 — 추측 초안(답은 같다)
     layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', bodyHash: '',
   };
   if (Array.isArray(rr.gp.prompt_tokens) && rr.gp.prompt_tokens.length) tr.promptIds = rr.gp.prompt_tokens;   // 서버가 쓴 그대로
@@ -4401,7 +4411,8 @@ function labAnswerHead(tr) {
     h('div', { class: 'small muted' }, [
       tr.req.temp > 0 ? T`온도 ${tr.req.temp} · 씨앗 ${tr.seed || '?'}` : T('탐욕(온도 0)'),
       tr.finish === 'stop' ? T`토큰 ${fmtNum(tr.tokens.length)}개(끝 토큰 포함)` : T`토큰 ${fmtNum(tr.tokens.length)}개`,
-      tps ? T`${tps.toFixed(1)}토큰/초` : null, tr.branch ? T`갈래 — 걸음 ${tr.branch.k + 1}부터` : null,
+      tps ? T`${tps.toFixed(1)}토큰/초` : null, tr.spec && tr.spec.p > 0 ? T`추측 초안 ${fmtNum(tr.spec.a)}/${fmtNum(tr.spec.p)}개 받음` : null,
+      tr.branch ? T`갈래 — 걸음 ${tr.branch.k + 1}부터` : null,
       `${tr.device || ''}${tr.layer ? ' · ' + (LAYER[tr.layer] || tr.layer) : ''}`,
     ].filter(Boolean).join(NB)));
 }
@@ -4602,6 +4613,7 @@ async function labBranch(i, alt) {
       TRACES[nt] = Object.assign({}, tr, {
         at: Date.now(), tokens: pre.concat(rr.gp.tokens), promptIds: an.prompt, branch: { from: tid, k: i, alt, max }, seed: tr.req.temp > 0 ? tr.seed : (rr.seed || ''),
         slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '', bodyHash: '',
+        spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,
         layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact',
       });
       asst.tid = nt;

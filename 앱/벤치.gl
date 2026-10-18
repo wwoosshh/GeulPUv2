@@ -366,11 +366,12 @@
 
 묶음 잰값은 정수 프롬프트, 정수 생성, 실수 첫us, 실수 생성us, 실수 벽ms, 참거짓 됨.
 
-(* 하나 재기 — 프롬프트 n 토큰, 생성 m 토큰(끝 토큰을 무시) *)
+(* 하나 재기 — 프롬프트 n 토큰, 생성 m 토큰(끝 토큰을 무시). GeulPUv2 3단계 — 추측 디코딩은 끄고 잰다: 무작위 토큰 프롬프트 · 탐욕 ·
+   끝 무시는 되풀이에 빠지기 쉬워 초안이 받아지는 만큼 생성 속도가 부풀고, 지난 기록 · llama.cpp 의 같은 재기와 견줄 수 없게 된다 *)
 [일 참조 j에 정수 포트를 정수 n을 정수 m을 정수 씨를 한번재기]는 -> 잰값 참조 {
     잰값 참조 v = 초기할당(1 을, 크기(잰값)).
     문자열 토큰 = 시험토큰(n, 씨).
-    문자열 몸 = 짓기("\{\"prompt\":%s,\"max_tokens\":%lld,\"temperature\":0,\"cache_prompt\":false,\"ignore_eos\":true,\"geulpu\":\{\}\}", 토큰, m).
+    문자열 몸 = 짓기("\{\"prompt\":%s,\"max_tokens\":%lld,\"temperature\":0,\"cache_prompt\":false,\"ignore_eos\":true,\"geulpu\":\{\"speculative\":false\}\}", 토큰, m).
     해제(토큰).
     실수 t0 = 정밀시각_밀리초().
     위답 참조 r = 위묻기("POST", 포트, "/v1/completions", 몸, 600).
