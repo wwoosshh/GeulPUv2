@@ -211,7 +211,7 @@ print(r.choices[0].message.content)
 
 - Qwen3의 생각을 끄려면 요청에 `"chat_template_kwargs": {"enable_thinking": false}` 를 넣습니다(Python은 `extra_body=` 로).
 - Qwen3 · DeepSeek-R1의 생각은 기본으로 태그 없이 답 앞에 붙어 옵니다. 요청에 `"geulpu": {"special": true}` 를 넣으면 `<think>` ·
-  `</think>` 가 글로 와서 생각과 답을 나눌 수 있습니다.
+  `</think>` 가 글로 와서 생각과 답을 나눌 수 있습니다. 도구(`tools`)를 보낸 요청이면 Qwen3의 생각은 `reasoning_content` 로 따로 옵니다.
 - 이 PC 안에서만 접속되고 인증은 없습니다. 다른 웹사이트가 브라우저를 통해 보내는 요청은 막습니다.
 - `/v1/chat/completions` 는 Qwen2.5 · Qwen3 · Llama 3(3.1 · 3.2) · Mistral(v0.3)의 대화 틀을 씁니다. DeepSeek-R1은 아직 `/v1/completions` 에
   R1의 대화 틀을 직접 넣어 씁니다.
@@ -220,6 +220,32 @@ print(r.choices[0].message.content)
   `{시스템}\n\n` 으로 붙입니다(llama.cpp와 같은 꼴).
 - Llama 3 · Mistral은 글 프롬프트(`/v1/completions` 의 글 · `/tokenize` 의 `prompt`)에 BOS를 앞에 붙입니다(llama.cpp · vLLM과 같이 —
   `/tokenize` 는 `"add_special_tokens": false` 면 붙이지 않음). 토큰 번호 프롬프트는 그대로 씁니다.
+
+**코딩 에이전트에 연결하기(도구 · tools)** — Qwen Code · OpenCode · Continue · Cline처럼 OpenAI 호환 API로 도구(파일 읽기 · 쓰기 ·
+명령 실행)를 부르는 에이전트를 붙일 수 있습니다.
+
+- 주소는 `http://127.0.0.1:44544/v1`, API 키는 아무 글자, 모델 이름은 아무거나 됩니다(앱에서 불러 둔 모델이 답합니다 — 에이전트를
+  쓰기 전에 앱에서 모델을 불러 두세요).
+- 도구를 받는 모델: Qwen2.5(7B · 14B · Coder) · Qwen3 · Llama 3.1 · 3.2. 도구를 낀 프롬프트는 모델 파일의 공식 채팅 틀과 토큰까지
+  같습니다. Mistral · DeepSeek-R1은 모델 파일의 틀에 도구가 없어 받지 않습니다(400).
+- 시험에서는 Qwen2.5-7B · Qwen3-8B가 일을 끝까지 해냈고, Llama 3.x는 도구 결과를 받은 뒤에도 같은 호출을 되풀이할 때가 있었습니다 —
+  에이전트에는 Qwen을 권합니다. `tool_choice` 는 `auto`(기본) · `none` 만 받습니다.
+- **문맥은 클수록 좋습니다.** 에이전트의 기본 지시문만 1만 ~ 1만 5천 토큰이고(Qwen Code 14,501), 일할수록 늘어납니다. 기능 단위
+  개발(예: 로그인 기능을 계획 · 검토 · 구현 · 보고)까지 압축 없이 하려면 100k 토큰 이상이 목표입니다. 설정에서 동시 처리 수를 1로,
+  '채팅마다 문맥 길이'를 크게(예: 131072) 두면 엔진이 모델의 최대와 그래픽 메모리에 맞춰 줄입니다. RTX 4070 Ti(12 GB)에서 된 최대:
+
+  | 모델 | 최대 문맥 | 한계 |
+  |---|---|---|
+  | Qwen2.5-7B Q4_K_M · Coder-7B Q8_0 | 32,768 | 모델의 최대 |
+  | Qwen3-8B Q4_K_M | 35,328 | 그래픽 메모리 |
+  | Llama-3.1-8B Q4_K_M | 39,936 | 그래픽 메모리 |
+  | Llama-3.2-3B Q8_0 | 57,984 | 그래픽 메모리 |
+  | Qwen2.5-14B Q4_K_M | 8,448 | 그래픽 메모리 |
+
+- 문맥이 넘치면 서버가 OpenAI 꼴 오류(`code: context_length_exceeded`, 토큰 수 포함)로 알려 에이전트가 스스로 대화를 줄입니다.
+  `/v1/models` 의 `max_model_len` 이 지금 문맥입니다.
+- 예(Qwen Code): 환경 변수 `OPENAI_BASE_URL=http://127.0.0.1:44544/v1` · `OPENAI_API_KEY=geulpu` · `OPENAI_MODEL=qwen2.5-7b-instruct-q4_k_m`
+  을 두고 작업 폴더에서 `qwen` 을 실행합니다.
 
 **로그확률 · 점수 매기기 · 토큰화(연구용)** — 연구 패널의 값은 모두 API로도 받습니다. 값은 계약 5.2([계약](계약/계약.md))로 정해져 어느
 PC · GPU에서든 같은 비트입니다.

@@ -232,7 +232,8 @@ print(r.choices[0].message.content)
 
 - To turn Qwen3's thinking off, add `"chat_template_kwargs": {"enable_thinking": false}` to the request (`extra_body=` in Python).
 - By default the thinking of Qwen3 and DeepSeek-R1 comes in front of the answer without tags. Add `"geulpu": {"special": true}` to
-  receive `<think>` and `</think>` as text, so you can separate the thinking from the answer.
+  receive `<think>` and `</think>` as text, so you can separate the thinking from the answer. In requests that send `tools`, Qwen3's
+  thinking comes separately as `reasoning_content`.
 - Only this PC can connect, and there is no authentication. Requests that other websites send through your browser are refused.
 - `/v1/chat/completions` uses the Qwen2.5, Qwen3, Llama 3 (3.1 · 3.2) and Mistral (v0.3) chat templates. For DeepSeek-R1, put R1's
   template into `/v1/completions` yourself for now.
@@ -241,6 +242,33 @@ print(r.choices[0].message.content)
   no system role, so a system message is put in front of the first question as `{system}\n\n` (the same form as llama.cpp).
 - For Llama 3 and Mistral a BOS token is prepended to text prompts (the text of `/v1/completions` and the `prompt` of `/tokenize`), as
   llama.cpp and vLLM do — `/tokenize` leaves it out with `"add_special_tokens": false`. Prompts given as token ids are used as they are.
+
+**Connecting a coding agent (tools)** — agents such as Qwen Code, OpenCode, Continue and Cline that call tools (read and write files, run
+commands) through an OpenAI-compatible API can connect.
+
+- The address is `http://127.0.0.1:44544/v1`; any API key and any model name work (the model loaded in the app answers — load a model
+  in the app before using the agent).
+- Models that take tools: Qwen2.5 (7B · 14B · Coder), Qwen3, Llama 3.1 · 3.2. Prompts with tools match the official chat template in the
+  model file token for token. Mistral and DeepSeek-R1 have no tools in their model files' templates, so they refuse them (400).
+- In tests Qwen2.5-7B and Qwen3-8B finished the tasks; Llama 3.x sometimes repeated the same call after getting the tool result — Qwen is
+  recommended for agents. `tool_choice` accepts only `auto` (default) and `none`.
+- **The bigger the context, the better.** An agent's base instructions alone are 10,000–15,000 tokens (Qwen Code: 14,501), and they
+  grow as it works. Feature-level development (for example planning, reviewing, implementing and reporting a login feature) without
+  compaction needs 100k tokens or more. Set concurrent chats to 1 and the context length per chat high (e.g. 131072) in Settings; the
+  engine reduces it to the model's maximum and to the graphics memory. Maximum reached on an RTX 4070 Ti (12 GB):
+
+  | Model | Max context | Limit |
+  |---|---|---|
+  | Qwen2.5-7B Q4_K_M · Coder-7B Q8_0 | 32,768 | model maximum |
+  | Qwen3-8B Q4_K_M | 35,328 | graphics memory |
+  | Llama-3.1-8B Q4_K_M | 39,936 | graphics memory |
+  | Llama-3.2-3B Q8_0 | 57,984 | graphics memory |
+  | Qwen2.5-14B Q4_K_M | 8,448 | graphics memory |
+
+- When the context overflows, the server answers with an OpenAI-style error (`code: context_length_exceeded`, with the token counts) so
+  the agent can shorten the conversation itself. `max_model_len` in `/v1/models` is the current context.
+- Example (Qwen Code): set the environment variables `OPENAI_BASE_URL=http://127.0.0.1:44544/v1`, `OPENAI_API_KEY=geulpu` and
+  `OPENAI_MODEL=qwen2.5-7b-instruct-q4_k_m`, then run `qwen` in your project folder.
 
 **Log-probabilities · scoring · tokenization (for research)** — every value in the research panel is also available from the API.
 Contract 5.2 ([contract](계약/contract.md)) defines the values, so they are bit-identical on any PC or GPU.
