@@ -403,11 +403,11 @@ backends are packaged only after their bytes are checked against the build hashe
   itself (0.24%). How this was measured: [docs/hidden-loss.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/hidden-loss.md). 7B and 14B were not measured with the real engine
   (see the simulation below). The fast mode keeps the hidden loss at llama.cpp's level — measured against the exact mode, its
   next-token KL is 0.65–0.98× llama.cpp's on k-quant 7B · 8B models and 2.2–2.4× on Q8_0 ([stage 2](문서/2단계.md)).
-- **Speed — fast-mode prompts beat llama.cpp up to 2048 tokens; decoding at parity.** On one RTX 4070 Ti:
-  - Fast mode (stage 2 — latest official llama.cpp b11719, same GGUF, median of three alternating rounds, llama.cpp at its fastest
-    setting per length): prompt time is 0.92 / 0.93 / 0.99 / 1.09× llama.cpp's for Qwen2.5-7B Q4_K_M, 0.74 / 0.77 / 0.83 / 0.95× for Q8_0
-    and 0.94 / 0.96 / 1.03 / 1.17× for Llama-3.1-8B Q4_K_M (512 / 2048 / 4096 / 8192 tokens). The slowdown at long contexts is the
-    attention, which still has two digits. The exact mode took 1.16–1.46× in the same run.
+- **Speed — fast-mode prompts beat llama.cpp up to 4096 tokens; decoding at parity.** On one RTX 4070 Ti:
+  - Fast mode (stage 4 — latest official llama.cpp b11721, same GGUF, median of three alternating rounds, llama.cpp at its fastest
+    setting per length): prompt time is 0.89 / 0.90 / 0.95 / 1.04× llama.cpp's for Qwen2.5-7B Q4_K_M, 0.74 / 0.76 / 0.81 / 0.92× for Q8_0
+    and 0.92 / 0.93 / 0.99 / 1.11× for Llama-3.1-8B Q4_K_M (512 / 2048 / 4096 / 8192 tokens — [stage 4](문서/4단계.md)). The slowdown at
+    long contexts is the attention, which still has two digits. The exact mode took 1.16–1.47× in the same run.
   - Speculative decoding (stage 3 — on by default; Qwen2.5-7B Q4_K_M, fast mode, one slot, median of three rounds, generated tokens
     per second): editing code 329 / 356, rewriting a document 389, a quoting summary 347 — 3.5–4.1× the 95 with speculation off and
     1.2–2.5× llama.cpp b11721's fastest speculation (ngram-simple: 266 / 245 / 188 / 139). Ordinary chat: greedy 112, sampling 97,
