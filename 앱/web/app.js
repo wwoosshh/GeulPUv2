@@ -841,6 +841,33 @@ const DICT = {
   "다른 모델로 점수 — {}": "Scored with another model — {}",
   "UTF-8 바이트 조각인 토큰입니다 — 이웃 토큰과 합쳐 한 글자가 됩니다.": "A UTF-8 byte-fragment token — it forms one character together with its neighbors.",
   "토큰 {}개(끝 토큰 포함)": "{0} {0|token|tokens} (including the end token)",
+  // 대화 압축
+  "앞의 대화를 요약하는 중 · 덩이 {}/{} · {}토큰": "Summarizing the earlier conversation · part {0}/{1} · {2} {2|token|tokens}",
+  "앞의 대화를 요약하는 중 · {}토큰": "Summarizing the earlier conversation · {0} {0|token|tokens}",
+  "앞의 대화를 요약했습니다": "Summarized the earlier conversation",
+  "문맥({}토큰)이 차서 앞의 대화를 요약합니다. 끝나면 바로 답을 씁니다.": "The context ({} tokens) is filling up, so the earlier conversation is being summarized. The answer follows right after.",
+  "앞의 대화를 요약했습니다 — 메시지 {}개 · 약 {}토큰 → {}토큰": "Summarized the earlier conversation — {0} {0|message|messages} · about {1} → {2} tokens",
+  "한도에서 끊김": "cut at the limit",
+  "이 위의 메시지는 보내지 않고 이 요약으로 대신 보냅니다.": "The messages above are no longer sent; this summary is sent in their place.",
+  "요약하고 다시 생성": "Summarize and regenerate",
+  "답을 쓰기 전에 문맥 끝({}토큰)에 닿았습니다.": "Reached the end of the context ({} tokens) before writing the answer.",
+  "문맥 끝({}토큰)에 닿아 답이 끊겼습니다.": "The answer was cut off at the end of the context ({} tokens).",
+  "이 답까지 쓴 문맥 — 차면 앞의 대화를 요약해 이어 갑니다": "Context used up to this answer — when it fills up, the earlier conversation is summarized so the chat can go on",
+  "문맥 {} / {}": "context {} / {}",
+  "대화가 문맥보다 깁니다": "The conversation is longer than the context",
+  "앞의 대화를 요약하면 이어서 보낼 수 있습니다. 설정에서 채팅마다 문맥 길이를 늘릴 수도 있습니다.": "Summarize the earlier conversation to keep going, or raise the context length per chat in Settings.",
+  "설정에서 채팅마다 문맥 길이를 늘리거나 새 채팅에서 이어 가세요.": "Raise the context length per chat in Settings, or continue in a new chat.",
+  "요약하고 다시 시도": "Summarize and retry",
+  "이 메시지가 문맥에 비해 너무 깁니다": "This message is too long for the context",
+  "설정에서 채팅마다 문맥 길이를 늘리거나 메시지를 나눠 보내세요.": "Raise the context length per chat in Settings, or split the message.",
+  "앞의 대화를 요약하지 못했습니다": "Could not summarize the earlier conversation",
+  "다시 시도하거나, 설정에서 채팅마다 문맥 길이를 늘려 보세요.": "Try again, or raise the context length per chat in Settings.",
+  "긴 대화 자동 요약": "Auto-summarize long chats",
+  "문맥이 차면 앞의 대화를 요약해 이어 갑니다": "When the context fills up, the earlier conversation is summarized so the chat can go on",
+  "요약을 중지했습니다": "Summarizing stopped",
+  "문맥이 가득 차 이어서 생성할 수 없습니다": "The context is full, so the answer can't be continued",
+  "앞의 대화를 요약하지 못했습니다 — 요약이 비었습니다": "Could not summarize the earlier conversation — the summary came back empty",
+  "이 답이 쓴 요약을 찾지 못했습니다": "Couldn't find the summary this answer used",
 };
 function T(s, ...v) {
   if (typeof s === 'string') {
@@ -920,6 +947,9 @@ const TMX = [
   [/\s?\(nvcuda\.dll 없음\)/g, ' (nvcuda.dll missing)'],
   // 추론 서버 · 엔진의 오류(오류 카드의 자세히 · 상태 막대의 도움말)
   [/프롬프트가 슬롯의 문맥보다 길다/g, "The prompt is longer than the slot's context"],
+  [/이 메시지만으로 문맥\((\d+)토큰\)이 거의 찹니다 — 시스템 프롬프트와 이 메시지가 (\d+)토큰/g, 'This message alone nearly fills the context ($1 tokens) — the system prompt and this message take $2 tokens'],
+  [/문맥이 가득 찼습니다 — 요약한 뒤에도 프롬프트 (\d+)토큰 · 문맥 (\d+)토큰/g, 'The context is full — even after summarizing, the prompt is $1 tokens (context $2 tokens)'],
+  [/문맥이 가득 찼습니다 — 프롬프트 (\d+)토큰 · 문맥 (\d+)토큰/g, 'The context is full — the prompt is $1 tokens (context $2 tokens)'],
   [/프롬프트가 비었다/g, 'The prompt is empty'],
   [/줄이 가득 찼다 — 잠시 뒤에/g, 'The queue is full — try again shortly'],
   [/장치 메모리에 맞춰 문맥을 (\d+) → (\d+) 로 줄였다\(남은 ([\d.]+) GB\)/g, 'Reduced the context from $1 to $2 to fit the device memory ($3 GB left)'],
@@ -1639,7 +1669,7 @@ async function checkUpdate() {
 // ---------- 채팅 ----------
 const R1_BOS = '<｜begin▁of▁sentence｜>', R1_USER = '<｜User｜>', R1_ASSIST = '<｜Assistant｜>', R1_EOS = '<｜end▁of▁sentence｜>';
 const THINK_END_ID = 151649;   // R1-Distill-Qwen 의 </think> — GGUF 토큰 종류 4(사용자 정의). 서버는 글로 내지 않는다.
-const OPT = Object.assign({ temp: 0, max: 4096, system: '', think: true }, load('geulpu.opt', {}));
+const OPT = Object.assign({ temp: 0, max: 4096, system: '', think: true, compact: true }, load('geulpu.opt', {}));
 function saveRooms() { store('geulpu.rooms', S.rooms); store('geulpu.room', S.roomId); }
 function curRoom() { return S.rooms.find(r => r.id === S.roomId) || null; }
 function runnable(m) { return !!(m && m.shape && m.shape.ok && !m.device_reason); }
@@ -1837,6 +1867,8 @@ $('#optbtn').addEventListener('click', e => {
   const sys = h('textarea', { rows: '4', placeholder: T('비워 두면 모델 기본값'), 'aria-label': T('시스템 프롬프트'), class: 'w100' }, OPT.system || '');
   const think = h('input', { type: 'checkbox', 'aria-label': T('생각 과정 쓰기(Qwen3)'), onchange: () => { OPT.think = think.checked; store('geulpu.opt', OPT); } });
   think.checked = OPT.think !== false;
+  const comp = h('input', { type: 'checkbox', 'aria-label': T('긴 대화 자동 요약'), onchange: () => { OPT.compact = comp.checked; store('geulpu.opt', OPT); } });
+  comp.checked = OPT.compact !== false;
   // 쓰는 동안은 그대로 두고, 칸을 떠날 때(또는 Enter) 범위에 맞춰 칸에도 다시 적는다(온도 0~2 · 길이 16~32768)
   const clampNum = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
   const save = () => { OPT.temp = clampNum(parseFloat(temp.value), 0, 2, 0); OPT.max = Math.round(clampNum(parseInt(max.value, 10), 16, 32768, 4096)); OPT.system = sys.value; store('geulpu.opt', OPT); };
@@ -1848,6 +1880,7 @@ $('#optbtn').addEventListener('click', e => {
     h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('온도')), h('div', { class: 'small muted' }, T('0이면 같은 질문에 늘 같은 답'))), temp),
     h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('최대 답변 길이')), h('div', { class: 'small muted' }, T('토큰 · 추론 모델은 생각 과정도 포함'))), max),
     h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('생각 과정 쓰기')), h('div', { class: 'small muted' }, T('Qwen3 · 끄면 생각 없이 바로 답합니다'))), h('label', { class: 'switch' }, think, h('i'))),
+    h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('긴 대화 자동 요약')), h('div', { class: 'small muted' }, T('문맥이 차면 앞의 대화를 요약해 이어 갑니다'))), h('label', { class: 'switch' }, comp, h('i'))),
     h('div', { class: 'col' }, h('div', { class: 'ink' }, T('시스템 프롬프트')), sys)), 'right');
 });
 
@@ -2120,6 +2153,15 @@ function humanError(msg, room) {
   }
   const retry = h('button', { class: 'btn sm needs-conn', onclick: () => retryLast() }, I('refresh', 's'), T('다시 시도'));
   const swap = h('button', { class: 'btn sm ghost', onclick: () => $('#model-pill').click() }, I('box', 's'), T('모델 바꾸기'));
+  // 대화 압축 — 문맥이 넘친 오류
+  const setb = h('button', { class: 'btn sm ghost', onclick: () => show('settings') }, I('gear', 's'), T('설정 열기'));
+  if (/슬롯의 문맥보다 길다|^문맥이 가득/.test(s)) {
+    const can = room && canCompact(room);
+    return [T('대화가 문맥보다 깁니다'), can ? T('앞의 대화를 요약하면 이어서 보낼 수 있습니다. 설정에서 채팅마다 문맥 길이를 늘릴 수도 있습니다.') : T('설정에서 채팅마다 문맥 길이를 늘리거나 새 채팅에서 이어 가세요.'),
+      can ? [h('button', { class: 'btn sm needs-conn', onclick: () => retryLast(undefined, { compact: true }) }, I('layers', 's'), T('요약하고 다시 시도')), setb] : [setb]];
+  }
+  if (/^이 메시지만으로 문맥/.test(s)) return [T('이 메시지가 문맥에 비해 너무 깁니다'), T('설정에서 채팅마다 문맥 길이를 늘리거나 메시지를 나눠 보내세요.'), [setb]];
+  if (/^앞의 대화를 요약하지 못했습니다/.test(s)) return [T('앞의 대화를 요약하지 못했습니다'), T('다시 시도하거나, 설정에서 채팅마다 문맥 길이를 늘려 보세요.'), [retry, setb]];
   if (/Failed to fetch|NetworkError|연결이 끊/.test(s)) return [T('GeulPU.exe와 연결이 끊겼습니다'), T('GeulPU.exe가 실행 중인지 확인한 뒤 다시 시도하세요.'), [retry]];
   if (/다른 (일이 돌고|작업이 실행 중)/.test(s)) return [T('다른 작업이 실행 중입니다'), T('벤치마크가 끝나거나 중지된 뒤 다시 시도하세요.'), [retry, h('button', { class: 'btn sm ghost', onclick: () => show('bench') }, I('gauge', 's'), T('벤치마크 보기'))]];
   if (/모델을 불러오지|추론 서버|서버/.test(s)) return [T('모델을 불러오지 못했습니다'), T('자세히를 열어 원인을 확인하세요. 다른 모델로 바꾸거나 다시 시도할 수 있습니다.'), [retry, swap]];
@@ -2167,7 +2209,17 @@ function msgEl(m, room, opts) {
     return h('div', { class: 'msg notice' }, h('div', { class: 'ncard', role: 'status' },
       h('div', { class: 'row' }, h('i', { class: 'dot busy' }), h('span', { class: 't' }, m.text || m.content)),
       h('div', { class: 'bar' }, h('i', { class: 'nbar', style: `width:${m.pct || 0}%` })),
-      h('div', { class: 's' }, m.kernel ? KERNEL_NOTE : T('모델을 GPU에 올리는 중입니다.'))));
+      h('div', { class: 's' }, m.kind === 'sum' ? T`문맥(${fmtNum(m.L)}토큰)이 차서 앞의 대화를 요약합니다. 끝나면 바로 답을 씁니다.`
+        : m.kernel ? KERNEL_NOTE : T('모델을 GPU에 올리는 중입니다.'))));
+  }
+  // 대화 압축의 요약 — 접힌 카드(펼치면 요약 글 — 모델이 쓴 글이라 화면 번역을 거치지 않는다)
+  if (m.role === 'summary') {
+    return h('div', { class: 'msg summary' }, h('details', { class: 'scard' },
+      h('summary', null, I('layers', 's'),
+        h('span', { class: 't' }, T`앞의 대화를 요약했습니다 — 메시지 ${fmtNum(m.msgs || 0)}개 · 약 ${fmtNum(m.tokIn || 0)}토큰 → ${fmtNum(m.tokOut || 0)}토큰`),
+        m.cut ? h('span', { class: 'tag' }, T('한도에서 끊김')) : null, I('chevR', 's chev')),
+      h('div', { class: 'sb md', html: md(m.content) }),
+      h('div', { class: 'sf' }, T('이 위의 메시지는 보내지 않고 이 요약으로 대신 보냅니다.'))));
   }
   if (m.role === 'note') return h('div', { class: 'msg note' }, I('info', 's'), h('span', null, TM(m.content)));
   if (m.role === 'error') {
@@ -2216,12 +2268,19 @@ function fillMsg(e, m, room, done) {
     const r1 = m.template === 'deepseek-r1';
     const noAns = (r1 || m.template === 'qwen3') && !sp.answer;
     const max = (m.max || OPT.max);
+    // 대화 압축 — 최대 길이 전에 문맥 끝에 닿아 끊긴 답(답 토큰 < 최대 길이): 요약하고 다시 생성
+    const ctxEnd = m.finish === 'length' && m.nc > 0 && m.nc < max && m.L > 0;
+    const live = e._last && !S.streaming;
+    const again = ctxEnd
+      ? (canCompact(room) ? h('button', { class: 'btn sm ghost needs-conn', onclick: () => retryLast(undefined, { compact: true }) }, I('layers', 's'), T('요약하고 다시 생성'))
+        : h('button', { class: 'btn sm ghost', onclick: () => show('settings') }, I('gear', 's'), T('설정 열기')))
+      : h('button', { class: 'btn sm ghost needs-conn', onclick: () => retryLast(Math.min(32768, max * 2)) }, I('refresh', 's'), T`${fmtNum(Math.min(32768, max * 2))}토큰으로 다시 생성`);
     body.append(h('div', { class: 'cut-note' }, I('info', 's'),
       h('div', { class: 'col g12' },
-        h('span', null, noAns ? T`답을 쓰기 전에 최대 답변 길이(${fmtNum(max)}토큰)에 닿았습니다.` : T`최대 답변 길이(${fmtNum(max)}토큰)에서 답이 끊겼습니다.`),
-        e._last && !S.streaming ? h('div', { class: 'row' },
-          r1 ? h('button', { class: 'btn sm needs-conn', onclick: continueLast }, I('forward', 's'), T('이어서 생성')) : null,
-          h('button', { class: 'btn sm ghost needs-conn', onclick: () => retryLast(Math.min(32768, max * 2)) }, I('refresh', 's'), T`${fmtNum(Math.min(32768, max * 2))}토큰으로 다시 생성`)) : null)));
+        h('span', null, ctxEnd ? (noAns ? T`답을 쓰기 전에 문맥 끝(${fmtNum(m.L)}토큰)에 닿았습니다.` : T`문맥 끝(${fmtNum(m.L)}토큰)에 닿아 답이 끊겼습니다.`)
+          : noAns ? T`답을 쓰기 전에 최대 답변 길이(${fmtNum(max)}토큰)에 닿았습니다.` : T`최대 답변 길이(${fmtNum(max)}토큰)에서 답이 끊겼습니다.`),
+        live ? h('div', { class: 'row' },
+          r1 ? h('button', { class: 'btn sm needs-conn', onclick: continueLast }, I('forward', 's'), T('이어서 생성')) : null, again) : null)));
   }
   const tools = e.querySelector('.tools');
   put(tools,
@@ -2234,7 +2293,9 @@ function fillMsg(e, m, room, done) {
     }, I('copy', 's')) : null,
     done && e._last && !S.streaming ? h('button', { class: 'icon-btn needs-conn', 'data-tip': T('다시 생성 — 지금 답은 버전으로 남습니다'), 'data-tip-pos': 'top', 'aria-label': T('다시 생성'), onclick: () => retryLast() }, I('refresh', 's')) : null,
     done && m.tid && TRACES[m.tid] ? h('button', { class: 'icon-btn', 'data-tip': T('연구 패널에서 보기 — 토큰마다 확률 · 개입 · 비교 · 재현'), 'data-tip-pos': 'top', 'aria-label': T('이 답을 연구 패널에서 보기'), onclick: () => labOpen(m.tid) }, I('flask', 's')) : null,
-    m.stats ? h('span', { class: 'stats' }, statsText(m.stats)) : null);
+    m.stats ? h('span', { class: 'stats' }, statsText(m.stats)) : null,
+    done && m.np > 0 && m.L > 0 ? h('span', { class: 'stats', 'data-tip': T('이 답까지 쓴 문맥 — 차면 앞의 대화를 요약해 이어 갑니다'), 'data-tip-pos': 'top' },
+      T`문맥 ${fmtNum(m.np + (m.nc || 0))} / ${fmtNum(m.L)}`) : null);
 }
 // 지난 기록의 통계 글도 지금 꼴로(“412 토큰” → “412토큰”)
 // 숫자와 '토큰'은 붙여 쓴다(“412토큰 · 59.8토큰/초”) — 지난 기록의 띄어 쓴 꼴도 이렇게 보인다
@@ -2382,20 +2443,28 @@ function renderMsgs() {
   const th = h('div', { class: 'thread' });
   let prevModel = null;
   const msgs = room.messages, n = msgs.length;
-  // 차례 = 사용자 메시지 + 그 뒤의 답 · 오류. 차례의 마지막 요소에 버전 넘기기를 단다
+  // 차례 = 사용자 메시지 + 그 뒤의 답 · 오류. 차례의 마지막 요소에 버전 넘기기를 단다(요약은 차례가 아니다 — 건너뛰고 본다).
+  // 마지막 요약 앞의 메시지는 흐리게(보내지 않는다 — 요약으로 대신)
   let uk = -1;
+  const lastS = msgs.map(x => x.role).lastIndexOf('summary');
+  const nextRole = j => { while (j < n && msgs[j].role === 'summary') j++; return j < n ? msgs[j].role : null; };
   msgs.forEach((m, k) => {
     if (m.role === 'user') uk = k;
-    const vk = (k === n - 1 || msgs[k + 1].role === 'user') && uk >= 0 && m.role !== 'user' ? uk : undefined;
+    const nr = nextRole(k + 1);
+    const vk = (nr === null || nr === 'user') && uk >= 0 && m.role !== 'user' && m.role !== 'summary' ? uk : undefined;
+    let el;
     if (m.role === 'assistant') {
       const mid = m.model || room.model;
-      th.append(msgEl(m, room, { who: mid !== prevModel, last: k === n - 1, vk }));
+      el = msgEl(m, room, { who: mid !== prevModel, last: k === n - 1, vk });
+      th.append(el);
       prevModel = mid;
     } else {
-      th.append(msgEl(m, room, { last: k === n - 1 }));
+      el = msgEl(m, room, { last: k === n - 1 });
+      th.append(el);
       const vs = vk !== undefined ? verSwitch(room, vk) : null;
       if (vs) th.append(h('div', { class: 'msg-vers' }, vs));
     }
+    if (k < lastS && el) el.classList.add('unsent');
   });
   const sn = S.streaming && S.streaming.roomId === room.id && S.streaming.notice;
   if (sn) { sn.el = msgEl(sn, room); th.append(sn.el); }
@@ -2415,16 +2484,298 @@ $('#msgs').addEventListener('scroll', () => {
   const b = $('#msgs');
   $('#tobottom').hidden = $('#chat').classList.contains('empty') || b.scrollHeight - b.scrollTop - b.clientHeight < 240;
 });
-function buildR1Prompt(room, system) {
+// ---------- 대화 압축(문서/대화압축.md) ----------
+// 문맥이 차면 앞의 대화를 같은 모델로 요약해(온도 0 · 생각 끔) 그 요약과 최근 차례만 보낸다. 요약은 room.messages 의 남길 차례 바로 앞에
+// { role: 'summary', id, content, … } 로 둔다 — 자리가 곧 범위(앞은 보내지 않고 뒤는 그대로). 요약 글은 시스템 말이 아니라 그 뒤 첫 사용자
+// 말의 앞머리로 보낸다(시스템 프롬프트 · 서버의 기본 시스템 말 · Mistral 의 번갈음이 그대로). 요청 글은 고정 상수(영어 — 화면 말과 상관없이
+// 같은 대화 → 같은 요청 → 같은 요약). 지시를 바꾸면 SUM_V 를 올린다(요약에 적힌다).
+const SUM_V = 1;
+// 지시 — 한도(lim 토큰)에 맞춘 낱말 수(한도에서 끊기지 않게), 사용자 말이 한국어면 한국어로(7B 는 영어 지시에 영어로 쓰기 쉽다)
+function sumRules(lim, ko) {
+  return "Keep: the user's goals, requirements and constraints; decisions made and why; important facts, numbers and names (people, products, file paths, functions, variables); short code that is still needed, verbatim; errors and how they were resolved; open questions, remaining tasks, and what was being worked on most recently. Drop greetings, thanks and repetition. "
+    + (ko ? 'Write the summary in Korean, in Hangul (no Chinese characters). ' : 'Write it in the same language the user writes in. ')
+    + `Keep it under about ${Math.floor(lim / (ko ? 3 : 2))} words; if space runs short, keep recent and unfinished work rather than older details. Output only the summary, with no preamble or closing remarks.`;
+}
+const sumAsk = (lim, ko) => 'Summarize the conversation so far so that it can be continued without the earlier messages. If it begins with an earlier summary, merge that in. For this request only, ignore earlier instructions about answer format or persona.\n\n' + sumRules(lim, ko);
+const sumRollAsk = (lim, ko) => 'Below are an earlier summary (it may be empty) and the next part of a conversation transcript. Write one updated summary that merges both, so that the conversation can be continued without the transcript.\n\n' + sumRules(lim, ko);
+// 사용자 말이 한국어인가 — 글자(한글 음절 + 로마자) 가운데 한글이 20 % 이상
+function userKo(room, upto) {
+  let ko = 0, all = 0;
+  for (let k = 0; k < upto; k++) {
+    const x = room.messages[k];
+    if (x.role !== 'user') continue;
+    const h = (x.content.match(/[가-힣]/g) || []).length;
+    ko += h; all += h + (x.content.match(/[A-Za-z]/g) || []).length;
+  }
+  return all > 0 && ko / all >= 0.2;
+}
+const SUM_HEAD = '[Summary of the earlier conversation]\n', SUM_TAIL = '\n[End of summary]\n\n';
+const R1_NOTHINK = '<think>\n\n</think>\n\n';   // R1 의 요약 — 빈 생각을 붙여 바로 쓰게
+// 요청에 보낼 대화 — upto 앞까지의 사용자 말 · 끝난 답(src = 원래 메시지). sid 의 요약이 있으면 그 앞은 빼고, 요약을 그 뒤 첫 사용자 말의
+// 앞머리로 붙인다. sid 가 없으면 처음부터(요약 메시지는 건너뛴다 — 요약 없이 지은 답의 요청은 뒤에 요약이 끼어도 그대로 다시 지어진다)
+function convView(room, upto, sid) {
+  const ms = room.messages;
+  let k = 0, head = '';
+  if (sid) {
+    const i = ms.findIndex(x => x.role === 'summary' && x.id === sid);
+    if (i < 0 || i >= upto) throw new Error('이 답이 쓴 요약을 찾지 못했습니다');
+    k = i + 1;
+    head = SUM_HEAD + ms[i].content + SUM_TAIL;
+  }
+  const out = [];
+  for (; k < upto; k++) {
+    const x = ms[k];
+    if (x.role === 'user') { out.push({ role: 'user', content: head + x.content, src: x }); head = ''; }
+    else if (x.role === 'assistant' && !x.partial) out.push({ role: 'assistant', content: x.content, src: x });
+  }
+  return out;
+}
+// 요청 앞의 마지막 요약 — 보낼 때만(다시 지을 때는 답에 적힌 요약 id)
+function lastSum(room, upto) {
+  for (let k = Math.min(upto, room.messages.length) - 1; k >= 0; k--) if (room.messages[k].role === 'summary') return room.messages[k].id;
+  return null;
+}
+// R1(완성 길)의 프롬프트
+function r1Prompt(view, system) {
   let p = R1_BOS + (system || '');
-  for (const m of room.messages) {
-    if (m.role === 'user') p += R1_USER + m.content;
-    else if (m.role === 'assistant' && !m.partial) {
-      const ans = splitThink(Object.assign({ template: 'deepseek-r1' }, m), true).answer.trim();   // 앞 차례의 생각은 다시 보내지 않는다
+  for (const v of view) {
+    if (v.role === 'user') p += R1_USER + v.content;
+    else {
+      const ans = splitThink(Object.assign({ template: 'deepseek-r1' }, v.src, { content: v.content }), true).answer.trim();   // 앞 차례의 생각은 다시 보내지 않는다
       if (ans) p += R1_ASSIST + ans + R1_EOS;
     }
   }
   return p + R1_ASSIST;
+}
+// 생각을 뺀 답 — (나)의 글 기록
+const answerText = x => (x.template === 'qwen3' || x.template === 'deepseek-r1' ? splitThink(x, true).answer : String(x.content || ''));
+// 앞 답에서 요청에 실제로 가는 글 — 토큰 셈. 서버의 Qwen3 틀은 마지막 </think> 뒤만 보내고, </think> 가 없으면(생각 중에 끊김) 글 그대로
+// 보낸다(GGUF 의 chat_template 과 같다). R1 프롬프트는 splitThink 의 답(비면 그 답을 빼고)
+function sentText(x) {
+  const t = String(x.content || '');
+  if (x.template === 'qwen3') { const e = t.lastIndexOf('</think>'); return e >= 0 ? t.slice(e + 8) : t; }
+  return x.template === 'deepseek-r1' ? splitThink(x, true).answer : t;
+}
+const utf8Len = s => new TextEncoder().encode(String(s || '')).length;
+// 압축 중의 작은 요청 — 중지 단추가 먹게(S.streaming.ctrl), 오류에 상태 번호
+async function postJ(path, body) {
+  const ctrl = new AbortController();
+  if (S.streaming) { if (S.streaming.aborted) throw new Error('중지했습니다'); S.streaming.ctrl = ctrl; }
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
+  let j = null;
+  try { j = await r.json(); } catch (_) { }
+  if (!r.ok) { const e = new Error((j && j.error && j.error.message) || ('HTTP ' + r.status)); e.status = r.status; throw e; }
+  return j;
+}
+// 요청 그대로(채팅 틀 · 생각 켬끔까지) 서버에 잰다 — { n: 프롬프트 토큰 수, L: 슬롯의 문맥 }
+async function tokOf(req) {
+  const j = await postJ('/tokenize', req.url === '/v1/completions' ? { prompt: req.body.prompt } : { messages: req.body.messages, chat_template_kwargs: req.body.chat_template_kwargs });
+  return { n: j.count, L: j.max_model_len };
+}
+// 메시지 하나의 토큰 수(어림 — 틀 몫 8 을 더함). 압축할 때만 잰다
+const TOKN = new WeakMap();
+async function msgTok(x, mid) {
+  const t = x.role === 'assistant' ? sentText(x) : String(x.content || '');
+  const c = TOKN.get(x);
+  if (c && c.mid === mid && c.len === t.length) return c.n;
+  const n = (t ? (await postJ('/tokenize', { prompt: t, add_special_tokens: false })).count : 0) + 8;
+  TOKN.set(x, { mid, len: t.length, n });
+  return n;
+}
+// 문맥 L · 최대 답변 길이 max 에서: R 답 몫(이만큼 비어야 그냥 보낸다 — 생각하는 답은 생각까지라 L/2) · r 최소 답 몫(이보다 적게 남으면
+// 보내지 않는다) · S 요약 한도 · K 글자 그대로 남길 최근 차례의 몫
+function ctxBudget(L, max, th) {
+  return { R: Math.min(max, Math.max(1024, th ? L >> 1 : L >> 2)), r: Math.min(max, Math.max(256, L >> 4)), S: Math.min(2048, Math.max(256, L >> 3)), K: Math.floor(L * 0.3) };
+}
+const thinks = rp => rp.tpl === 'deepseek-r1' || (rp.tpl === 'qwen3' && rp.think !== false);
+// 요청의 조건(모델 · 틀 · 시스템 · 생각 · 요약) — 앞 답의 토큰 수로 어림해도 되는지 가린다
+function ctxKey(rp) {
+  const s = [rp.model, rp.tpl, rp.system || '', rp.think !== false, rp.sum || ''].join('\u0001');
+  let x = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619) >>> 0; }
+  return x.toString(36);
+}
+// 재지 않고 어림 — 첫 질문이면 시스템의 어림, 바로 앞이 같은 조건의 답이면 그 답의 프롬프트 + 답 토큰, 모르면 Infinity(잰다).
+// 새 질문은 UTF-8 바이트 / 2 + 16. 모두 크게 어림한 쪽이다(Qwen3 · R1 의 앞 생각은 다음 요청에서 빠진다)
+function estimateN(room, upto, rp) {
+  const ms = room.messages, q = ms[upto - 1];
+  const qn = utf8Len(q && q.content) / 2 + 16;
+  if (!ms.slice(0, upto - 1).some(x => x.role === 'user' || x.role === 'assistant')) return utf8Len(rp.system) / 2 + 64 + qn;
+  const a = ms[upto - 2];
+  return a && a.role === 'assistant' && a.np > 0 && a.ck === ctxKey(rp) ? a.np + (a.nc || 0) + qn : Infinity;
+}
+// 요약할 것이 있는가 — 마지막 요약 뒤 · 마지막 사용자 말 앞에 끝난 답
+function canCompact(room) {
+  const ms = room.messages, roles = ms.map(x => x.role);
+  const qk = roles.lastIndexOf('user');
+  return qk > 0 && ms.slice(roles.lastIndexOf('summary', qk) + 1, qk).some(x => x.role === 'assistant' && !x.partial && x.content);
+}
+// 보내기 전 — 문맥에 드는가, 넘치면 앞의 대화를 요약한다(한 번 보낼 때 많아야 한 번). 새 질문은 room.messages 의 끝.
+// force: '요약하고 다시' — 남길 차례를 줄여 최대 답변 길이만큼 비운다. exact: 어림 없이 잰다(서버가 문맥 400 을 준 뒤).
+// 돌려주는 것: { L, done: 압축했는가 }
+async function fitContext(room, rp, max, force, exact) {
+  const upto = room.messages.length;
+  const L0 = (S.st && S.st.server.context) || 0;
+  if (!force && !exact && L0 > 0 && estimateN(room, upto, rp) + ctxBudget(L0, max, thinks(rp)).R <= 0.9 * L0) return { L: L0, done: false };
+  let { n, L } = await tokOf(replyBody(room, upto, rp));
+  const B = ctxBudget(L, max, thinks(rp));
+  if (!force && n + B.R <= L) return { L, done: false };
+  const q = room.messages[upto - 1];
+  const n0 = (await tokOf(reqOf([{ role: 'user', content: q.content, src: q }], rp))).n;
+  if (n0 + B.r > L) throw new Error(`이 메시지만으로 문맥(${L}토큰)이 거의 찹니다 — 시스템 프롬프트와 이 메시지가 ${n0}토큰`);
+  const plan = await planKeep(room, upto - 1, rp, n0, L, B, force ? max : B.R);
+  if (!plan) {
+    if (n + B.r <= L) return { L, done: false };
+    throw new Error(`문맥이 가득 찼습니다 — 프롬프트 ${n}토큰 · 문맥 ${L}토큰`);
+  }
+  await summarize(room, rp, plan, L, B);
+  ({ n } = await tokOf(replyBody(room, room.messages.length, rp)));
+  // 그래도 넘치면(남긴 차례의 어림이 틀림) — 남긴 차례까지 요약에 넣는다(방금 만든 요약 + 남긴 차례 → 새 요약, 한 번만)
+  const qk = room.messages.length - 1, si = room.messages.findIndex(x => x.id === rp.sum);
+  if (n + B.r > L && room.messages.slice(si + 1, qk).some(x => x.role === 'assistant' && !x.partial && x.content)) {
+    await summarize(room, rp, { s0: si + 1, keepFrom: qk, kept: 0, prev: room.messages[si] }, L, B);
+    ({ n } = await tokOf(replyBody(room, room.messages.length, rp)));
+  }
+  if (n + B.r > L) throw new Error(`문맥이 가득 찼습니다 — 요약한 뒤에도 프롬프트 ${n}토큰 · 문맥 ${L}토큰`);
+  return { L, done: true };
+}
+// 남길 차례 고르기 — 지금 차례(qk = 그 사용자 말) 앞에서 거꾸로 차례(사용자 말 + 그 답) 단위로, 몫 K 와 남는 자리 안에서 글자 그대로 둔다.
+// 요약할 범위 = 지금 요약 뒤(s0) ~ keepFrom 앞. 범위에 끝난 답이 없으면 null(요약할 것이 없다)
+async function planKeep(room, qk, rp, n0, L, B, need) {
+  const ms = room.messages;
+  const si = rp.sum ? ms.findIndex(x => x.role === 'summary' && x.id === rp.sum) : -1;
+  const s0 = si + 1;
+  const room1 = Math.min(B.K, L - n0 - 24 - B.S - need);
+  let keepFrom = qk, kept = 0;
+  for (let u = qk - 1; u >= s0 && room1 > 0; u--) {
+    if (ms[u].role !== 'user') continue;
+    let t = 0;
+    for (let k = u; k < keepFrom; k++) { const x = ms[k]; if (x.role === 'user' || (x.role === 'assistant' && !x.partial)) t += await msgTok(x, rp.model); }
+    if (kept + t > room1) break;
+    kept += t;
+    keepFrom = u;
+  }
+  const done = b => ms.slice(s0, b).some(x => x.role === 'assistant' && !x.partial && x.content);
+  while (keepFrom < qk && !done(keepFrom)) { keepFrom++; while (keepFrom < qk && ms[keepFrom].role !== 'user') keepFrom++; }
+  if (!done(keepFrom)) return null;
+  return { s0, keepFrom, kept, prev: si >= 0 ? ms[si] : null };
+}
+// 요약 요청 — 온도 0 · 생각 끔 · 한도 S. withSys: (가)는 지금까지의 요청과 같은 앞부분이라 시스템 프롬프트를 그대로, (나)는 없이
+function sumReq(view, rp, lim, withSys) {
+  const req = reqOf(view, { tpl: rp.tpl, max: lim, temp: 0, system: withSys ? rp.system : '', think: false });
+  if (rp.tpl === 'deepseek-r1') { req.body.prompt += R1_NOTHINK; req.body.geulpu = { special: true }; }
+  else req.body.geulpu = rp.tpl === 'qwen3' ? { special: true } : {};
+  return req;
+}
+// 요약 글 다듬기 — 생각이 섞였으면 그 뒤만, 한도에서 끊겼으면 마지막 온전한 줄까지
+function sumClean(t, finish) {
+  t = String(t || '');
+  const e = t.lastIndexOf('</think>');
+  if (e >= 0) t = t.slice(e + 8);
+  else if (t.startsWith('<think>')) t = '';
+  t = t.trim();
+  const cut = finish === 'length';
+  if (cut) { const k = t.lastIndexOf('\n'); if (k > t.length / 2) t = t.slice(0, k).trim(); }
+  return { text: t, finish: finish || '', cut };
+}
+// 요약하는 동안의 알림 카드(맨 아래) — 받은 조각 수(≈ 토큰) · (나)는 덩이
+function sumNotice(nt) {
+  nt.text = nt.parts > 1 ? T`앞의 대화를 요약하는 중 · 덩이 ${nt.part}/${nt.parts} · ${fmtNum(nt.got)}토큰` : T`앞의 대화를 요약하는 중 · ${fmtNum(nt.got)}토큰`;
+  nt.pct = Math.min(100, 100 * (Math.max(0, nt.part - 1) + Math.min(1, nt.got / nt.S)) / Math.max(1, nt.parts));
+  const el = nt.el;
+  if (el && el.isConnected) { el.querySelector('.t').textContent = nt.text; el.querySelector('.nbar').style.width = nt.pct + '%'; }
+}
+async function sumRun(req, rp, notice, room) {
+  const tmp = { role: 'summary', content: '', template: rp.tpl };
+  const rr = await streamReply(tmp, room, req.url, req.body, { onPaint: k => { notice.got = k; sumNotice(notice); } });
+  return sumClean(tmp.content, rr.finish);
+}
+// (나) 구르는 요약 — 요약할 범위를 글 기록으로 덩이에 나눠, 앞 요약에 덩이를 하나씩 더해 요약한다(시스템 프롬프트 없이 · 덩이마다 캐시 없이)
+async function sumRoll(room, rp, plan, L, B, notice) {
+  const ms = room.messages;
+  const items = [];
+  for (let k = plan.s0; k < plan.keepFrom; k++) {
+    const x = ms[k];
+    if (x.role === 'user') items.push('User: ' + x.content);
+    else if (x.role === 'assistant' && !x.partial) { const a = answerText(x).trim(); if (a) items.push('Assistant: ' + a); }
+  }
+  // 덩이의 자리 = 문맥 − 요약 한도 둘(앞 요약 · 새 요약) − 지시 · 머리, 5 % 여유
+  const ask = sumRollAsk(B.S, userKo(room, plan.keepFrom));
+  const fixed = (await postJ('/tokenize', { prompt: ask, add_special_tokens: false })).count + 64;
+  const cap = Math.floor((L - 2 * B.S - fixed) * 0.95);
+  if (cap < 128) return null;
+  const pieces = [];
+  for (const t of items) {
+    const n = (await postJ('/tokenize', { prompt: t, add_special_tokens: false })).count + 4;
+    if (n <= cap) { pieces.push({ t, n }); continue; }
+    const per = n / t.length, most = Math.max(64, Math.floor(cap / per));   // 덩이보다 큰 글은 줄 · 글자로 나눈다(글자 수에 비례해 어림)
+    for (let rest = t; rest.length;) {
+      let at = rest.length <= most ? rest.length : rest.lastIndexOf('\n', most);
+      if (at < most / 2) at = Math.min(rest.length, most);
+      pieces.push({ t: rest.slice(0, at), n: Math.ceil(at * per) + 4 });
+      rest = rest.slice(at);
+    }
+  }
+  const chunks = [];
+  let cur = [], curN = 0;
+  for (const p of pieces) { if (cur.length && curN + p.n > cap) { chunks.push(cur); cur = []; curN = 0; } cur.push(p); curN += p.n; }
+  if (cur.length) chunks.push(cur);
+  let sum = plan.prev ? plan.prev.content : '', last = null, tokIn = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    notice.parts = chunks.length; notice.part = i + 1; notice.got = 0; sumNotice(notice);
+    const text = ask + '\n\n[Earlier summary]\n' + (sum || '(none)') + '\n\n[Transcript]\n' + chunks[i].map(p => p.t).join('\n\n');
+    const req = sumReq([{ role: 'user', content: text }], rp, B.S, false);
+    const { n } = await tokOf(req);
+    if (n + B.S > L) {                    // 어림이 틀렸다 — 덩이를 반으로
+      const c = chunks[i];
+      let a, b;
+      if (c.length > 1) { a = c.slice(0, c.length >> 1); b = c.slice(c.length >> 1); }
+      else { const h2 = c[0].t.length >> 1; if (h2 < 16) return null; a = [{ t: c[0].t.slice(0, h2), n: c[0].n / 2 }]; b = [{ t: c[0].t.slice(h2), n: c[0].n / 2 }]; }
+      chunks.splice(i, 1, a, b);
+      i--;
+      continue;
+    }
+    tokIn += n;
+    last = await sumRun(req, rp, notice, room);
+    if (!last.text) return null;
+    sum = last.text;
+  }
+  return last ? { text: sum, finish: last.finish, cut: last.cut, chunks: chunks.length, tokIn } : null;
+}
+// 요약을 만들어 남길 차례 바로 앞에 넣는다 — (가) 지금까지의 요청과 같은 앞부분(남길 차례 앞에서 끊음) + 지시: 서버의 캐시가 앞부분을
+// 갖고 있어 새로 셀 것은 지시뿐. 들지 않거나 · 서버가 받지 않거나(400 — Mistral 의 번갈음 등) · 결과가 비면 (나). 성공했을 때만 넣고 곧 저장
+async function summarize(room, rp, plan, L, B) {
+  const notice = { role: 'notice', kind: 'sum', text: '', pct: 0, el: null, L, S: B.S, got: 0, part: 0, parts: 1 };
+  S.streaming.notice = notice;
+  sumNotice(notice);
+  if (S.roomId === room.id) renderMsgs();
+  const t0 = performance.now();
+  let res = null, path = '가';
+  const ko = userKo(room, plan.keepFrom);
+  const reqA = sumReq(convView(room, plan.keepFrom, rp.sum || null).concat([{ role: 'user', content: sumAsk(B.S, ko) }]), rp, B.S, true);
+  let nA = Infinity;
+  try { nA = (await tokOf(reqA)).n; } catch (e) { if (S.streaming.aborted || e.status !== 400) throw e; }
+  if (nA + B.S <= L) {
+    try { res = await sumRun(reqA, rp, notice, room); } catch (e) { if (S.streaming.aborted || e.status !== 400) throw e; }
+    if (res && res.text.length < 20) res = null;
+    if (res) res.tokIn = nA;
+  }
+  if (!res) { path = '나'; res = await sumRoll(room, rp, plan, L, B, notice); }
+  if (!res || res.text.length < 20) throw new Error('앞의 대화를 요약하지 못했습니다 — 요약이 비었습니다');
+  const tokOut = (await postJ('/tokenize', { prompt: res.text, add_special_tokens: false })).count;
+  const sm = {
+    role: 'summary', id: 's' + newTid(), content: res.text, at: Date.now(), v: SUM_V, model: rp.model, tpl: rp.tpl, path, chunks: res.chunks || 1,
+    L, lim: B.S, ko, finish: res.finish, cut: res.cut, precision: (S.st && S.st.server.precision) || 'exact', think: false,
+    sys: (await sha256Hex(rp.system || '')).slice(0, 16), prev: plan.prev ? plan.prev.id : null, ms: Math.round(performance.now() - t0),
+    msgs: room.messages.slice(0, plan.keepFrom).filter(x => x.role === 'user' || (x.role === 'assistant' && !x.partial)).length, tokIn: res.tokIn || 0, tokOut,
+  };
+  room.messages.splice(plan.keepFrom, 0, sm);
+  rp.sum = sm.id;
+  saveRooms();
+  S.streaming.notice = null;
+  if (notice.el) notice.el.remove();
+  if (S.roomId === room.id) renderMsgs();
+  announce(T('앞의 대화를 요약했습니다'));
 }
 async function ensureServer(modelId, notice) {
   const st = S.st;
@@ -2504,7 +2855,7 @@ function switchVersion(room, k, j) {
   $('#msgs').scrollTop = keepY;
   announce(T`버전 ${j + 1} / ${u.vers.length}`);
 }
-function retryLast(maxOverride) {
+function retryLast(maxOverride, ov) {
   const room = curRoom();
   if (!room || S.streaming) return;
   const k = room.messages.map(x => x.role).lastIndexOf('user');
@@ -2512,7 +2863,7 @@ function retryLast(maxOverride) {
   const why = sendBlock(room);
   if (why) { toast(why, 'err'); return; }
   branch(room, k, room.messages[k].content);
-  replyTo(room, maxOverride);
+  replyTo(room, maxOverride, ov);
 }
 // 메시지 고치기 — 말풍선 자리에서 고치고, 보내면 새 버전(지금 대화는 앞 버전으로 남는다). 취소하면 아무것도 바뀌지 않는다
 function startEdit(room, k) {
@@ -2562,11 +2913,13 @@ async function streamReply(asst, room, url, body, opt) {
   if (!res.ok) {
     let msg = 'HTTP ' + res.status;
     try { const j = await res.json(); msg = (j.error && j.error.message) || msg; } catch (_) { }
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.status = res.status;               // 대화 압축 — 문맥 400 을 가린다
+    throw err;
   }
   const reader = res.body.getReader();
   const dec = new TextDecoder();
-  let buf = '', lastPaint = 0;
+  let buf = '', lastPaint = 0, pieces = 0;
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -2586,6 +2939,7 @@ async function streamReply(asst, room, url, body, opt) {
         const piece = c ? (textChunks ? (c.text || '') : ((c.delta && c.delta.content) || '')) : '';
         if (piece) {
           if (!tFirst) tFirst = performance.now();
+          pieces++;
           asst.content += piece;
           if (tpl === 'deepseek-r1' && !asst.thinkMs && (asst.content.includes('</think>') || asst.content.includes('\n\n\n'))) asst.thinkMs = performance.now() - tFirst;
           if (tpl === 'qwen3' && !asst.thinkMs && asst.content.startsWith('<think>') && asst.content.includes('</think>')) asst.thinkMs = performance.now() - tFirst;
@@ -2598,15 +2952,17 @@ async function streamReply(asst, room, url, body, opt) {
     const now = performance.now();
     if (now - lastPaint > 60) {
       lastPaint = now;
-      const el = S.streaming && S.streaming.el;
+      const el = S.streaming && S.streaming.msg === asst && S.streaming.el;
       if (el && el.isConnected) {
         const box = $('#msgs');
         const near = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
         fillMsg(el, asst, room, false);
         if (near) box.scrollTop = box.scrollHeight;
       }
+      if (opt.onPaint) opt.onPaint(pieces);
     }
   }
+  if (opt.onPaint) opt.onPaint(pieces);
   delete asst.partial;
   asst.finish = finish;
   if (tpl === 'deepseek-r1' && gp && Array.isArray(gp.tokens) && gp.tokens.includes(THINK_END_ID)) asst.thinkEnded = true;
@@ -2619,7 +2975,9 @@ async function streamReply(asst, room, url, body, opt) {
     stats = `${fmtNum(n)}토큰 · ${tps.toFixed(1)}토큰/초 · 첫 토큰 ${(gp.first_token_ms / 1000).toFixed(0)} ms`;   // 서버의 이 칸은 µs(이름만 ms)
   }
   else if (tFirst) stats = `${fmtNum(n)}토큰 · ${((performance.now() - t0) / 1000).toFixed(1)}초`;
-  return { stats, gp, seed, bodyStr, finish };
+  // 대화 압축 — 프롬프트 · 답 토큰 수(채팅은 usage, R1 은 geulpu.prompt_tokens)
+  const np = (usage && usage.prompt_tokens) || (gp && Array.isArray(gp.prompt_tokens) ? gp.prompt_tokens.length : 0);
+  return { stats, gp, seed, bodyStr, finish, np, nc: n };
 }
 async function send(textOverride) {
   if (S.streaming) { if (!streamingHere()) toast(T('다른 채팅의 답이 끝나면 보낼 수 있습니다')); return; }
@@ -2635,16 +2993,14 @@ async function send(textOverride) {
   room.messages.push({ role: 'user', content: text });
   await replyTo(room);
 }
-// 답 하나의 요청 몸 — 보낼 때와 연구 패널이 다시 지을 때 같은 함수다(같은 글 → 같은 해시). upto = 이 답 앞까지의 메시지 수.
+// 답 하나의 요청 몸 — 보낼 때와 연구 패널이 다시 지을 때 같은 함수다(같은 글 → 같은 해시). upto = 이 답 앞까지의 메시지 수, p.sum = 쓴 요약.
 // geulpu.prompt_tokens — 서버가 채팅 틀을 씌운 프롬프트 토큰을 돌려준다(연구 기록에 남겨, 숨은 버전 · 고친 대화의 답도 셈할 수 있게)
-function replyBody(room, upto, p) {
-  if (p.tpl === 'deepseek-r1') {
-    const hist = Object.assign({}, room, { messages: room.messages.slice(0, upto) });
-    return { url: '/v1/completions', body: { prompt: buildR1Prompt(hist, p.system), max_tokens: p.max, temperature: p.temp, stream: true, geulpu: { prompt_tokens: true } } };
-  }
+function replyBody(room, upto, p) { return reqOf(convView(room, upto, p.sum || null), p); }
+function reqOf(view, p) {
+  if (p.tpl === 'deepseek-r1') return { url: '/v1/completions', body: { prompt: r1Prompt(view, p.system), max_tokens: p.max, temperature: p.temp, stream: true, geulpu: { prompt_tokens: true } } };
   const msgs = [];
   if (p.system) msgs.push({ role: 'system', content: p.system });
-  for (const x of room.messages.slice(0, upto)) if (x.role === 'user' || (x.role === 'assistant' && !x.partial)) msgs.push({ role: x.role, content: x.content });
+  for (const v of view) msgs.push({ role: v.role, content: v.content });
   const body = { messages: msgs, max_tokens: p.max, temperature: p.temp, stream: true, stream_options: { include_usage: true }, geulpu: { prompt_tokens: true } };
   if (p.tpl === 'qwen3') {                 // 서버의 Qwen3 틀 — 앞 답의 생각은 서버가 뗀다, <think> 는 글로 받아 접는다
     body.geulpu.special = true;
@@ -2653,7 +3009,8 @@ function replyBody(room, upto, p) {
   return { url: '/v1/chat/completions', body };
 }
 // 방의 마지막 사용자 메시지에 답한다(보내기 · 다시 생성 · 고쳐 보내기가 함께 쓴다).
-// ov — 연구 패널의 '설정을 바꿔 다시'(38단계): { model, temp, seed(원문 숫자), system, think } 가운데 준 것만 바꾼다
+// ov — 연구 패널의 '설정을 바꿔 다시'(38단계): { model, temp, seed(원문 숫자), system, think, sum, lab: 참 } 가운데 준 것만 바꾼다 —
+// 원래 답이 쓴 요약 그대로 짓고 압축하지 않는다. ov.compact — '요약하고 다시 생성 · 시도'(넘치지 않아도 압축)
 async function replyTo(room, maxOverride, ov) {
   ov = ov || {};
   const mid = ov.model || room.model;
@@ -2663,6 +3020,7 @@ async function replyTo(room, maxOverride, ov) {
   stickNext = true;
   S.streaming = { aborted: false, ctrl: null, loading: false, roomId: room.id, msg: null, el: null, notice: null };
   saveRooms(); renderRooms(); renderMsgs(); renderChatTop(true);
+  let phase = 'load';
   try {
     if (!(S.st.server.state === 'ready' && S.st.server.model === mid)) {
       const notice = { role: 'notice', text: T`${labelById(mid)} 불러오는 중`, pct: 0, kernel: false, el: null };
@@ -2673,16 +3031,41 @@ async function replyTo(room, maxOverride, ov) {
       if (notice.el) notice.el.remove();
     }
     const tpl = m.template;
-    const asst = { role: 'assistant', content: '', template: tpl, model: mid, max, partial: true };
     const rp = {
       tpl, max, temp: ov.temp ?? OPT.temp, system: ov.system ?? (OPT.system || ''), think: ov.think ?? (OPT.think !== false), model: mid,
+      sum: ov.lab ? (ov.sum || null) : lastSum(room, room.messages.length),
     };
-    const { url, body } = replyBody(room, room.messages.length, rp);
+    // 대화 압축 — 문맥에 드는지 보고, 넘치면 앞의 대화를 요약한다
+    phase = 'fit';
+    const auto = !ov.lab && (OPT.compact !== false || !!ov.compact);
+    let fit = auto ? await fitContext(room, rp, max, !!ov.compact, false) : { L: (S.st.server.context) || 0, done: false };
+    phase = 'send';
+    const asst = { role: 'assistant', content: '', template: tpl, model: mid, max, partial: true };
+    if (rp.sum) asst.sum = rp.sum;
+    let { url, body } = replyBody(room, room.messages.length, rp);
     room.messages.push(asst);
     S.streaming.msg = asst;
     if (S.roomId === room.id) renderMsgs();
-    const rr = await streamReply(asst, room, url, body, ov.seed ? { bodyStr: seedBody(body, ov.seed) } : undefined);
+    const sopt = () => (ov.seed ? { bodyStr: seedBody(body, ov.seed) } : undefined);
+    let rr;
+    try { rr = await streamReply(asst, room, url, body, sopt()); }
+    catch (e) {
+      // 어림이 틀려 서버가 문맥 400 을 주면 — 아직 압축하지 않았으면 정확히 재고 한 번 더
+      if (!(auto && !fit.done && e.status === 400 && /문맥보다 길다/.test(e.message) && !asst.content && !(S.streaming && S.streaming.aborted))) throw e;
+      room.messages.pop();
+      S.streaming.msg = null;
+      phase = 'fit';
+      fit = await fitContext(room, rp, max, false, true);
+      phase = 'send';
+      if (rp.sum) asst.sum = rp.sum;
+      ({ url, body } = replyBody(room, room.messages.length, rp));
+      room.messages.push(asst);
+      S.streaming.msg = asst;
+      if (S.roomId === room.id) renderMsgs();
+      rr = await streamReply(asst, room, url, body, sopt());
+    }
     asst.stats = rr.stats;
+    if (rr.np > 0) { asst.np = rr.np; asst.nc = rr.nc; asst.L = fit.L || (S.st.server.context) || 0; asst.ck = ctxKey(rp); }
     traceAfter(asst, rp, rr, body);     // 38단계 — 연구 기록(토큰 · 씨앗 원문 · 요청 몸의 해시 — 씨앗은 빼고)
     room.updated = Date.now();
     store('geulpu.hinted', true);
@@ -2697,7 +3080,10 @@ async function replyTo(room, maxOverride, ov) {
       else last.stats = '오류';
       if (!last.content) room.messages.pop();
     }
-    if (aborted && room.messages[room.messages.length - 1].role === 'user') room.messages.push({ role: 'note', content: '불러오기를 중지했습니다' });
+    if (aborted && room.messages[room.messages.length - 1].role === 'user') {
+      const nt = S.streaming.notice;
+      room.messages.push({ role: 'note', content: nt && nt.kind === 'sum' ? '요약을 중지했습니다' : phase === 'load' ? '불러오기를 중지했습니다' : '중지했습니다' });
+    }
     else if (!aborted) { const em = { role: 'error', content: e.message }; FRESH.add(em); room.messages.push(em); }
     saveRooms();
   } finally {
@@ -2707,12 +3093,11 @@ async function replyTo(room, maxOverride, ov) {
     renderChatTop(true);
   }
 }
-// R1 이 길이에서 끊겼을 때 — 받은 글을 그대로 앞에 두고 이어서 생성한다
+// R1 이 길이에서 끊겼을 때 — 받은 글을 그대로 앞에 두고 이어서 생성한다(그 답이 쓴 요약으로). 문맥이 모자라면 그 차례 앞을 압축한 뒤
 async function continueLast() {
   const room = curRoom();
   if (!room || S.streaming || !S.conn) return;
-  const k = room.messages.length - 1;
-  const m = room.messages[k];
+  const m = room.messages[room.messages.length - 1];
   if (!m || m.role !== 'assistant' || m.template !== 'deepseek-r1') return;
   const mm = modelOf(m.model || room.model);
   if (!runnable(mm)) return;
@@ -2724,10 +3109,31 @@ async function continueLast() {
   const before = m.content.length;
   try {
     if (!(S.st.server.state === 'ready' && S.st.server.model === mm.id)) await ensureServer(mm.id, null);
-    const hist = Object.assign({}, room, { messages: room.messages.slice(0, k) });
-    const prompt = buildR1Prompt(hist, OPT.system) + '<think>' + m.content;
-    const stat = (await streamReply(m, room, '/v1/completions', { prompt, max_tokens: OPT.max, temperature: OPT.temp, stream: true, geulpu: {} })).stats;
+    const rp = { tpl: 'deepseek-r1', max: OPT.max, temp: OPT.temp, system: OPT.system || '', think: true, model: mm.id, sum: m.sum || null };
+    const mk = () => r1Prompt(convView(room, room.messages.indexOf(m), rp.sum), rp.system) + '<think>' + m.content;
+    let prompt = mk(), np = 0, L = (S.st.server.context) || 0;
+    if (OPT.compact !== false) {
+      let t = await tokOf({ url: '/v1/completions', body: { prompt } });
+      L = t.L;
+      const B = ctxBudget(L, OPT.max, true);
+      if (t.n + B.R > L) {
+        const qk = room.messages.map(x => x.role).lastIndexOf('user', room.messages.indexOf(m));
+        const n0 = qk < 0 ? t.n : (await tokOf({ url: '/v1/completions', body: { prompt: r1Prompt([{ role: 'user', content: room.messages[qk].content }], rp.system) + '<think>' + m.content } })).n;
+        const plan = n0 + B.r <= L && qk > 0 ? await planKeep(room, qk, rp, n0, L, B, B.R) : null;
+        if (plan) {
+          await summarize(room, rp, plan, L, B);
+          m.sum = rp.sum;
+          prompt = mk();
+          t = await tokOf({ url: '/v1/completions', body: { prompt } });
+        }
+        if (t.n + B.r > L) throw new Error('문맥이 가득 차 이어서 생성할 수 없습니다');
+      }
+      np = t.n;
+    }
+    const rr = await streamReply(m, room, '/v1/completions', { prompt, max_tokens: OPT.max, temperature: OPT.temp, stream: true, geulpu: {} });
+    const stat = rr.stats;
     m.stats = stat ? '이어서 ' + stat : m.stats;
+    if (np > 0) { m.np = np; m.nc = rr.nc; m.L = L; } else { delete m.np; delete m.nc; }
     delete m.tid;                     // 38단계 — 이어서 생성한 답은 한 요청이 아니라 연구 기록을 떼어 둔다
     room.updated = Date.now();
     saveRooms();
@@ -4150,7 +4556,7 @@ function traceAfter(asst, rp, rr, body) {
   const tid = newTid();
   const tr = {
     v: 1, at: Date.now(), model: rp.model, sha256: (m && m.sha256) || '', name: m ? displayName(m) : rp.model, quant: m ? quantOf(m) : '',
-    tpl: rp.tpl, req: { max: rp.max, temp: rp.temp, system: rp.system, think: rp.think }, seed: rr.seed || '', tokens: rr.gp.tokens,
+    tpl: rp.tpl, req: { max: rp.max, temp: rp.temp, system: rp.system, think: rp.think, sum: rp.sum || null }, seed: rr.seed || '', tokens: rr.gp.tokens,
     slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '',
     spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,   // GeulPUv2 3단계 — 추측 초안(답은 같다)
     layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', bodyHash: '',
@@ -4247,7 +4653,7 @@ async function labPrompt(tid) {
   const f = labFind(tid);
   if (!f) throw new Error(T('이 답이 있던 채팅을 찾지 못했습니다'));
   if (!f.live) throw new Error(T('숨은 버전의 답입니다 — 채팅에서 그 버전을 연 뒤에 셈하세요'));
-  const { body } = replyBody(f.room, f.idx, { tpl: tr.tpl, max: tr.req.max, temp: tr.req.temp, system: tr.req.system, think: tr.req.think });
+  const { body } = replyBody(f.room, f.idx, { tpl: tr.tpl, max: tr.req.max, temp: tr.req.temp, system: tr.req.system, think: tr.req.think, sum: tr.req.sum || null });
   if (tr.bodyHash && (await sha256Hex(JSON.stringify(body))) !== tr.bodyHash) throw new Error(T('이 답을 만든 요청을 똑같이 다시 지을 수 없습니다 — 앞 대화가 바뀌었습니다'));
   const tk = tr.tpl === 'deepseek-r1' ? { prompt: body.prompt } : { messages: body.messages, chat_template_kwargs: body.chat_template_kwargs };
   tr.promptIds = (await labApi('/tokenize', tk)).tokens;
@@ -4618,6 +5024,7 @@ async function labBranch(i, alt) {
   if (S.roomId !== room.id) pickRoom(room.id);
   branch(room, uk, room.messages[uk].content);
   const asst = { role: 'assistant', content: preText, template: tr.tpl, model: tr.model, max: tr.req.max, partial: true };
+  if (tr.req.sum) asst.sum = tr.req.sum;   // 대화 압축 — 원래 답이 쓴 요약(이어서 생성이 같은 앞부분을 짓게)
   room.messages.push(asst);
   room.updated = Date.now();
   stickNext = true;
@@ -4675,7 +5082,7 @@ async function labRegen() {
   if (uk < 0) return;
   if (S.roomId !== room.id) pickRoom(room.id);
   branch(room, uk, room.messages[uk].content);
-  await replyTo(room, max, { temp, seed, model: tr.model, system: tr.req.system, think: tr.req.think });
+  await replyTo(room, max, { temp, seed, model: tr.model, system: tr.req.system, think: tr.req.think, sum: tr.req.sum || null, lab: true });
   const last = room.messages[room.messages.length - 1];
   if (last && last.tid) { labPick(last.tid); LAB.regen = null; }
 }

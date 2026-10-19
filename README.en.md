@@ -137,6 +137,10 @@ memory right away; **Browse models** opens Find models, described below.
 ![Generation settings — temperature, max answer length, thinking switch, system prompt](docs/img/generation-settings-en.png)
 - You can regenerate an answer or edit and resend your message; earlier answers stay as versions you can flip through (‹ 1 / 2 ›).
   Code, tables and math (LaTeX) are rendered.
+- **Long chats**: when a chat nears the context length per chat, the same model summarizes the earlier conversation (the latest turns
+  stay word for word) and the chat goes on without an error. The summary stays in the chat as a card you can expand, and the
+  summarized messages stay, dimmed. "context N / L" under an answer shows how much is used. Turn it off with **Auto-summarize long
+  chats** in Generation settings.
 - Conversations are stored only in this browser.
 
 ### 3. Benchmark (optional)

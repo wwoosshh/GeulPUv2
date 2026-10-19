@@ -463,6 +463,19 @@ details.fold > :not(summary) { margin-top: 12px; }
 .link-btn { border: 0; background: none; padding: 0; color: var(--body); font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 3px; }
 .link-btn:hover { color: var(--ink); text-decoration-color: var(--accent); }
 .msg.note { display: flex; align-items: center; gap: 8px; color: var(--mute); font-size: 13px; margin-top: -16px; }
+/* 대화 압축 — 요약 카드(접힘) · 요약 앞의 보내지 않는 메시지(흐리게) */
+.msg.summary .scard { border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-raise); }
+.msg.summary .scard > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 12px 16px; cursor: pointer; color: var(--mute); font-size: 13px; line-height: 19px; }
+.msg.summary .scard > summary::-webkit-details-marker { display: none; }
+.msg.summary .scard > summary:hover { color: var(--ink); }
+.msg.summary .scard > summary .t { flex: 1; min-width: 0; }
+.msg.summary .scard > summary svg { flex: none; }
+.msg.summary .scard > summary svg.chev { transition: transform .15s; }
+.msg.summary .scard[open] > summary svg.chev { transform: rotate(90deg); }
+.msg.summary .scard .sb { padding: 0 16px 12px 40px; color: var(--body); font-size: 14px; line-height: 23px; }
+.msg.summary .scard .sf { padding: 0 16px 14px 40px; color: var(--mute); font-size: 12px; line-height: 18px; }
+.msg.unsent { opacity: .5; transition: opacity .15s; }
+.msg.unsent:hover, .msg.unsent:focus-within { opacity: .85; }
 .hello .dl { max-width: 420px; margin-top: 20px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
 .chip-btn { min-height: 34px; padding: 8px 16px; text-align: left; line-height: 20px; border: 1px solid var(--hairline-strong); border-radius: var(--r-pill); background: transparent; color: var(--body); font-size: 13px; }
