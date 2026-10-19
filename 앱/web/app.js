@@ -558,6 +558,40 @@ const DICT = {
   "정밀 — 계약의 자리 둘(연구용 정밀도)": "Exact — two-digit contract (research precision)",
   "빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 계약의 정밀도 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
   "추측 디코딩": "Speculative decoding",
+  "문맥 저장소": "Context store",
+  "기본 — SSD면 켬, HDD면 끔": "Default — on for an SSD, off for an HDD",
+  "켬": "On",
+  "긴 프롬프트의 KV를 SSD에 남겨, 같은 앞부분의 요청을 다시 세지 않고 되살립니다 — 앱을 다시 켜거나 모델을 바꿨다 돌아와도. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다. 다음에 모델을 불러올 때 적용": "Keeps the KV of long prompts on the SSD and restores it instead of recomputing when a request starts the same way — even after restarting the app or switching models and back. Answers, log-probabilities and research-panel values are bit-identical to having it off. Applies the next time a model is loaded",
+  " · 지금 켬": " · on now",
+  " · 지금 끔": " · off now",
+  " — 위치가 HDD": " — the location is an HDD",
+  "문맥 저장소 위치": "Context store location",
+  "문맥 저장소 위치 찾아보기": "Browse for the context store location",
+  "위치": "Location",
+  "기본: {} — SSD를 권합니다(HDD에서는 되살리기가 다시 셈보다 느릴 수 있습니다)": "Default: {} — an SSD is recommended (on an HDD, restoring can be slower than recomputing)",
+  "크기 한도": "Size limit",
+  "문맥 저장소 크기 한도": "Context store size limit",
+  "GB · 넘으면 가장 오래 쓰지 않은 것부터 지웁니다": "GB · when full, the longest-unused entries are deleted first",
+  "쓰기 방식": "Writing",
+  "모두 — 답이 끝날 때마다(쉴 때)": "All — after every answer (when idle)",
+  "비울 때만 — 다른 대화가 덮기 전 · 모델을 내리기 전": "Only when evicted — before another chat overwrites it or the model is unloaded",
+  "끔 — 읽기만": "Off — read only",
+  "모두는 답이 끝날 때마다 뒤에서 씁니다. 비울 때만은 SSD에 쓰는 양을 줄입니다.": "All writes in the background after every answer. Only-when-evicted writes less to the SSD.",
+  "쓰는 양": "Usage",
+  "덩이 {}개 · {} / 한도 {} GB": "{0} {0|chunk|chunks} · {1} / limit {2} GB",
+  "읽는 중…": "Reading…",
+  "저장소 지우기": "Clear the store",
+  "문맥 저장소의 덩이 {}개({})를 지웁니다. 채팅 기록은 그대로이고, 다음 요청부터 다시 셉니다.": "Deletes the {0} {0|chunk|chunks} ({1}) in the context store. Chats stay; the next requests are computed again.",
+  "저장소를 지웠습니다": "Cleared the store",
+  "다시 쓴 프롬프트 {}/{} 토큰 — 이 슬롯 {} · 다른 슬롯 {} · 저장소 {}({} ms)": "Reused prompt {}/{} tokens — this slot {}, another slot {}, store {} ({} ms)",
+  "캐시가 깨진 자리: 토큰 {} — 앞 내용과 갈라짐": "Cache break: token {} — differs from the earlier content",
+  "캐시가 깨진 자리: 토큰 {} — 저장소에 있는 데까지": "Cache break: token {} — as far as the store had it",
+  "같은 앞부분이 없어 처음부터 셈": "No shared beginning — computed from the start",
+  "앞 내용을 끝까지 다시 씀": "Reused all of the earlier content",
+  "프롬프트를 끝까지 다시 씀": "Reused the whole prompt",
+  "캐시 없이 셈": "Computed without the cache",
+  "이전|tok": "before",
+  "이번|tok": "now",
   "켬 — 답은 같고, 되풀이가 많은 답이 빨라집니다": "On — same answers; repetitive answers get faster",
   "끔": "Off",
   "프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 걸음에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용": "Looks up likely next tokens in the prompt and the answer so far and verifies several in one step. Answers, log-probabilities and research-panel values are bit-identical to Off (editing code or rewriting documents gets faster). Applies the next time a model is loaded",
@@ -757,7 +791,7 @@ const DICT = {
   "SHA-256 셈하기": "Compute SHA-256",
   "셈하기": "Compute",
   "다시 돌려 확인": "Re-run and check",
-  "같은 요청(같은 프롬프트 토큰 · 매개변수 · 씨앗)을 캐시 없이 다시 생성하고 걸음마다 토큰과 로짓 해시를 견줍니다.": "Regenerates the same request (same prompt tokens, parameters and seed) without the cache and compares the token and the logit hash at every step.",
+  "같은 요청(같은 프롬프트 토큰 · 매개변수 · 씨앗)을 캐시 · 문맥 저장소 없이 다시 생성하고 걸음마다 토큰과 로짓 해시를 견줍니다.": "Regenerates the same request (same prompt tokens, parameters and seed) without the cache or the context store and compares the token and the logit hash at every step.",
   "재현 캡슐": "Reproduction capsule",
   "요청 · 결과 · 로그확률 · 로짓 해시 · 만든 곳을 JSON 파일 하나로. 받은 사람이 자기 GPU에서(아래 '캡슐 불러와 확인') 또는 GPU 없이 파이썬(도구/캡슐확인.py)으로 비트까지 같은지 확인합니다.": "The request, result, log-probabilities, logit hashes and where it was made, in one JSON file. The recipient checks that it is bit-identical on their own GPU ('Load capsule and check' below) or without a GPU in Python (도구/캡슐확인.py).",
   "캡슐 내보내기": "Export capsule",
@@ -1561,7 +1595,7 @@ function show(view) {
   resetSig();
   renderAll();
   if (view === 'bench') loadResults(true);
-  if (view === 'settings') loadVk();
+  if (view === 'settings') { loadVk(); loadStore(true); }
   if (view === 'chat') { if (!same) renderMsgs(); setTimeout(() => { if (!$('#input').disabled) $('#input').focus(); }, 0); }
   try { sessionStorage.setItem('geulpu.view', view); } catch (_) { }
 }
@@ -4389,6 +4423,18 @@ async function renderDevice() {
 }
 
 // ---------- 설정(바꾸면 바로 저장) ----------
+// GeulPUv2 문맥 저장소 — 설정 · 실제로 켜는가(HDD) · 쓰는 양(/api/store). 설정 화면을 열 때와 바꾼 뒤
+async function loadStore(force) {
+  if (!force && S.storeAt && Date.now() - S.storeAt < 3000) return;
+  S.storeAt = Date.now();
+  try { S.store = await api('/api/store'); resetSig(); if (S.view === 'settings') renderSettings(); } catch (_) { }
+}
+async function clearStore() {
+  const cs = S.store || {};
+  if (!(await confirmBox(T('저장소 지우기'), h('p', { class: 'muted m0' }, T`문맥 저장소의 덩이 ${fmtNum(cs.files || 0)}개(${fmtBytes(cs.bytes || 0)})를 지웁니다. 채팅 기록은 그대로이고, 다음 요청부터 다시 셉니다.`), T('지우기'), 'danger'))) return;
+  try { await api('/api/store/clear', {}); toast(T('저장소를 지웠습니다'), 'ok'); } catch (e) { toast(e.message, 'err'); }
+  loadStore(true);
+}
 async function loadVk() {
   if (S.vk) return;
   try { const raw = await api('/api/device'); S.vk = (raw.vulkan && raw.vulkan['장치들'] ? raw.vulkan['장치들'] : []).map(v => v['이름']); resetSig(); renderSettings(); } catch (_) { }
@@ -4417,20 +4463,30 @@ function saveSettings(note, recheck, delay, withDir, row) {
       precision: (page.querySelector('#set-prec') || {}).value || S.st.settings.precision || 'fast',   // GeulPUv2 2단계 — 계산 방식
       speculative: ((page.querySelector('#set-spec') || {}).value || (S.st.settings.speculative === false ? 'off' : 'on')) !== 'off',   // GeulPUv2 3단계 — 추측 디코딩
     };
-    if (withDir) body.models_dir = page.querySelector('#set-mdir').value.trim();
+    if (withDir === true) body.models_dir = page.querySelector('#set-mdir').value.trim();
+    // GeulPUv2 문맥 저장소 — 켬 · 크기 · 쓰기 방식은 늘, 위치는 그 칸이 바뀐 때만
+    const csSel = page.querySelector('#set-store');
+    if (csSel) {
+      body.context_store = csSel.value;
+      body.context_store_gb = num('#set-sgb', 1, 100000, 20);
+      body.context_store_write = (page.querySelector('#set-swrite') || {}).value || 'all';
+      page.querySelector('#set-sgb').value = body.context_store_gb;
+    }
+    if (withDir === 'store') body.context_store_dir = page.querySelector('#set-sdir').value.trim();
     // 범위에 맞춘 값을 칸에도 다시 적는다(1~8 · 1024~131072)
     page.querySelector('#set-slots').value = body.slots;
     page.querySelector('#set-ctx').value = body.context;
-    const errEl = page.querySelector('#set-mdir-err');
+    const errEl = page.querySelector(withDir === 'store' ? '#set-sdir-err' : '#set-mdir-err');
     try {
       await api('/api/settings', body);
       if (withDir && errEl) errEl.hidden = true;
       markSaved(row || '', note);
       if (recheck) await api('/api/device/check', {}).catch(e => toast(e.message, 'err'));
     } catch (e) {
-      if (withDir && errEl) { put(errEl, I('alert', 's'), h('span', null, e.message)); errEl.hidden = false; }
+      if (withDir && errEl) { put(errEl, I('alert', 's'), h('span', null, TM(e.message))); errEl.hidden = false; }
       else toast(e.message, 'err');
     }
+    if (body.context_store !== undefined) loadStore(true);
     S.setDirty = false;
     await refresh();   // 새 설정을 받아 온 뒤에 다시 그린다
     if (recheck) { resetSig(); renderSettings(true); }
@@ -4441,7 +4497,7 @@ function renderSettings(force) {
   const st = S.st;
   const page = $('#page-settings');
   if (!force && (S.setDirty || (page.contains(document.activeElement) && S.view === 'settings'))) return;   // 고치는 중에는 다시 그리지 않는다
-  if (!changed('settings', [st.settings, st.app.version, st.app.commit, st.app.built, st.app.data_dir, st.app.models_dir, st.app.port, S.update && S.update.tag, S.vk, st.device.layer]) && !force) return;
+  if (!changed('settings', [st.settings, st.app.version, st.app.commit, st.app.built, st.app.data_dir, st.app.models_dir, st.app.port, S.update && S.update.tag, S.vk, st.device.layer, S.store]) && !force) return;
   const focusV = force && document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.v : null;
   const s = st.settings, a = st.app;
   const NEXT = T('저장했습니다 · 다음에 모델을 불러올 때 적용됩니다');
@@ -4488,6 +4544,21 @@ function renderSettings(force) {
   mdir.addEventListener('change', commitDir);
   mdir.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); mdir.blur(); } });
   const pickDir = h('button', { class: 'btn needs-conn', 'aria-label': T('모델 폴더 찾아보기'), onclick: () => browse(mdir.value.trim() || defDir, p => { mdir.value = p; commitDir(); }) }, I('folder', 's'), T('찾아보기'));
+  // GeulPUv2 문맥 저장소
+  const cs = S.store;
+  const storeSel = h('select', { class: 'input', id: 'set-store', 'aria-label': T('문맥 저장소'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-store') },
+    [['auto', T('기본 — SSD면 켬, HDD면 끔')], ['on', T('켬')], ['off', T('끔')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.context_store || 'auto') ? true : null }, tx)));
+  const sdir = h('input', { type: 'text', id: 'set-sdir', value: s.context_store_dir || '', placeholder: T('기본 폴더 사용'), 'aria-label': T('문맥 저장소 위치') });
+  const commitSdir = () => { if (sdir.value.trim() !== (s.context_store_dir || '')) saveSettings(NEXT, false, 0, 'store', 'set-sdir'); };
+  sdir.addEventListener('change', commitSdir);
+  sdir.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); sdir.blur(); } });
+  const pickSdir = h('button', { class: 'btn needs-conn', 'aria-label': T('문맥 저장소 위치 찾아보기'), onclick: () => browse(sdir.value.trim() || (cs && cs.default_dir) || a.data_dir || '', p => { sdir.value = p; commitSdir(); }) }, I('folder', 's'), T('찾아보기'));
+  const sgb = numIn('set-sgb', 1, 100000, 1, s.context_store_gb || 20, T('문맥 저장소 크기 한도'));
+  const swrite = h('select', { class: 'input', id: 'set-swrite', 'aria-label': T('쓰기 방식'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-swrite') },
+    [['all', T('모두 — 답이 끝날 때마다(쉴 때)')], ['evict', T('비울 때만 — 다른 대화가 덮기 전 · 모델을 내리기 전')], ['off', T('끔 — 읽기만')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.context_store_write || 'all') ? true : null }, tx)));
+  const storeNow = cs ? (cs.enabled ? T(' · 지금 켬') : T(' · 지금 끔')) + (cs.hdd ? T(' — 위치가 HDD') : '') : '';
+  const usage = cs ? T`덩이 ${fmtNum((cs.server && cs.server.files !== undefined) ? cs.server.files : cs.files)}개 · ${fmtBytes((cs.server && cs.server.bytes !== undefined) ? cs.server.bytes : cs.bytes)} / 한도 ${fmtNum(cs.limit_gb)} GB` : T('읽는 중…');
+  const clearBtn = h('button', { class: 'btn sm needs-conn', onclick: clearStore }, I('trash', 's'), T('저장소 지우기'));
   const upd = h('input', { type: 'checkbox', id: 'set-upd', 'aria-label': T('새 버전 알림'), onchange: () => saveSettings(T('저장했습니다'), false, 0, false, 'set-upd') });
   upd.checked = !!s.update_check;
   const savedMark = id => h('span', { class: 'saved', 'data-saved': id, hidden: !(SAVED.row === id && Date.now() - SAVED.t < 2400) }, I('check', 's'), T('저장됨'));
@@ -4507,6 +4578,13 @@ function renderSettings(force) {
         row(T('채팅마다 문맥 길이'), T('토큰 · 그래픽 메모리에 맞지 않으면 엔진이 자동으로 줄입니다. 다음에 모델을 불러올 때 적용'), ctx, null, 'set-ctx'),
         row(T('계산 방식'), T('빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 계약의 정밀도 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용'), precSel, null, 'set-prec'),
         row(T('추측 디코딩'), T('프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 걸음에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용'), specSel, null, 'set-spec')),
+      h('div', { class: 'sec mt16' }, T('문맥 저장소')),
+      h('div', { class: 'set-group' },
+        row(T('문맥 저장소'), T('긴 프롬프트의 KV를 SSD에 남겨, 같은 앞부분의 요청을 다시 세지 않고 되살립니다 — 앱을 다시 켜거나 모델을 바꿨다 돌아와도. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다. 다음에 모델을 불러올 때 적용') + storeNow, storeSel, null, 'set-store'),
+        row(T('위치'), T`기본: ${cs ? cs.default_dir : (a.data_dir || '') + '문맥저장소'} — SSD를 권합니다(HDD에서는 되살리기가 다시 셈보다 느릴 수 있습니다)`, h('div', { class: 'row nowrap w100' }, sdir, pickSdir), h('div', { class: 'set-err', id: 'set-sdir-err', hidden: true }), 'set-sdir'),
+        row(T('크기 한도'), T('GB · 넘으면 가장 오래 쓰지 않은 것부터 지웁니다'), sgb, null, 'set-sgb'),
+        row(T('쓰기 방식'), T('모두는 답이 끝날 때마다 뒤에서 씁니다. 비울 때만은 SSD에 쓰는 양을 줄입니다.'), swrite, null, 'set-swrite'),
+        row(T('쓰는 양'), usage, clearBtn)),
       h('div', { class: 'sec mt16' }, T('저장 위치')),
       h('div', { class: 'set-group' },
         row(T('모델 폴더'), T`다음 실행부터 적용됩니다. 기본: ${defDir}`, h('div', { class: 'row nowrap w100' }, mdir, pickDir), h('div', { class: 'set-err', id: 'set-mdir-err', hidden: true }), 'set-mdir'),
@@ -4560,6 +4638,7 @@ function traceAfter(asst, rp, rr, body) {
     tpl: rp.tpl, req: { max: rp.max, temp: rp.temp, system: rp.system, think: rp.think, sum: rp.sum || null }, seed: rr.seed || '', tokens: rr.gp.tokens,
     slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '',
     spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,   // GeulPUv2 3단계 — 추측 초안(답은 같다)
+    store: rr.gp.store || null,   // GeulPUv2 문맥 저장소 — 다시 쓴 토큰(이 슬롯 · 다른 슬롯 · 저장소) · 캐시가 깨진 자리
     layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', bodyHash: '',
   };
   if (Array.isArray(rr.gp.prompt_tokens) && rr.gp.prompt_tokens.length) tr.promptIds = rr.gp.prompt_tokens;   // 서버가 쓴 그대로
@@ -4842,7 +4921,27 @@ function labAnswerHead(tr) {
       tps ? T`${tps.toFixed(1)}토큰/초` : null, tr.spec && tr.spec.p > 0 ? T`추측 초안 ${fmtNum(tr.spec.a)}/${fmtNum(tr.spec.p)}개 받음` : null,
       tr.branch ? T`갈래 — 걸음 ${tr.branch.k + 1}부터` : null,
       `${tr.device || ''}${tr.layer ? ' · ' + (LAYER[tr.layer] || tr.layer) : ''}`,
-    ].filter(Boolean).join(NB)));
+    ].filter(Boolean).join(NB)),
+    labStoreLines(tr));
+}
+// GeulPUv2 문맥 저장소 — 이 답의 프롬프트를 어디서 다시 썼나(이 슬롯 · 다른 슬롯 · 저장소)와 캐시가 깨진 자리(그 앞 글 · 이전 토큰 → 이번 토큰)
+function labStoreLines(tr) {
+  const st = tr.store;
+  if (!st || typeof st !== 'object') return null;
+  const n = tr.promptIds ? tr.promptIds.length : 0;
+  const reuse = (st.slot_cached_tokens || 0) + (st.slot_copy_tokens || 0) + (st.restored_tokens || 0);
+  const lines = [T`다시 쓴 프롬프트 ${fmtNum(reuse)}/${fmtNum(n || reuse)} 토큰 — 이 슬롯 ${fmtNum(st.slot_cached_tokens || 0)} · 다른 슬롯 ${fmtNum(st.slot_copy_tokens || 0)} · 저장소 ${fmtNum(st.restored_tokens || 0)}(${Math.round(st.restore_ms || 0)} ms)`];
+  const at = fmtNum(st.reuse_end || 0);
+  const shown = x => tokShow(x === undefined || x === null ? '' : x);
+  if (st.break === 'diverged' || st.break === 'store_end') {
+    lines.push(h('span', null, st.break === 'diverged' ? T`캐시가 깨진 자리: 토큰 ${at} — 앞 내용과 갈라짐` : T`캐시가 깨진 자리: 토큰 ${at} — 저장소에 있는 데까지`,
+      h('span', { class: 'mono' }, ' …' + shown(st.break_before_text)),
+      st.break === 'diverged' ? h('span', { class: 'mono' }, ` [${T('이전', 'tok')} ${JSON.stringify(shown(st.break_prev_text))} → ${T('이번', 'tok')} ${JSON.stringify(shown(st.break_next_text))}]`) : null));
+  } else if (st.break === 'new') lines.push(T('같은 앞부분이 없어 처음부터 셈'));
+  else if (st.break === 'extended') lines.push(T('앞 내용을 끝까지 다시 씀'));
+  else if (st.break === 'full') lines.push(T('프롬프트를 끝까지 다시 씀'));
+  else if (st.break === 'off') lines.push(T('캐시 없이 셈'));
+  return lines.map(x => h('div', { class: 'small muted' }, x));
 }
 function labPicker() {
   const list = labAnswers(curRoom());
@@ -5043,6 +5142,7 @@ async function labBranch(i, alt) {
         at: Date.now(), tokens: pre.concat(rr.gp.tokens), promptIds: an.prompt, branch: { from: tid, k: i, alt, max }, seed: tr.req.temp > 0 ? tr.seed : (rr.seed || ''),
         slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '', bodyHash: '',
         spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,
+        store: rr.gp.store || null,
         layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact',
       });
       asst.tid = nt;
@@ -5254,7 +5354,7 @@ function labRepro() {
     if (!an) out.push(h('div', null, labAnalyzeBtn(LAB.tid, T('셈하기'))));
     // 다시 돌려 확인
     const rp = LAB.replay[LAB.tid];
-    out.push(labSec(T('다시 돌려 확인')), labNote(T('같은 요청(같은 프롬프트 토큰 · 매개변수 · 씨앗)을 캐시 없이 다시 생성하고 걸음마다 토큰과 로짓 해시를 견줍니다.')),
+    out.push(labSec(T('다시 돌려 확인')), labNote(T('같은 요청(같은 프롬프트 토큰 · 매개변수 · 씨앗)을 캐시 · 문맥 저장소 없이 다시 생성하고 걸음마다 토큰과 로짓 해시를 견줍니다.')),
       h('div', null, h('button', {
         class: 'btn needs-conn', disabled: (LAB.busy || S.streaming || (!tr.promptIds && !(f && f.live))) ? true : null, onclick: () => labRun(() => labReplay(LAB.tid)),
       }, I('refresh', 's'), T('다시 돌려 확인'))));
