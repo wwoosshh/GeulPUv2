@@ -408,6 +408,10 @@ backends are packaged only after their bytes are checked against the build hashe
     setting per length): prompt time is 0.89 / 0.90 / 0.95 / 1.04× llama.cpp's for Qwen2.5-7B Q4_K_M, 0.74 / 0.76 / 0.81 / 0.92× for Q8_0
     and 0.92 / 0.93 / 0.99 / 1.11× for Llama-3.1-8B Q4_K_M (512 / 2048 / 4096 / 8192 tokens — [stage 4](문서/4단계.md)). The slowdown at
     long contexts is the attention, which still has two digits. The exact mode took 1.16–1.47× in the same run.
+  - Long sessions ([long-context measurement](문서/긴문맥재기.md), fast mode): filling an empty cache with 16k / 32k tokens takes 1.19 / 1.40×
+    llama.cpp's time (Qwen2.5-7B Q4_K_M) and 1.29 / 1.40× (Llama-3.1-8B Q4_K_M); a new 1,024-token input at session depth 8k / 16k / 31k
+    takes 1.18 / 1.40 / 1.57× and 1.29 / 1.44 / 1.08× — the attention costs 1.9–2.4× llama.cpp's per token of depth. Decoding at the same
+    depths is 1.01–1.06×. Context goes up to 32,768 for Qwen2.5 (no YaRN) and to about 33k for Llama-3.1-8B on 12 GB.
   - Speculative decoding (stage 3 — on by default; Qwen2.5-7B Q4_K_M, fast mode, one slot, median of three rounds, generated tokens
     per second): editing code 329 / 356, rewriting a document 389, a quoting summary 347 — 3.5–4.1× the 95 with speculation off and
     1.2–2.5× llama.cpp b11721's fastest speculation (ngram-simple: 266 / 245 / 188 / 139). Ordinary chat: greedy 112, sampling 97,
@@ -469,7 +473,7 @@ reports, paper) lives in the [GeulPU repository](https://github.com/wwoosshh/Geu
 | [`시험/`](시험/) (tests) | `빠른점검.py` (the quick check run by CI), `계약자체.py` (the contract's CPU self-tests), `참조7B.py` (the CPU reference forward pass for 7B — the end-to-end bit oracle), `판23.py` · `판26.py` · `머리128.py` · `줄128.py` (each kernel against the CPU reference — on the GPU, via `쿠다드라이버.py`), `품질.py` (hidden loss relative to the exact mode, compared with llama.cpp), `뽑기.py` · `로그확률38.py` (sampling and log-probability contracts, Python vs geul), `서버28.py` · `로그확률서버38.py` (server regression tests: bits under concurrency, API, log-probabilities), `모듈해시.txt` · `SASS넘침.txt` · `글저장소커밋.txt`. |
 | [`재기/`](재기/) (measurements) | Speed and quality runs — `견주기2.sh` (prompt time of exact · fast · llama.cpp, order alternating by round) · `견주기요약.py`, `생성2.sh` (decode ms/token), `품질2.sh`, `라마.py` (llama.cpp's C API). The geul test and measurement programs are in `엔진/`: `시험_7B.gl` · `재기_7B.gl` · `재기_프롬프트.gl` · `재기_커널.gl` · `퍼플렉시티.gl`. |
 | [`교차검증/`](교차검증/) (cross-check) | The reference for the app's reproducibility check (Benchmark → cross-check): `expected.json` (the reference PC's outputs and build hashes) · `requests.json` (the 32 problems). Packaging compares the build hashes with it. |
-| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan · [2c단계.md](문서/2c단계.md) — matmul kernels · [3단계.md](문서/3단계.md) — speculative decoding) — Korean. |
+| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan · [2c단계.md](문서/2c단계.md) — matmul kernels · [3단계.md](문서/3단계.md) — speculative decoding · [4단계.md](문서/4단계.md) — long-prompt attention kernel · [4b단계.md](문서/4b단계.md) — long-context decode fold fix), [긴문맥재기.md](문서/긴문맥재기.md) (long-session prompt and decode vs llama.cpp) — Korean. |
 | [`docs/`](docs/) | English documents — [research-guide.md](docs/research-guide.md) (research panel guide) · [glossary.md](docs/glossary.md) · `img/` (screenshots). |
 | [`연구자안내.md`](연구자안내.md) | The research panel guide in Korean. |
 
