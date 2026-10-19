@@ -175,7 +175,9 @@ Applies the next time a model is loaded.
 **Context store** — **Default** (on when the location is an SSD, off for an HDD) · On · Off. Keeps what the model computed for long
 prompts (the KV cache) on the SSD in 256-token chunks and restores it instead of recomputing whenever a request starts the same way —
 even after restarting the app, switching models and back, or another chat taking the slot. For coding agents, which resend long system
-prompts and conversations, the first token drops from seconds to about 0.3 s (Qwen2.5-7B · 15k tokens). Because this engine produces
+prompts and conversations, the first token drops sharply — after restarting the app, a new task's first request (15k tokens) goes from
+3.2 s to 0.3 s, and reopening a 31k-token conversation from 10.0 s to 0.74 s (0.52 s and 1.1 s when the chunks are not in the OS file
+cache, as after a reboot — Qwen2.5-7B, RTX 4070 Ti). Because this engine produces
 the same KV bytes whichever way it is filled, **answers, log-probabilities and research-panel values are bit-identical to Off.** The
 location (default: data folder\문맥저장소), size limit (default 20 GB — the longest-unused chunks go first), writing (all · only when
 evicted · read only) and **Clear the store** are here too. The chunks are derived from your chats, so turn it off or clear it on a shared
@@ -197,7 +199,8 @@ read the numbers, and API examples.
   (margin). Close calls (margin < δ — places where a slightly different computation or setting could pick another token) and steps
   where sampling picked a token that wasn't ranked first are marked. The answer header shows where the prompt was reused from (this
   slot · another slot · the context store) and the **cache break** (which token, the text before it, before → now token) — when an agent
-  puts something that changes every time (a clock, a working-folder path) near the start of its prompt, you can see the cache break there.
+  puts something that changes every time (a clock, a working-folder path) near the start of its prompt, you can see the cache break there
+  ([guide — where did the prompt cache break](docs/research-guide.md#where-did-the-prompt-cache-break-context-store)).
 - **Intervene** — pick an alternative token at any step and **branch here**: generation continues with the same settings, the same
   seed and the same per-step random numbers, so the chosen token is the only change. You can also regenerate with only the
   temperature, seed or max length changed. New answers stay as versions.
@@ -466,8 +469,9 @@ backends are packaged only after their bytes are checked against the build hashe
 - **The context store gives the same answers.** KV restored from the SSD is byte-identical to recomputed KV (the contract — KV is the same
   whichever way it is filled), so with the store on, the tokens and per-step logit hashes equal those with it off. Tests: 54 recorded Qwen
   Code requests sent with recomputation · store off · empty store · after a server restart · one slot alternating conversations · 40
-  corrupted chunks — all 1,728 steps identical; a Vulkan server reading chunks written by CUDA matched too
-  ([문서/문맥저장소.md](문서/문맥저장소.md), Korean).
+  corrupted chunks — all 1,728 steps identical; a Vulkan server reading chunks written by CUDA matched too. So did a replay that
+  generates the recorded answer lengths (19,552 steps), a new task, reopening a 31k-token conversation and rewinding it (from the OS
+  cache and from a cold SSD), and switching between more conversations than slots ([문서/문맥저장소.md](문서/문맥저장소.md), Korean).
 - **The exact mode's hidden loss is small — measured on 0.5B.** Qwen2.5-0.5B-Instruct (Q8_0): the hidden loss (KL against an fp64 forward pass of the same
   weights) is 1/615 of llama.cpp's (a 461-token evaluation text) and 1/385 (wikitext-2, 148,920 tokens); its perplexity is
   indistinguishable from fp64 (relative −6.6 × 10⁻⁶), while llama.cpp's is 0.34% higher — the same order as the Q8_0 weight quantization

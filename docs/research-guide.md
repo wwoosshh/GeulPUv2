@@ -25,6 +25,7 @@ numbers as this guide** — that is the premise of the panel.
   - [Experiment 5. How much does one word of the question change the same answer](#experiment-5-how-much-does-one-word-of-the-question-change-the-same-answer) (Compare)
   - [Experiment 6. How plausible is a line of text](#experiment-6-how-plausible-is-a-line-of-text) (Score)
   - [Experiment 7. Having someone else check your result](#experiment-7-having-someone-else-check-your-result) (Reproduce)
+  - [Where did the prompt cache break (context store)](#where-did-the-prompt-cache-break-context-store) (Observe)
   - [Getting the data out](#getting-the-data-out) (Export)
 - [5. From scripts — the API](#5-from-scripts--the-api)
 - [6. Caveats and FAQ](#6-caveats-and-faq)
@@ -283,6 +284,92 @@ implementation (a few minutes for 7B).
 ```bash
 python -I 도구/캡슐확인.py capsule.json Qwen2.5-7B-Instruct-Q8_0.gguf
 ```
+
+### Where did the prompt cache break (context store)
+
+**Question**: a coding agent resends the same long instructions with every request — how much of the prompt did GeulPU reuse, and
+why was the rest computed again?
+
+GeulPU reuses the computed state (the KV cache) of a prompt's beginning wherever it matches token for token: in the slot itself,
+copied from another slot inside the GPU, or read from the **context store** — 256-token chunks on the SSD that survive restarts and
+model switches (Settings → Context store, on by default for an SSD). KV is byte-identical however it was filled, so reuse never
+changes an answer; it only skips work. The answer header shows how much was reused and where reuse stopped.
+
+<img src="img/guide/16-cache-break-en.png" width="460" align="right" alt="Answer header — (1) reused prompt: 270 of 576 tokens, copied from another slot (2) cache break at token 270: differs from the earlier content, the day of the date 1 → 2">
+
+1. In generation settings, set the system prompt below — rules, then `Today's date: 2026-10-19`, then project notes. Ask
+   `How do I run this project's tests? Answer in one sentence.` The answer is ``Run the tests with `python -m pytest`.``
+2. Change the date to `2026-10-20`, start a **new chat** with the same model, ask the same question, and open this answer in the panel.
+
+**Reading**
+- **(1)** Reused prompt 270/576 tokens — this slot 0, another slot 270, store 0. The new chat took the free slot and copied the shared
+  beginning from the first chat's slot.
+- **(2)** Cache break: token 270 — differs from the earlier content, then the 12 tokens before it (…`'s date: 2026-10-`) and the token
+  at that place before → now (`"1"` → `"2"`). The date changed, so everything after it — the project notes and the question, 306
+  tokens — was computed again.
+- Put what changes from request to request (date, time, working folder, git status) **after** what stays the same. Coding agents run
+  into this too: in our recording of Qwen Code (stage 4 in [문서/문맥저장소.md](../문서/문맥저장소.md), Korean) a new task in another
+  folder broke at token 3,819 of 14,671 (the working folder in the system prompt), a new task in the same folder on the next day at
+  13,591 (the date line), and on the same day only at the task text (14,633).
+
+<br clear="right">
+
+<img src="img/guide/17-store-restore-en.png" width="460" align="right" alt="After restarting — (1) reused prompt: 512 of 624 tokens from the context store in 11 ms (2) cache break at token 512: as far as the store had it">
+
+3. Restart the app (or load another model and come back) — the slots are empty now — and ask the second chat another question:
+   `To add a command that lists only overdue to-dos, which file do I change and how? Two sentences.`
+
+**Reading**
+- **(1)** Reused prompt 512/624 tokens — store 512 (11 ms). Nothing was left in the slots, so the beginning of the chat came from the
+  SSD instead of being computed. The store keeps whole 256-token chunks, and the chat so far filled two.
+- **(2)** Cache break: token 512 — as far as the store had it. Only the rest (112 tokens: the end of the first exchange and the new
+  question) was computed. Reopening a 31,000-token conversation after a restart takes 0.74 s to the first token instead of 10 s of
+  recomputation, 1.1 s when the chunks are not in the OS file cache as after a reboot (Qwen2.5-7B Q4_K_M, stage 4).
+- To check that reuse changed nothing, **Reproduce → Re-run and check** generates the answer again without the cache and without the
+  context store and compares every step.
+
+<br clear="right">
+
+<details>
+<summary>The system prompt used here</summary>
+
+```text
+You are a coding assistant for the project below. Keep answers short and exact, and say so when you do not know. When you change code, add one line on why and update the tests with it. Ask before deleting or renaming a file.
+
+# Rules
+- Python 3.12, standard library only. Ask before adding an outside package.
+- Function names in snake_case, class names in PascalCase, constants in UPPER_CASE.
+- Every public function has a docstring and type hints for its arguments and return value.
+- Store data only in todo.json (UTF-8, indent 2). Write to a temporary file and swap it in, so that a crash never leaves a broken file.
+- Handle dates as ISO 8601 (YYYY-MM-DD), without time zones.
+- Read command-line arguments with argparse, with help text for every subcommand.
+- Report errors as one readable line on standard error and exit with code 1. Only unexpected errors leave a traceback.
+- Print a human-readable table by default, and a single JSON line with --json.
+- No function longer than 40 lines; split it into smaller functions.
+- Commit messages: a one-line summary, an empty line, then the reason.
+
+Today's date: 2026-10-19
+
+# Project: a to-do command-line tool
+Files: todo.py (commands), store.py (reading and writing todo.json), tests/test_todo.py and tests/test_store.py (pytest), README.md.
+
+## Commands
+- add <title> [--due date] [--tag tag] — adds a to-do and prints its number.
+- list [--done] [--tag tag] [--json] — lists to-dos in number order; by default only the unfinished ones.
+- done <number> — marks it done; if it is already done, just says so.
+- remove <number> — deletes it; a deleted number is never reused.
+- edit <number> [--title title] [--due date] — changes it.
+
+## Data
+A to-do is {"id": int, "title": str, "due": date or null, "tags": [str], "done": bool, "created": date}.
+todo.json has the form {"version": 1, "next_id": int, "items": [to-do]}; if the version differs, stop reading and say so.
+
+## Tests
+Tests run with python -m pytest and create todo.json in a temporary folder (tmp_path). Every command gets at least one success and
+one failure case. Tests that need a date never use today's date directly; they pass it in as an argument.
+```
+
+</details>
 
 ### Getting the data out
 

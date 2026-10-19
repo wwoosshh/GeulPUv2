@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """MoE 재기 — 코딩 에이전트와 llama-server 사이의 기록용 프록시(표준 라이브러리만).
 
-  python 프록시.py <듣는 포트> <llama-server 주소> <기록.jsonl>
+  python 프록시.py <듣는 포트> <llama-server 주소> <기록.jsonl> [geulpu]
 
 요청 · 응답을 그대로 넘기고, /v1/chat/completions 는 요청 JSON 과 응답(흘림이면 조각을 모은 것 — reasoning_content · content ·
-tool_calls)과 서버의 timings(prompt_n · cache_n · predicted_n · 시간)를 한 줄씩 적는다.
+tool_calls)과 서버의 timings(prompt_n · cache_n · predicted_n · 시간)를 한 줄씩 적는다. 넷째 인자 geulpu 면 GeulPU 서버 · 앱 앞에서
+채팅 요청에 "geulpu": {} 를 넣어(덧붙임 — 첫 토큰 · 캐시 · 문맥 저장소) 응답의 geulpu 도 적는다(문맥 저장소 4단계).
 """
 import http.client
 import json
@@ -17,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 PORT = int(sys.argv[1])
 UP = urllib.parse.urlparse(sys.argv[2])
 LOG = sys.argv[3]
+덧붙임 = len(sys.argv) > 4 and sys.argv[4] == "geulpu"
 잠금 = threading.Lock()
 차례 = [0]
 
@@ -57,6 +59,13 @@ class 손(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         몸 = self.rfile.read(n)
         채팅 = self.path.rstrip("/").endswith("/chat/completions")
+        if 채팅 and 덧붙임:
+            try:
+                j0 = json.loads(몸)
+                j0.setdefault("geulpu", {})
+                몸 = json.dumps(j0, ensure_ascii=False).encode("utf-8")
+            except ValueError:
+                pass
         with 잠금:
             차례[0] += 1
             i = 차례[0]
@@ -68,7 +77,7 @@ class 손(BaseHTTPRequestHandler):
                 self.send_header(k, v)
         self.end_headers()
         모음 = {"reasoning_content": "", "content": "", "tool_calls": {}, "finish_reason": None}
-        timings, usage, 날것 = None, None, b""
+        timings, usage, 날것, gp = None, None, b"", None
         흘림 = "text/event-stream" in (r.getheader("Content-Type") or "")
         if 흘림:
             while True:
@@ -86,6 +95,7 @@ class 손(BaseHTTPRequestHandler):
                     continue
                 timings = j.get("timings", timings)
                 usage = j.get("usage", usage)
+                gp = j.get("geulpu", gp)
                 for ch in j.get("choices") or []:
                     d = ch.get("delta") or {}
                     모음["reasoning_content"] += d.get("reasoning_content") or ""
@@ -104,7 +114,7 @@ class 손(BaseHTTPRequestHandler):
             self.wfile.write(날것)
             try:
                 j = json.loads(날것)
-                timings, usage = j.get("timings"), j.get("usage")
+                timings, usage, gp = j.get("timings"), j.get("usage"), j.get("geulpu")
                 m = (j.get("choices") or [{}])[0].get("message") or {}
                 모음 = {"reasoning_content": m.get("reasoning_content") or "", "content": m.get("content") or "",
                       "tool_calls": {k: {"id": t.get("id"), "name": t["function"]["name"],
@@ -120,7 +130,7 @@ class 손(BaseHTTPRequestHandler):
             except ValueError:
                 요청 = None
             적기({"i": i, "t0": t0, "t1": time.time(), "status": r.status, "stream": 흘림, "request": 요청,
-                "response": 모음, "timings": timings, "usage": usage})
+                "response": 모음, "timings": timings, "usage": usage, "geulpu": gp})
 
 
 ThreadingHTTPServer(("127.0.0.1", PORT), 손).serve_forever()

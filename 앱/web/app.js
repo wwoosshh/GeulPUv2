@@ -4935,7 +4935,7 @@ function labStoreLines(tr) {
   const shown = x => tokShow(x === undefined || x === null ? '' : x);
   if (st.break === 'diverged' || st.break === 'store_end') {
     lines.push(h('span', null, st.break === 'diverged' ? T`캐시가 깨진 자리: 토큰 ${at} — 앞 내용과 갈라짐` : T`캐시가 깨진 자리: 토큰 ${at} — 저장소에 있는 데까지`,
-      h('span', { class: 'mono' }, ' …' + shown(st.break_before_text)),
+      h('span', { class: 'mono' }, ' …' + shown(String(st.break_before_text || '').replace(/^\uFFFD+/, ''))),   // 앞 12 토큰이 글자 가운데서 시작하면 그 조각(U+FFFD)은 뺀다
       st.break === 'diverged' ? h('span', { class: 'mono' }, ` [${T('이전', 'tok')} ${JSON.stringify(shown(st.break_prev_text))} → ${T('이번', 'tok')} ${JSON.stringify(shown(st.break_next_text))}]`) : null));
   } else if (st.break === 'new') lines.push(T('같은 앞부분이 없어 처음부터 셈'));
   else if (st.break === 'extended') lines.push(T('앞 내용을 끝까지 다시 씀'));

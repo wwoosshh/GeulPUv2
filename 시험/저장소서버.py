@@ -5,11 +5,12 @@
 
     python -I 시험/저장소서버.py 돌리기 <이름> <서버.exe> <모델.gguf> <모듈> <작업폴더> <기록.jsonl …>
           [--저장소 폴더] [--저장소크기 GB] [--저장소쓰기 모두|비울때|끔] [--슬롯 2] [--문맥 32768] [--포트 8099]
-          [--최대 48] [--섞기] [--처음 N] [--끔 3,7] [--망가뜨리기 N] [--비우기] [--캐시끔]
+          [--최대 48] [--실제길이] [--섞기] [--처음 N] [--끔 3,7] [--망가뜨리기 N] [--비우기] [--캐시끔]
     python -I 시험/저장소서버.py 견주기 <결과 a.json> <결과 b.json>
 
 돌리기: 서버를 띄워 요청을 차례로(--섞기면 작업마다 번갈아) 보낸다 — 흘림 끔, max_tokens = --최대, 온도 0.7 · 씨앗 = 1000 + 요청
-번호(뽑기를 거침), geulpu.logit_hash. --끔 의 번호는 geulpu.store: false, --캐시끔 이면 모든 요청이 cache_prompt: false(이 슬롯 ·
+번호(뽑기를 거침), geulpu.logit_hash. --실제길이면 max_tokens = 기록한 답의 토큰 수(usage.completion_tokens) · ignore_eos(4단계 — 작업
+전체 시간을 기록한 생성 길이로). --끔 의 번호는 geulpu.store: false, --캐시끔 이면 모든 요청이 cache_prompt: false(이 슬롯 ·
 다른 슬롯 · 저장소 없이 다시 셈 — 기준). --망가뜨리기 N 이면 띄우기 전에 저장소의 덩이 파일 N 개의
 내용 바이트 하나를 바꾼다(맞음 5 — 걸러져 다시 셈). 끝나면(--비우기) POST /geulpu/store/flush 뒤 GET /geulpu/store 를 적는다.
 결과: <작업폴더>/<이름>.json(요청마다 토큰 · 해시 · 덧붙임 · 시간)과 <이름>.log(서버 기록).
@@ -71,7 +72,8 @@ def 요청열(파일들, 섞기, 처음):
     작업 = []
     for f in 파일들:
         줄 = [json.loads(l) for l in open(f, encoding="utf-8") if l.strip()]
-        작업.append([(os.path.splitext(os.path.basename(f))[0], i, r["request"]) for i, r in enumerate(줄)])
+        작업.append([(os.path.splitext(os.path.basename(f))[0], i, r["request"], (r.get("usage") or {}).get("completion_tokens") or 1)
+                     for i, r in enumerate(줄)])
     if 처음:
         작업 = [w[:처음] for w in 작업]
     if not 섞기:
@@ -113,12 +115,15 @@ def 돌리기(a):
     s = 서버(a.서버, a.모델, a.모듈, a.포트, a.슬롯, a.문맥, 덧, 로그)
     결과 = {"이름": a.이름, "인자": sys.argv[2:], "올림초": s.올림초, "망친": 망친, "요청": []}
     try:
-        for 차례, (작업, i, 원본) in enumerate(목록):
+        for 차례, (작업, i, 원본, 답길이) in enumerate(목록):
             번호 = f"{작업}:{i}"
             몸 = dict(원본)
             몸.pop("stream_options", None)
             몸["stream"] = False
             몸["max_tokens"] = a.최대
+            if a.실제길이:
+                몸["max_tokens"] = 답길이
+                몸["ignore_eos"] = True
             몸["temperature"] = 0.7
             몸["seed"] = 1000 + hash_번호(번호)
             몸["geulpu"] = {"logit_hash": True}
@@ -137,7 +142,7 @@ def 돌리기(a):
                  "토큰": g.get("tokens"), "해시": g.get("logit_hashes"), "끝": r["choices"][0]["finish_reason"],
                  "글": m.get("content"), "호출": m.get("tool_calls"), "슬롯": g.get("slot"),
                  "캐시": g.get("prompt_tokens_cached"), "저장소": g.get("store"), "첫토큰ms": g.get("first_token_ms"),
-                 "걸림초": round(걸림, 3)}
+                 "생성us": g.get("generate_us"), "생성": r["usage"].get("completion_tokens"), "걸림초": round(걸림, 3)}
             결과["요청"].append(줄)
             st = 줄["저장소"] or {}
             print(f"{차례:3d} {번호:16s} 프롬프트 {줄['프롬프트']:6d} · 캐시 {줄['캐시']:6d} (슬롯 {st.get('slot_cached_tokens', 0):6d} · "
@@ -196,6 +201,7 @@ def main():
     d.add_argument("--문맥", type=int, default=32768)
     d.add_argument("--포트", type=int, default=8099)
     d.add_argument("--최대", type=int, default=48)
+    d.add_argument("--실제길이", action="store_true")
     d.add_argument("--섞기", action="store_true")
     d.add_argument("--처음", type=int, default=0)
     d.add_argument("--끔", default="")

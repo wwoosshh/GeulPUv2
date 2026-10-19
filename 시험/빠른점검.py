@@ -5,6 +5,7 @@
   2. 계약의 CPU 참조 자체 시험(시험/계약자체.py)
   3. 판(타일 모양) 표가 생성기 · 엔진에서 같은가
   4. 글(geul) 언어 프로그램이 빌드되는가 — 커널 생성기와 엔진 프로그램 모두(글 컴파일러)
+     4b. 문맥 저장소의 GPU 없는 시험 — 가짜 장치 위의 저장소.gl(엔진/시험_저장소CPU.gl)을 파이썬 참조(시험/저장소CPU.py)와 견줌
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 글 저장소의 자체SPIRV 뒷단으로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
@@ -345,6 +346,17 @@ def SASS(출력, ptxas, 병렬, 갱신):
         print("시험/SASS넘침.txt 를 새로 고쳤다", flush=True)
 
 
+def 저장소CPU(출력):
+    """문서/문맥저장소.md 4단계 — 이름 사슬 · 머리말 · 내용 합 · 배치 · 되살리기 · 색인 차례 · 크기 한도를 GPU 없이(윈도 · 리눅스)"""
+    exe = os.path.join(출력, "시험_저장소CPU" + EXE)
+    if not os.path.exists(exe):
+        알림("문맥 저장소(GPU 없이)", False, "시험_저장소CPU 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "저장소CPU.py"), exe], os.path.join(출력, "저장소CPU.txt"))
+    알림("문맥 저장소(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
 def 가져오기검사(출력):
     """윈도: 실행기는 kernel32 · shell32 · nvcuda, 서버는 그에 ws2_32(28단계). 리눅스(29단계): 둘 다 libc.so.6 · libcuda.so.1 뿐."""
     허용 = {"kernel32.dll", "shell32.dll", "nvcuda.dll"}
@@ -405,6 +417,7 @@ def main():
     else:
         print("글 도구: " + " · ".join(f"{os.path.basename(x)} {해시(x)[:16]}" for x in 도구), flush=True)
         if 빌드(글, 출력, a.병렬):
+            저장소CPU(출력)
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
                 요약.append("건너뜀  [모듈 · SASS] --모듈없이")
