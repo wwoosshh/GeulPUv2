@@ -70,7 +70,7 @@ because it contains no model — you download models inside the app.
 To check that the file arrived intact (optional), compare it with `SHA256SUMS.txt` on the same page. In PowerShell:
 
 ```powershell
-Get-FileHash .\GeulPU-0.5.1-windows-x64.zip
+Get-FileHash .\GeulPU-0.6.0-windows-x64.zip
 ```
 
 ### 2. Unzip
@@ -155,7 +155,8 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, **computation mode**, **speculative decoding**, model folder, language, new-version notice. Changes are saved immediately.
+chat, **computation mode**, **speculative decoding**, **context store**, model folder, language, new-version notice. Changes are saved
+immediately.
 
 **Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded.
 - **Fast**: the activations entering the matrix multiplications are 8-bit (the same class as llama.cpp). Prompt processing is 1.3–1.6×
@@ -171,6 +172,15 @@ log-probabilities and research-panel values are bit-identical to Off**, while an
 code, rewriting a document, quoting summaries — generate 3.5–4× faster (ordinary chat 1.0–1.5× — [문서/3단계.md](문서/3단계.md), Korean).
 Applies the next time a model is loaded.
 
+**Context store** — **Default** (on when the location is an SSD, off for an HDD) · On · Off. Keeps what the model computed for long
+prompts (the KV cache) on the SSD in 256-token chunks and restores it instead of recomputing whenever a request starts the same way —
+even after restarting the app, switching models and back, or another chat taking the slot. For coding agents, which resend long system
+prompts and conversations, the first token drops from seconds to about 0.3 s (Qwen2.5-7B · 15k tokens). Because this engine produces
+the same KV bytes whichever way it is filled, **answers, log-probabilities and research-panel values are bit-identical to Off.** The
+location (default: data folder\문맥저장소), size limit (default 20 GB — the longest-unused chunks go first), writing (all · only when
+evicted · read only) and **Clear the store** are here too. The chunks are derived from your chats, so turn it off or clear it on a shared
+PC. Applies the next time a model is loaded ([문서/문맥저장소.md](문서/문맥저장소.md), Korean).
+
 ### 5. Research panel — per-token probabilities · intervene · compare · reproduce
 
 GeulPU's arithmetic is fixed by a written contract, so scoring the same text again gives **bit-identical** probabilities to those at
@@ -185,7 +195,9 @@ read the numbers, and API examples.
 
 - **Observe** — the answer as tokens: each token's probability, rank, top-10 alternatives, entropy and the gap between the top two
   (margin). Close calls (margin < δ — places where a slightly different computation or setting could pick another token) and steps
-  where sampling picked a token that wasn't ranked first are marked.
+  where sampling picked a token that wasn't ranked first are marked. The answer header shows where the prompt was reused from (this
+  slot · another slot · the context store) and the **cache break** (which token, the text before it, before → now token) — when an agent
+  puts something that changes every time (a clock, a working-folder path) near the start of its prompt, you can see the cache break there.
 - **Intervene** — pick an alternative token at any step and **branch here**: generation continues with the same settings, the same
   seed and the same per-step random numbers, so the chosen token is the only change. You can also regenerate with only the
   temperature, seed or max length changed. New answers stay as versions.
@@ -451,6 +463,11 @@ backends are packaged only after their bytes are checked against the build hashe
   (tests: seventeen requests × correct, wrong and half-wrong drafts, four concurrent slots, CUDA and Vulkan — [stage 3](문서/3단계.md)).
   In the same measurement, llama.cpp b11721's llama-server changed the answers of two of eight greedy requests (summary, math) when
   `--spec-type ngram-simple` was switched on.
+- **The context store gives the same answers.** KV restored from the SSD is byte-identical to recomputed KV (the contract — KV is the same
+  whichever way it is filled), so with the store on, the tokens and per-step logit hashes equal those with it off. Tests: 54 recorded Qwen
+  Code requests sent with recomputation · store off · empty store · after a server restart · one slot alternating conversations · 40
+  corrupted chunks — all 1,728 steps identical; a Vulkan server reading chunks written by CUDA matched too
+  ([문서/문맥저장소.md](문서/문맥저장소.md), Korean).
 - **The exact mode's hidden loss is small — measured on 0.5B.** Qwen2.5-0.5B-Instruct (Q8_0): the hidden loss (KL against an fp64 forward pass of the same
   weights) is 1/615 of llama.cpp's (a 461-token evaluation text) and 1/385 (wikitext-2, 148,920 tokens); its perplexity is
   indistinguishable from fp64 (relative −6.6 × 10⁻⁶), while llama.cpp's is 0.34% higher — the same order as the Q8_0 weight quantization
