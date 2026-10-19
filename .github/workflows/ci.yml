@@ -2,6 +2,8 @@
 # GPU 없이 만들 수 있다: 글 컴파일러 · PTX 뒷단을 글 저장소의 고정 커밋(시험/글저장소커밋.txt)에서 빌드하고, 생성기 · 호스트 프로그램을
 # 빌드하고, 모듈을 처음부터 만들어(소스 · PTX · SPIR-V 묶음 — 31단계) 시험/모듈해시.txt 와 바이트까지 견준다. 그다음 NVIDIA ptxas(검사에만 — 엔진은 쓰지 않는다)로
 # PTX → SASS(sm_89)까지 — 커널마다 레지스터 · 넘침(spill)을 적는다. GPU 의 비트 대조 · 속도는 단계마다의 공식 실행(공식실행/)이 한다.
+# GeulPUv2 0.6.0 뒤 — 모듈은 커널/ · 시험/모듈해시.txt · 시험/SASS넘침.txt · 시험/글저장소커밋.txt(와 이 점검 · 이 파일)로만 정해진다. 그것들이
+# 앞 커밋과 같으면 모듈 · SASS(6 ~ 8 분)를 건너뛰고(빠른점검 --모듈없이 — 문법 · 계약 · 빌드 · 가져오기 표는 늘), 하나라도 바뀌면 모두 본다.
 name: 빠른 점검
 on:
   push:
@@ -19,6 +21,23 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: GeulPUv2
+          fetch-depth: 0
+      - name: 커널이 바뀌었나(아니면 모듈 · SASS 를 건너뜀)
+        id: kernel
+        working-directory: GeulPUv2
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          from="${BASE:-$BEFORE}"
+          paths="커널 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
+          if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$from^{commit}" 2>/dev/null; then
+            echo "full=1" >> "$GITHUB_OUTPUT"; echo "견줄 앞 커밋이 없다 — 모두 본다"
+          elif git diff --quiet "$from" HEAD -- $paths; then
+            echo "full=0" >> "$GITHUB_OUTPUT"; echo "커널 · 생성기 · 글 고정 커밋 · 점검이 그대로 — 모듈 · SASS 를 건너뜀"
+          else
+            echo "full=1" >> "$GITHUB_OUTPUT"; echo "바뀐 곳:"; git diff --name-only "$from" HEAD -- $paths
+          fi
       - name: 글 저장소의 고정 커밋 읽기
         id: geul
         run: echo "sha=$(tr -d '\r\n ' < GeulPUv2/시험/글저장소커밋.txt)" >> "$GITHUB_OUTPUT"
@@ -32,11 +51,14 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: 파이썬 꾸러미(+ 검사용 ptxas)
+      - name: 파이썬 꾸러미(+ 검사용 ptxas — 모듈을 볼 때만)
         run: |
-          python -m pip install -r GeulPUv2/requirements.txt nvidia-cuda-nvcc-cu12==12.9.86
-          python -c "import importlib.util, os; p = importlib.util.find_spec('nvidia.cuda_nvcc').submodule_search_locations[0]; print(os.path.join(p, 'bin', 'ptxas.exe'))" > ptxas경로.txt
-          cat ptxas경로.txt
+          python -m pip install -r GeulPUv2/requirements.txt
+          if [ "${{ steps.kernel.outputs.full }}" = "1" ]; then
+            python -m pip install nvidia-cuda-nvcc-cu12==12.9.86
+            python -c "import importlib.util, os; p = importlib.util.find_spec('nvidia.cuda_nvcc').submodule_search_locations[0]; print(os.path.join(p, 'bin', 'ptxas.exe'))" > ptxas경로.txt
+            cat ptxas경로.txt
+          fi
       - name: 글 컴파일러 · PTX 뒷단 캐시
         id: cache
         uses: actions/cache@v6
@@ -60,7 +82,12 @@ jobs:
         working-directory: GeulPUv2
         env:
           PYTHONUTF8: "1"
-        run: python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --ptxas "$(cat ../ptxas경로.txt)"
+        run: |
+          if [ "${{ steps.kernel.outputs.full }}" = "1" ]; then
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --ptxas "$(cat ../ptxas경로.txt)"
+          else
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --모듈없이
+          fi
       - name: 점검 결과 올리기
         if: always()
         uses: actions/upload-artifact@v7
@@ -82,6 +109,23 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: GeulPUv2
+          fetch-depth: 0
+      - name: 커널이 바뀌었나(아니면 모듈 · SASS 를 건너뜀)
+        id: kernel
+        working-directory: GeulPUv2
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          from="${BASE:-$BEFORE}"
+          paths="커널 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
+          if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$from^{commit}" 2>/dev/null; then
+            echo "full=1" >> "$GITHUB_OUTPUT"; echo "견줄 앞 커밋이 없다 — 모두 본다"
+          elif git diff --quiet "$from" HEAD -- $paths; then
+            echo "full=0" >> "$GITHUB_OUTPUT"; echo "커널 · 생성기 · 글 고정 커밋 · 점검이 그대로 — 모듈 · SASS 를 건너뜀"
+          else
+            echo "full=1" >> "$GITHUB_OUTPUT"; echo "바뀐 곳:"; git diff --name-only "$from" HEAD -- $paths
+          fi
       - name: 글 저장소의 고정 커밋 읽기
         id: geul
         run: echo "sha=$(tr -d '\r\n ' < GeulPUv2/시험/글저장소커밋.txt)" >> "$GITHUB_OUTPUT"
@@ -95,11 +139,14 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: 파이썬 꾸러미(+ 검사용 ptxas)
+      - name: 파이썬 꾸러미(+ 검사용 ptxas — 모듈을 볼 때만)
         run: |
-          python -m pip install -r GeulPUv2/requirements.txt nvidia-cuda-nvcc-cu12==12.9.86
-          python -c "import importlib.util, os; p = importlib.util.find_spec('nvidia.cuda_nvcc').submodule_search_locations[0]; print(os.path.join(p, 'bin', 'ptxas'))" > ptxas경로.txt
-          cat ptxas경로.txt
+          python -m pip install -r GeulPUv2/requirements.txt
+          if [ "${{ steps.kernel.outputs.full }}" = "1" ]; then
+            python -m pip install nvidia-cuda-nvcc-cu12==12.9.86
+            python -c "import importlib.util, os; p = importlib.util.find_spec('nvidia.cuda_nvcc').submodule_search_locations[0]; print(os.path.join(p, 'bin', 'ptxas'))" > ptxas경로.txt
+            cat ptxas경로.txt
+          fi
       - name: 글 컴파일러 · PTX · SPIR-V 뒷단 빌드(파이썬 참조 구현 → 글로 쓴 컴파일러(ELF) → 뒷단 둘(ELF))
         working-directory: geul-lang-v2
         env:
@@ -113,7 +160,12 @@ jobs:
         working-directory: GeulPUv2
         env:
           PYTHONUTF8: "1"
-        run: python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --ptxas "$(cat ../ptxas경로.txt)"
+        run: |
+          if [ "${{ steps.kernel.outputs.full }}" = "1" ]; then
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --ptxas "$(cat ../ptxas경로.txt)"
+          else
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --모듈없이
+          fi
       - name: 점검 결과 올리기
         if: always()
         uses: actions/upload-artifact@v7

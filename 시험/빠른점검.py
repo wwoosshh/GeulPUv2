@@ -10,6 +10,9 @@
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
 
   python -X utf8 시험/빠른점검.py [--글 <글 저장소 — 기본 ../geul-lang-v2>] [--병렬 N] [--출력 <폴더 — 기본 빌드/점검>] [--해시갱신] [--계약없이]
+                                [--모듈없이]
+--모듈없이: 5 · 7(모듈 · SASS)을 건너뛴다 — CI 는 커널/ · 시험/모듈해시.txt · 시험/SASS넘침.txt · 시험/글저장소커밋.txt · 이 파일 · ci.yml 이
+앞 커밋과 같으면 이것으로 돈다(모듈은 그 파일들로만 정해진다 — 엔진/ · 앱/ 은 모듈을 바꾸지 않는다). 하나라도 바뀌면 모두 본다.
 글 저장소에는 build/self_컴파일러.exe · build/자체PTX.exe · build/자체SPIRV.exe(리눅스에서는 확장자 없이)가 있어야 한다
 (README 의 빠른 시작 2). 리눅스(29단계 — 글 D-50)에서는 같은 프로그램을 ELF 로 빌드하고, 모듈은 윈도와 같은 시험/모듈해시.txt 와 견준다.
 마지막 줄 "빠른 점검: 모두 통과"(종료 0) 또는 "못 미침 …"(종료 1).
@@ -381,6 +384,7 @@ def main():
     p.add_argument("--ptxas", default=os.environ.get("점검_PTXAS", ""), help="NVIDIA ptxas — 주면 PTX → SASS(sm_89)까지 본다")
     p.add_argument("--넘침갱신", action="store_true", help="시험/SASS넘침.txt 를 지금 넘치는 커널로 다시 쓴다")
     p.add_argument("--계약없이", action="store_true", help="계약 자체 시험(numpy)을 건너뛴다 — 운영체제와 무관한 CPU 시험이라 다른 곳에서 돌린 것으로 갈음할 때")
+    p.add_argument("--모듈없이", action="store_true", help="모듈 · SASS 를 건너뛴다 — 커널 · 생성기 · 글 고정 커밋이 앞 커밋과 같을 때(CI)")
     a = p.parse_args()
     글 = os.path.abspath(a.글)
     출력 = os.path.abspath(a.출력)
@@ -401,9 +405,15 @@ def main():
     else:
         print("글 도구: " + " · ".join(f"{os.path.basename(x)} {해시(x)[:16]}" for x in 도구), flush=True)
         if 빌드(글, 출력, a.병렬):
-            모듈(글, 출력, a.병렬, a.해시갱신)
+            if a.모듈없이:
+                print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
+                요약.append("건너뜀  [모듈 · SASS] --모듈없이")
+            else:
+                모듈(글, 출력, a.병렬, a.해시갱신)
             가져오기검사(출력)
-            if a.ptxas:
+            if a.모듈없이:
+                pass
+            elif a.ptxas:
                 SASS(출력, a.ptxas, a.병렬, a.넘침갱신)
             else:
                 print("SASS: ptxas 를 주지 않아 건너뜀(--ptxas)", flush=True)
