@@ -17,7 +17,7 @@ zip을 풀고 `GeulPU.exe`를 실행하면 브라우저에 채팅 화면이 열�
 
 > 적힌 대로만 잃는다. 덜 잃는 데 드는 셈은 숨기지 않는다.
 
-**[⬇ 최신 버전 받기 — Windows 64비트 · zip 약 1.4 MB](https://github.com/wwoosshh/GeulPU/releases/latest)**
+**[⬇ 최신 버전 받기 — Windows 64비트 · zip 약 1.4 MB](https://github.com/wwoosshh/GeulPUv2/releases/latest)**
 
 [설치](#설치) · [처음 쓰기](#처음-쓰기) · [지원하는 모델](#지원하는-모델) · [실행 방식](#실행-방식) · [문제 해결](#문제-해결) ·
 [업데이트 · 삭제](#업데이트--삭제) · [무엇이 다른가](#무엇이-다른가) · [개발 · 연구](#개발--연구)
@@ -39,13 +39,13 @@ zip을 풀고 `GeulPU.exe`를 실행하면 브라우저에 채팅 화면이 열�
 
 ### 1. 받기
 
-[릴리스 페이지](https://github.com/wwoosshh/GeulPU/releases/latest)에서 **`GeulPU-<버전>-windows-x64.zip`** 을 받습니다. 모델은 들어 있지 않아
+[릴리스 페이지](https://github.com/wwoosshh/GeulPUv2/releases/latest)에서 **`GeulPU-<버전>-windows-x64.zip`** 을 받습니다. 모델은 들어 있지 않아
 작습니다(모델은 앱 안에서 받습니다).
 
 받은 파일이 그대로인지 보려면(선택) 같은 페이지의 `SHA256SUMS.txt` 와 견줍니다. PowerShell에서:
 
 ```powershell
-Get-FileHash .\GeulPU-0.5.0-windows-x64.zip
+Get-FileHash .\GeulPU-0.5.1-windows-x64.zip
 ```
 
 ### 2. 압축 풀기
@@ -339,7 +339,7 @@ bcrypt · advapi32)과 그래픽 드라이버의 DLL뿐입니다.
 | "이 GPU 미지원" · "그래픽 메모리 부족" | 더 작은 파일(Q4_K_M)이나 작은 모델을 고릅니다. 설정에서 채팅마다 문맥 길이나 동시 처리 수를 줄이면 메모리가 덜 듭니다. |
 | 첫 메시지가 오래 걸림 | 처음 한 번은 커널을 만듭니다(1 ~ 3분). 다음부터는 모델을 올리는 시간(수십 초)만 듭니다. |
 | 다운로드가 멈춤 | **내 모델** 또는 상태 막대에서 **이어서 다운로드** — 받은 데부터 잇습니다. |
-| 그 밖 | `%USERPROFILE%\GeulPU\기록\` 의 기록과 함께 [이슈](https://github.com/wwoosshh/GeulPU/issues)를 남겨 주세요. |
+| 그 밖 | `%USERPROFILE%\GeulPU\기록\` 의 기록과 함께 [이슈](https://github.com/wwoosshh/GeulPUv2/issues)를 남겨 주세요. |
 
 ## 업데이트 · 삭제
 

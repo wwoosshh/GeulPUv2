@@ -61,7 +61,9 @@ const DICT = {
   "멈춤 {}개": "{} paused",
   "실패 {}개": "{} failed",
   "새 버전이 나왔습니다: {}(지금 v{}). 새 폴더에 압축을 풀고 실행하면 모델과 결과는 그대로 이어집니다.": "A new version is available: {} (you have v{}). Unzip it into a new folder and run it — your models and results carry over.",
+  "새 버전이 나왔습니다: {}(지금 v{}). GeulPU를 끈 뒤 이 명령으로 업데이트하세요(모델과 결과는 그대로 이어집니다):": "A new version is available: {} (you have v{}). Quit GeulPU, then update with this command (your models and results carry over):",
   "다운로드 페이지": "Download page",
+  "PyPI 페이지": "PyPI page",
   "새 채팅": "New chat",
   "오늘": "Today",
   "어제": "Yesterday",
@@ -1591,26 +1593,45 @@ function renderStatus() {
 // 새 버전 알림
 function verNum(v) { return String(v || '').replace(/^v/, '').split('.').map(x => parseInt(x, 10) || 0); }
 function newer(a, b) { const x = verNum(a), y = verNum(b); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; }
+// 0.5.1 — 설치 방식(관리자의 app.installer: zip · pip · pipx · uv)마다 확인처와 안내가 다르다. zip 은 GitHub(GeulPUv2)의 최신 릴리스,
+// pip 로 깐 앱은 PyPI 의 geulpu 최신 판(PyPI 에 올라가기 앞에 아직 없는 판으로 올리라 하지 않게) — 업데이트 명령은 앱을 끈 뒤에(실행 파일이 잠긴다)
+const UPDATE_CMD = { pip: 'pip install -U geulpu', pipx: 'pipx upgrade geulpu', uv: 'uv tool upgrade geulpu' };
 async function checkUpdate() {
   if (!S.st || !S.st.settings.update_check || !S.conn) return;
+  const inst = (S.st.app && S.st.app.installer) || 'zip';
+  const cmd = UPDATE_CMD[inst];
+  const key = 'geulpu.rel.' + (cmd ? 'pypi' : 'gh');
   let rel = null;
-  try { const c = JSON.parse(sessionStorage.getItem('geulpu.rel') || 'null'); if (c && Date.now() - c.t < 3600e3) rel = c.r; } catch (_) { }
+  try { const c = JSON.parse(sessionStorage.getItem(key) || 'null'); if (c && Date.now() - c.t < 3600e3) rel = c.r; } catch (_) { }
   if (!rel) {
     try {
-      const r = await fetch('https://api.github.com/repos/wwoosshh/GeulPU/releases/latest', { headers: { Accept: 'application/vnd.github+json' } });
-      if (!r.ok) return;
-      const j = await r.json();
-      rel = { tag: j.tag_name, url: j.html_url, name: j.name };
-      try { sessionStorage.setItem('geulpu.rel', JSON.stringify({ t: Date.now(), r: rel })); } catch (_) { }
+      if (cmd) {
+        const r = await fetch('https://pypi.org/pypi/geulpu/json', { headers: { Accept: 'application/json' } });
+        if (!r.ok) return;
+        const j = await r.json();
+        rel = { tag: 'v' + j.info.version, url: 'https://pypi.org/project/geulpu/', name: 'geulpu ' + j.info.version };
+      } else {
+        const r = await fetch('https://api.github.com/repos/wwoosshh/GeulPUv2/releases/latest', { headers: { Accept: 'application/vnd.github+json' } });
+        if (!r.ok) return;
+        const j = await r.json();
+        rel = { tag: j.tag_name, url: j.html_url, name: j.name };
+      }
+      try { sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), r: rel })); } catch (_) { }
     } catch (_) { return; }
   }
   S.update = rel;
   const b = $('#banner');
   if (b.classList.contains('offline')) return;
   if (rel && newer(rel.tag, S.st.app.version)) {
-    put(b, h('i', { class: 'dot acc' }), h('span', null, T`새 버전이 나왔습니다: ${rel.tag}(지금 v${S.st.app.version}). 새 폴더에 압축을 풀고 실행하면 모델과 결과는 그대로 이어집니다.`),
-      h('span', { class: 'grow' }), h('a', { class: 'btn sm', href: rel.url, target: '_blank', rel: 'noopener' }, T('다운로드 페이지'), I('ext', 's')),
-      h('button', { class: 'icon-btn', 'aria-label': T('알림 닫기'), onclick: () => { b.hidden = true; } }, I('x', 's')));
+    const close = h('button', { class: 'icon-btn', 'aria-label': T('알림 닫기'), onclick: () => { b.hidden = true; } }, I('x', 's'));
+    if (cmd) {
+      put(b, h('i', { class: 'dot acc' }), h('span', null, T`새 버전이 나왔습니다: ${rel.tag}(지금 v${S.st.app.version}). GeulPU를 끈 뒤 이 명령으로 업데이트하세요(모델과 결과는 그대로 이어집니다):`),
+        h('code', null, cmd), h('span', { class: 'grow' }),
+        h('a', { class: 'btn sm', href: rel.url, target: '_blank', rel: 'noopener' }, T('PyPI 페이지'), I('ext', 's')), close);
+    } else {
+      put(b, h('i', { class: 'dot acc' }), h('span', null, T`새 버전이 나왔습니다: ${rel.tag}(지금 v${S.st.app.version}). 새 폴더에 압축을 풀고 실행하면 모델과 결과는 그대로 이어집니다.`),
+        h('span', { class: 'grow' }), h('a', { class: 'btn sm', href: rel.url, target: '_blank', rel: 'noopener' }, T('다운로드 페이지'), I('ext', 's')), close);
+    }
     b.hidden = false;
   } else b.hidden = true;
 }

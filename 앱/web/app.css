@@ -128,6 +128,7 @@ h3 { font-size: 17px; line-height: 24px; }
   background: var(--canvas-raise); color: var(--body); font-size: 13px;
 }
 #banner.offline { color: var(--ink); background: var(--err-wash); border-bottom-color: rgba(255, 107, 129, 0.35); }
+#banner code { flex: none; white-space: nowrap; user-select: all; color: var(--ink); background: var(--canvas-soft); border: 1px solid var(--hairline); border-radius: var(--r-sm); padding: 2px 6px; font-size: 12px; }
 #banner.offline svg { color: var(--err); }
 .view { display: none; flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
 .view.active { display: block; }

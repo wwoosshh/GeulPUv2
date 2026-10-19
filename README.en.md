@@ -21,7 +21,7 @@ with one token changed, compare against another model or prompt, and check someo
 
 > It loses only what is written down — and it shows what losing less costs.
 
-**[⬇ Download the latest version — Windows 64-bit, zip of about 1.4 MB](https://github.com/wwoosshh/GeulPU/releases/latest)**
+**[⬇ Download the latest version — Windows 64-bit, zip of about 1.4 MB](https://github.com/wwoosshh/GeulPUv2/releases/latest)**
 
 [Install](#install) · [First steps](#first-steps) · [Supported models](#supported-models) · [How it runs](#how-it-runs) ·
 [Troubleshooting](#troubleshooting) · [Update and uninstall](#update-and-uninstall) · [What is different](#what-is-different) ·
@@ -45,13 +45,13 @@ verified.
 
 ### 1. Download
 
-Get **`GeulPU-<version>-windows-x64.zip`** from the [releases page](https://github.com/wwoosshh/GeulPU/releases/latest). It is small
+Get **`GeulPU-<version>-windows-x64.zip`** from the [releases page](https://github.com/wwoosshh/GeulPUv2/releases/latest). It is small
 because it contains no model — you download models inside the app.
 
 To check that the file arrived intact (optional), compare it with `SHA256SUMS.txt` on the same page. In PowerShell:
 
 ```powershell
-Get-FileHash .\GeulPU-0.5.0-windows-x64.zip
+Get-FileHash .\GeulPU-0.5.1-windows-x64.zip
 ```
 
 ### 2. Unzip
@@ -365,7 +365,7 @@ backends are packaged only after their bytes are checked against the build hashe
 | The first message takes long | The first time builds kernels (1–3 minutes). After that, only loading the model (tens of seconds). |
 | A download stopped | **Resume download** under My models or in the status bar — it continues where it stopped. |
 | Part of the screen is in Korean | Messages from the engine are translated when they are shown; raw logs, tool output and result files stay in Korean. Paths such as `%USERPROFILE%\GeulPU\모델\` are real folder names. |
-| Anything else | Open an [issue](https://github.com/wwoosshh/GeulPU/issues) and attach the logs from `%USERPROFILE%\GeulPU\기록\`. |
+| Anything else | Open an [issue](https://github.com/wwoosshh/GeulPUv2/issues) and attach the logs from `%USERPROFILE%\GeulPU\기록\`. |
 
 ## Update and uninstall
 
