@@ -2,8 +2,10 @@
    요청과 상관없이 같은 비트를 낸다(계약 — 문서/28단계.md). 가져오는 DLL 은 글 런타임의 kernel32 · shell32 와 nvcuda.dll, ws2_32.dll 뿐이다.
 
      서버 모델.gguf [--ptx 경로] [--주소 127.0.0.1] [--포트 8080] [--슬롯 4] [--문맥 4096] [--덩이 512] [--이름 모델이름] [--기록 폴더]
+           [--저장소 폴더 [--저장소크기 GB] [--모델해시 sha256] [--계약 정밀|빠른] [--저장소쓰기 모두|비울때|끔]]
 
-   길: GET /health · GET /v1/models · POST /v1/chat/completions · POST /v1/completions (앞의 /v1 은 없어도 된다), OPTIONS(CORS).
+   길: GET /health · GET /v1/models · POST /v1/chat/completions · POST /v1/completions (앞의 /v1 은 없어도 된다), OPTIONS(CORS),
+   GET /geulpu/store · POST /geulpu/store/flush(문맥 저장소 — 문서/문맥저장소.md).
    스레드는 하나다: 막지 않는 소켓을 WSAPoll 로 돌보고, 그 사이에 줄 선 요청을 빈 슬롯에 넣고(캐시 토큰열과 앞이 가장 길게 같은 슬롯),
    생성 걸음 하나(생성 중인 슬롯 모두 — 엔진표.gl 의 표걸음)와 프롬프트 덩이 하나를 번갈아 한다. 뽑기는 뽑기.gl(계약), 탐욕은 장치의
    가장 큰 번호. 받는 모델은 머리 128 의 Qwen2(7B · 14B — Q8_0 · Q4_0 · k-양자화). *)
@@ -14,4 +16,5 @@
 포함 "표준/수학.gl"
 포함 "표준/시간.gl"
 포함 "쿠다.gl"
+포함 "쿠다여럿.gl"
 포함 "서버몸.gl"
