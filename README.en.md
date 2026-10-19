@@ -21,7 +21,7 @@ with one token changed, compare against another model or prompt, and check someo
 
 > It loses only what is written down — and it shows what losing less costs.
 
-**[⬇ Download the latest version — Windows 64-bit, zip of about 1.4 MB](https://github.com/wwoosshh/GeulPUv2/releases/latest)**
+**[⬇ Download the latest version — Windows 64-bit, zip of about 1.4 MB](https://github.com/wwoosshh/GeulPUv2/releases/latest)** · with Python, one line: `pipx install geulpu` ([install](#with-python--one-command))
 
 [Install](#install) · [First steps](#first-steps) · [Supported models](#supported-models) · [How it runs](#how-it-runs) ·
 [Troubleshooting](#troubleshooting) · [Update and uninstall](#update-and-uninstall) · [What is different](#what-is-different) ·
@@ -42,6 +42,25 @@ with one token changed, compare against another model or prompt, and check someo
 Keep the graphics driver up to date. NVIDIA cards older than the RTX 30 series (RTX 20, GTX 16 and earlier) cannot use the CUDA path
 (compute capability below 8.0); the app then checks by itself whether they can run on Vulkan. On AMD, a Radeon RX 9060 XT has been
 verified.
+
+### With Python — one command
+
+Instead of downloading and extracting the zip, you can install with a Python installer and run it right away
+([geulpu on PyPI](https://pypi.org/project/geulpu/) — the same app as the release zip).
+
+```powershell
+pipx install geulpu        # or: uv tool install geulpu · pip install geulpu
+geulpu                     # opens http://127.0.0.1:44544 in your browser
+```
+
+- To update, quit the app, then run `pipx upgrade geulpu` (`uv tool upgrade geulpu`, `pip install -U geulpu`). The app shows the
+  command when a new version is out.
+- Models, settings and results live in `%USERPROFILE%\GeulPU` as with the zip, so uninstalling the package (`pipx uninstall geulpu`)
+  keeps them.
+- If the `geulpu` command is not found, run `python -m geulpu` (pip's per-user install may leave its scripts folder off PATH). pipx or
+  uv is recommended.
+
+Steps 1–3 below install from the zip.
 
 ### 1. Download
 
@@ -374,6 +393,9 @@ backends are packaged only after their bytes are checked against the build hashe
   Changes are listed in [바뀐것.md](문서/바뀐것.md) (Korean).
 - **Uninstall**: quit the app and delete the GeulPU folder. To delete the downloaded models as well, also delete
   `%USERPROFILE%\GeulPU`.
+- **Installed with a Python installer**: to update, quit the app, then `pipx upgrade geulpu` (`uv tool upgrade geulpu` ·
+  `pip install -U geulpu`); to uninstall, `pipx uninstall geulpu` (`uv tool uninstall geulpu` · `pip uninstall geulpu`) — the data
+  folder stays.
 
 ## What is different
 

@@ -17,7 +17,7 @@ zip을 풀고 `GeulPU.exe`를 실행하면 브라우저에 채팅 화면이 열�
 
 > 적힌 대로만 잃는다. 덜 잃는 데 드는 셈은 숨기지 않는다.
 
-**[⬇ 최신 버전 받기 — Windows 64비트 · zip 약 1.4 MB](https://github.com/wwoosshh/GeulPUv2/releases/latest)**
+**[⬇ 최신 버전 받기 — Windows 64비트 · zip 약 1.4 MB](https://github.com/wwoosshh/GeulPUv2/releases/latest)** · 파이썬이 있다면 `pipx install geulpu` 한 줄로([설치](#파이썬이-있다면--명령-한-줄로))
 
 [설치](#설치) · [처음 쓰기](#처음-쓰기) · [지원하는 모델](#지원하는-모델) · [실행 방식](#실행-방식) · [문제 해결](#문제-해결) ·
 [업데이트 · 삭제](#업데이트--삭제) · [무엇이 다른가](#무엇이-다른가) · [개발 · 연구](#개발--연구)
@@ -36,6 +36,23 @@ zip을 풀고 `GeulPU.exe`를 실행하면 브라우저에 채팅 화면이 열�
 
 그래픽 드라이버는 최신으로 두세요. RTX 20 · GTX 16 이하의 NVIDIA 카드는 CUDA 경로를 쓰지 못합니다(계산 능력 8.0 미만). 이때 앱은 Vulkan으로
 돌 수 있는지 스스로 확인합니다. AMD는 Radeon RX 9060 XT에서 확인했습니다.
+
+### 파이썬이 있다면 — 명령 한 줄로
+
+zip을 받아 풀지 않고, 파이썬의 설치 도구로 받아 곧바로 실행할 수 있습니다([PyPI의 geulpu](https://pypi.org/project/geulpu/) — 릴리스
+zip과 같은 앱).
+
+```powershell
+pipx install geulpu        # 또는 uv tool install geulpu · pip install geulpu
+geulpu                     # 브라우저에 http://127.0.0.1:44544 가 열립니다
+```
+
+- 업데이트는 앱을 끈 뒤 `pipx upgrade geulpu`(uv는 `uv tool upgrade geulpu`, pip는 `pip install -U geulpu`)입니다. 새 판이 나오면 앱이
+  이 명령을 알려 줍니다.
+- 모델 · 설정 · 결과는 zip 판과 같은 `%USERPROFILE%\GeulPU`에 있어, 꾸러미를 지워도(`pipx uninstall geulpu`) 남습니다.
+- `geulpu` 명령을 찾지 못하면 `python -m geulpu`로 실행합니다(pip의 사용자 설치는 명령 폴더가 PATH에 없을 수 있습니다). pipx · uv를 권합니다.
+
+아래 1 ~ 3은 zip으로 설치하는 길입니다.
 
 ### 1. 받기
 
@@ -346,6 +363,8 @@ bcrypt · advapi32)과 그래픽 드라이버의 DLL뿐입니다.
 - **새 버전**: 앱 화면이 GitHub의 새 릴리스를 알려 줍니다. 앱을 끄고 새 zip을 풀어 그 `GeulPU.exe` 를 실행하면 됩니다. 모델 · 설정 · 결과는
   자료 폴더에 그대로 있어 다시 받지 않습니다(커널만 새 버전에 맞춰 한 번 다시 만듭니다). 바뀐 것은 [바뀐것.md](문서/바뀐것.md).
 - **삭제**: 앱을 끄고 GeulPU 폴더를 지웁니다. 받은 모델까지 지우려면 `%USERPROFILE%\GeulPU` 도 지웁니다.
+- **파이썬 설치 도구로 깐 경우**: 업데이트는 앱을 끈 뒤 `pipx upgrade geulpu`(`uv tool upgrade geulpu` · `pip install -U geulpu`),
+  삭제는 `pipx uninstall geulpu`(`uv tool uninstall geulpu` · `pip uninstall geulpu`) — 자료 폴더는 남습니다.
 
 ## 무엇이 다른가
 
