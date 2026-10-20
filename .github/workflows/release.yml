@@ -82,12 +82,14 @@ jobs:
             $log = [IO.File]::ReadAllText("GeulPUv2/$path", [Text.Encoding]::UTF8)
             $m = [regex]::Match($log, "(?ms)^## $([regex]::Escape($ver))\b.*?(?=^## |\z)")
             if (-not $m.Success) { throw "$path 에 '## $ver' 절이 없다" }
-            return [regex]::Replace($m.Value.TrimEnd(), '\]\((?!https?://|#|mailto:)([^)\s]+)\)', {
+            $s = [regex]::Replace($m.Value.TrimEnd(), '\]\((?!https?://|#|mailto:)([^)\s]+)\)', {
               param($x)
               $p = $dir + $x.Groups[1].Value
               while ($p -match '(^|/)[^/]+/\.\./') { $p = $p -replace '(^|/)[^/]+/\.\./', '$1' }
               "](" + $blob + $p + ")"
             })
+            # 폭에 맞춰 접은 줄을 잇는다 — 릴리스 노트는 줄바꿈을 그대로 <br> 로 그린다(목록 · 제목 · HTML 로 시작하는 줄은 그대로)
+            return [regex]::Replace($s, '(?<=\S)[ \t]*\r?\n(?![ \t]*([-*+] |\d+\. |#|<))[ \t]+', ' ')
           }
           $en = Section "CHANGELOG.md" ""
           $ko = Section "문서/바뀐것.md" "문서/"
