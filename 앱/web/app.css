@@ -895,3 +895,52 @@ pre.log.lab-code { max-height: 220px; white-space: pre; word-break: normal; over
   .lab-body { padding: 12px 16px 24px; }
   .alt { grid-template-columns: minmax(0, 1fr) 56px 52px 28px; }
 }
+
+/* 디버거(디버거 v1) — 실행 목록(왼쪽) · 고른 실행(오른쪽). 넓은 창은 두 칸이 저마다 스크롤(화면은 고정), 좁은 창은 위아래로 */
+.dbg { display: flex; flex-direction: column; }
+.dbg-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 24px; }
+.dbg-list { min-width: 0; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-card); overflow: hidden; }
+.dbg-detail { min-width: 0; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-card); padding: 24px 28px 28px; }
+.dbg-list::-webkit-scrollbar-thumb, .dbg-detail::-webkit-scrollbar-thumb { border-color: var(--canvas-card); }
+@media (width > 960px) {
+  .page.wide > .dbg { flex: 1; min-height: 0; }
+  .dbg-body { flex: 1; min-height: 0; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); }
+  .dbg-list, .dbg-detail { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+}
+@media (max-width: 960px) {
+  .dbg-list { max-height: 40vh; overflow-y: auto; }
+  .dbg-detail { padding: 20px; }
+}
+.dbg-rec { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--hairline); color: var(--ink); font-size: 13px; line-height: 19px; }
+.dbg-busy { display: flex; align-items: center; gap: 8px; color: var(--body); font-size: 13px; line-height: 19px; }
+.dbg-detail input.lab-num { width: 88px; }
+.dbg-detail textarea.lab-ta { resize: vertical; min-height: 160px; font-size: 12px; line-height: 18px; }
+.dbg-msg { display: flex; gap: 12px; align-items: baseline; padding: 8px 12px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-raise); }
+.dbg-msg .qlab { flex: none; width: 76px; color: var(--mute); }
+.dbg-msg-t { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 19px; color: var(--body); }
+pre.dbg-ans {
+  margin: 0; max-height: 280px; overflow: auto; padding: 12px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-raise);
+  font: 400 14px/22px var(--font-sans); color: var(--body); white-space: pre-wrap; overflow-wrap: anywhere; overscroll-behavior: contain;
+}
+pre.dbg-ans.sm { max-height: 200px; font-size: 13px; line-height: 20px; }
+.dbg-json summary { cursor: pointer; color: var(--mute); font-size: 13px; line-height: 19px; }
+.dbg-json summary:hover { color: var(--ink); }
+.dbg-json pre.log { max-height: 320px; overflow: auto; white-space: pre; word-break: normal; font-size: 12px; line-height: 18px; margin-top: 8px; }
+.dbg-vs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.card.dbg-branch { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card.dbg-branch.on { border-color: var(--accent-line); }
+.dbg-link { border: 0; padding: 0; background: none; color: var(--ink); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+.dbg-link:hover { text-decoration-color: var(--ink); }
+table.data.dbg-table tbody tr.on td { background: var(--canvas-soft); }
+.dbg-bks { gap: 4px 8px; }
+.dbg-chip {
+  min-width: 32px; height: 24px; padding: 0 8px; border: 1px solid var(--hairline-strong); border-radius: var(--r-pill); background: transparent;
+  color: var(--body); font: 400 12px/22px var(--font-mono); font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.dbg-chip:hover { border-color: var(--line-pill-hover); color: var(--ink); }
+.dbg-chip.low { border-style: dashed; }
+.dbg-chip.tool { border-color: var(--line-strong); color: var(--ink); }
+@media (max-width: 640px) {
+  .dbg-vs { grid-template-columns: minmax(0, 1fr); }
+  .dbg-msg { flex-direction: column; gap: 4px; }
+}

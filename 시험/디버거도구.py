@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """디버거 v1 2단계 — 도구/debugger.py 의 GPU 없는 시험(빠른 점검 4e — 시험/빠른점검.py 가 부른다). 실행 로그 나누기 · 분석 줄
 덧붙이기(파일) · 분기 요청 짓기 · 요청 고치기(경로) · echo 응답 풀기 · 점수가 같은 서버의 것인가 · 중단점 찾기 · 비교 계산을, 손으로
-정한 값과 이 파일에 따로 짠 단순한 참조(무작위 실행 여럿)로 본다. 같은 입력이면 같은 보고(글자까지)인지도 본다.
+정한 값과 이 파일에 따로 짠 단순한 참조(무작위 실행 여럿)로 본다. 같은 입력이면 같은 보고(글자까지)인지도 본다. node 가 있으면 앱
+화면(앱/web/app.js)의 비교 · 중단점 · 큰 정수(64 비트 시드) JSON 이 도구와 같은 값인지도 본다(시험/디버거화면.js).
 
     python -X utf8 시험/디버거도구.py      → 마지막 줄 "디버거 도구: 사례 N 모두 통과"(종료 0), 틀리면 종료 1
 """
@@ -10,6 +11,8 @@ import json
 import math
 import os
 import random
+import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -169,13 +172,20 @@ def 시험_경로():
 # ---- 4. echo 응답 풀기 · 서버 · 해시 검사 ----
 def 시험_점수():
     P = 3
-    r = {"choices": [{"text": "…", "logprobs": {"tokens": ["a", "b", "c", "X", "Y"], "token_logprobs": [None, None, None, -0.5, -1.25],
+    r = {"choices": [{"text": "abcXY", "logprobs": {"tokens": ["a", "b", "c", "X", "Y"], "token_logprobs": [None, None, None, -0.5, -1.25],
                                                 "top_logprobs": [None, None, None, {}, {}], "text_offset": [0, 1, 2, 3, 4]}}],
          "geulpu": {"prompt_entropy": [None, None, None, 0.7, 1.1], "prompt_top_ids": [None, None, None, [8, 9], [9, 8]],
                     "prompt_top_logprobs": [None, None, None, [-0.5, -1.0], [-0.25, -1.25]], "prompt_logit_hashes": ["h3", "h4"]}}
     s = d.점수풀기(r, P, 2)
     같다("점수 풀기", s, {"logprobs": [-0.5, -1.25], "entropy": [0.7, 1.1], "top_ids": [[8, 9], [9, 8]], "top_logprobs": [[-0.5, -1.0], [-0.25, -1.25]],
-                       "token_text": ["X", "Y"], "logit_hashes": ["h3", "h4"]})
+                       "token_text": ["X", "Y"], "text": "XY", "text_offset": [0, 1], "logit_hashes": ["h3", "h4"]})
+    # 한 글자(한 · 3 바이트)가 토큰 둘에 걸친 답 — 글은 바이트로 이어 붙인 것, 자리는 답의 처음부터
+    r2 = {"choices": [{"text": "ab한글", "logprobs": {"tokens": ["a", "b", "�", "�", "글"], "token_logprobs": [None, None, -1.0, -2.0, -0.5],
+                                                       "text_offset": [0, 1, 2, 4, 5]}}],
+          "geulpu": {"prompt_entropy": [None, None, 1, 2, 3], "prompt_top_ids": [None, None, [1], [2], [3]],
+                     "prompt_top_logprobs": [None, None, [-1.0], [-2.0], [-0.5]], "prompt_logit_hashes": ["x", "y", "z"]}}
+    s2 = d.점수풀기(r2, 2, 3)
+    같다("점수 풀기 — 바이트 조각", (s2["text"], s2["text_offset"], s2["token_text"]), ("한글", [0, 2, 3], ["�", "�", "글"]))
     몸 = d.점수요청([1, 2, 3], [8, 8])
     같다("점수 요청", (몸["prompt"], 몸["echo"], 몸["max_tokens"], 몸["logprobs"], 몸["geulpu"]["echo_from"], 몸["geulpu"]["logit_hash"]),
          ([1, 2, 3, 8, 8], True, 0, 2, 3, True))
@@ -342,9 +352,84 @@ def 시험_비교():
         같다(f"비교 무작위 {회} — 다시 해도 같은 보고", json.dumps(d.비교계산(A, B)), json.dumps(보고))
 
 
+# ---- 7. 앱 화면(app.js)의 같은 계산 — node 가 있으면 화면의 비교 · 중단점 · 큰 정수 JSON 이 도구와 같은 값인가 ----
+def 줄글(헤더, 줄들):
+    return "\n".join(json.dumps(x, ensure_ascii=False, separators=(",", ":")) for x in [헤더] + 줄들) + "\n"
+
+
+def 시험_화면():
+    node = shutil.which("node")
+    if not node:
+        print("화면 시험: node 가 없어 건너뜀")
+        return
+    rng = random.Random(23)
+    입력 = {"compare": [], "breaks": [], "big": []}
+    기대 = []
+    for 회 in range(40):
+        n = rng.randint(1, 20)
+        Ax, Bx, As = [], [], []
+        for i in range(n):
+            m = rng.randint(1, 30)
+            ta = [rng.randint(0, 9) for _ in range(m)]
+            tb = list(ta)
+            if rng.random() < 0.6:
+                k = rng.randint(0, m - 1)
+                tb = tb[:k] + [rng.randint(10, 19)] + [rng.randint(0, 9) for _ in range(rng.randint(0, 10))]
+            Ax.append(요청줄(i, [1, i], ta, 상태=200 if rng.random() < 0.95 else 400))
+            if rng.random() < 0.9:
+                Bx.append(요청줄(i, [1, i] if rng.random() < 0.9 else [2, i], tb, 서버=서버B))
+            for 서버 in (서버A, 서버B):
+                if rng.random() < 0.85:
+                    lp = [-rng.random() * 6 for _ in range(m)]
+                    As.append(점수줄(i, 서버, lp, [[rng.choice([t, t + 1]), 99] for t in ta], [[v, v - rng.random()] for v in lp]))
+        rng.shuffle(As)
+        입력["compare"].append({"a": 줄글(헤더A, Ax + As), "b": 줄글(헤더B, Bx)})
+        기대.append(d.비교계산(d.실행(헤더A, Ax + As, 이름="A"), d.실행(헤더B, Bx, 이름="B")))
+    기대중단 = []
+    for 회 in range(80):
+        n = rng.randint(0, 40)
+        토큰 = [rng.randint(0, 50) for _ in range(n)]
+        a1 = [-rng.random() * 3 for _ in range(n)]
+        sc = {"logprobs": [v if rng.random() < 0.7 else v - rng.random() * 4 for v in a1], "top_ids": [[t, 0] for t in 토큰],
+              "top_logprobs": [[v, v - rng.choice([0.0, 0.01, 0.04, 0.3, 2.0])] for v in a1],
+              "token_text": [rng.choice(["a", "<tool_call>", "x<|python_tag|>", "한"]) if rng.random() < 0.1 else "w" for _ in range(n)]}
+        마, 확, 호 = rng.choice([0.01, 0.05, 0.5]), rng.choice([0.01, 0.05, 0.3]), rng.random() < 0.3
+        입력["breaks"].append({"tokens": 토큰, "score": sc, "margin": 마, "prob": 확, "tool_call": 호})
+        기대중단.append([[b["step"], b["kinds"]] for b in d.중단점찾기(토큰, sc, 마, 확, 호)])
+    큰 = ['{"seed":18446744073709551615,"x":[1,-9223372036854775808,0.5],"s":"a\\"b 12345678901234567890"}',
+          '{"a":9007199254740993,"b":9007199254740992,"c":123}', '{"t":"\\\\","n":-0.25}']
+    입력["big"] = 큰
+    with tempfile.TemporaryDirectory() as 폴더:
+        p = os.path.join(폴더, "입력.json")
+        open(p, "w", encoding="utf-8").write(json.dumps(입력, ensure_ascii=False))
+        r = subprocess.run([node, os.path.join(ROOT, "시험", "디버거화면.js"), os.path.join(ROOT, "앱", "web", "app.js"), p],
+                           capture_output=True, text=True, encoding="utf-8")
+    if r.returncode != 0:
+        같다("화면 시험 — node 실행", r.stderr[-500:], "")
+        return
+    받음 = json.loads(r.stdout)
+    for 회, (js, py) in enumerate(zip(받음["compare"], 기대)):
+        for jr, pr in zip(js["rows"], py["requests"]):
+            열 = ["i", "compared"] + (["same", "first_divergence", "steps_a", "steps_b", "scored"] if pr["compared"] else [])
+            if pr.get("scored"):
+                열 += ["delta_sum", "delta_mean", "b_top1_differs", "a_top1_differs", "logprob_a", "logprob_b"]
+            같다(f"화면 비교 {회} 요청 {pr['i']}", {k: jr.get(k) for k in 열}, {k: pr.get(k) for k in 열})
+            if pr.get("scored"):
+                같다(f"화면 비교 {회} 요청 {pr['i']} 가장 나빠진 스텝", jr["worst"], [w["step"] for w in pr["worst"]])
+        ps, jsum = py["summary"], js["summary"]
+        같다(f"화면 비교 {회} 요약", {k: jsum[k] for k in ("requests", "same", "different", "prompt_different", "scored", "tokens", "delta_sum", "b_top1_differs", "a_top1_differs")},
+             {k: ps[k] for k in ("requests", "same", "different", "prompt_different", "scored", "tokens", "delta_sum", "b_top1_differs", "a_top1_differs")})
+        같다(f"화면 비교 {회} 갈라진 스텝", [jsum["fd_min"], jsum["fd_median"], jsum["fd_max"]],
+             [ps["first_divergence"]["min"], ps["first_divergence"]["median"], ps["first_divergence"]["max"]])
+    for 회, (js, py) in enumerate(zip(받음["breaks"], 기대중단)):
+        같다(f"화면 중단점 {회}", js, py)
+    for t, js in zip(큰, 받음["big"]):
+        같다(f"화면 큰 정수 JSON {t[:30]}", js, t)
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    for f in (시험_실행, 시험_덧붙이기, 시험_분기요청, 시험_경로, 시험_점수, 시험_중단점, 시험_비교):
+    for f in (시험_실행, 시험_덧붙이기, 시험_분기요청, 시험_경로, 시험_점수, 시험_중단점, 시험_비교, 시험_화면):
         f()
     for t in 틀림[:20]:
         print("틀림 —", t)

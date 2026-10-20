@@ -303,12 +303,17 @@ def 점수요청(프롬프트, 토큰, k=점수k):
 
 
 def 점수풀기(r, P, n):
-    """echo 응답에서 프롬프트 뒤 n 토큰의 스텝마다 값 — 점수 줄의 칸"""
+    """echo 응답에서 프롬프트 뒤 n 토큰의 스텝마다 값 — 점수 줄의 칸. text 는 답의 글(토큰을 바이트로 이은 것), text_offset 은 토큰마다
+    그 글 안의 바이트 자리 — 한 글자가 토큰 둘에 걸쳐도 화면이 글자 단위로 묶는다(token_text 는 토큰 하나의 글이라 '�' 일 수 있다)"""
     c = r["choices"][0]
     lp = c.get("logprobs") or {}
     g = r.get("geulpu") or {}
+    본 = (c.get("text") or "").encode("utf-8")
+    오프 = lp.get("text_offset") or []
+    a0 = 오프[P] if len(오프) > P else len(본)
     return {"logprobs": lp["token_logprobs"][P:P + n], "entropy": g["prompt_entropy"][P:P + n], "top_ids": g["prompt_top_ids"][P:P + n],
             "top_logprobs": g["prompt_top_logprobs"][P:P + n], "token_text": lp["tokens"][P:P + n],
+            "text": 본[a0:].decode("utf-8", "replace"), "text_offset": [o - a0 for o in 오프[P:P + n]],
             "logit_hashes": (g.get("prompt_logit_hashes") or [])[:n]}
 
 

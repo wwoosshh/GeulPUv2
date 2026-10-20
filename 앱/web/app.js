@@ -903,6 +903,188 @@ const DICT = {
   "문맥이 가득 차 이어서 생성할 수 없습니다": "The context is full, so the answer can't be continued",
   "앞의 대화를 요약하지 못했습니다 — 요약이 비었습니다": "Could not summarize the earlier conversation — the summary came back empty",
   "이 답이 쓴 요약을 찾지 못했습니다": "Couldn't find the summary this answer used",
+  "GeulPU 실행 로그가 아닙니다 — 첫 줄이 헤더여야 합니다": "Not a GeulPU run log — the first line must be the header",
+  "YaRN 배": "YaRN factor",
+  "백엔드(빠른 모드)": "backend (fast mode)",
+  "모델 모름": "unknown model",
+  "빠름": "Fast",
+  "정밀": "Exact",
+  "이 실행과 계산 방식 · 백엔드가 다릅니다 — '이 실행의 설정으로 불러오기'를 누르세요": "The precision or backend differs from this run — press 'Load with this run's settings'",
+  "서버를 멈추는 중": "Stopping the server",
+  "생성 요청이 아니거나 요청이 JSON이 아닙니다": "Not a generation request, or the request is not JSON",
+  "응답에 토큰이 없습니다(끊긴 스트리밍 · geulpu 없음)": "The response has no tokens (cut stream or no geulpu object)",
+  "재생할 요청이 없습니다": "There are no requests to replay",
+  "기록한 서버와 지금 서버가 다릅니다": "The recorded server differs from the current one",
+  "'이 실행의 설정으로 불러오기'로 맞춘 뒤 재생하면 같은 계산입니다.": "Use 'Load with this run's settings' first to replay the same computation.",
+  "그래도 재생": "Replay anyway",
+  "재생": "Replay",
+  "이 요청의 응답에 시드가 없어 분기할 수 없습니다": "This request's response has no seed, so it can't be branched",
+  "요청이 JSON이 아닙니다 — ": "The request is not JSON — ",
+  "요청은 JSON 객체여야 합니다": "The request must be a JSON object",
+  "오류 응답이거나 토큰 없음": "error response or no tokens",
+  "B에 없음": "not in B",
+  "기록 멈춤": "Stop recording",
+  "기록 시작": "Start recording",
+  "디버거 v1": "Debugger v1",
+  "디버거": "Debugger",
+  "앱의 /v1을 지나는 생성 요청을 실행 로그로 기록하고, 같은 비트로 다시 돌리고(재생), 토큰마다 들여다보고(관찰 · 중단점), 다른 토큰이나 고친 요청으로 갈라 보고(분기), 두 실행을 비교합니다.": "Record the generation requests that pass through the app's /v1 as a run log, run them again bit for bit (replay), look at every token (observe · breakpoints), try another token or an edited request (branch), and compare two runs.",
+  "불러오기": "Import",
+  "비우면 시각으로": "Leave empty to use the time",
+  "실행 이름": "Run name",
+  "지금부터 앱의 /v1을 지나는 생성 요청(에이전트 · 스크립트 · 이 앱의 채팅)이 이 실행 로그에 한 줄씩 남습니다. 대화 내용이 담기니 필요한 동안만 켜 두세요.": "From now on, every generation request that passes through the app's /v1 (agents, scripts, this app's chat) is written to this run log, one line each. It holds conversation content, so keep it on only while you need it.",
+  "실행 로그가 없습니다": "No run logs",
+  "기록 시작을 누른 뒤 에이전트 · 스크립트 · 이 앱의 채팅으로 요청을 보내면 여기 남습니다. 다른 PC에서 내보낸 실행 로그는 불러오기로 엽니다.": "Press Start recording, then send requests from an agent, a script or this app's chat — they show up here. Open a run log exported on another PC with Import.",
+  "기록 중": "Recording",
+  "고친 때": "Modified",
+  "실행 목록": "Runs",
+  "실행을 고르세요": "Pick a run",
+  "실행 로그는 요청 · 응답과 시드 · 프롬프트 토큰 · 스텝마다 로짓 해시를 담습니다. 같은 GeulPU 버전 · 같은 모델 파일 · 같은 계산 방식이면 어느 PC에서든 비트까지 같게 다시 돌립니다.": "A run log holds each request and response with its seed, prompt tokens and a logit hash per step. With the same GeulPU version, model file and precision, it replays bit for bit on any PC.",
+  "실행 보기": "Run view",
+  "요청": "Requests",
+  "실행 로그": "Run log",
+  "echo 스코어링 줄 — 모델(서버)마다 요청마다 하나": "Echo-scoring lines — one per request for each model (server)",
+  "이 실행의 설정으로 불러오기": "Load with this run's settings",
+  "기록한 요청과 분기를 같은 시드로 다시 보내 토큰 · 스텝마다 로짓 해시를 비교합니다": "Send the recorded requests and branches again with the same seeds and compare the tokens and the logit hash of every step",
+  "요청마다 답을 지금 모델로 echo 스코어링해 점수 줄을 덧붙입니다(중단점 · 비교에 씀)": "Echo-score each answer with the current model and append score lines (used for breakpoints and comparison)",
+  "점수 매기기": "Score",
+  "실행 로그 파일(JSONL)을 받습니다 — 다른 GeulPU에서 불러오기로 엽니다": "Download the run log file (JSONL) — open it in another GeulPU with Import",
+  "실행 로그 지우기": "Delete run log",
+  "실행 로그를 지울까요?": "Delete this run log?",
+  "아직 기록한 요청이 없습니다.": "No requests recorded yet.",
+  "완성": "completion",
+  "차례": "#",
+  "경로": "Path",
+  "프롬프트": "Prompt",
+  "스텝": "Steps",
+  "끝": "Finish",
+  "중단점": "Breakpoints",
+  "분기": "Branches",
+  "건너뜀": "Skipped",
+  "다름": "Different",
+  "저확률 샘플의 기준 p": "Low-probability sample threshold p",
+  "마진 δ": "Margin δ",
+  "확률 p": "Probability p",
+  "확률은 모델의 분포(온도 1)입니다.": "Probabilities are the model's distribution (temperature 1).",
+  "요청 목록": "Requests",
+  "이 요청이 실행 로그에 없습니다.": "This request is not in the run log.",
+  "온도 기본값": "default temperature",
+  "오류로 끝난 요청입니다 — 재생은 같은 오류(상태 · 코드)가 나오는지 봅니다.": "This request ended with an error — replay checks that the same error (status and code) comes back.",
+  "응답에 토큰이 없습니다.": "The response has no tokens.",
+  "답": "Answer",
+  "(이 실행의 모델과 어휘가 같은 모델을 불러오면 답의 글이 보입니다)": "(Load a model with the same vocabulary as this run's model to see the answer text)",
+  "관찰 — 토큰마다": "Observe — per token",
+  "토큰마다 확률 · 순위 · 대안 · 엔트로피를 이 실행의 모델로 다시 계산합니다(echo 스코어링 — 생성과 같은 비트). 그 스텝의 대안 토큰으로 분기할 수 있습니다.": "Recompute each token's probability, rank, alternatives and entropy with this run's model (echo scoring — the same bits as generation). You can branch from a step with an alternative token.",
+  "로짓 해시가 생성 때와 다릅니다 — 다른 계산입니다(모델 · 계산 방식 · 빌드를 확인하세요).": "The logit hashes differ from generation — this is a different computation (check the model, precision and build).",
+  "토큰을 누르면 그 스텝의 대안과 수치가 보입니다. 대안의 화살표 단추가 그 토큰으로 분기합니다(같은 시드 · 같은 스텝 번호의 난수).": "Click a token to see that step's alternatives and numbers. An alternative's arrow button branches with that token (same seed, same step-indexed random numbers).",
+  "관찰에서 대안 토큰으로 분기하거나, 아래에서 요청을 고쳐 다시 생성하면 여기 남습니다(실행 로그의 분기 줄 — 재생이 함께 다시 돌립니다).": "Branch with an alternative token in Observe, or edit the request below and generate again — the branches show up here (branch lines in the run log, replayed together with the requests).",
+  "고칠 요청(JSON)": "Request to edit (JSON)",
+  "요청을 고쳐 다시 생성": "Edit the request and generate again",
+  "도구 결과 · 시스템 프롬프트 · 사용자 말 · 설정을 고쳐 같은 시드로 다시 생성합니다. 프롬프트 토큰이 처음 달라진 자리와 답이 처음 갈라진 스텝을 원래와 비교하고, 두 번 돌려 같은 비트인지 봅니다.": "Edit a tool result, the system prompt, a user message or a setting and generate again with the same seed. Shows where the prompt tokens first differ and the step where the answer first diverges, and runs it twice to check the bits.",
+  "고친 요청으로 분기": "Branch with the edited request",
+  "원래대로": "Reset",
+  " (원래 토큰 — 자기 확인)": " (original token — self-check)",
+  "앞 스텝 로짓 해시 같음": "Earlier steps: same logit hashes",
+  "앞 스텝 로짓 해시 다름": "Earlier steps: different logit hashes",
+  "분기 앞의 스텝들이 원래와 같은 계산인가": "Whether the steps before the branch are the same computation as the original",
+  "두 번 같은 비트": "Same bits twice",
+  "두 번 돌려 다름": "Different on a second run",
+  "원래 답과 같음": "Same as the original answer",
+  "원래 답과 다름": "Differs from the original answer",
+  "원래 토큰으로 이으면 원래 답의 뒤가 그대로 나와야 한다": "Continuing with the original token must reproduce the rest of the original answer",
+  "원래": "Original",
+  "(어휘가 같은 모델을 불러오면 글이 보입니다)": "(Load a model with the same vocabulary to see the text)",
+  "같은 요청열(같은 테스트 세트 등)을 다른 모델 파일 · 양자화 · 설정 · GeulPU 버전으로 돌린 실행 B와 요청마다 비교합니다 — 같은 답인가 · 처음 갈라진 스텝, 그리고 A의 답을 A의 모델과 B의 모델로 점수 매긴 로그확률의 차.": "Compare, request by request, with a run B of the same requests (e.g. the same test set) on another model file, quantization, setting or GeulPU version — whether the answers match, the first diverging step, and the log-probability difference of A's answer scored with A's model and B's model.",
+  "비교할 실행(B)": "Run to compare (B)",
+  "비교할 실행(B) 고르기": "Pick a run to compare (B)",
+  "같은 답": "Same answer",
+  "나온 토큰이 모두 같은 요청": "Requests whose generated tokens are all the same",
+  "처음 갈라진 스텝(가운데값)": "First diverging step (median)",
+  "토큰당 로그확률 차(B − A)": "Log-probability difference per token (B − A)",
+  "A의 답을 B의 모델과 A의 모델로 점수 매긴 로그확률의 차 — 토큰마다 평균(nat)": "A's answer scored with B's model minus A's model — mean per token (nat)",
+  "B의 1위 ≠ A의 토큰": "B's top-1 ≠ A's token",
+  "처음 갈라진 스텝": "First diverging step",
+  "스텝 A/B": "Steps A/B",
+  "차 합": "Diff sum",
+  "차 평균": "Diff mean",
+  "B 1위 ≠ A": "B top-1 ≠ A",
+  "A의 이 요청 보기": "Open this request in A",
+  "두 답의 토큰이 모두 같습니다.": "All tokens of the two answers are the same.",
+  "B의 모델에서": "with B's model",
+  "{}번째 줄이 JSON이 아닙니다": "Line {} is not JSON",
+  "모델 {}": "Model {}",
+  "{}이 10분 안에 끝나지 않았습니다": "{} did not finish within 10 minutes",
+  "이 실행의 모델 파일이 설치되어 있지 않습니다(sha256 {})": "This run's model file is not installed (sha256 {})",
+  "불러온 서버가 이 실행과 다릅니다 — {}": "The loaded server differs from this run — {}",
+  "하드웨어 확인 뒤에도 백엔드가 {}입니다": "After the hardware check the backend is still {}",
+  "앱이 기록 중입니다({}) — 이 화면이 보내는 요청도 그 실행 로그에 들어갑니다. 먼저 기록을 멈추세요.": "The app is recording ({}) — requests sent from this screen would go into that run log too. Stop recording first.",
+  "상태 {} — 오류 응답이 없습니다": "Status {} — no error response",
+  "다른 것: {}. 다른 계산이라 비트가 다를 수 있습니다.": "Different: {}. It is a different computation, so the bits may differ.",
+  "재생: {}개 중 같음 {}개": "Replay: {1} of {0} the same",
+  "점수의 로짓 해시가 생성 때와 다른 요청이 {}개 있습니다 — 점수가 생성과 다른 계산입니다": "{} requests have score logit hashes that differ from generation — the scores are a different computation",
+  "점수 {}개를 실행 로그에 덧붙였습니다": "Appended {} score lines to the run log",
+  " — 로짓 해시 {}개가 생성 때와 같음": " — {} with the same logit hashes as generation",
+  "분기 생성 중({}/2 — 두 번 돌려 같은 비트인지 봅니다)": "Generating the branch ({}/2 — run twice to check the bits)",
+  "분기 요청이 실패했습니다 — HTTP {} {}": "The branch request failed — HTTP {} {}",
+  "분기 b{} — 두 번 돌려 같은 비트": "Branch b{} — same bits on two runs",
+  "분기 b{} — 확인에서 다른 곳이 있습니다": "Branch b{} — a check found a difference",
+  "{} 읽는 중": "Reading {}",
+  "불러오는 중 {}/{}": "Importing {}/{}",
+  "실행 로그를 불러왔습니다 — {}": "Imported the run log — {}",
+  "기록 중 — {} · 요청 {}개": "Recording — {} · {} requests",
+  "{} {}/{}": "{} {}/{}",
+  "문맥 {}": "Context {}",
+  "만든 때 {}": "Created {}",
+  "커밋 {}": "Commit {}",
+  "서버 빌드 {}": "Server build {}",
+  "요청 {}개": "{0} {0|request|requests}",
+  "분기 {}개": "{0} {0|branch|branches}",
+  "점수 {}개 · 모델 {}개": "{0} score {0|line|lines} · {1} {1|model|models}",
+  "이 실행은 {}로 계산했습니다 — 지금 불러온 모델이 없습니다.": "This run was computed with {} — no model is loaded now.",
+  "이 실행은 {}로 계산했습니다 — 지금 서버와 다른 것: {}.": "This run was computed with {} — different from the current server: {}.",
+  "{} — 기록 · 점수 · 분기가 모두 지워집니다. 되돌릴 수 없습니다.": "{} — the records, scores and branches are all deleted. This can't be undone.",
+  " · 건너뜀 {}개": " · {} skipped",
+  " (분기 {}개 포함)": " (including {} branches)",
+  "중단점은 그 요청을 생성한 모델의 점수에서 찾습니다 — 점수가 있는 요청 {}/{}개. 이 실행의 모델로 '점수 매기기'를 누르세요.": "Breakpoints come from the scores of the model that generated each request — {}/{} requests have them. Press 'Score' with this run's model.",
+  "요청 {}": "Request {}",
+  "온도 {}": "temperature {}",
+  "시드 {}": "seed {}",
+  "프롬프트 {} 토큰": "prompt {} tokens",
+  "답 {} 토큰": "answer {} tokens",
+  "메시지 {}개 — 마지막 {}개": "{} messages — last {}",
+  " · 도구 {}개": " · {} tools",
+  "요청 JSON({})": "Request JSON ({})",
+  "로짓 해시 {}개가 생성 때와 같습니다 — 이 값은 생성할 때와 같은 계산입니다.": "All {} logit hashes match generation — these values are the same computation as generation.",
+  "중단점 {}개": "{} breakpoints",
+  "스텝 {} — {}": "Step {} — {}",
+  "스텝 {}: {} → {}": "Step {}: {} → {}",
+  "요청을 고쳐서 — 프롬프트가 토큰 {}에서 달라짐 · 답이 스텝 {}에서 갈라짐": "Edited request — the prompt differs from token {} · the answer diverges at step {}",
+  "{} 토큰": "{} tokens",
+  "최소 {} · 최대 {}": "min {} · max {}",
+  "A 자신의 1위가 아닌 토큰(샘플링) {}": "A's own non-top-1 tokens (sampling) {}",
+  "점수가 없는 요청 {}개 — A의 답을 A의 모델 · B의 모델로 점수 매깁니다(모델을 바꿔 불러옵니다).": "{} requests have no scores — score A's answers with A's model and B's model (loads the models in turn).",
+  "프롬프트 토큰이 다른 요청 {}개 — 채팅 템플릿이 다른 모델이면 답을 그대로 맞대기 어렵습니다.": "{} requests have different prompt tokens — answers from models with different chat templates are hard to compare directly.",
+  "스텝 {}에서 처음 갈라집니다 — 그 앞 {}토큰은 같습니다.": "First diverges at step {} — the {} tokens before it are the same.",
+  "A — 스텝 {}부터": "A — from step {}",
+  "B — 스텝 {}부터": "B — from step {}",
+  "마진이 작은 스텝": "Low-margin step",
+  "저확률 샘플": "Low-probability sample",
+  "도구 호출의 시작": "Tool-call start",
+  "기록 중인 실행입니다 — 먼저 멈추세요": "This run is being recorded — stop recording first",
+  "없는 실행입니다": "No such run",
+  "실행이 없습니다": "No such run",
+  "실행 이름이 맞지 않습니다": "Invalid run name",
+  "덧붙일 줄이 없습니다": "No lines to append",
+  "들여올 줄이 없습니다": "No lines to import",
+  "실행 로그를 열 수 없습니다": "Cannot open the run log",
+  "실행 로그를 만들 수 없습니다": "Cannot create the run log",
+  "실행 로그에 다 쓰지 못했습니다(디스크를 확인하세요)": "Could not write the whole run log (check the disk)",
+  "실행 로그에 쓰지 못했습니다": "Could not write to the run log",
+  "실행 로그에 쓰다 멈췄습니다(디스크를 확인하세요)": "Writing to the run log stopped (check the disk)",
+  "이어 받을 들여오기가 없습니다 — 첫 조각부터 다시 보내세요": "No import in progress to continue — send it again from the first part",
+  "GeulPU 실행 로그가 아닙니다 — 첫 줄이 헤더(format: geulpu-run-log/…)여야 합니다": "Not a GeulPU run log — the first line must be the header (format: geulpu-run-log/…)",
+  "lines(JSONL 글)가 있어야 합니다": "lines (JSONL text) is required",
+  "text(JSONL 글)가 있어야 합니다": "text (JSONL text) is required",
+  "실행 이름은 1 ~ 64 바이트, / \\ : * ? \" < > | 와 앞의 점 없이": "Run names are 1–64 bytes, without / \\ : * ? \" < > | or a leading dot",
 };
 function T(s, ...v) {
   if (typeof s === 'string') {
@@ -926,6 +1108,12 @@ function T(s, ...v) {
 }
 // 관리자 · 서버 문구 → 영어(사전에 통째로 있으면 그것, 아니면 아래 바꾸기를 차례로). 영어 화면이 아니면 그대로
 const TMX = [
+  // 디버거(디버거 v1) — 관리자의 문구
+  [/이미 기록 중입니다\((.*?)\) — 먼저 멈추세요/g, 'Already recording ($1) — stop it first'],
+  [/같은 이름의 실행이 있습니다\((.*?)\)/g, 'A run with the same name exists ($1)'],
+  [/(\d+) 번째 줄이 JSON 객체가 아닙니다/g, 'Line $1 is not a JSON object'],
+  [/(\d+) 번째 줄에 type\(글\)이 없습니다/g, 'Line $1 has no "type" string'],
+  [/실행 로그를 만들 수 없습니다\((.*?)\)/g, 'Cannot create the run log ($1)'],
   // 작업 제목
   [/모델 불러오기 — /g, 'Loading a model — '],
   [/하드웨어 진단 — /g, 'Hardware diagnosis — '],
@@ -1218,6 +1406,7 @@ const IC = {
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>',
   heart: '<path d="M12 19.6s-7.6-4.5-7.6-9.8A4.2 4.2 0 0 1 12 7.4a4.2 4.2 0 0 1 7.6 2.4c0 5.3-7.6 9.8-7.6 9.8z"/>',
   clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  bug: '<path d="M9 6.5a3 3 0 0 1 6 0"/><rect x="6.5" y="7.5" width="11" height="13" rx="5.5"/><path d="M12 11v9.5M6.5 11.5 3 10M17.5 11.5 21 10M6.5 15H2.5M17.5 15h4M7 18.5l-3.5 2M17 18.5l3.5 2"/>',
   flask: '<path d="M9.5 3.5h5M10.5 3.5v5.4l-5.3 9.2a1.6 1.6 0 0 0 1.4 2.4h10.8a1.6 1.6 0 0 0 1.4-2.4l-5.3-9.2V3.5"/><path d="M7.6 14.5h8.8"/>',
 };
 const svg = (n, cls) => `<svg class="i ${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || ''}</svg>`;
@@ -1487,6 +1676,7 @@ function renderAll() {
   if (S.view === 'chat') { renderChatTop(); if (!curRoom() || !curRoom().messages.length) renderMsgsIfChanged(); labSync(); }
   else if (S.view === 'models') renderModels();
   else if (S.view === 'bench') renderBench();
+  else if (S.view === 'debug') renderDebug();
   else if (S.view === 'device') renderDevice();
   else if (S.view === 'settings') renderSettings();
   if (POP && POP.dataset.kind === 'dl') refreshDlPop();
@@ -1578,7 +1768,7 @@ function fitTag(f) {
 }
 
 // ---------- 레일 · 상태 막대 ----------
-const RAIL_ICON = { chat: 'chat', models: 'box', bench: 'gauge', device: 'cpu', settings: 'gear' };
+const RAIL_ICON = { chat: 'chat', models: 'box', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
 document.querySelectorAll('.rail-btn').forEach(b => {
   b.innerHTML = svg(RAIL_ICON[b.dataset.view], 'l') + `<span class="lbl" aria-hidden="true">${esc(b.getAttribute('aria-label'))}</span>`;
   b.addEventListener('click', () => show(b.dataset.view));
@@ -1596,6 +1786,7 @@ function show(view) {
   resetSig();
   renderAll();
   if (view === 'bench') loadResults(true);
+  if (view === 'debug') DBG.listAt = 0;
   if (view === 'settings') { loadVk(); loadStore(true); }
   if (view === 'chat') { if (!same) renderMsgs(); setTimeout(() => { if (!$('#input').disabled) $('#input').focus(); }, 0); }
   try { sessionStorage.setItem('geulpu.view', view); } catch (_) { }
@@ -4990,9 +5181,9 @@ function labStrip(an, toks, sel, onSel, label) {
   return box;
 }
 // 걸음 하나 — 확률 · 순위 · 엔트로피 · 여유 · 로짓 해시, 대안 상위 k(막대). 갈래를 낼 수 있으면 대안마다 '여기서 분기'
-function labDetail(an, toks, i, canBranch) {
+function labDetail(an, toks, i, canBranch, onBranch) {
   const ids = an.topIds[i] || [], lps = an.topLp[i] || [];
-  if (ids.some(id => LAB.texts[id] === undefined)) labTexts(ids).then(() => document.querySelectorAll('#lab .lab-detail-holder').forEach(x => x._render && x._render()));
+  if (ids.some(id => LAB.texts[id] === undefined)) labTexts(ids).then(() => document.querySelectorAll('.lab-detail-holder').forEach(x => x._render && x._render()));
   const st = labStep(an, toks, i);
   const txt = id => (LAB.texts[id] === undefined ? '…' : tokShow(LAB.texts[id]));
   const rows = ids.map((id, q) => h('div', { class: 'alt' + (id === toks[i] ? ' chosen' : '') },
@@ -5002,7 +5193,7 @@ function labDetail(an, toks, i, canBranch) {
     canBranch && id !== toks[i] ? h('button', {
       class: 'icon-btn sm needs-conn', 'aria-label': T`이 토큰으로 분기: ${LAB.texts[id] === undefined ? id : LAB.texts[id]}`,
       'data-tip': T('여기서 분기 — 이 토큰을 고른 뒤 같은 설정으로 이어 생성(지금 답은 버전으로 남음)'), 'data-tip-pos': 'left',
-      disabled: (S.streaming || LAB.busy) ? true : null, onclick: () => labBranch(i, id),
+      disabled: (S.streaming || LAB.busy) ? true : null, onclick: () => (onBranch || labBranch)(i, id),
     }, I('forward', 's')) : h('span', { class: 'alt-go' }, id === toks[i] ? h('span', { role: 'img', 'aria-label': T('고른 토큰'), 'data-tip': T('고른 토큰'), 'data-tip-pos': 'left' }, I('check', 's')) : '')));
   return h('div', { class: 'card lab-detail' },
     h('div', { class: 'row g8 nowrap' }, h('span', { class: 'eyebrow' }, T`스텝 ${i + 1}`), h('span', { class: 'grow' }), h('span', { class: 'eyebrow mono' }, `#${toks[i]}`)),
@@ -5584,6 +5775,873 @@ function labOut() {
   return labCol(out);
 }
 if (load('geulpu.lab.open', false) && !labOverlay()) setTimeout(() => labToggle(true), 0);
+
+// ---------- 디버거(디버거 v1 3단계 — 문서/디버거.md) ----------
+// 실행 로그(run log): 앱의 /v1 을 지나는 생성 요청을 한 줄씩 적은 JSONL(앱/디버거.gl). 이 화면은 실행을 고르고, 요청마다 같은 비트로
+// 다시 돌리고(재생), echo 스코어링으로 토큰마다 들여다보고(관찰 · 중단점), 다른 토큰이나 고친 요청으로 갈라 보고(분기), 두 실행을
+// 비교한다. 규칙은 도구/debugger.py 와 같고, 점수 · 분기는 같은 꼴의 분석 줄로 실행 로그에 남는다(/api/debug/run/append).
+const DBG = {
+  list: null, rec: null, listAt: 0, listing: false, listErr: '',
+  sel: load('geulpu.dbg.sel', ''), run: null, loading: '',
+  view: 'reqs', ri: -1, bi: -1, step: -1,
+  busy: '', err: '', stop: false, prog: null,
+  replay: {}, an: {}, texts: {}, cmpB: '', cmpRun: null, cmpSel: -1, edit: {}, tick: 0,
+  prob: load('geulpu.dbg.prob', 0.05),
+};
+const DBG_K = 2;                                     // 점수 줄의 상위 — 마진 · 1위면 둘(도구와 같다)
+const DBG_CHUNK = 4 * 1048576;                       // 덧붙이기 · 들여오기 조각(앱의 본문 한도 16 MB 안 — JSON 글로 감싸면 늘어난다)
+
+// 2⁵³ 위의 정수(서버가 고른 시드)는 JS 의 수로 읽으면 바뀐다 — JSON 의 글 밖에 있는 16 자리 이상의 정수를 표시가 붙은 글로 읽고,
+// 보낼 때 원래 숫자로 되돌린다
+const BIG = '\u0001N:';
+function bigParse(s) {
+  if (!/\d{16}/.test(s)) return JSON.parse(s);
+  let out = '', a = 0, i = 0;
+  const n = s.length;
+  while (i < n) {
+    const c = s.charCodeAt(i);
+    if (c === 34) {
+      i++;
+      while (i < n) { const d = s.charCodeAt(i); if (d === 92) i += 2; else { i++; if (d === 34) break; } }
+    } else if ((c >= 48 && c <= 57) || c === 45) {
+      const neg = c === 45 ? 1 : 0;
+      let j = i + neg;
+      while (j < n && s.charCodeAt(j) >= 48 && s.charCodeAt(j) <= 57) j++;
+      const nx = j < n ? s.charCodeAt(j) : 0;
+      if (j - i - neg >= 16 && nx !== 46 && nx !== 101 && nx !== 69) { out += s.slice(a, i) + '"\\u0001N:' + s.slice(i, j) + '"'; a = j; }   // 표시는 JSON 글 안의 이스케이프로(날 제어 글자는 JSON 이 받지 않는다)
+      i = j;
+      while (i < n) { const d = s.charCodeAt(i); if ((d >= 48 && d <= 57) || d === 46 || d === 101 || d === 69 || d === 43 || d === 45) i++; else break; }
+    } else i++;
+  }
+  return JSON.parse(out + s.slice(a));
+}
+const bigStringify = (v, sp) => JSON.stringify(v, null, sp).replace(/"\\u0001N:(-?\d+)"/g, '$1');
+const bigShow = v => (typeof v === 'string' && v.startsWith(BIG) ? v.slice(BIG.length) : v);
+
+const dbgG = x => ((x && x.response) || {}).geulpu || {};
+const dbgFinish = r => (((r && r.choices) || [])[0] || {}).finish_reason || null;
+const dbgKey = x => (x.type === 'branch' ? 'b' + x.b : 'r' + x.i);
+const dbgEq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function dbgFirstDiff(a, b) {
+  const n = Math.min(a.length, b.length);
+  for (let k = 0; k < n; k++) if (a[k] !== b[k]) return k;
+  return a.length === b.length ? null : n;
+}
+const dbgStamp = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+const dbgWhen = ms => (ms > 0 ? new Date(ms).toLocaleString(EN ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-');
+const dbgIsHeader = x => !!x && typeof x === 'object' && (String(x.format || '').startsWith('geulpu-run-log/') || x.geulrun === 1);
+
+// ---- 실행 로그 ----
+function dbgParse(text, name) {
+  const rows = [];
+  let k = 0;
+  for (const l of text.split('\n')) {
+    k++;
+    if (!l.trim()) continue;
+    try { rows.push(bigParse(l)); } catch (_) { throw new Error(T`${k}번째 줄이 JSON이 아닙니다`); }
+  }
+  if (!rows.length || !dbgIsHeader(rows[0])) throw new Error(T('GeulPU 실행 로그가 아닙니다 — 첫 줄이 헤더여야 합니다'));
+  const body = rows.slice(1);
+  return {
+    name, header: rows[0], reqs: body.filter(x => !Object.prototype.hasOwnProperty.call(x, 'type')),
+    scores: body.filter(x => x.type === 'score'), branches: body.filter(x => x.type === 'branch'), bytes: new Blob([text]).size,
+  };
+}
+async function dbgFetchRun(name) {
+  const r = await fetch('/api/debug/run?name=' + encodeURIComponent(name));
+  const text = await r.text();
+  if (!r.ok) { let m = 'HTTP ' + r.status; try { m = JSON.parse(text).error.message; } catch (_) { } throw new Error(m); }
+  return dbgParse(text, name);
+}
+async function dbgSend(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bigStringify(body) });
+  const text = await r.text();
+  let j = null;
+  try { j = bigParse(text); } catch (_) { }
+  return { status: r.status, j };
+}
+async function dbgPost(path, body) {
+  const r = await dbgSend(path, body);
+  if (r.status !== 200) throw new Error((r.j && r.j.error && r.j.error.message) || ('HTTP ' + r.status));
+  return r.j;
+}
+// 분석 줄을 실행 로그 끝에(조각으로)
+async function dbgAppend(name, rows) {
+  let part = [], size = 0;
+  const flush = async () => { if (part.length) await api('/api/debug/run/append', { name, lines: part.join('\n') + '\n' }); part = []; size = 0; };
+  for (const x of rows) {
+    const t = bigStringify(x);
+    if (part.length && size + t.length > DBG_CHUNK) await flush();
+    part.push(t);
+    size += t.length + 1;
+  }
+  await flush();
+}
+async function dbgLoadList() {
+  if (DBG.listing) return;
+  DBG.listing = true;
+  try {
+    const d = await api('/api/debug');
+    DBG.list = (d.runs || []).slice().sort((a, b) => (b.modified_ms || 0) - (a.modified_ms || 0) || String(a.name).localeCompare(String(b.name)));
+    DBG.rec = { recording: !!d.recording, name: d.name || '', count: d.count || 0, error: d.error || '' };
+    DBG.listErr = '';
+  } catch (e) { DBG.listErr = e.message; }
+  finally { DBG.listing = false; DBG.listAt = Date.now(); }
+  if (S.view === 'debug') renderDebug();
+}
+async function dbgOpen(name) {
+  DBG.loading = name;
+  try {
+    const run = await dbgFetchRun(name);
+    if (DBG.sel === name) DBG.run = run;
+  } finally { DBG.loading = ''; }
+}
+function dbgSelect(name) {
+  if (DBG.sel !== name) {
+    DBG.sel = name; DBG.run = null; DBG.view = 'reqs'; DBG.ri = -1; DBG.bi = -1; DBG.step = -1; DBG.err = ''; DBG.cmpB = ''; DBG.cmpRun = null; DBG.cmpSel = -1;
+    store('geulpu.dbg.sel', name);
+  }
+  DBG.loading = name;
+  dbgRun(() => dbgOpen(name));
+}
+function dbgRun(fn) {
+  DBG.err = '';
+  renderDebug(true);
+  Promise.resolve().then(fn).catch(e => { DBG.err = e.message; }).finally(() => { DBG.busy = ''; DBG.prog = null; DBG.stop = false; renderDebug(true); });
+}
+async function dbgReload() {
+  if (!DBG.run) return;
+  const run = await dbgFetchRun(DBG.run.name);
+  if (DBG.sel === run.name) DBG.run = run;
+  DBG.listAt = 0;
+}
+
+// ---- 서버 — 요청을 계산한 서버와 지금 서버(비트가 같으려면 같아야 하는 것: 모델 sha256 · 계산 방식 · YaRN 배, 빠른 모드면 백엔드) ----
+function dbgServerOf(run, x) {
+  if (x && x.server && typeof x.server === 'object') return x.server;
+  const hs = run.header.server || {};
+  return { sha256: (run.header.model || {}).sha256 || null, layer: hs.layer, precision: hs.precision, context: hs.context, yarn: hs.yarn || 0 };
+}
+function dbgNowServer() {
+  const sv = (S.st && S.st.server) || {}, m = modelOf(sv.model), s = (m && m.shape) || {};
+  let yarn = 0;
+  if (s.yarn_orig > 0 && sv.context > s.context_native) yarn = sv.context <= 2 * s.yarn_orig ? 2 : 4;
+  return { sha256: m ? m.sha256 : null, layer: sv.layer, precision: sv.precision, context: sv.context, yarn, ready: sv.state === 'ready', model: sv.model || null };
+}
+const dbgSvPlain = n => ({ sha256: n.sha256, layer: n.layer, precision: n.precision, context: n.context, yarn: n.yarn });
+function dbgDiff(rec, now) {
+  const d = [];
+  if (rec.sha256 !== now.sha256) d.push(T('모델 파일'));
+  if (rec.precision !== now.precision) d.push(T('계산 방식'));
+  if ((rec.yarn || 0) !== (now.yarn || 0)) d.push(T('YaRN 배'));
+  if (rec.precision === 'fast' && now.precision === 'fast' && rec.layer !== now.layer) d.push(T('백엔드(빠른 모드)'));
+  return d;
+}
+const dbgModelBySha = sha => (S.st ? S.st.models.find(m => m.sha256 && m.sha256 === sha) : null) || null;
+const dbgSvLabel = sv => {
+  const m = dbgModelBySha(sv.sha256);
+  return [m ? labelById(m.id) : (sv.sha256 ? T`모델 ${String(sv.sha256).slice(0, 12)}` : T('모델 모름')), sv.precision === 'fast' ? T('빠름') : sv.precision === 'exact' ? T('정밀') : null,
+    LAYER[sv.layer] || sv.layer || null, sv.yarn ? `YaRN ×${sv.yarn}` : null].filter(Boolean).join(NB);
+};
+async function dbgWaitJob(id, what) {
+  const t0 = Date.now();
+  for (;;) {
+    await new Promise(r => setTimeout(r, 1000));
+    const st = await api('/api/state');
+    S.st = st;
+    const j = st.job || {};
+    if (j.id === id && j.state !== 'running') return j;
+    if (Date.now() - t0 > 600000) throw new Error(T`${what}이 10분 안에 끝나지 않았습니다`);
+  }
+}
+function dbgGuardSwitch() {
+  if (S.streaming) throw new Error(T('답이 흐르는 동안에는 모델을 바꿔 불러올 수 없습니다 — 끝난 뒤에 다시 누르세요'));
+  if (benchBusy()) throw new Error(T('벤치마크가 끝나면 계산할 수 있습니다'));
+}
+// 그 서버의 모델로 — 모델만 다르면 바꿔 불러온다. 계산 방식 · 백엔드 · YaRN 이 다르면 '이 실행의 설정으로 불러오기'를 쓰라고 알린다
+async function dbgEnsure(sv) {
+  const now = dbgNowServer();
+  if (now.ready && !dbgDiff(sv, now).length) return;
+  const m = dbgModelBySha(sv.sha256);
+  if (!m) throw new Error(T`이 실행의 모델 파일이 설치되어 있지 않습니다(sha256 ${String(sv.sha256 || '?').slice(0, 12)})`);
+  const set = (S.st && S.st.settings) || {};
+  const prec = now.ready ? now.precision : set.precision;
+  if (sv.precision !== prec || (sv.precision === 'fast' && now.ready && sv.layer !== now.layer)) throw new Error(T('이 실행과 계산 방식 · 백엔드가 다릅니다 — \'이 실행의 설정으로 불러오기\'를 누르세요'));
+  if (!runnable(m)) throw new Error(T('이 모델은 이 PC에서 실행할 수 없습니다 — ') + TM(m.device_reason || (m.shape && m.shape.reason) || ''));
+  dbgGuardSwitch();
+  DBG.busy = T`${labelById(m.id)} 불러오는 중`;
+  renderDebug(true);
+  await ensureServer(m.id, null);
+  const n2 = dbgNowServer();
+  const left = dbgDiff(sv, n2);
+  if (left.length) throw new Error(T`불러온 서버가 이 실행과 다릅니다 — ${left.join(', ')}`);
+}
+// 이 실행의 모델 · 설정(계산 방식 · 빠른 모드의 백엔드)으로 — 앱의 설정을 바꾼다(채팅도 이 설정을 쓴다)
+async function dbgMatch(sv) {
+  const m = dbgModelBySha(sv.sha256);
+  if (!m) throw new Error(T`이 실행의 모델 파일이 설치되어 있지 않습니다(sha256 ${String(sv.sha256 || '?').slice(0, 12)})`);
+  if (!runnable(m)) throw new Error(T('이 모델은 이 PC에서 실행할 수 없습니다 — ') + TM(m.device_reason || (m.shape && m.shape.reason) || ''));
+  dbgGuardSwitch();
+  const set = (S.st && S.st.settings) || {}, body = {};
+  if (sv.precision && set.precision !== sv.precision) body.precision = sv.precision;
+  if (sv.precision === 'fast' && sv.layer && S.st.device.layer !== sv.layer) body.gpu_layer = sv.layer;
+  if (Object.keys(body).length) await api('/api/settings', body);
+  if (body.gpu_layer) {
+    DBG.busy = T('하드웨어 확인 중');
+    renderDebug(true);
+    const j = await api('/api/device/check', {});
+    await dbgWaitJob(j.job, T('하드웨어 확인'));
+    if (S.st.device.layer !== sv.layer) throw new Error(T`하드웨어 확인 뒤에도 백엔드가 ${LAYER[S.st.device.layer] || S.st.device.layer}입니다`);
+  }
+  const sv0 = S.st.server;
+  if (sv0.state === 'ready' && sv0.model === m.id && (sv0.precision !== sv.precision || (sv.precision === 'fast' && sv0.layer !== sv.layer))) {
+    DBG.busy = T('서버를 멈추는 중');
+    renderDebug(true);
+    await api('/api/server/stop', {});
+    for (let k = 0; k < 120; k++) { await new Promise(r => setTimeout(r, 500)); S.st = await api('/api/state'); if (S.st.server.state !== 'ready') break; }
+  }
+  DBG.busy = T`${labelById(m.id)} 불러오는 중`;
+  renderDebug(true);
+  await ensureServer(m.id, null);
+  const left = dbgDiff(sv, dbgNowServer());
+  if (left.length) throw new Error(T`불러온 서버가 이 실행과 다릅니다 — ${left.join(', ')}`);
+}
+async function dbgNotRecording() {
+  const d = await api('/api/debug');
+  if (d.recording) throw new Error(T`앱이 기록 중입니다(${d.name}) — 이 화면이 보내는 요청도 그 실행 로그에 들어갑니다. 먼저 기록을 멈추세요.`);
+}
+
+// ---- 재생 ----
+async function dbgReplayOne(x) {
+  const resp = x.response || {}, g = resp.geulpu || {};
+  if (!['/v1/chat/completions', '/v1/completions'].includes(x.path) || !x.request || typeof x.request !== 'object') return { result: 'skipped', reason: T('생성 요청이 아니거나 요청이 JSON이 아닙니다') };
+  const body = structuredClone(x.request);
+  body.stream = false;
+  delete body.stream_options;
+  const t0 = performance.now();
+  if ((x.status || 200) !== 200) {
+    if (!resp.error || typeof resp.error !== 'object') return { result: 'skipped', reason: T`상태 ${x.status} — 오류 응답이 없습니다` };
+    const r = await dbgSend(x.path, body);
+    const c1 = resp.error.code, c2 = ((r.j || {}).error || {}).code;
+    const d = r.status === x.status && c1 === c2 ? [] : [`error ${x.status} ${c1} → ${r.status} ${c2}`];
+    return { result: d.length ? 'different' : 'same', differences: d, seconds: (performance.now() - t0) / 1000, error: x.status };
+  }
+  if (!Array.isArray(g.tokens)) return { result: 'skipped', reason: T('응답에 토큰이 없습니다(끊긴 스트리밍 · geulpu 없음)') };
+  if (g.seed !== undefined) body.seed = g.seed;
+  body.geulpu = Object.assign({}, body.geulpu && typeof body.geulpu === 'object' ? body.geulpu : {}, { logit_hash: true, prompt_tokens: true });
+  const r = await dbgSend(x.path, body);
+  const secs = (performance.now() - t0) / 1000;
+  if (r.status !== 200) return { result: 'different', differences: [`HTTP ${r.status} ${((r.j || {}).error || {}).message || ''}`], seconds: secs };
+  const g2 = (r.j && r.j.geulpu) || {}, d = [];
+  if (Array.isArray(g.prompt_tokens) && !dbgEq(g.prompt_tokens, g2.prompt_tokens)) d.push('prompt tokens');
+  const k = dbgFirstDiff(g.tokens, g2.tokens || []);
+  if (k !== null) d.push(`tokens (step ${k})`);
+  if (Array.isArray(g.logit_hashes) && !dbgEq(g.logit_hashes, g2.logit_hashes)) d.push(`logit hashes (step ${dbgFirstDiff(g.logit_hashes, g2.logit_hashes || [])})`);
+  if (Array.isArray(g.prompt_logit_hashes) && !dbgEq(g.prompt_logit_hashes, g2.prompt_logit_hashes)) d.push(`echo logit hashes (position ${dbgFirstDiff(g.prompt_logit_hashes, g2.prompt_logit_hashes || [])})`);
+  const f1 = dbgFinish(resp), f2 = dbgFinish(r.j);
+  if (f1 && f1 !== f2) d.push(`finish_reason ${f1} → ${f2}`);
+  return { result: d.length ? 'different' : 'same', differences: d, seconds: secs, steps: g.tokens.length, hashes: Array.isArray(g.logit_hashes) };
+}
+async function dbgReplay(run) {
+  await dbgNotRecording();
+  const lines = run.reqs.concat(run.branches);
+  if (!lines.length) throw new Error(T('재생할 요청이 없습니다'));
+  const svs = lines.map(x => dbgServerOf(run, x));
+  const diffNow = () => [...new Set(svs.flatMap(sv => dbgDiff(sv, dbgNowServer())))];
+  if (!dbgNowServer().ready || diffNow().length) {
+    try { await dbgEnsure(svs[0]); } catch (e) { if (!dbgNowServer().ready) throw e; }   // 모델만 다르면 바꿔 불러온다
+    const diffs = diffNow();
+    if (diffs.length) {
+      const ok = await confirmBox(T('기록한 서버와 지금 서버가 다릅니다'), h('div', { class: 'col g8' },
+        h('p', { class: 'm0' }, T`다른 것: ${diffs.join(', ')}. 다른 계산이라 비트가 다를 수 있습니다.`),
+        h('p', { class: 'm0 muted small' }, T('\'이 실행의 설정으로 불러오기\'로 맞춘 뒤 재생하면 같은 계산입니다.'))), T('그래도 재생'), 'quiet');
+      if (!ok) return;
+    }
+  }
+  const res = DBG.replay[run.name] = {};
+  DBG.prog = { what: T('재생'), done: 0, total: lines.length };
+  for (let q = 0; q < lines.length && !DBG.stop; q++) {
+    DBG.prog.done = q;
+    renderDebug(true);
+    res[dbgKey(lines[q])] = await dbgReplayOne(lines[q]);
+  }
+  const vals = Object.values(res), ran = vals.filter(v => v.result !== 'skipped'), same = ran.filter(v => v.result === 'same').length;
+  toast(T`재생: ${ran.length}개 중 같음 ${same}개`, same === ran.length ? 'ok' : 'err');
+}
+
+// ---- 점수(echo 스코어링 — 생성 없이 답의 토큰마다 로그확률 · 상위 k · 엔트로피 · 로짓 해시) ----
+async function dbgEcho(prompt, tokens, k) {
+  const P = prompt.length;
+  const j = await dbgPost('/v1/completions', {
+    prompt: prompt.concat(tokens), echo: true, max_tokens: 0, logprobs: k, temperature: 0, stream: false, geulpu: { echo_from: P, logit_hash: true, special: true },
+  });
+  const c = j.choices[0], lp = c.logprobs || {}, g = j.geulpu || {}, n = tokens.length;
+  const enc = new TextEncoder().encode(c.text || ''), offs = lp.text_offset || [], a0 = offs.length > P ? offs[P] : enc.length;
+  return {
+    logprobs: lp.token_logprobs.slice(P, P + n), entropy: g.prompt_entropy.slice(P, P + n), top_ids: g.prompt_top_ids.slice(P, P + n),
+    top_logprobs: g.prompt_top_logprobs.slice(P, P + n), token_text: lp.tokens.slice(P, P + n),
+    text: new TextDecoder().decode(enc.subarray(a0)), text_offset: offs.slice(P, P + n).map(o => o - a0), logit_hashes: (g.prompt_logit_hashes || []).slice(0, n),
+  };
+}
+const dbgScoreFor = (run, i, sv) => run.scores.find(s => s.of === i && !dbgDiff(s.server || {}, sv).length) || null;
+function dbgHashCheck(rec, now, h1, h2) {
+  if (dbgDiff(rec, now).length) return 'other_model';
+  if (!Array.isArray(h1)) return 'no_hashes';
+  return dbgEq(h1, h2) ? 'same' : 'different';
+}
+// 실행의 요청마다 답을 이 서버(sv)로 점수 — 이미 있으면 건너뛴다
+async function dbgScoreRun(run, sv) {
+  await dbgNotRecording();
+  await dbgEnsure(sv);
+  const now = dbgNowServer(), m = modelOf(now.model) || {};
+  const todo = run.reqs.filter(x => x.status === 200 && (dbgG(x).prompt_tokens || []).length && (dbgG(x).tokens || []).length && !dbgScoreFor(run, x.i, now));
+  const rows = [], cnt = { same: 0, different: 0 };
+  DBG.prog = { what: T('점수'), done: 0, total: todo.length };
+  for (let q = 0; q < todo.length && !DBG.stop; q++) {
+    DBG.prog.done = q;
+    renderDebug(true);
+    const x = todo[q], g = dbgG(x);
+    const s = await dbgEcho(g.prompt_tokens, g.tokens, DBG_K);
+    const hc = dbgHashCheck(dbgServerOf(run, x), now, g.logit_hashes, s.logit_hashes);
+    if (hc in cnt) cnt[hc]++;
+    rows.push(Object.assign({ type: 'score', of: x.i, at: dbgStamp(), model: { id: m.id || now.model, file: String(m.path || '').split(/[\\/]/).pop(), sha256: now.sha256 }, server: dbgSvPlain(now), k: DBG_K }, s, { hash_check: hc }));
+  }
+  if (rows.length) await dbgAppend(run.name, rows);
+  await dbgReload();
+  if (cnt.different) toast(T`점수의 로짓 해시가 생성 때와 다른 요청이 ${cnt.different}개 있습니다 — 점수가 생성과 다른 계산입니다`, 'err');
+  else toast(T`점수 ${rows.length}개를 실행 로그에 덧붙였습니다` + (cnt.same ? T` — 로짓 해시 ${cnt.same}개가 생성 때와 같음` : ''), 'ok');
+}
+// 중단점 — 도구의 중단점찾기와 같다: 마진 < δ(low_margin), 고른 토큰의 확률 < p(low_prob), 도구 호출의 시작(tool_call)
+function dbgBreaks(toks, s, delta, prob, toolCall) {
+  const out = [];
+  for (let j = 0; j < toks.length; j++) {
+    const lp = s.logprobs[j], tl = s.top_logprobs[j] || [], t = s.token_text[j];
+    const margin = tl.length >= 2 ? tl[0] - tl[1] : null, p = lp === null || lp === undefined ? null : Math.exp(lp);
+    const kinds = [];
+    if (margin !== null && margin < delta) kinds.push('low_margin');
+    if (p !== null && p < prob) kinds.push('low_prob');
+    if (t !== null && t !== undefined && (String(t).includes('<tool_call>') || String(t).includes('<|python_tag|>'))) kinds.push('tool_call');
+    if (kinds.length) out.push({ step: j, kinds, p, margin });
+  }
+  if (toolCall && toks.length && !out.some(b => b.kinds.includes('tool_call'))) {
+    const f = out.find(b => b.step === 0);
+    if (f) f.kinds.push('tool_call');
+    else out.unshift({ step: 0, kinds: ['tool_call'], p: null, margin: null });
+  }
+  return out;
+}
+const dbgToolCall = x => { const r = x.response || {}, c = ((r.choices || [])[0]) || {}; return !!((c.message || {}).tool_calls || []).length || c.finish_reason === 'tool_calls'; };
+const BK = { low_margin: '마진이 작은 스텝', low_prob: '저확률 샘플', tool_call: '도구 호출의 시작' };
+
+// ---- 관찰(상위 10 — 연구 패널과 같은 꼴) ----
+async function dbgObserve(run, x) {
+  const key = run.name + '|' + dbgKey(x);
+  if (DBG.an[key]) return DBG.an[key];
+  await dbgNotRecording();
+  const sv = dbgServerOf(run, x);
+  await dbgEnsure(sv);
+  const g = dbgG(x);
+  const prompt = x.type === 'branch' ? (x.request.prompt || []) : g.prompt_tokens, toks = g.tokens;
+  DBG.busy = T`토큰 ${fmtNum(toks.length)}개를 다시 계산하는 중(점수 매기기)`;
+  renderDebug(true);
+  const s = await dbgEcho(prompt, toks, LAB_K);
+  DBG.an[key] = {
+    prompt, raw: s.token_text, strs: tokTexts(s.text, s.text_offset, s.token_text), lp: s.logprobs, ent: s.entropy, topIds: s.top_ids, topLp: s.top_logprobs,
+    hashes: s.logit_hashes, k: LAB_K, same: Array.isArray(g.logit_hashes) ? dbgEq(g.logit_hashes, s.logit_hashes) : null,
+  };
+  return DBG.an[key];
+}
+
+// ---- 분기 ----
+function dbgTokenBranchBody(x, k, alt) {
+  const g = dbgG(x), o = x.request || {};
+  const body = {
+    prompt: g.prompt_tokens.concat(g.tokens.slice(0, k), [alt]), echo: true, logprobs: DBG_K, stream: false, seed: g.seed,
+    geulpu: { echo_from: g.prompt_tokens.length, logit_hash: true, prompt_tokens: true, step_offset: k + 1, special: true },
+  };
+  for (const key of ['temperature', 'top_p', 'top_k', 'min_p', 'stop', 'ignore_eos']) if (key in o) body[key] = o[key];
+  const max = o.max_tokens !== undefined ? o.max_tokens : o.max_completion_tokens;
+  if (max !== undefined && max !== null) body.max_tokens = Math.max(0, max - (k + 1));
+  return body;
+}
+async function dbgBranchRun(run, x, kind, body, path, extra) {
+  await dbgNotRecording();
+  await dbgEnsure(dbgServerOf(run, x));
+  const now = dbgNowServer(), m = modelOf(now.model) || {};
+  const rs = [], secs = [];
+  for (let q = 0; q < 2; q++) {
+    DBG.busy = T`분기 생성 중(${q + 1}/2 — 두 번 돌려 같은 비트인지 봅니다)`;
+    renderDebug(true);
+    const t0 = performance.now();
+    const r = await dbgSend(path, body);
+    secs.push((performance.now() - t0) / 1000);
+    if (r.status !== 200) throw new Error(T`분기 요청이 실패했습니다 — HTTP ${r.status} ${((r.j || {}).error || {}).message || ''}`);
+    rs.push(r.j);
+  }
+  const g = dbgG(x), g2 = rs[0].geulpu || {}, g3 = rs[1].geulpu || {};
+  const checks = { repeat: 2, repeat_same: ['tokens', 'logit_hashes', 'prompt_logit_hashes', 'prompt_tokens'].every(f => dbgEq(g2[f], g3[f])) };
+  if (kind === 'token') {
+    const k = extra.step;
+    checks.prefix_same = Array.isArray(g.logit_hashes) ? dbgEq(g2.prompt_logit_hashes || [], g.logit_hashes.slice(0, k + 1)) : null;
+    if (extra.token === g.tokens[k]) {
+      const n = g.tokens.length - k - 1, nt = g2.tokens || [];
+      checks.null_branch_same = dbgEq(nt.slice(0, n), g.tokens.slice(k + 1)) && (!Array.isArray(g.logit_hashes) || dbgEq((g2.logit_hashes || []).slice(0, n), g.logit_hashes.slice(k + 1)));
+      if (nt.length > n) checks.null_branch_longer = nt.length - n;
+    }
+  } else {
+    checks.prompt_diff_at = dbgFirstDiff(g.prompt_tokens || [], g2.prompt_tokens || []);
+    checks.first_divergence = dbgFirstDiff(g.tokens || [], g2.tokens || []);
+  }
+  const line = Object.assign({ type: 'branch', b: run.branches.length, of: x.i, at: dbgStamp(), model: { id: m.id || now.model, file: String(m.path || '').split(/[\\/]/).pop(), sha256: now.sha256 },
+    server: dbgSvPlain(now), kind }, extra, { ms: Math.round(secs[0] * 1000), path, request: body, response: rs[0], checks });
+  await dbgAppend(run.name, [line]);
+  await dbgReload();
+  DBG.bi = line.b;
+  const ok = checks.repeat_same && checks.prefix_same !== false && checks.null_branch_same !== false;
+  toast(ok ? T`분기 b${line.b} — 두 번 돌려 같은 비트` : T`분기 b${line.b} — 확인에서 다른 곳이 있습니다`, ok ? 'ok' : 'err');
+}
+function dbgBranchToken(run, x, k, alt) {
+  if (!('seed' in dbgG(x))) { DBG.err = T('이 요청의 응답에 시드가 없어 분기할 수 없습니다'); renderDebug(true); return; }
+  dbgRun(() => dbgBranchRun(run, x, 'token', dbgTokenBranchBody(x, k, alt), '/v1/completions', { step: k, token: alt, original_token: dbgG(x).tokens[k] }));
+}
+function dbgBranchEdit(run, x, text) {
+  dbgRun(async () => {
+    let body;
+    try { body = bigParse(text); } catch (e) { throw new Error(T('요청이 JSON이 아닙니다 — ') + e.message); }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error(T('요청은 JSON 객체여야 합니다'));
+    const g = dbgG(x);
+    body.stream = false;
+    delete body.stream_options;
+    if (body.seed === undefined && g.seed !== undefined) body.seed = g.seed;
+    body.geulpu = Object.assign({}, body.geulpu && typeof body.geulpu === 'object' ? body.geulpu : {}, { logit_hash: true, prompt_tokens: true });
+    await dbgBranchRun(run, x, 'request', body, x.path, { edit: 'json' });
+  });
+}
+
+// ---- 비교 — 도구의 비교계산과 같다(같은 입력이면 같은 보고 — 차례대로 더한다) ----
+function dbgCompare(A, B) {
+  const Bq = new Map(B.reqs.map(y => [y.i, y]));
+  const rows = [];
+  const sameReq = (x, y) => { const a = Object.assign({}, x.request || {}), b = Object.assign({}, y.request || {}); delete a.model; delete b.model; return dbgEq(a, b); };
+  for (const x of A.reqs.slice().sort((p, q) => p.i - q.i)) {
+    const y = Bq.get(x.i), gA = dbgG(x);
+    if (!y || x.status !== 200 || y.status !== 200 || !Array.isArray(gA.tokens) || !Array.isArray(dbgG(y).tokens)) { rows.push({ i: x.i, compared: false, reason: y ? T('오류 응답이거나 토큰 없음') : T('B에 없음') }); continue; }
+    const gB = dbgG(y), tA = gA.tokens, tB = gB.tokens;
+    const r = { i: x.i, compared: true, request_same: sameReq(x, y), prompt_same: dbgEq(gA.prompt_tokens, gB.prompt_tokens), same: dbgEq(tA, tB), first_divergence: dbgFirstDiff(tA, tB),
+      steps_a: tA.length, steps_b: tB.length, finish_a: dbgFinish(x.response), finish_b: dbgFinish(y.response) };
+    const sAA = dbgScoreFor(A, x.i, dbgServerOf(A, x)), sAB = dbgScoreFor(A, x.i, dbgServerOf(B, y));
+    if (sAA && sAB && sAA.logprobs.length === tA.length && sAB.logprobs.length === tA.length) {
+      const d = sAA.logprobs.map((a, j) => sAB.logprobs[j] - a);
+      let sum = 0, sa = 0, sb = 0;
+      for (const v of d) sum += v;
+      for (const v of sAA.logprobs) sa += v;
+      for (const v of sAB.logprobs) sb += v;
+      const worst = d.map((v, j) => j).sort((p, q) => d[p] - d[q] || p - q).slice(0, 3);
+      Object.assign(r, { scored: true, logprob_a: sa, logprob_b: sb, delta_sum: sum, delta_mean: d.length ? sum / d.length : 0,
+        b_top1_differs: tA.filter((t, j) => (sAB.top_ids[j] || [null])[0] !== t).length, a_top1_differs: tA.filter((t, j) => (sAA.top_ids[j] || [null])[0] !== t).length,
+        worst: worst.map(j => ({ step: j, delta: d[j], text: sAA.token_text[j] })), sAA, sAB });
+    } else Object.assign(r, { scored: false, missing: [['a_by_a', sAA], ['a_by_b', sAB]].filter(([, s]) => !s).map(([n]) => n) });
+    rows.push(r);
+  }
+  const seen = rows.filter(r => r.compared), diff = seen.filter(r => !r.same);
+  const fd = diff.map(r => r.first_divergence).filter(v => v !== null).sort((p, q) => p - q);
+  const sc = seen.filter(r => r.scored);
+  let sum = 0, toks = 0, b1 = 0, a1 = 0;
+  for (const r of sc) { sum += r.delta_sum; toks += r.steps_a; b1 += r.b_top1_differs; a1 += r.a_top1_differs; }
+  return {
+    rows, summary: {
+      requests: seen.length, same: seen.length - diff.length, different: diff.length, prompt_different: seen.filter(r => !r.prompt_same).length,
+      fd_min: fd.length ? fd[0] : null, fd_median: fd.length ? fd[(fd.length - 1) >> 1] : null, fd_max: fd.length ? fd[fd.length - 1] : null,
+      scored: sc.length, tokens: toks, delta_sum: sum, delta_mean: toks ? sum / toks : null, b_top1_differs: b1, a_top1_differs: a1,
+    },
+  };
+}
+// 비교에 모자란 점수 — A 의 답을 A 의 모델로 · B 의 모델로(모델을 바꿔 불러온다)
+async function dbgCmpScore(A, B) {
+  const svA = dbgServerOf(A, A.reqs[0]), svB = dbgServerOf(B, B.reqs[0]);
+  await dbgScoreRun(A, svA);
+  await dbgScoreRun(DBG.run, svB);
+}
+
+// ---- 글(토큰 → 글 — 지금 모델의 어휘로. 어휘가 이 실행의 모델과 같을 때만) ----
+function dbgVocabOk(sv) {
+  const now = dbgNowServer();
+  if (!now.ready) return false;
+  const a = dbgModelBySha(sv.sha256), b = modelOf(now.model);
+  return !!(a && b && a.shape && b.shape && a.shape.vocab === b.shape.vocab && a.template === b.template);
+}
+function dbgText(key, toks, sv) {
+  if (DBG.texts[key] !== undefined) return DBG.texts[key];
+  if (!toks.length) return '';
+  if (!dbgVocabOk(sv)) return null;
+  DBG.texts[key] = '…';
+  labApi('/detokenize', { tokens: toks }).then(j => { DBG.texts[key] = j.prompt; }).catch(() => { DBG.texts[key] = undefined; }).finally(() => { DBG.tick++; renderDebug(); });
+  return '…';
+}
+
+// ---- 화면 ----
+const dbgStat = (icon, text, tip) => h('span', { class: 'st', 'data-tip': tip || null, 'data-tip-pos': 'top' }, I(icon), text);
+function dbgHead() {
+  const rec = DBG.rec || {};
+  const recBtn = rec.recording
+    ? h('button', { class: 'btn needs-conn', 'data-fk': 'dbg:recstop', onclick: () => dbgRun(async () => { await api('/api/debug/record/stop', {}); await dbgLoadList(); }) }, I('stop', 's'), T('기록 멈춤'))
+    : h('button', { class: 'btn needs-conn', 'data-fk': 'dbg:recstart', onclick: dbgRecordStart }, I('play', 's'), T('기록 시작'));
+  return pageHead(T('디버거 v1'), T('디버거'),
+    T('앱의 /v1을 지나는 생성 요청을 실행 로그로 기록하고, 같은 비트로 다시 돌리고(재생), 토큰마다 들여다보고(관찰 · 중단점), 다른 토큰이나 고친 요청으로 갈라 보고(분기), 두 실행을 비교합니다.'),
+    [recBtn, h('button', { class: 'btn needs-conn', 'data-fk': 'dbg:import', onclick: dbgImportPick }, I('download', 's'), T('불러오기'))]);
+}
+function dbgRecordStart() {
+  const inp = h('input', { type: 'text', class: 'w100', placeholder: T('비우면 시각으로'), 'aria-label': T('실행 이름'), spellcheck: 'false' });
+  const go = () => { const name = inp.value.trim(); closeModal(); dbgRun(async () => { const d = await api('/api/debug/record/start', { name }); await dbgLoadList(); dbgSelect(d.name); }); };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  modal(h('div', { class: 'col g12' }, h('h2', null, T('기록 시작')),
+    h('p', { class: 'm0 muted' }, T('지금부터 앱의 /v1을 지나는 생성 요청(에이전트 · 스크립트 · 이 앱의 채팅)이 이 실행 로그에 한 줄씩 남습니다. 대화 내용이 담기니 필요한 동안만 켜 두세요.')),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('실행 이름')), inp)),
+  [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('기록 시작'))], false, 'input');
+}
+function dbgImportPick() {
+  const inp = h('input', { type: 'file', accept: '.jsonl,.json,.txt,application/x-ndjson,application/json,text/plain', hidden: true });
+  inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; inp.remove(); if (f) dbgRun(() => dbgImport(f)); });
+  document.body.append(inp);
+  inp.click();
+}
+async function dbgImport(file) {
+  DBG.busy = T`${file.name} 읽는 중`;
+  renderDebug(true);
+  const text = await file.text();
+  dbgParse(text, file.name);
+  const enc = new TextEncoder();
+  let base = file.name.replace(/\.(jsonl|json|txt)$/i, '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').replace(/^\.+/, '') || 'run';
+  while (enc.encode(base).length > 56) base = base.slice(0, -1);
+  const names = new Set((DBG.list || []).map(r => r.name));
+  let name = base;
+  for (let k = 2; names.has(name); k++) name = `${base}-${k}`;
+  const lines = text.split('\n').filter(l => l.trim()), parts = [];
+  let cur = [], size = 0;
+  for (const l of lines) { if (cur.length && size + l.length > DBG_CHUNK) { parts.push(cur); cur = []; size = 0; } cur.push(l); size += l.length + 1; }
+  if (cur.length) parts.push(cur);
+  try {
+    for (let p = 0; p < parts.length; p++) {
+      DBG.busy = T`불러오는 중 ${p + 1}/${parts.length}`;
+      renderDebug(true);
+      await api('/api/debug/run/import', { name, text: parts[p].join('\n') + '\n', part: p, last: p === parts.length - 1 });
+    }
+  } catch (e) {
+    try { await api('/api/debug/run/delete', { name }); } catch (_) { }
+    throw e;
+  }
+  await dbgLoadList();
+  dbgSelect(name);
+  toast(T`실행 로그를 불러왔습니다 — ${name}`, 'ok');
+}
+function dbgListPane() {
+  const rec = DBG.rec || {};
+  const out = [];
+  if (rec.recording) out.push(h('div', { class: 'dbg-rec' }, h('i', { class: 'dot busy' }),
+    h('span', { class: 'grow' }, T`기록 중 — ${rec.name} · 요청 ${fmtNum(rec.count)}개`), rec.error ? h('span', { class: 'tag err' }, I('alert'), TM(rec.error)) : null));
+  if (DBG.listErr && !DBG.list) out.push(h('div', { class: 'fd-more' }, h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(DBG.listErr)))));
+  else if (!DBG.list) out.push(h('div', { class: 'fd-more' }, h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'))));
+  else if (!DBG.list.length) out.push(h('div', { class: 'fd-empty' }, I('bug', 'l'), h('div', { class: 'big' }, T('실행 로그가 없습니다')),
+    h('div', { class: 'small' }, T('기록 시작을 누른 뒤 에이전트 · 스크립트 · 이 앱의 채팅으로 요청을 보내면 여기 남습니다. 다른 PC에서 내보낸 실행 로그는 불러오기로 엽니다.'))));
+  else out.push(h('div', { class: 'fd-list' }, DBG.list.map(r => h('button', {
+    class: 'fd-row' + (DBG.sel === r.name ? ' on' : ''), 'data-fk': 'dbg:run:' + r.name, 'aria-current': DBG.sel === r.name ? 'true' : null, onclick: () => dbgSelect(r.name),
+  }, h('span', { class: 'main' },
+    h('span', { class: 'top' }, h('span', { class: 'nm' }, r.name), rec.recording && rec.name === r.name ? h('span', { class: 'tag acc' }, T('기록 중')) : null),
+    h('span', { class: 'foot' }, dbgStat('file', fmtBytes(r.bytes), T('크기')), dbgStat('clock', dbgWhen(r.modified_ms), T('고친 때'))))))));
+  return h('div', { class: 'dbg-list', 'aria-label': T('실행 목록') }, out);
+}
+function dbgDetailKey() { return [DBG.sel, DBG.view, DBG.ri].join('|'); }
+function dbgDetailPane() {
+  const box = h('div', { class: 'dbg-detail', 'data-k': dbgDetailKey() });
+  const run = DBG.run && DBG.run.name === DBG.sel ? DBG.run : null;
+  if (!DBG.sel) {
+    put(box, h('div', { class: 'fd-empty' }, I('bug', 'l'), h('div', { class: 'big' }, T('실행을 고르세요')),
+      h('div', { class: 'small' }, T('실행 로그는 요청 · 응답과 시드 · 프롬프트 토큰 · 스텝마다 로짓 해시를 담습니다. 같은 GeulPU 버전 · 같은 모델 파일 · 같은 계산 방식이면 어느 PC에서든 비트까지 같게 다시 돌립니다.')),
+      h('div', { class: 'small mono muted' }, 'python 도구/debugger.py --help')));
+    return box;
+  }
+  if (!run) {
+    put(box, DBG.err ? h('div', { class: 'note-line err', role: 'alert' }, I('alert', 's'), h('span', null, TM(DBG.err)))
+      : h('div', { class: 'row g8 muted' }, h('i', { class: 'dot busy' }), T`${DBG.sel} 불러오는 중`));
+    return box;
+  }
+  const kids = [dbgRunHead(run)];
+  if (DBG.prog) kids.push(h('div', { class: 'dbg-busy', role: 'status' }, h('i', { class: 'dot busy' }),
+    h('span', { class: 'grow' }, T`${DBG.prog.what} ${fmtNum(DBG.prog.done)}/${fmtNum(DBG.prog.total)}`),
+    h('button', { class: 'btn sm ghost', onclick: () => { DBG.stop = true; } }, I('stop', 's'), T('중지'))));
+  else if (DBG.busy) kids.push(h('div', { class: 'dbg-busy', role: 'status' }, h('i', { class: 'dot busy' }), h('span', null, DBG.busy)));
+  if (DBG.err) kids.push(h('div', { class: 'note-line err', role: 'alert' }, I('alert', 's'), h('span', null, TM(DBG.err))));
+  try {
+    kids.push(DBG.view === 'req' ? dbgReqView(run) : DBG.view === 'cmp' ? dbgCmpView(run) : dbgReqsView(run));
+  } catch (e) { kids.push(h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, String(e && e.message)))); console.error(e); }
+  put(box, h('div', { class: 'col g16' }, kids));
+  return box;
+}
+function dbgRunHead(run) {
+  const hd = run.header, hs = hd.server || {}, hm = hd.model || {};
+  const sv = run.reqs.length ? dbgServerOf(run, run.reqs[0]) : dbgServerOf(run, null);
+  const now = dbgNowServer(), diff = dbgDiff(sv, now);
+  const busy = !!(DBG.busy || DBG.prog);
+  const tabs = h('div', { class: 'seg-ctl', role: 'tablist', 'aria-label': T('실행 보기') }, [['reqs', T('요청')], ['cmp', T('비교')]].map(([k, t]) => h('button', {
+    role: 'tab', class: (DBG.view === k || (k === 'reqs' && DBG.view === 'req')) ? 'on' : '', 'aria-selected': DBG.view === k ? 'true' : 'false', 'data-fk': 'dbg:tab:' + k,
+    onclick: () => { DBG.view = k; DBG.err = ''; renderDebug(true); },
+  }, t)));
+  const scoredModels = new Set(run.scores.map(s => (s.server || {}).sha256)).size;
+  return h('div', { class: 'col g12' },
+    h('div', null, h('div', { class: 'eyebrow' }, T('실행 로그')), h('div', { class: 'fd-title' }, run.name),
+      h('div', { class: 'fd-sub' }, [hm.id ? (modelOf(hm.id) ? labelById(hm.id) : hm.id) : (hm.file || T('모델 모름')), hs.precision === 'fast' ? T('빠름') : hs.precision === 'exact' ? T('정밀') : null,
+        LAYER[hs.layer] || hs.layer || null, hs.context ? T`문맥 ${fmtCtx(hs.context)}` : null, hs.yarn ? `YaRN ×${hs.yarn}` : null].filter(Boolean).join(NB)),
+      h('div', { class: 'small muted' }, [hd.created ? T`만든 때 ${hd.created}` : null, hd.app ? `GeulPU ${hd.app}` : null, hd.commit ? T`커밋 ${String(hd.commit).slice(0, 7)}` : null,
+        (hd.build || {}).server ? T`서버 빌드 ${String(hd.build.server).slice(0, 12)}` : null].filter(Boolean).join(NB))),
+    h('div', { class: 'row g8' }, h('span', { class: 'tag' }, T`요청 ${fmtNum(run.reqs.length)}개`), h('span', { class: 'tag' }, T`분기 ${fmtNum(run.branches.length)}개`),
+      h('span', { class: 'tag', 'data-tip': T('echo 스코어링 줄 — 모델(서버)마다 요청마다 하나'), 'data-tip-pos': 'top' }, T`점수 ${fmtNum(run.scores.length)}개 · 모델 ${scoredModels}개`),
+      h('span', { class: 'tag dim' }, fmtBytes(run.bytes))),
+    diff.length || !now.ready ? h('div', { class: 'note-line' }, I('info', 's'), h('span', { class: 'grow' }, !now.ready ? T`이 실행은 ${dbgSvLabel(sv)}로 계산했습니다 — 지금 불러온 모델이 없습니다.`
+      : T`이 실행은 ${dbgSvLabel(sv)}로 계산했습니다 — 지금 서버와 다른 것: ${diff.join(', ')}.`),
+    h('button', { class: 'btn sm needs-conn', disabled: busy ? true : null, onclick: () => dbgRun(() => dbgMatch(sv)) }, I('refresh', 's'), T('이 실행의 설정으로 불러오기'))) : null,
+    h('div', { class: 'row g8' }, tabs, h('span', { class: 'grow' }),
+      h('button', { class: 'btn sm needs-conn', disabled: busy || !run.reqs.length ? true : null, 'data-tip': T('기록한 요청과 분기를 같은 시드로 다시 보내 토큰 · 스텝마다 로짓 해시를 비교합니다'), 'data-tip-pos': 'top',
+        onclick: () => dbgRun(() => dbgReplay(run)) }, I('refresh', 's'), T('재생')),
+      h('button', { class: 'btn sm needs-conn', disabled: busy || !run.reqs.length ? true : null, 'data-tip': T('요청마다 답을 지금 모델로 echo 스코어링해 점수 줄을 덧붙입니다(중단점 · 비교에 씀)'), 'data-tip-pos': 'top',
+        onclick: () => dbgRun(() => dbgScoreRun(run, now.ready ? now : sv)) }, I('gauge', 's'), T('점수 매기기')),
+      h('a', { class: 'btn sm', href: '/api/debug/run?name=' + encodeURIComponent(run.name), download: run.name + '.jsonl', 'data-tip': T('실행 로그 파일(JSONL)을 받습니다 — 다른 GeulPU에서 불러오기로 엽니다'), 'data-tip-pos': 'top' }, I('download', 's'), T('내보내기')),
+      h('button', { class: 'icon-btn sm needs-conn', 'aria-label': T('실행 로그 지우기'), 'data-tip': T('지우기'), 'data-tip-pos': 'top', disabled: busy || ((DBG.rec || {}).recording && DBG.rec.name === run.name) ? true : null,
+        onclick: () => dbgDelete(run.name) }, I('trash', 's'))));
+}
+async function dbgDelete(name) {
+  const ok = await confirmBox(T('실행 로그를 지울까요?'), h('p', { class: 'm0' }, T`${name} — 기록 · 점수 · 분기가 모두 지워집니다. 되돌릴 수 없습니다.`), T('지우기'), 'danger');
+  if (!ok) return;
+  dbgRun(async () => { await api('/api/debug/run/delete', { name }); if (DBG.sel === name) { DBG.sel = ''; DBG.run = null; store('geulpu.dbg.sel', ''); } await dbgLoadList(); });
+}
+// 요청 표 — 차례 · 길 · 상태 · 프롬프트 · 스텝 · 끝 · 중단점(그 요청을 생성한 모델의 점수에서) · 분기 · 재생
+function dbgReqsView(run) {
+  if (!run.reqs.length) return labNote(T('아직 기록한 요청이 없습니다.'));
+  const rep = DBG.replay[run.name] || {};
+  const bcount = {};
+  for (const b of run.branches) bcount[b.of] = (bcount[b.of] || 0) + 1;
+  let scored = 0;
+  const rows = run.reqs.map(x => {
+    const g = dbgG(x), s = dbgScoreFor(run, x.i, dbgServerOf(run, x));
+    const bs = s && Array.isArray(g.tokens) ? dbgBreaks(g.tokens, s, LAB.delta, DBG.prob, dbgToolCall(x)) : null;
+    if (s) scored++;
+    const rr = rep[dbgKey(x)];
+    const open = () => { DBG.view = 'req'; DBG.ri = x.i; DBG.bi = -1; DBG.step = -1; DBG.err = ''; renderDebug(true); };
+    const err = x.status !== 200 ? (((x.response || {}).error || {}).code || '') : '';
+    return h('tr', { class: 'clk', onclick: open },
+      h('td', { class: 'num' }, h('button', { class: 'dbg-link', 'data-fk': 'dbg:req:' + x.i, onclick: ev => { ev.stopPropagation(); open(); } }, String(x.i))),
+      h('td', { class: 'nw' }, x.path === '/v1/completions' ? T('완성') : x.path === '/v1/chat/completions' ? T('채팅') : x.path),
+      h('td', { class: 'nw' }, x.status === 200 ? '200' : h('span', { class: 'tag err' }, I('alert'), `${x.status}${err ? ' ' + err : ''}`)),
+      h('td', { class: 'r num' }, Array.isArray(g.prompt_tokens) ? fmtNum(g.prompt_tokens.length) : '-'),
+      h('td', { class: 'r num' }, Array.isArray(g.tokens) ? fmtNum(g.tokens.length) : '-'),
+      h('td', { class: 'nw' }, dbgFinish(x.response) || '-'),
+      h('td', { class: 'nw' }, bs ? (bs.length ? h('span', { 'data-tip': [...new Set(bs.flatMap(b => b.kinds))].map(k => T(BK[k])).join(', '), 'data-tip-pos': 'top' }, fmtNum(bs.length)) : '0') : h('span', { class: 'muted' }, '-')),
+      h('td', { class: 'r num' }, bcount[x.i] ? fmtNum(bcount[x.i]) : ''),
+      h('td', { class: 'nw' }, rr ? dbgResultTag(rr) : ''));
+  });
+  const vals = Object.values(rep), ran = vals.filter(v => v.result !== 'skipped');
+  const rb = Object.entries(rep).filter(([k, v]) => k[0] === 'b' && v.result !== 'skipped').length;
+  return h('div', { class: 'col g12' },
+    ran.length ? h('div', { class: 'note-line' }, I(ran.every(v => v.result === 'same') ? 'check' : 'alert', 's'),
+      h('span', null, T`재생: ${fmtNum(ran.length)}개 중 같음 ${fmtNum(ran.filter(v => v.result === 'same').length)}개` + (vals.length > ran.length ? T` · 건너뜀 ${fmtNum(vals.length - ran.length)}개` : '')
+        + (rb ? T` (분기 ${fmtNum(rb)}개 포함)` : ''))) : null,
+    scored < run.reqs.length ? labNote(T`중단점은 그 요청을 생성한 모델의 점수에서 찾습니다 — 점수가 있는 요청 ${fmtNum(scored)}/${fmtNum(run.reqs.length)}개. 이 실행의 모델로 '점수 매기기'를 누르세요.`) : null,
+    dbgBreakSet(),
+    h('div', { class: 'list' }, h('table', { class: 'data lab-table dbg-table' },
+      h('thead', null, h('tr', null, [T('차례'), T('경로'), T('상태'), T('프롬프트'), T('스텝'), T('끝'), T('중단점'), T('분기'), T('재생')].map((t, k) => h('th', { class: k === 3 || k === 4 || k === 7 ? 'r' : null }, t)))),
+      h('tbody', null, rows))));
+}
+function dbgResultTag(rr) {
+  if (rr.result === 'same') return h('span', { class: 'tag ok' }, I('check'), T('같음'));
+  if (rr.result === 'skipped') return h('span', { class: 'tag dim', 'data-tip': rr.reason || null, 'data-tip-pos': 'top' }, T('건너뜀'));
+  return h('span', { class: 'tag err', 'data-tip': (rr.differences || []).join(', '), 'data-tip-pos': 'top' }, I('alert'), T('다름'));
+}
+// 중단점의 기준 — δ(연구 패널과 같은 값) · p
+function dbgBreakSet() {
+  const dIn = h('input', { type: 'number', min: '0.001', max: '5', step: '0.01', value: LAB.delta, class: 'lab-num', 'aria-label': T('작은 마진의 기준 δ(nat)'), 'data-fk': 'dbg:delta' });
+  dIn.addEventListener('change', () => { const v = parseFloat(dIn.value); if (v > 0 && v <= 5) { LAB.delta = v; store('geulpu.lab.delta', v); renderDebug(true); } });
+  const pIn = h('input', { type: 'number', min: '0.0001', max: '1', step: '0.01', value: DBG.prob, class: 'lab-num', 'aria-label': T('저확률 샘플의 기준 p'), 'data-fk': 'dbg:prob' });
+  pIn.addEventListener('change', () => { const v = parseFloat(pIn.value); if (v > 0 && v <= 1) { DBG.prob = v; store('geulpu.dbg.prob', v); renderDebug(true); } });
+  return h('div', { class: 'row g12 small muted' },
+    h('label', { class: 'row g8' }, h('span', null, T('마진 δ')), dIn, h('span', null, 'nat')),
+    h('label', { class: 'row g8' }, h('span', null, T('확률 p')), pIn),
+    h('span', null, T('확률은 모델의 분포(온도 1)입니다.')));
+}
+
+// 요청 하나 — 요청 · 답 · 관찰(토큰 줄 · 스텝 · 분기) · 분기들 · 요청 고쳐 다시
+function dbgReqView(run) {
+  const x = run.reqs.find(r => r.i === DBG.ri);
+  const back = h('button', { class: 'btn sm ghost', 'data-fk': 'dbg:back', onclick: () => { DBG.view = 'reqs'; DBG.err = ''; renderDebug(true); } }, I('chevL', 's'), T('요청 목록'));
+  if (!x) return h('div', { class: 'col g12' }, back, labNote(T('이 요청이 실행 로그에 없습니다.')));
+  const g = dbgG(x), o = x.request || {}, sv = dbgServerOf(run, x), toks = Array.isArray(g.tokens) ? g.tokens : [];
+  const out = [h('div', { class: 'row g8' }, back, h('span', { class: 'grow' }))];
+  out.push(h('div', null, h('div', { class: 'sec' }, T`요청 ${x.i}`),
+    h('div', { class: 'small muted' }, [x.path, `HTTP ${x.status}`, dbgFinish(x.response), o.temperature !== undefined ? T`온도 ${o.temperature}` : T('온도 기본값'),
+      g.seed !== undefined ? T`시드 ${bigShow(g.seed)}` : null, Array.isArray(g.prompt_tokens) ? T`프롬프트 ${fmtNum(g.prompt_tokens.length)} 토큰` : null,
+      T`답 ${fmtNum(toks.length)} 토큰`, x.ms !== undefined ? `${fmtNum(x.ms)} ms` : null, x.at || null].filter(Boolean).join(NB))));
+  // 요청(메시지의 끝 몇 개)
+  const msgs = Array.isArray(o.messages) ? o.messages : null;
+  const cText = c => (typeof c === 'string' ? c : Array.isArray(c) ? c.map(p => (p && p.text) || '').join('') : c === null || c === undefined ? '' : JSON.stringify(c));
+  if (msgs) {
+    const last = msgs.slice(-3);
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'eyebrow' }, T`메시지 ${fmtNum(msgs.length)}개 — 마지막 ${last.length}개` + (Array.isArray(o.tools) ? T` · 도구 ${fmtNum(o.tools.length)}개` : '')),
+      last.map(m => h('div', { class: 'dbg-msg' }, h('span', { class: 'qlab' }, m.role), h('span', { class: 'dbg-msg-t' }, cText(m.content).slice(0, 600) + (cText(m.content).length > 600 ? '…' : ''),
+        (m.tool_calls || []).map(tc => h('span', { class: 'mono small' }, ` ${((tc || {}).function || {}).name || ''}(${String(((tc || {}).function || {}).arguments || '').slice(0, 120)})`)))))));
+  }
+  const raw = bigStringify(o, 1);
+  out.push(h('details', { class: 'dbg-json' }, h('summary', null, T`요청 JSON(${fmtBytes(new Blob([raw]).size)})`), h('pre', { class: 'log' }, raw.length > 200000 ? raw.slice(0, 200000) + '\n…' : raw)));
+  if (x.status !== 200 || !toks.length) { out.push(labNote(x.status !== 200 ? T('오류로 끝난 요청입니다 — 재생은 같은 오류(상태 · 코드)가 나오는지 봅니다.') : T('응답에 토큰이 없습니다.'))); return h('div', { class: 'col g16' }, out); }
+  // 답의 글
+  const msg = ((((x.response || {}).choices || [])[0]) || {}).message || {};
+  const txt = dbgText(run.name + '|r' + x.i + '|all', toks, sv);
+  out.push(h('div', { class: 'col g8' }, h('div', { class: 'eyebrow' }, T('답')),
+    h('pre', { class: 'dbg-ans' }, txt !== null ? txt : (msg.content || T('(이 실행의 모델과 어휘가 같은 모델을 불러오면 답의 글이 보입니다)')))));
+  // 관찰
+  const key = run.name + '|' + dbgKey(x), an = DBG.an[key];
+  out.push(labSec(T('관찰 — 토큰마다')));
+  if (!an) {
+    out.push(labNote(T('토큰마다 확률 · 순위 · 대안 · 엔트로피를 이 실행의 모델로 다시 계산합니다(echo 스코어링 — 생성과 같은 비트). 그 스텝의 대안 토큰으로 분기할 수 있습니다.')),
+      h('div', null, h('button', { class: 'btn primary needs-conn', disabled: (DBG.busy || DBG.prog) ? true : null, onclick: () => dbgRun(() => dbgObserve(run, x)) }, I('play', 's'), T('토큰마다 확률 계산하기'))));
+  } else {
+    const sm = labSummary(an, toks);
+    out.push(h('div', { class: 'kpis sm lab-kpis' },
+      labKpi(nat(sm.mean), T('평균 로그확률')), labKpi(sm.ppl.toFixed(3), T('퍼플렉시티')),
+      labKpi(nat(sm.minM), T`가장 작은 마진 (스텝 ${sm.minAt + 1})`), labKpi(fmtNum(sm.frag), T`마진이 작은 스텝 (마진 < ${LAB.delta})`), labKpi(fmtNum(sm.notTop), T('1위가 아닌 토큰'))),
+      an.same === true ? h('div', { class: 'note-line' }, I('check', 's'), h('span', null, T`로짓 해시 ${fmtNum(toks.length)}개가 생성 때와 같습니다 — 이 값은 생성할 때와 같은 계산입니다.`))
+        : an.same === false ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('로짓 해시가 생성 때와 다릅니다 — 다른 계산입니다(모델 · 계산 방식 · 빌드를 확인하세요).'))) : null);
+    const bks = dbgBreaks(toks, { logprobs: an.lp, top_logprobs: an.topLp.map(v => (v || []).slice(0, 2)), token_text: an.raw }, LAB.delta, DBG.prob, dbgToolCall(x));
+    const holder = labDetailHolder(() => (DBG.step >= 0 && DBG.step < an.lp.length ? labDetail(an, toks, DBG.step, true, (i, id) => dbgBranchToken(run, x, i, id))
+      : labNote(T('토큰을 누르면 그 스텝의 대안과 수치가 보입니다. 대안의 화살표 단추가 그 토큰으로 분기합니다(같은 시드 · 같은 스텝 번호의 난수).'))));
+    const strip = labStrip(an, toks, DBG.step, i => { DBG.step = i; holder._render(); }, T('답의 토큰'));
+    if (bks.length) out.push(h('div', { class: 'row g8 dbg-bks' }, h('span', { class: 'small muted' }, T`중단점 ${fmtNum(bks.length)}개`),
+      bks.slice(0, 40).map(b => h('button', { class: 'dbg-chip' + (b.kinds.includes('tool_call') ? ' tool' : '') + (b.kinds.includes('low_prob') ? ' low' : ''), onclick: () => strip._go(b.step),
+        'aria-label': T`스텝 ${b.step + 1} — ${b.kinds.map(k => T(BK[k])).join(', ')}`, 'data-tip': b.kinds.map(k => T(BK[k])).join(', '), 'data-tip-pos': 'top' }, String(b.step + 1))), bks.length > 40 ? h('span', { class: 'small muted' }, '…') : null));
+    out.push(strip, h('div', { class: 'lab-legend small muted' },
+      h('span', null, h('i', { class: 'lg b3' }), T('짙을수록 확률이 낮음')), h('span', null, h('i', { class: 'lg frag' }), T('밑줄 = 마진이 작음')), h('span', null, h('i', { class: 'lg pick' }), T('테두리 = 1위가 아닌 토큰'))),
+      holder);
+  }
+  // 분기들
+  const mine = run.branches.filter(b => b.of === x.i);
+  out.push(labSec(T`분기 ${fmtNum(mine.length)}개`));
+  if (!mine.length) out.push(labNote(T('관찰에서 대안 토큰으로 분기하거나, 아래에서 요청을 고쳐 다시 생성하면 여기 남습니다(실행 로그의 분기 줄 — 재생이 함께 다시 돌립니다).')));
+  for (const b of mine.slice().reverse()) out.push(dbgBranchCard(run, x, b));
+  // 요청 고쳐 다시
+  const ek = run.name + '|' + x.i;
+  if (DBG.edit[ek] === undefined) DBG.edit[ek] = bigStringify(o, 1);
+  const ta = h('textarea', { class: 'w100 lab-ta mono', rows: '10', spellcheck: 'false', 'aria-label': T('고칠 요청(JSON)'), 'data-fk': 'dbg:edit' });
+  ta.value = DBG.edit[ek];
+  ta.addEventListener('input', () => { DBG.edit[ek] = ta.value; });
+  out.push(labSec(T('요청을 고쳐 다시 생성')), labNote(T('도구 결과 · 시스템 프롬프트 · 사용자 말 · 설정을 고쳐 같은 시드로 다시 생성합니다. 프롬프트 토큰이 처음 달라진 자리와 답이 처음 갈라진 스텝을 원래와 비교하고, 두 번 돌려 같은 비트인지 봅니다.')),
+    ta, h('div', { class: 'row g8' },
+      h('button', { class: 'btn needs-conn', disabled: (DBG.busy || DBG.prog) ? true : null, onclick: () => dbgBranchEdit(run, x, DBG.edit[ek]) }, I('forward', 's'), T('고친 요청으로 분기')),
+      h('button', { class: 'btn ghost sm', onclick: () => { DBG.edit[ek] = bigStringify(o, 1); renderDebug(true); } }, T('원래대로'))));
+  return h('div', { class: 'col g16' }, out);
+}
+function dbgBranchCard(run, x, b) {
+  const g = dbgG(x), g2 = dbgG(b), c = b.checks || {}, sv = dbgServerOf(run, x);
+  const tag = (ok, yes, no, tip) => ok === undefined || ok === null ? null : h('span', { class: 'tag ' + (ok ? 'ok' : 'err'), 'data-tip': tip || null, 'data-tip-pos': 'top' }, I(ok ? 'check' : 'alert'), ok ? yes : no);
+  const rr = (DBG.replay[run.name] || {})['b' + b.b];
+  let title, from = 0;
+  if (b.kind === 'token') {
+    const k = b.step;
+    from = k;
+    const tk = id => sv.sha256 + '|t' + id, o = DBG.texts[tk(b.original_token)], a = DBG.texts[tk(b.token)];
+    if ((o === undefined || a === undefined) && dbgVocabOk(sv)) {
+      DBG.texts[tk(b.original_token)] = DBG.texts[tk(b.original_token)] || '…';
+      DBG.texts[tk(b.token)] = DBG.texts[tk(b.token)] || '…';
+      Promise.all([b.original_token, b.token].map(id => labApi('/detokenize', { tokens: [id] }).then(j => { DBG.texts[tk(id)] = j.prompt; })))
+        .catch(() => { DBG.texts[tk(b.original_token)] = undefined; DBG.texts[tk(b.token)] = undefined; }).finally(() => { DBG.tick++; renderDebug(); });
+    }
+    title = T`스텝 ${k + 1}: ${o === undefined ? '#' + b.original_token : JSON.stringify(tokShow(o))} → ${a === undefined ? '#' + b.token : JSON.stringify(tokShow(a))}` + (b.token === b.original_token ? T(' (원래 토큰 — 자기 확인)') : '');
+  } else title = T`요청을 고쳐서 — 프롬프트가 토큰 ${c.prompt_diff_at === null || c.prompt_diff_at === undefined ? '-' : fmtNum(c.prompt_diff_at)}에서 달라짐 · 답이 스텝 ${c.first_divergence === null || c.first_divergence === undefined ? '-' : fmtNum(c.first_divergence + 1)}에서 갈라짐`;
+  const nt = Array.isArray(g2.tokens) ? g2.tokens : [];
+  const tail = b.kind === 'token' ? nt : nt.slice(c.first_divergence || 0);
+  const t2 = dbgText(run.name + '|b' + b.b, tail, sv);
+  const t1 = dbgText(run.name + '|r' + x.i + '|' + (b.kind === 'token' ? from + 1 : (c.first_divergence || 0)), (g.tokens || []).slice(b.kind === 'token' ? from + 1 : (c.first_divergence || 0)), sv);
+  return h('div', { class: 'card dbg-branch' + (DBG.bi === b.b ? ' on' : '') },
+    h('div', { class: 'row g8' }, h('span', { class: 'eyebrow mono' }, 'b' + b.b), h('span', { class: 'ink' }, title), h('span', { class: 'grow' }), rr ? dbgResultTag(rr) : null),
+    h('div', { class: 'row g8' }, tag(c.prefix_same, T('앞 스텝 로짓 해시 같음'), T('앞 스텝 로짓 해시 다름'), T('분기 앞의 스텝들이 원래와 같은 계산인가')),
+      tag(c.repeat_same, T('두 번 같은 비트'), T('두 번 돌려 다름')), tag(c.null_branch_same, T('원래 답과 같음'), T('원래 답과 다름'), T('원래 토큰으로 이으면 원래 답의 뒤가 그대로 나와야 한다')),
+      h('span', { class: 'small muted' }, [dbgFinish(b.response), T`${fmtNum(nt.length)} 토큰`, b.at].filter(Boolean).join(NB))),
+    h('div', { class: 'dbg-vs' },
+      h('div', null, h('div', { class: 'eyebrow' }, T('원래')), h('pre', { class: 'dbg-ans sm' }, t1 === null ? T('(어휘가 같은 모델을 불러오면 글이 보입니다)') : t1)),
+      h('div', null, h('div', { class: 'eyebrow' }, T('분기')), h('pre', { class: 'dbg-ans sm' }, t2 === null ? T('(어휘가 같은 모델을 불러오면 글이 보입니다)') : t2))));
+}
+
+// 비교 — B 고르기 · 요약 · 요청 표 · 고른 요청의 맞대기
+function dbgCmpView(run) {
+  const others = (DBG.list || []).filter(r => r.name !== run.name);
+  const out = [labNote(T('같은 요청열(같은 테스트 세트 등)을 다른 모델 파일 · 양자화 · 설정 · GeulPU 버전으로 돌린 실행 B와 요청마다 비교합니다 — 같은 답인가 · 처음 갈라진 스텝, 그리고 A의 답을 A의 모델과 B의 모델로 점수 매긴 로그확률의 차.'))];
+  out.push(h('select', { class: 'input w100', 'aria-label': T('비교할 실행(B)'), 'data-fk': 'dbg:cmpB', onchange: ev => {
+    DBG.cmpB = ev.target.value; DBG.cmpRun = null; DBG.cmpSel = -1;
+    if (DBG.cmpB) dbgRun(async () => { const r = await dbgFetchRun(DBG.cmpB); if (DBG.cmpB === r.name) DBG.cmpRun = r; });
+  } }, h('option', { value: '' }, T('비교할 실행(B) 고르기')), others.map(r => h('option', { value: r.name, selected: r.name === DBG.cmpB ? true : null }, r.name))));
+  const B = DBG.cmpRun && DBG.cmpRun.name === DBG.cmpB ? DBG.cmpRun : null;
+  if (!B) return h('div', { class: 'col g12' }, out);
+  const rep = dbgCompare(run, B), s = rep.summary;
+  const svA = run.reqs.length ? dbgServerOf(run, run.reqs[0]) : null, svB = B.reqs.length ? dbgServerOf(B, B.reqs[0]) : null;
+  out.push(h('div', { class: 'small muted' }, `A ${run.name} — ${svA ? dbgSvLabel(svA) : '-'}`), h('div', { class: 'small muted' }, `B ${B.name} — ${svB ? dbgSvLabel(svB) : '-'}`));
+  out.push(h('div', { class: 'kpis sm lab-kpis' },
+    labKpi(`${fmtNum(s.same)}/${fmtNum(s.requests)}`, T('같은 답'), T('나온 토큰이 모두 같은 요청')),
+    labKpi(s.fd_median === null ? '-' : fmtNum(s.fd_median + 1), T('처음 갈라진 스텝(가운데값)'), s.fd_median === null ? null : T`최소 ${s.fd_min + 1} · 최대 ${s.fd_max + 1}`),
+    labKpi(s.scored ? sgn(s.delta_mean) : '-', T('토큰당 로그확률 차(B − A)'), T('A의 답을 B의 모델과 A의 모델로 점수 매긴 로그확률의 차 — 토큰마다 평균(nat)')),
+    labKpi(s.scored ? `${fmtNum(s.b_top1_differs)}/${fmtNum(s.tokens)}` : '-', T('B의 1위 ≠ A의 토큰'), s.scored ? T`A 자신의 1위가 아닌 토큰(샘플링) ${fmtNum(s.a_top1_differs)}` : null)));
+  const miss = rep.rows.filter(r => r.compared && !r.scored);
+  if (miss.length) out.push(h('div', { class: 'note-line' }, I('info', 's'), h('span', { class: 'grow' }, T`점수가 없는 요청 ${fmtNum(miss.length)}개 — A의 답을 A의 모델 · B의 모델로 점수 매깁니다(모델을 바꿔 불러옵니다).`),
+    h('button', { class: 'btn sm needs-conn', disabled: (DBG.busy || DBG.prog) ? true : null, onclick: () => dbgRun(() => dbgCmpScore(run, B)) }, I('gauge', 's'), T('점수 매기기'))));
+  if (s.prompt_different) out.push(labNote(T`프롬프트 토큰이 다른 요청 ${fmtNum(s.prompt_different)}개 — 채팅 템플릿이 다른 모델이면 답을 그대로 맞대기 어렵습니다.`));
+  const rows = rep.rows.map(r => h('tr', { class: 'clk' + (DBG.cmpSel === r.i ? ' on' : ''), onclick: () => { DBG.cmpSel = DBG.cmpSel === r.i ? -1 : r.i; renderDebug(true); } },
+    h('td', { class: 'num' }, h('button', { class: 'dbg-link', 'data-fk': 'dbg:cmp:' + r.i, onclick: ev => { ev.stopPropagation(); DBG.cmpSel = DBG.cmpSel === r.i ? -1 : r.i; renderDebug(true); } }, String(r.i))),
+    r.compared ? [h('td', null, r.same ? h('span', { class: 'tag ok' }, I('check'), T('같음')) : h('span', { class: 'tag' }, T('다름'))),
+      h('td', { class: 'r num' }, r.first_divergence === null ? '-' : fmtNum(r.first_divergence + 1)), h('td', { class: 'r num' }, `${fmtNum(r.steps_a)}/${fmtNum(r.steps_b)}`),
+      h('td', { class: 'r num' }, r.scored ? sgn(r.delta_sum) : '-'), h('td', { class: 'r num' }, r.scored ? sgn(r.delta_mean) : '-'), h('td', { class: 'r num' }, r.scored ? fmtNum(r.b_top1_differs) : '-')]
+      : h('td', { colspan: '6', class: 'muted' }, r.reason)));
+  out.push(h('div', { class: 'list' }, h('table', { class: 'data lab-table dbg-table' },
+    h('thead', null, h('tr', null, [T('차례'), T('답'), T('처음 갈라진 스텝'), T('스텝 A/B'), T('차 합'), T('차 평균'), T('B 1위 ≠ A')].map((t, k) => h('th', { class: k >= 2 ? 'r' : null }, t)))),
+    h('tbody', null, rows))));
+  const sel = rep.rows.find(r => r.i === DBG.cmpSel && r.compared);
+  if (sel) out.push(dbgCmpPair(run, B, sel));
+  return h('div', { class: 'col g12' }, out);
+}
+function dbgCmpPair(A, B, r) {
+  const x = A.reqs.find(q => q.i === r.i), y = B.reqs.find(q => q.i === r.i);
+  const tA = dbgG(x).tokens, tB = dbgG(y).tokens, d = r.first_divergence === null ? 0 : r.first_divergence;
+  const svA = dbgServerOf(A, x);
+  const a = dbgText(A.name + '|r' + x.i + '|' + d, tA.slice(d), svA), b = dbgText(B.name + '|r' + y.i + '|' + d, tB.slice(d), svA);
+  const out = [h('div', { class: 'row g8' }, h('span', { class: 'eyebrow' }, T`요청 ${r.i}`), h('span', { class: 'grow' }),
+    h('button', { class: 'btn sm ghost', onclick: () => { DBG.view = 'req'; DBG.ri = r.i; DBG.step = d < tA.length ? d : -1; renderDebug(true); } }, T('A의 이 요청 보기')))];
+  out.push(labNote(r.same ? T('두 답의 토큰이 모두 같습니다.') : T`스텝 ${d + 1}에서 처음 갈라집니다 — 그 앞 ${fmtNum(d)}토큰은 같습니다.`));
+  if (!r.same) out.push(h('div', { class: 'dbg-vs' },
+    h('div', null, h('div', { class: 'eyebrow' }, T`A — 스텝 ${d + 1}부터`), h('pre', { class: 'dbg-ans sm' }, a === null ? T('(어휘가 같은 모델을 불러오면 글이 보입니다)') : a)),
+    h('div', null, h('div', { class: 'eyebrow' }, T`B — 스텝 ${d + 1}부터`), h('pre', { class: 'dbg-ans sm' }, b === null ? T('(어휘가 같은 모델을 불러오면 글이 보입니다)') : b))));
+  if (r.scored) {
+    const strs = s => (s.text !== undefined && Array.isArray(s.text_offset) ? tokTexts(s.text, s.text_offset, s.token_text) : s.token_text);
+    const an = { lp: r.sAA.logprobs, topIds: r.sAA.top_ids, strs: strs(r.sAA) }, res = { lp: r.sAB.logprobs, topIds: r.sAB.top_ids };
+    out.push(labDelta(an, tA, res, T('B의 모델에서')));
+  }
+  return h('div', { class: 'card col g12' }, out);
+}
+function renderDebug(force) {
+  const page = $('#page-debug');
+  if (!page || !S.st) return;
+  if (!DBG.listing && Date.now() - DBG.listAt > 2500) dbgLoadList();
+  if (DBG.sel && !DBG.run && !DBG.loading && !DBG.err) { DBG.loading = DBG.sel; dbgRun(() => dbgOpen(DBG.sel)); }
+  const now = dbgNowServer();
+  const sig = [S.conn, now.ready, now.model, now.precision, now.layer, DBG.list && DBG.list.map(r => [r.name, r.bytes]), DBG.rec, DBG.listErr, DBG.sel,
+    DBG.run && [DBG.run.name, DBG.run.bytes], DBG.view, DBG.ri, DBG.bi, DBG.busy, DBG.err, DBG.cmpB, DBG.cmpRun && DBG.cmpRun.bytes, DBG.cmpSel,
+    DBG.prog && [DBG.prog.done, DBG.prog.total], DBG.loading, DBG.tick, S.streaming ? 1 : 0];
+  if (!changed('dbg', sig) && !force) return;
+  const ol = page.querySelector('.dbg-list'), od = page.querySelector('.dbg-detail');
+  const ly = ol ? ol.scrollTop : 0, dy = od && od.dataset.k === dbgDetailKey() ? od.scrollTop : 0;
+  const os = od && od.dataset.k === dbgDetailKey() ? od.querySelector('.tokstrip') : null, sy = os ? os.scrollTop : 0;
+  const a = document.activeElement, selr = a && page.contains(a) && 'selectionStart' in a && a.tagName === 'TEXTAREA' ? [a.selectionStart, a.selectionEnd, a.scrollTop] : null;
+  rebuild(page, dbgHead(), h('div', { class: 'dbg' }, h('div', { class: 'dbg-body' }, dbgListPane(), dbgDetailPane())));
+  const nl = page.querySelector('.dbg-list'), nd = page.querySelector('.dbg-detail'), ns = nd ? nd.querySelector('.tokstrip') : null;
+  if (nl) nl.scrollTop = ly;
+  if (nd) nd.scrollTop = dy;
+  if (ns) ns.scrollTop = sy;
+  const b = document.activeElement;
+  if (selr && b && page.contains(b) && b.tagName === 'TEXTAREA') { try { b.setSelectionRange(selr[0], selr[1]); b.scrollTop = selr[2]; } catch (_) { } }
+}
 
 // ---------- 시작 ----------
 (async function start() {
