@@ -192,10 +192,13 @@ def e자리(ep):
 # (에뮬레이션 정리). "" 이면 9 · 22단계의 계약 그대로. 커널생성 --어텐션한자리 KV 는 "kv", QKV 는 "qkv".
 # GeulPUv2 ③b-1 — "kv8" · "v8" 은 8비트 KV(F1A′)의 에뮬레이션: 키 · 값(v8 은 값만)을 팔비트(아래)로 바꿨다가 되돌린 값을 자리 둘로(문서/긴문맥.md).
 어텐션한자리 = ""
+# GeulPUv2 ③b-2 — 8비트 KV 캐시(계약 F1A′, 계약.md 2.1): 참이면 어텐션의 키 · 값을 팔비트KV(아래)의 (n, s)로 두고, fp32 스케일 s 를
+# 2^(E − 13) 자리에 쓴다. 커널생성 --KV8.
+KV8 = False
 
 
 def 팔비트(x):
-    """GeulPUv2 ③b-1 — 8비트 KV(F1A′)의 에뮬레이션. x [행][깊이] 짧은실수 → 블록(32 칸)마다 m = max|x|, s = m / 127(바른 반올림), s > 0 이면
+    """GeulPUv2 ③b-1 — 8비트 KV(F1A′)의 에뮬레이션. x [행][깊이] fp32 → 블록(값 32 개)마다 m = max|x|, s = m / 127(반올림 하나), s > 0 이면
     y = 가까운정수(x / s) · s(|가까운정수| ≤ 127), 아니면 0 — 모두 규칙 R. 커널(생성머리128.gl 의 큰팔비트)과 같은 식."""
     x = 버림(np.asarray(x, f32))
     M, K = x.shape
@@ -205,6 +208,19 @@ def 팔비트(x):
     n = np.where(양, np.rint(나눔(xb, np.where(양, s, f32(1.0)))), f32(0.0)).astype(f32)
     assert np.abs(n).max() <= 127
     return np.where(양, 곱(n, s), f32(0.0)).astype(f32).reshape(M, K)
+
+
+def 팔비트KV(x):
+    """GeulPUv2 ③b-2 — 8비트 KV 캐시의 저장(계약 F1A′). x [행][깊이] fp32 → (n [행][깊이] int64, s [행][깊이/32] fp32): 블록(값 32 개)마다
+    s = m / 127(m = max|x|, 반올림 하나), s > 0 이면 n = 가까운정수(x / s)(|n| ≤ 127), 아니면 0 — 모두 규칙 R. n · s 는 팔비트 와 같은 값."""
+    x = 버림(np.asarray(x, f32))
+    M, K = x.shape
+    xb = x.reshape(M, K // 32, 32)
+    s = 나눔(np.abs(xb).max(2), f32(127.0))
+    양 = s > 0
+    n = np.where(양[:, :, None], np.rint(나눔(xb, np.where(양, s, f32(1.0))[:, :, None])), f32(0.0)).astype(np.int64)
+    assert np.abs(n).max() <= 127
+    return n.reshape(M, K), s
 
 
 def 어텐션자리로(x, 이름):
@@ -231,7 +247,8 @@ def 점수눈금(hd):
 
 def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n):
     """행 Rr(위치 — 모두 시작 이상)의 키 조각 [시작, 시작 + 64) 몫 (m, l, o) — 9단계 계약의 1~4(점수 · 최댓값 · 적힌지수 · 합 · e′ 자리 ·
-    가중합). 머리 크기 hd = nq 의 열 수(64 · 128 — 블록 hd/32 개를 b 오름차순으로, 22단계)."""
+    가중합). 헤드 크기 hd = nq 의 열 수(64 · 128 — 블록 hd/32 개를 b 오름차순으로, 22단계). 8비트 KV(③b-2 — 계약 F1A′)면 nk · nv 가 8비트
+    정수이고 Pk · Pv 가 fp32 스케일이라, 그 곱(점수의 곱 · FMA, e′)마다 반올림 하나 — 식과 차례는 같다."""
     hd = nq.shape[1]
     keys = np.arange(시작, min(시작 + 64, n))
     valid = keys[None, :] <= Rr[:, None]                         # [R][keys]
@@ -252,7 +269,7 @@ def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n):
     # 4. 가중합 — 값의 블록 b 마다 e′ = e · 2^(E_v − 13), 키 32 개 블록 j 마다 자리 둘
     o = np.zeros((len(Rr), hd), f32)
     for b in range(hd // 32):
-        ep = 곱(e, Pv[keys, b][None, :])                            # 정확(2⁻¹²⁶ 아래로 작아지면 규칙 R 로 0)
+        ep = 곱(e, Pv[keys, b][None, :])                            # 정확(2⁻¹²⁶ 아래로 작아지면 규칙 R 로 0) — 8비트 KV 는 반올림 하나
         uj = []
         for j in range(0, len(keys), 32):
             epj = np.zeros((len(Rr), 32), f32)
@@ -289,6 +306,8 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0):
     (Dq, Eq), (Dk, Ek), (Dv, Ev) = 어텐션자리로(q, "q"), 어텐션자리로(k, "k"), 어텐션자리로(v, "v")   # 2b단계 — F1A 면 에뮬레이션
     nq, nk, nv = (D[1] * 256 + D[0] for D in (Dq, Dk, Dv))          # [n][hd] int64
     Pq, Pk, Pv = 거듭제곱(Eq), 거듭제곱(Ek), 거듭제곱(Ev)              # [n][hd/32]
+    if KV8:                                                          # ③b-2 — 키 · 값은 8비트 정수, fp32 스케일이 2^(E − 13) 자리에(계약 F1A′)
+        (nk, Pk), (nv, Pv) = 팔비트KV(k), 팔비트KV(v)
     hd = q.shape[1]
     R_ = np.arange(첫행, n)
     M = np.zeros(len(R_), f32)

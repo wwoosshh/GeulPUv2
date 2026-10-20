@@ -115,6 +115,31 @@ chunks of 64 keys:
 Because integer sums do not depend on their order, prefill (tensor-core MMA) and decode (dp4a) produce the same bits — this follows
 directly from the contract.
 
+### 2.1 Fast KV contract F1A′ — 8-bit KV (GeulPUv2 ③b-2, [`문서/긴문맥.md`](../문서/긴문맥.md))
+
+With the fast mode's 8-bit KV cache setting on, keys and values are cached as 8-bit integers with a float32 scale, and attention
+multiplies those integers directly. The 16-bit format (two 8-bit digits) of q and e′, the max m, e_t, the sum l and the two-level merge
+(section 3) are as in section 2.
+
+1. Storage: per block of 32 values along the head dimension, s = max|x| / 127 (float32 division, one rounding). If s > 0, n is the
+   integer nearest to the float32 quotient x / s (one rounding; ties to even) and |n| ≤ 127; if s = 0, n = 0. The cache holds n (int8)
+   and s (float32).
+2. Score: per block b, u_b,t = float32(Σ n_q · n_k) — the exact integer sum of the 32 products of q's 16-bit-format integer
+   n_q = 256·D₁ + D₀ and the key's n (|sum| < 2²⁶), converted to float32 (one rounding). With a_b,t = u_b,t × 2^(E_q,b − 13) (a power-of-two
+   product), z ← a_0,t × s_k,t,0, then z ← fma(a_b,t, s_k,t,b, z) for b = 1, 2, … in order, and s_t = z × c (c = 0.125 for head size 64,
+   the c of section 4 for head size 128). Masked keys (t > p) get −3 × 10³⁸.
+3. Output o_d (d in value block b): e′_t = e_t × s_v,t,b (one rounding) is converted per 32-key block j to the 16-bit format (integer
+   n_e,t, exponent E_e,j) as in section 2 step 4; u_j,d = float32(Σ_t n_e,t · n_v,t,d) (exact integer sum, |sum| < 2²⁶, one rounding),
+   and o_d = u₀,d × 2^(E_e,0 − 13) + u₁,d × 2^(E_e,1 − 13) (one rounding).
+
+All float32 operations follow rule R. The only difference from section 2 is that the float32 scale s takes the place of the power-of-two
+factor 2^(E − 13) of keys and values; the order of operations is the same. Because keys and values have one digit, the tensor-core MMAs
+drop from four digit pairs to two. With power-of-two scales and values of ordinary size, the result is bit-identical to the ③b-1
+emulation (the dequantized value n · s written in the 16-bit format). The two differ only in tiny values: an all-zero block has s = 0, so
+its contribution is exactly 0, while the 16-bit format keeps it as a value with exponent −98, and the 16-bit format's exponent does not go
+below −98. [`시험/계약자체.py`](../시험/계약자체.py) checks the storage, the match with the emulation, and a computation that follows this
+section's text row by row.
+
 ## 3. Two-level merge (stage 13)
 
 Key tiles (64 positions each) are grouped (16 tiles = 1024 positions; group g covers positions [1024g, 1024g + 1024)):
