@@ -163,3 +163,11 @@ The documents and the app used Korean coinages for standard terms until 2026-10-
 | 뒷단 | 백엔드 | (compiler) backend — turns kernel source into PTX · SPIR-V |
 | 판 (app, plans) | 버전 | version — e.g. 디버거 1판 → 디버거 v1 |
 | 열쇠 | 키 | key (JSON, dictionary, cache) |
+| 눈금 (quantization) | 스케일 | scale (e.g. block maximum / 127) |
+| 짧은실수 · 반실수 (in prose) | fp32 · fp16 | float32 · float16 (the geul type name `짧은실수` stays in code) |
+| 다른 칸 · 오류 칸 | 불일치 · 오류 플래그 | mismatch (elements that differ in a bit comparison) · error flag |
+| 길 · 다섯 길 | 실행 경로 | execution path (one batch, four chunks, one row at a time, repeated, generation) |
+| 텐서곱 · 결정 나무 · 바늘 찾기 | 텐서 코어 행렬곱 · 결정 트리 · NIAH 테스트 | tensor-core MMA · decision tree · needle-in-a-haystack test |
+| 탐욕 · 가운데값 · 창 | 그리디 디코딩 · 중앙값 · 윈도 | greedy decoding · median · window |
+| 쓴 때 · 사슬 · 쓰기 고리 | 마지막 사용 시각 · 체인 · 쓰기 링 버퍼 | timestamp (prompt-cache LRU) · (hash) chain · write ring buffer |
+| 재기 (in prose) | 측정 | measurement (the folder name `재기/` stays) |
