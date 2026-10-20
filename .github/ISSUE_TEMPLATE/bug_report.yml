@@ -1,0 +1,77 @@
+name: Bug report
+description: Something does not work, crashes, or gives a wrong or non-reproducible result.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. English or Korean is fine. **Security problems** go to the
+        [private reporting form](https://github.com/wwoosshh/GeulPUv2/security/advisories/new) instead.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of problem
+      options:
+        - Crash, error message or hang
+        - Wrong or garbled output
+        - Not reproducible — a replay or another PC gives different bits
+        - Install, update or download
+        - App screen
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: GeulPU version
+      description: Shown at the bottom right of the app, or run `geulpu --version`.
+      placeholder: "0.7.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it was installed
+      options:
+        - Release zip
+        - pipx / uv / pip (PyPI package)
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU, driver and backend
+      description: The GPU and driver version, the backend (CUDA or Vulkan) and the computation mode (fast or exact) from Settings.
+      placeholder: "RTX 4070 Ti 12 GB, driver <version>, CUDA, fast mode"
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model file
+      description: The Hugging Face repository and file name, or the file's SHA-256.
+      placeholder: "Qwen/Qwen2.5-7B-Instruct-GGUF — qwen2.5-7b-instruct-q4_k_m.gguf"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Load ... with context 32768
+        2. Send ...
+        3. ...
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: >-
+        The relevant part of the logs in `%USERPROFILE%\GeulPU\기록\` (the logs folder). For a reproducibility problem, attach the
+        debugger's run log or the research panel's reproduction file — they let us replay exactly what you ran.
+      render: text

@@ -1,6 +1,6 @@
 # GeulPU research panel — a guide for researchers
 
-**[한국어](../연구자안내.md)** · [README](../README.en.md) · [contract §5.2](../계약/contract.md) · [research log](https://github.com/wwoosshh/GeulPU/blob/main/docs/research-log.md) · [debugger guide](debugger-guide.md)
+**[한국어](../연구자안내.md)** · [README](../README.md) · [user guide](user-guide.md) · [contract §5.2](../계약/contract.md) · [research log](https://github.com/wwoosshh/GeulPU/blob/main/docs/research-log.md) · [debugger guide](debugger-guide.md)
 
 GeulPU's **research panel** is a workbench next to the chat. It splits an answer into tokens to show where the model hesitated, lets you
 pick a different token and continue from there, and measures how much one word of the question — or one model file — changes the
@@ -50,7 +50,7 @@ real difference. That makes questions like these cleanly answerable:
 
 ## 1. Setup
 
-1. Install **GeulPU 0.5.0 or later** ([Install in the README](../README.en.md#install)).
+1. Install **GeulPU 0.5.0 or later** ([Install in the README](user-guide.md#install)).
 2. **Model**: this guide uses **Qwen2.5-7B-Instruct Q8_0** (Models → Find models). Experiment 4 also needs the same model's **Q4_K_M**.
    Any other model works the same way; only the numbers change.
 3. In the **generation settings** (the sliders button at the top right of the chat), check that **temperature is 0**. It is the default.
@@ -489,7 +489,7 @@ Things you will use:
   cover only the answer's tokens, as in OpenAI (one shorter when the answer ends with the end token). To get the end token's probability,
   score `tokens` with echo (that is what the panel does).
 - **lm-evaluation-harness** — connects with `local-completions` + `tokenizer_backend=remote`. Per-item results are bit-identical whatever
-  the number of concurrent requests, CUDA or Vulkan ([README](../README.en.md#use-it-from-other-programs-openai-compatible-api)).
+  the number of concurrent requests, CUDA or Vulkan ([README](user-guide.md#use-it-from-other-programs-openai-compatible-api)).
 
 ## 6. Caveats and FAQ
 

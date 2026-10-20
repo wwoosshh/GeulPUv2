@@ -22,8 +22,8 @@ import zipfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 시각 = (2026, 1, 1, 0, 0, 0)                   # 휠 안 파일의 시각(고정 — 다시 만들어도 같은 바이트)
 태그 = "py3-none-win_amd64"
-요약 = ("Local AI chat on your own GPU — a bit-reproducible GGUF LLM engine written in the geul language "
-        "(Windows x64 app, CUDA or Vulkan)")
+요약 = ("A deterministic local LLM engine and debugger — bit-reproducible GGUF inference on your own GPU, written in the "
+        "geul language (Windows x64 app, CUDA or Vulkan)")
 
 
 def 레코드해시(b):
@@ -41,17 +41,21 @@ def 메타데이터(판, 설명):
         "License-Expression: MIT",
         "License-File: LICENSE",
         "Project-URL: Homepage, https://github.com/wwoosshh/GeulPUv2",
-        "Project-URL: Changelog, https://github.com/wwoosshh/GeulPUv2/blob/main/%EB%AC%B8%EC%84%9C/%EB%B0%94%EB%80%90%EA%B2%83.md",
+        "Project-URL: Documentation, https://github.com/wwoosshh/GeulPUv2/blob/main/docs/user-guide.md",
+        "Project-URL: Changelog, https://github.com/wwoosshh/GeulPUv2/blob/main/CHANGELOG.md",
         "Project-URL: Issues, https://github.com/wwoosshh/GeulPUv2/issues",
-        "Keywords: llm,gguf,local-llm,chat,cuda,vulkan,openai-compatible,reproducible",
+        "Keywords: llm,gguf,local-llm,chat,cuda,vulkan,openai-compatible,reproducible,deterministic,debugger",
         "Classifier: Development Status :: 4 - Beta",
         "Classifier: Environment :: Console",
         "Classifier: Environment :: GPU :: NVIDIA CUDA",
+        "Classifier: Intended Audience :: Developers",
         "Classifier: Intended Audience :: End Users/Desktop",
+        "Classifier: Intended Audience :: Science/Research",
         "Classifier: Operating System :: Microsoft :: Windows :: Windows 10",
         "Classifier: Operating System :: Microsoft :: Windows :: Windows 11",
         "Classifier: Programming Language :: Python :: 3",
         "Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Classifier: Topic :: Software Development :: Debuggers",
         "Requires-Python: >=3.9",
         "Description-Content-Type: text/markdown",
     ]

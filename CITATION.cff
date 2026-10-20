@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use GeulPU in your research, please cite it as below."
+title: "GeulPU: a deterministic local LLM engine and debugger"
+type: software
+authors:
+  - name: "wwoosshh"
+    website: "https://github.com/wwoosshh"
+version: "0.7.0"
+date-released: "2026-10-20"
+license: MIT
+repository-code: "https://github.com/wwoosshh/GeulPUv2"
+url: "https://github.com/wwoosshh/GeulPUv2"
+abstract: >-
+  GeulPU runs GGUF language models on a local GPU with output that is bit-identical to a CPU reference implementation of a written
+  precision contract — across batching, slots, the prompt cache, speculative decoding and, in exact mode, CUDA and Vulkan GPUs. Its
+  debugger records generation runs, replays them bit for bit, branches from any token or request, and compares runs across model
+  files, quantizations and versions. The engine, kernels, server and app are written in the geul programming language.
+keywords:
+  - large language models
+  - local inference
+  - reproducibility
+  - determinism
+  - debugging
+  - GGUF
+  - CUDA
+  - Vulkan

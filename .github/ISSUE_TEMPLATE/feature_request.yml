@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a new feature, model family, format or improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        English or Korean is fine. Requests for a model family or weight format are welcome — please link the GGUF file you want to run.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The task or workflow, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+      description: How you imagine it working — in the app, the API, the debugger or the tools.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have tried
+      description: Other tools or workarounds, and why they are not enough.

@@ -1,6 +1,6 @@
 # GeulPU debugger — a guide
 
-**[한국어](../디버거안내.md)** · [README](../README.en.md) · [research panel guide](research-guide.md) · [plan and verdicts — 문서/디버거.md](../문서/디버거.md) (Korean)
+**[한국어](../디버거안내.md)** · [README](../README.md) · [user guide](user-guide.md) · [research panel guide](research-guide.md) · [plan and verdicts — 문서/디버거.md](../문서/디버거.md) (Korean)
 
 GeulPU's **debugger** works on **runs** — many requests, such as an agent session or a test set — rather than on a single answer. It
 records the generation requests that pass through the app as a **run log**, runs them again bit for bit (**replay**), looks at every
@@ -28,9 +28,8 @@ Qwen2.5-7B-Instruct. With the same model file and the same computation mode, **y
 
 ## 1. Setup
 
-1. Use **a GeulPU with the debugger** (the version after 0.6.0 — until it is released, [build from source](../README.en.md#build-from-source)).
-   The bug button on the left rail opens the debugger. The pictures in this guide were taken with a pre-release build, so they show
-   version 0.6.0.
+1. Use **GeulPU 0.7.0 or later** ([install](user-guide.md#install)). The bug button on the left rail opens the debugger. The pictures
+   in this guide were taken with a pre-release build of 0.7.0, so they show version 0.6.0.
 2. **Model**: this guide uses **Qwen2.5-7B-Instruct Q4_K_M**, and the comparison in section 6 also uses **Q8_0** of the same model (get
    them from Models → Find models). Any other model works the same way; only the numbers change.
 3. The **computation mode** is the default (fast mode — NVIDIA). In exact mode CUDA ↔ Vulkan (AMD included) also give the same bits, and
@@ -208,7 +207,7 @@ python 도구/debugger.py compare test50-q4km test50-q8 --out compare.json
 **App API**: `GET /api/debug` (recording state · runs) · `GET /api/debug/run?name=` (a run log) · `POST /api/debug/record/start {name}` ·
 `/api/debug/record/stop` · `/api/debug/run/delete {name}` · `/api/debug/run/append {name, lines}` (analysis lines — each with a top-level
 `type`) · `/api/debug/run/import {name, text, part, last}` (import — the first line of the first part is the header). Replay, scoring and
-branches use `/v1` with the [`geulpu` extension fields](../README.en.md#use-it-from-other-programs-openai-compatible-api): `logit_hash` ·
+branches use `/v1` with the [`geulpu` extension fields](user-guide.md#use-it-from-other-programs-openai-compatible-api): `logit_hash` ·
 `prompt_tokens` · `step_offset` (start the step index of the sampling random numbers at this number — a branch continues with the same
 random numbers as the rest of the original answer) · `echo_from` (with `echo` on `/v1/completions`).
 

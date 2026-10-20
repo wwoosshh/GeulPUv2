@@ -75,13 +75,30 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ver = "${{ github.ref_name }}".TrimStart('v')
-          $notes = "**설치**: GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행하세요 — 설치 · 사용 안내는 [README](https://github.com/wwoosshh/GeulPUv2#설치). 바뀐 것은 문서/바뀐것.md, 파일마다의 SHA-256 은 zip 안의 version.json."
-          $log = [IO.File]::ReadAllText("GeulPUv2/문서/바뀐것.md", [Text.Encoding]::UTF8)
-          $m = [regex]::Match($log, "(?ms)^## $([regex]::Escape($ver))\b.*?(?=^## |\z)")
-          if (-not $m.Success) { throw "문서/바뀐것.md 에 '## $ver' 절이 없다" }
-          # 바뀐것의 상대 링크(문서/ 기준)는 릴리스 페이지에서 깨지므로 이 태그의 절대 주소로
-          $sec = [regex]::Replace($m.Value, '\]\((?!https?://|#|mailto:)([^)\s]+)\)', { param($x) "](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/문서/" + $x.Groups[1].Value + ")" })
-          $notes = $sec + "`n`n" + $notes
-          $notes += "`n`n**English**: unzip GeulPU-$ver-windows-x64.zip and run GeulPU.exe. The app's screens are in English unless the browser is set to Korean (Settings → 언어 · Language). The install and usage guide is in [README.en.md](https://github.com/wwoosshh/GeulPUv2/blob/main/README.en.md)."
+          # 0.7.0 — 노트는 영어(CHANGELOG.md 의 '## <버전>' 절)가 먼저, 한국어(문서/바뀐것.md 의 같은 절)는 접어서. 상대 링크는 릴리스
+          # 페이지에서 깨지므로 이 태그의 절대 주소로(파일이 있는 폴더 기준 — '../' 는 풀어서)
+          $blob = "https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/"
+          function Section([string]$path, [string]$dir) {
+            $log = [IO.File]::ReadAllText("GeulPUv2/$path", [Text.Encoding]::UTF8)
+            $m = [regex]::Match($log, "(?ms)^## $([regex]::Escape($ver))\b.*?(?=^## |\z)")
+            if (-not $m.Success) { throw "$path 에 '## $ver' 절이 없다" }
+            return [regex]::Replace($m.Value.TrimEnd(), '\]\((?!https?://|#|mailto:)([^)\s]+)\)', {
+              param($x)
+              $p = $dir + $x.Groups[1].Value
+              while ($p -match '(^|/)[^/]+/\.\./') { $p = $p -replace '(^|/)[^/]+/\.\./', '$1' }
+              "](" + $blob + $p + ")"
+            })
+          }
+          $en = Section "CHANGELOG.md" ""
+          $ko = Section "문서/바뀐것.md" "문서/"
+          $notes = $en + "`n`n" +
+            "**Install** — with Python: ``pipx install geulpu`` (or ``uv tool install geulpu`` · ``pip install geulpu``), then run ``geulpu``. " +
+            "Without Python: unzip GeulPU-$ver-windows-x64.zip and run GeulPU.exe. To upgrade a Python install, quit the app and run " +
+            "``pipx upgrade geulpu``. Guide: [user guide]($($blob)docs/user-guide.md). SHA-256: SHA256SUMS.txt below, and version.json in " +
+            "the zip for every file.`n`n" +
+            "<details><summary>한국어</summary>`n`n" + $ko + "`n`n" +
+            "**설치** — 파이썬: ``pipx install geulpu``(또는 ``uv tool install geulpu`` · ``pip install geulpu``) 뒤 ``geulpu``. 파이썬 없이: " +
+            "GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행. 파이썬으로 깐 앱은 앱을 끈 뒤 ``pipx upgrade geulpu``. " +
+            "안내: [사용안내.md]($($blob)사용안내.md).`n`n</details>`n"
           [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
           gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --draft --title "GeulPU $ver" --notes-file "$env:RUNNER_TEMP/notes.md" "out/GeulPU-$ver-windows-x64.zip" "out/SHA256SUMS.txt" "out/wheel/geulpu-$ver-py3-none-win_amd64.whl"

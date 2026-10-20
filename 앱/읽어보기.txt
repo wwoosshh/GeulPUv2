@@ -17,8 +17,11 @@ English below.
   5. [벤치마크]에서 하드웨어 진단 · 속도 측정 · 재현성 검증(기준 PC와 비트 단위로 같은지)을 실행하고, 결과를 zip으로
      내보낼 수 있습니다.
   6. 답 아래의 플라스크 단추(연구 패널)로 토큰마다의 확률 · 대안을 보고, 어느 스텝에서 다른 토큰으로 분기를 내거나 다른
-     모델 · 프롬프트로 같은 답을 점수 매겨 비교합니다. 같은 값은 어느 PC · GPU에서 계산해도 비트까지 같습니다.
+     모델 · 프롬프트로 같은 답을 점수 매겨 비교합니다. 같은 계산 방식이면 어느 PC · GPU에서 계산해도 비트까지 같습니다.
      화면 그림과 함께 따라 하는 안내서: https://github.com/wwoosshh/GeulPUv2/blob/main/연구자안내.md
+  7. 왼쪽의 벌레 단추(디버거)로 에이전트 세션이나 테스트 세트를 기록하고, 같은 비트로 재생하고, 어느 토큰에서든 분기하고,
+     두 실행(예: Q4_K_M ↔ Q8_0)을 요청마다 비교합니다.
+     안내서: https://github.com/wwoosshh/GeulPUv2/blob/main/디버거안내.md
   화면은 브라우저 언어를 따릅니다(한국어가 아니면 영어). [설정] → '언어 · Language'에서 바꿀 수 있습니다.
 
 필요한 것
@@ -28,7 +31,7 @@ English below.
   - 인터넷은 모델을 찾고 받을 때와 새 버전을 확인할 때만 씁니다.
 
 지원하는 모델
-  Qwen3(1.7B · 8B · 14B), Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(1.5B 이상), Llama 3.1 · 3.2(3B · 8B) ·
+  Qwen3(1.7B · 8B — 14B는 모양만 확인), Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(1.5B 이상), Llama 3.1 · 3.2(3B · 8B) ·
   Mistral 7B v0.3과 그 미세조정 모델(같은 채팅 템플릿) —
   GGUF Q8_0 · Q4_K_M · Q5_K_M · Q6_K. 윈도의 AMD는 지금 Q8_0(과 순수 Q4_0) 파일만 실행합니다.
 
@@ -42,7 +45,8 @@ English below.
   (모델은 다시 받지 않습니다). 삭제는 이 폴더를 지우면 되고, 받은 모델까지 지우려면 %USERPROFILE%\GeulPU도 지웁니다.
   파일별 SHA-256은 version.json에, zip의 SHA-256은 릴리스의 SHA256SUMS.txt에 있습니다.
 
-자세한 안내 · 소스: https://github.com/wwoosshh/GeulPUv2
+자세한 안내: https://github.com/wwoosshh/GeulPUv2/blob/main/사용안내.md
+소스 · 바뀐 것: https://github.com/wwoosshh/GeulPUv2
 
 ==== English ====
 
@@ -59,8 +63,12 @@ Getting started
   5. Benchmark runs a hardware diagnosis, a speed test and a reproducibility check (bit-for-bit against the reference PC);
      results export as a zip.
   6. The flask button under an answer (research panel) shows each token's probability and alternatives; branch with
-     another token at any step, or score the same answer with another model or prompt. The values are bit-identical
-     on any PC or GPU. Step-by-step guide with screenshots: https://github.com/wwoosshh/GeulPUv2/blob/main/docs/research-guide.md
+     another token at any step, or score the same answer with another model or prompt. In the same computation mode the
+     values are bit-identical on any PC or GPU. Step-by-step guide with screenshots:
+     https://github.com/wwoosshh/GeulPUv2/blob/main/docs/research-guide.md
+  7. The bug button on the left (debugger) records an agent session or a test set, replays it bit for bit, branches from
+     any token and compares two runs (for example Q4_K_M vs Q8_0) request by request.
+     Guide: https://github.com/wwoosshh/GeulPUv2/blob/main/docs/debugger-guide.md
   The screens follow your browser's language (English unless it prefers Korean); change it in Settings -> Language.
 
 Requirements
@@ -70,7 +78,7 @@ Requirements
   - The internet is used only to find and download models and to check for new versions.
 
 Supported models
-  Qwen3 (1.7B, 8B, 14B), Qwen2.5, Qwen2.5-Coder, DeepSeek-R1-Distill-Qwen (1.5B and up), Llama 3.1 / 3.2 (3B, 8B) and
+  Qwen3 (1.7B, 8B; 14B checked as a shape only), Qwen2.5, Qwen2.5-Coder, DeepSeek-R1-Distill-Qwen (1.5B and up), Llama 3.1 / 3.2 (3B, 8B) and
   Mistral 7B v0.3, and their fine-tunes (with the same chat templates) —
   GGUF Q8_0, Q4_K_M, Q5_K_M, Q6_K. AMD on Windows currently runs Q8_0 (and pure Q4_0) files only.
 
@@ -84,4 +92,5 @@ Updates and uninstall
   To uninstall, delete this folder; to delete the downloaded models too, also delete %USERPROFILE%\GeulPU.
   Per-file SHA-256 values are in version.json; the zip's SHA-256 is in the release's SHA256SUMS.txt.
 
-Full guide and source: https://github.com/wwoosshh/GeulPUv2 (English: README.en.md)
+Full guide: https://github.com/wwoosshh/GeulPUv2/blob/main/docs/user-guide.md
+Source and changelog: https://github.com/wwoosshh/GeulPUv2
