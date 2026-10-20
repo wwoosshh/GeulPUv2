@@ -8,7 +8,8 @@
   (KV 머리 × 키 조각, 질의 머리 일곱을 가상 행으로) → 정수조각접기 · 정수조각접기짧은(두 층 접기)). 덩이마다 RoPEKV정수로 → 어텐션 →
   접기(o 의 자리 둘 · 정보, 짧은실수 O/L)를 띄우고, 끝에 KV 캐시(바이트 · 지수)를 내린다.
 
-  python -I 시험/머리128.py <qwen2Q8_7b.ptx> <7B gguf> <출력.json> [--빠르게]
+  python -I 시험/머리128.py <qwen2Q8_7b.ptx> <7B gguf> <출력.json> [--빠르게] [--KV8]
+  --KV8: 8비트 KV 모듈(GeulPUv2 ③b-2 — 커널생성 --빠른 --KV8). 캐시는 키 · 값 int8 과 스케일 fp32(키스케일 · 값스케일)로 견준다.
 """
 import ctypes
 import json
@@ -33,6 +34,7 @@ u64, i64 = G.c_u64, G.c_i64
 D, NH, NKV, HD = 3584, 28, 4, 128         # 7B — 24단계부터는 main 이 GGUF 의 설정으로 다시 둔다(모양두기)
 QKV = D + 2 * NKV * HD                     # 4608
 O자리수 = 2                                # 33단계 — 접기의 출력(o 의 입력) 자리 수: --자리하나 면 1 (어텐션 안의 q · k · v · e 는 늘 둘)
+KV8 = False                                # GeulPUv2 ③b-2 — 8비트 KV 모듈(커널생성 --KV8): 키 · 값 int8 + 스케일 fp32 (계약 F1A′)
 KB = D // 32                               # 112
 SH = HD + 4                            # 묶음 상태 하나의 칸 (M, L, 빈 둘, O 128)
 
@@ -116,8 +118,9 @@ class 글커널:
         묶음수 = (최대길이 + 1023) // 1024
         p입력 = dr.할당(Mmax * QKV * 4)
         p자q, p정q = dr.할당(2 * Mmax * D), dr.할당(KB * 폭max * 4)
-        p키, p값 = dr.할당(NKV * 2 * 최대길이 * HD), dr.할당(NKV * 최대길이 * 2 * HD)
-        p키지, p값지 = dr.할당(NKV * 최대길이 * 4), dr.할당(NKV * 최대길이 * 4)
+        자 = 1 if KV8 else 2                      # ③b-2 — 키 · 값의 자리 수, 지수 바이트 대신 fp32 스케일
+        p키, p값 = dr.할당(NKV * 자 * 최대길이 * HD), dr.할당(NKV * 최대길이 * 자 * HD)
+        p키지, p값지 = dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1)), dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1))
         p묶 = dr.할당(Mmax * NH * 묶음수 * SH * 4)
         p자, p정 = dr.할당(2 * Mmax * D), dr.할당(KB * 폭max * 4)
         p출 = dr.할당(Mmax * D * 4)
@@ -160,10 +163,16 @@ class 글커널:
             out["o자리"][:, s:s + m] = dr.내리기(p자, np.empty((O자리수, m, D), np.int8))
             out["o정보"][s:s + m] = dr.내리기(p정, np.empty((KB, 폭), np.int32))[:, :m].T
             out["o짧은"][s:s + m] = dr.내리기(p출, np.empty((m, D), f32))
-        out["키"] = dr.내리기(p키, np.empty((NKV, 2, 최대길이, HD), np.int8))
-        out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, 2, HD, 32), np.int8))
-        out["키지수"] = dr.내리기(p키지, np.empty((NKV, 최대길이, 4), np.uint8))
-        out["값지수"] = dr.내리기(p값지, np.empty((NKV, 최대길이, 4), np.uint8))
+        if KV8:
+            out["키"] = dr.내리기(p키, np.empty((NKV, 최대길이, HD), np.int8))
+            out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, HD, 32), np.int8))
+            out["키스케일"] = dr.내리기(p키지, np.empty((NKV, 최대길이, 4), f32))
+            out["값스케일"] = dr.내리기(p값지, np.empty((NKV, 최대길이, 4), f32))
+        else:
+            out["키"] = dr.내리기(p키, np.empty((NKV, 2, 최대길이, HD), np.int8))
+            out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, 2, HD, 32), np.int8))
+            out["키지수"] = dr.내리기(p키지, np.empty((NKV, 최대길이, 4), np.uint8))
+            out["값지수"] = dr.내리기(p값지, np.empty((NKV, 최대길이, 4), np.uint8))
         if RoPE만:
             for 키 in ("o자리", "o정보", "o짧은"):
                 out.pop(키)
@@ -204,12 +213,20 @@ def 참조(X, 최대길이, cos, sin, 첫행=0):
     vv = [np.ascontiguousarray(v[:, HD * g:HD * g + HD]) for g in range(NKV)]
     out = {}
     out["q자리"], out["q정보"] = q자리바이트(qr)
-    키들 = [C.키캐시(kr[g], 최대길이) for g in range(NKV)]
-    값들 = [C.값캐시(vv[g], 최대길이) for g in range(NKV)]
-    out["키"] = np.stack([a for a, _ in 키들])
-    out["키지수"] = np.stack([b for _, b in 키들])
-    out["값"] = np.stack([a for a, _ in 값들])
-    out["값지수"] = np.stack([b for _, b in 값들]).astype(np.uint8)
+    if KV8:                                         # ③b-2 — 계약 F1A′ 의 캐시(정수계약.키캐시KV8 · 값캐시KV8)
+        키들 = [C.키캐시KV8(kr[g], 최대길이) for g in range(NKV)]
+        값들 = [C.값캐시KV8(vv[g], 최대길이) for g in range(NKV)]
+        out["키"] = np.stack([a for a, _ in 키들])
+        out["키스케일"] = np.stack([b for _, b in 키들])
+        out["값"] = np.stack([a for a, _ in 값들])
+        out["값스케일"] = np.stack([b for _, b in 값들])
+    else:
+        키들 = [C.키캐시(kr[g], 최대길이) for g in range(NKV)]
+        값들 = [C.값캐시(vv[g], 최대길이) for g in range(NKV)]
+        out["키"] = np.stack([a for a, _ in 키들])
+        out["키지수"] = np.stack([b for _, b in 키들])
+        out["값"] = np.stack([a for a, _ in 값들])
+        out["값지수"] = np.stack([b for _, b in 값들]).astype(np.uint8)
     G_ = NH // NKV
     y = np.concatenate([C.어텐션(qr[:, HD * a:HD * a + HD], kr[a // G_], vv[a // G_], 첫행=첫행) for a in range(NH)], 1)
     out["o짧은"] = y
@@ -222,7 +239,7 @@ def 견주기(글, 참, 영부호=None):
     엔진이 쓰지 않는 시험용 출력(정수묶음접기짧은 · 정수조각접기짧은 커널)이고, 커널은 타일의 첫 행처럼 그 행에 유효한 키가 하나도 없는
     타일까지 병합해 −0 + 0 = +0 이 된다(계약은 그런 타일을 건너뛴다). 엔진이 쓰는 16비트 형식의 출력(o자리 · o정보)은 ±0 이 같은 바이트다."""
     결과 = {}
-    for 이름 in ("q자리", "q정보", "키", "키지수", "값", "값지수", "o자리", "o정보", "o짧은"):
+    for 이름 in ("q자리", "q정보", "키", "키지수", "키스케일", "값", "값지수", "값스케일", "o자리", "o정보", "o짧은"):
         if 이름 not in 글:                           # RoPE만 — 어텐션 · 접기의 출력이 없다
             continue
         a, b = np.asarray(글[이름]), np.asarray(참[이름])
@@ -304,8 +321,11 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     ptx, gguf, 출력 = sys.argv[1:4]
     빠르게 = "--빠르게" in sys.argv
-    global O자리수
-    if "--자리하나" in sys.argv or "--빠른" in sys.argv:     # 33단계 V1 · GeulPUv2 빠른 계약 F1(커널생성 --빠른) — 접기의 출력이 자리 하나
+    global O자리수, KV8
+    if "--KV8" in sys.argv:                     # GeulPUv2 ③b-2 — 8비트 KV 모듈(계약 F1A′)
+        KV8 = C.KV8 = True
+        print("8비트 KV(계약 F1A′)", flush=True)
+    if "--자리하나" in sys.argv or "--빠른" in sys.argv or KV8:     # 33단계 V1 · GeulPUv2 빠른 계약 F1(커널생성 --빠른) — 접기의 출력이 자리 하나
         O자리수 = 1
     if "--어텐션" in sys.argv:                  # GeulPUv2 2b단계 — F1A 에뮬레이션 · ③b-1 — 8비트 KV 에뮬레이션(커널생성 --어텐션한자리 의 모듈)
         변형 = sys.argv[sys.argv.index("--어텐션") + 1]

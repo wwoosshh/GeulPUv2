@@ -370,6 +370,36 @@ def 값캐시(v, 최대길이):
     return out, ex
 
 
+def 키캐시KV8(k, 최대길이):
+    """GeulPUv2 ③b-2 — 8비트 KV(계약 F1A′)의 키 캐시(헤드 하나): 바이트 [최대길이][hd](블록마다 32비트 워드 차례 — 키캐시 의 자리 하나, 위치
+    n 뒤는 0)와 스케일 [최대길이][hd/32] fp32. k [n][hd]."""
+    n8, s = 팔비트KV(np.asarray(k, f32))
+    n, hd = n8.shape
+    out = np.zeros((최대길이, hd), np.int8)
+    out[:n] = 낱말차례(n8.reshape(n, hd // 32, 32)).reshape(n, hd)
+    sc = np.zeros((최대길이, hd // 32), f32)
+    sc[:n] = s
+    return out, sc
+
+
+def 값캐시KV8(v, 최대길이):
+    """GeulPUv2 ③b-2 — 8비트 KV 의 값 캐시(헤드 하나): 바이트 [키 블록 최대길이/32][d hd][32 바이트](키의 차례는 값캐시 와 같다 — 그 자리
+    하나)와 스케일 [최대길이][hd/32] fp32. v [n][hd]."""
+    n8, s = 팔비트KV(np.asarray(v, f32))
+    n, hd = n8.shape
+    키 = np.zeros(32, np.int64)
+    for h in range(2):
+        for c in range(4):
+            키[(2 * c + h) * 4:(2 * c + h) * 4 + 4] = [16 * h + 2 * c, 16 * h + 2 * c + 1, 16 * h + 8 + 2 * c, 16 * h + 8 + 2 * c + 1]
+    Dp = np.zeros((최대길이, hd), np.int64)
+    Dp[:n] = n8
+    blk = Dp.reshape(최대길이 // 32, 32, hd)[:, 키, :]                         # [블록][키 32 (낱말 차례)][d]
+    out = np.ascontiguousarray(blk.transpose(0, 2, 1)).astype(np.int8)      # [블록][d][32 바이트]
+    sc = np.zeros((최대길이, hd // 32), f32)
+    sc[:n] = s
+    return out, sc
+
+
 # ── 14단계 — Llama 계열 블록(Qwen2): RMSNorm · RoPE · SwiGLU · GQA (문서/14단계.md 의 계약) ──────────────────────────────────
 
 def rms정규화(x, w, eps=1e-6):
