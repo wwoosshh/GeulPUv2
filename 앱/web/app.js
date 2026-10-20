@@ -556,6 +556,13 @@ const DICT = {
   "재현 파일과 계산 방식이 다릅니다 — 설정의 계산 방식을 재현 파일과 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different computation mode — set Computation mode in Settings to match it and load the model again",
   "빠름 — 8비트 활성값(llama.cpp와 같은 급)": "Fast — 8-bit activations (llama.cpp class)",
   "정밀 — 활성값 두 자리(정밀도 계약 그대로 · 연구용)": "Exact — two-digit activations (research precision)",
+  "KV 캐시 8비트": "8-bit KV cache",
+  "켬 — KV 캐시가 0.55배라 긴 문맥이 더 들어갑니다": "On — the KV cache is 0.55× the size, so longer contexts fit",
+  "끔 — 16비트 KV 캐시": "Off — 16-bit KV cache",
+  "빠름 · CUDA · k-양자화 모델(Q4_K_M 같은 파일)에서만 씁니다 — 그 밖에는 끔과 같습니다. 답의 비트는 16비트 KV 캐시와 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용": "Used only with Fast, CUDA and k-quant models (files such as Q4_K_M) — otherwise the same as Off. The answer bits differ from the 16-bit KV cache but are always the same under the same settings (reproduction and the research panel work as before). Applies the next time a model is loaded",
+  "KV 캐시": "KV cache",
+  "KV 8비트": "8-bit KV",
+  "재현 파일과 KV 캐시 설정이 다릅니다 — 설정의 KV 캐시 8비트를 재현 파일과 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different KV cache setting — set 8-bit KV cache in Settings to match it and load the model again",
   "빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
   "추측 디코딩": "Speculative decoding",
   "프롬프트 캐시": "Prompt cache",
@@ -909,7 +916,7 @@ const DICT = {
   "모델 모름": "unknown model",
   "빠름": "Fast",
   "정밀": "Exact",
-  "이 실행과 계산 방식 · 백엔드가 다릅니다 — '이 실행의 설정으로 불러오기'를 누르세요": "The precision or backend differs from this run — press 'Load with this run's settings'",
+  "이 실행과 계산 방식 · KV 캐시 · 백엔드가 다릅니다 — '이 실행의 설정으로 불러오기'를 누르세요": "The precision, KV cache or backend differs from this run — press 'Load with this run's settings'",
   "서버를 멈추는 중": "Stopping the server",
   "생성 요청이 아니거나 요청이 JSON이 아닙니다": "Not a generation request, or the request is not JSON",
   "응답에 토큰이 없습니다(끊긴 스트리밍 · geulpu 없음)": "The response has no tokens (cut stream or no geulpu object)",
@@ -2993,7 +3000,7 @@ async function summarize(room, rp, plan, L, B) {
   const tokOut = (await postJ('/tokenize', { prompt: res.text, add_special_tokens: false })).count;
   const sm = {
     role: 'summary', id: 's' + newTid(), content: res.text, at: Date.now(), v: SUM_V, model: rp.model, tpl: rp.tpl, path, chunks: res.chunks || 1,
-    L, lim: B.S, ko, finish: res.finish, cut: res.cut, precision: (S.st && S.st.server.precision) || 'exact', think: false,
+    L, lim: B.S, ko, finish: res.finish, cut: res.cut, precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8), think: false,
     sys: (await sha256Hex(rp.system || '')).slice(0, 16), prev: plan.prev ? plan.prev.id : null, ms: Math.round(performance.now() - t0),
     msgs: room.messages.slice(0, plan.keepFrom).filter(x => x.role === 'user' || (x.role === 'assistant' && !x.partial)).length, tokIn: res.tokIn || 0, tokOut,
   };
@@ -4655,6 +4662,7 @@ function saveSettings(note, recheck, delay, withDir, row) {
       gpu_layer: on ? on.dataset.v : 'auto', vulkan_device: vkSel ? vkSel.value : S.st.settings.vulkan_device || '', slots: num('#set-slots', 1, 8, 2), context: num('#set-ctx', 1024, 131072, 8192),
       update_check: page.querySelector('#set-upd').checked,
       precision: (page.querySelector('#set-prec') || {}).value || S.st.settings.precision || 'fast',   // GeulPUv2 2단계 — 계산 방식
+      kv8_cache: ((page.querySelector('#set-kv8') || {}).value || (S.st.settings.kv8_cache ? 'on' : 'off')) === 'on',   // GeulPUv2 ③b-2 — KV 캐시 8비트
       speculative: ((page.querySelector('#set-spec') || {}).value || (S.st.settings.speculative === false ? 'off' : 'on')) !== 'off',   // GeulPUv2 3단계 — 추측 디코딩
     };
     if (withDir === true) body.models_dir = page.querySelector('#set-mdir').value.trim();
@@ -4730,6 +4738,8 @@ function renderSettings(force) {
   const ctx = numIn('set-ctx', 1024, 131072, 1024, s.context, T('채팅마다 문맥 길이'));
   const precSel = h('select', { class: 'input', id: 'set-prec', 'aria-label': T('계산 방식'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-prec') },
     [['fast', T('빠름 — 8비트 활성값(llama.cpp와 같은 급)')], ['exact', T('정밀 — 활성값 두 자리(정밀도 계약 그대로 · 연구용)')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.precision || 'fast') ? true : null }, tx)));
+  const kv8Sel = h('select', { class: 'input', id: 'set-kv8', 'aria-label': T('KV 캐시 8비트'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-kv8') },
+    [['off', T('끔 — 16비트 KV 캐시')], ['on', T('켬 — KV 캐시가 0.55배라 긴 문맥이 더 들어갑니다')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.kv8_cache ? 'on' : 'off') ? true : null }, tx)));
   const specSel = h('select', { class: 'input', id: 'set-spec', 'aria-label': T('추측 디코딩'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-spec') },
     [['on', T('켬 — 답은 같고, 되풀이가 많은 답이 빨라집니다')], ['off', T('끔')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.speculative === false ? 'off' : 'on') ? true : null }, tx)));
   const defDir = (a.data_dir || '') + '모델\\';
@@ -4771,6 +4781,7 @@ function renderSettings(force) {
         row(T('동시 처리 수'), T('동시에 답할 수 있는 채팅 수(1~8) · 다음에 모델을 불러올 때 적용'), slots, null, 'set-slots'),
         row(T('채팅마다 문맥 길이'), T('토큰 · 그래픽 메모리에 맞지 않으면 엔진이 자동으로 줄입니다. 다음에 모델을 불러올 때 적용'), ctx, null, 'set-ctx'),
         row(T('계산 방식'), T('빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용'), precSel, null, 'set-prec'),
+        row(T('KV 캐시 8비트'), T('빠름 · CUDA · k-양자화 모델(Q4_K_M 같은 파일)에서만 씁니다 — 그 밖에는 끔과 같습니다. 답의 비트는 16비트 KV 캐시와 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용'), kv8Sel, null, 'set-kv8'),
         row(T('추측 디코딩'), T('프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 스텝에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용'), specSel, null, 'set-spec')),
       h('div', { class: 'sec mt16' }, T('프롬프트 캐시')),
       h('div', { class: 'set-group' },
@@ -4833,7 +4844,7 @@ function traceAfter(asst, rp, rr, body) {
     slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '',
     spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,   // GeulPUv2 3단계 — 추측 초안(답은 같다)
     store: rr.gp.store || null,   // GeulPUv2 문맥 저장소 — 다시 쓴 토큰(이 슬롯 · 다른 슬롯 · 저장소) · 캐시가 깨진 자리
-    layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', bodyHash: '',
+    layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8), bodyHash: '',
   };
   if (Array.isArray(rr.gp.prompt_tokens) && rr.gp.prompt_tokens.length) tr.promptIds = rr.gp.prompt_tokens;   // 서버가 쓴 그대로
   TRACES[tid] = tr;
@@ -5337,7 +5348,7 @@ async function labBranch(i, alt) {
         slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '', bodyHash: '',
         spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,
         store: rr.gp.store || null,
-        layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact',
+        layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8),
       });
       asst.tid = nt;
       saveTraces();
@@ -5596,7 +5607,7 @@ function labCapsuleText(tid) {
     format: 'geulpu-capsule/1', created: new Date().toISOString(), contract: '5.2',
     app: { version: S.st ? S.st.app.version : '', commit: S.st ? S.st.app.commit : '' },
     model: { name: tr.name, quant: tr.quant, file: m ? String(m.path || '').split(/[\\/]/).pop() : '', size: m ? m.size : null, sha256: trSha(tr) },
-    made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact' },
+    made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact', kv8: !!tr.kv8 },
     request: req,
     result: {
       tokens: cp.tokens, token_logprobs: an.lp.slice(o), entropy: an.ent.slice(o), top_ids: an.topIds.slice(o), top_logprobs: an.topLp.slice(o),
@@ -5664,6 +5675,7 @@ async function labCapsuleCheck(file) {
   }
   const md = cap.made_on || {};
   const precCap = md.precision || 'exact', precHere = (S.st && S.st.server.precision) || 'exact';
+  const kv8Cap = !!md.kv8, kv8Here = !!(S.st && S.st.server.kv8);   // GeulPUv2 ③b-2 — 없으면 16비트 KV 캐시
   const here = `${(S.st && S.st.device.name) || '-'} · ${LAYER[S.st && S.st.server.layer] || '-'}`;
   const where = T` (재현 파일에 적힌 만든 곳 ${md.device || '-'} · ${LAYER[md.layer] || md.layer || '-'} → 여기 ${here})`;
   const ok = scoreOk && genOk && fpOk;
@@ -5672,7 +5684,8 @@ async function labCapsuleCheck(file) {
       : [scoreOk ? null : T`점수 매기기가 스텝 ${d + 1}에서 다름`, genOk ? null : T('다시 생성한 토큰 · 로짓 해시가 다름'),
         !genOk && scoreOk && rq.temperature > 0 ? T('점수는 같으니 시드를 확인하세요 — 다른 도구로 다시 쓴 재현 파일은 시드(64비트 정수)가 정밀도를 잃었을 수 있습니다') : null,
         fpOk ? null : T('지문이 다름'),
-        precCap !== precHere ? T('재현 파일과 계산 방식이 다릅니다 — 설정의 계산 방식을 재현 파일과 같게 하고 모델을 다시 불러오세요') : null].filter(Boolean).join(NB) + where,
+        precCap !== precHere ? T('재현 파일과 계산 방식이 다릅니다 — 설정의 계산 방식을 재현 파일과 같게 하고 모델을 다시 불러오세요') : null,
+        kv8Cap !== kv8Here ? T('재현 파일과 KV 캐시 설정이 다릅니다 — 설정의 KV 캐시 8비트를 재현 파일과 같게 하고 모델을 다시 불러오세요') : null].filter(Boolean).join(NB) + where,
   };
 }
 function labProvView(p) {
@@ -5729,7 +5742,7 @@ function labOut() {
     const fx = labFpOf(LAB.tid);
     const meta = {
       model: { name: tr.name, quant: tr.quant, sha256: trSha(tr) }, params: { temperature: tr.req.temp, max_tokens: labMax(tr), seed: tr.req.temp > 0 ? tr.seed : null, branch: tr.branch || null },
-      prompt_tokens: an.prompt, fingerprint: fx && fx.fp ? { token: fx.fp, logit: fx.fpLogit } : null, made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact' },
+      prompt_tokens: an.prompt, fingerprint: fx && fx.fp ? { token: fx.fp, logit: fx.fpLogit } : null, made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact', kv8: !!tr.kv8 },
     };
     out.push(item(T('이 답의 토큰 표'), T`스텝마다 토큰 · 로그확률 · 확률 · 순위 · 엔트로피 · 마진 · 로짓 해시 · 상위 ${LAB_K}`, [
       dl('JSON', () => [base + '-answer-' + stamp() + '.json', json(head('answer', Object.assign({}, meta, { steps: labRows(an, tr.tokens) }))), 'application/json']),
@@ -5917,23 +5930,24 @@ async function dbgReload() {
   DBG.listAt = 0;
 }
 
-// ---- 서버 — 요청을 계산한 서버와 지금 서버(비트가 같으려면 같아야 하는 것: 모델 sha256 · 계산 방식 · YaRN 배, 빠른 모드면 백엔드) ----
+// ---- 서버 — 요청을 계산한 서버와 지금 서버(비트가 같으려면 같아야 하는 것: 모델 sha256 · 계산 방식 · KV 캐시 · YaRN 배, 빠른 모드면 백엔드) ----
 function dbgServerOf(run, x) {
   if (x && x.server && typeof x.server === 'object') return x.server;
   const hs = run.header.server || {};
-  return { sha256: (run.header.model || {}).sha256 || null, layer: hs.layer, precision: hs.precision, context: hs.context, yarn: hs.yarn || 0 };
+  return { sha256: (run.header.model || {}).sha256 || null, layer: hs.layer, precision: hs.precision, kv8: !!hs.kv8, context: hs.context, yarn: hs.yarn || 0 };
 }
 function dbgNowServer() {
   const sv = (S.st && S.st.server) || {}, m = modelOf(sv.model), s = (m && m.shape) || {};
   let yarn = 0;
   if (s.yarn_orig > 0 && sv.context > s.context_native) yarn = sv.context <= 2 * s.yarn_orig ? 2 : 4;
-  return { sha256: m ? m.sha256 : null, layer: sv.layer, precision: sv.precision, context: sv.context, yarn, ready: sv.state === 'ready', model: sv.model || null };
+  return { sha256: m ? m.sha256 : null, layer: sv.layer, precision: sv.precision, kv8: !!sv.kv8, context: sv.context, yarn, ready: sv.state === 'ready', model: sv.model || null };
 }
-const dbgSvPlain = n => ({ sha256: n.sha256, layer: n.layer, precision: n.precision, context: n.context, yarn: n.yarn });
+const dbgSvPlain = n => ({ sha256: n.sha256, layer: n.layer, precision: n.precision, kv8: !!n.kv8, context: n.context, yarn: n.yarn });
 function dbgDiff(rec, now) {
   const d = [];
   if (rec.sha256 !== now.sha256) d.push(T('모델 파일'));
   if (rec.precision !== now.precision) d.push(T('계산 방식'));
+  if (!!rec.kv8 !== !!now.kv8) d.push(T('KV 캐시'));
   if ((rec.yarn || 0) !== (now.yarn || 0)) d.push(T('YaRN 배'));
   if (rec.precision === 'fast' && now.precision === 'fast' && rec.layer !== now.layer) d.push(T('백엔드(빠른 모드)'));
   return d;
@@ -5942,7 +5956,7 @@ const dbgModelBySha = sha => (S.st ? S.st.models.find(m => m.sha256 && m.sha256 
 const dbgSvLabel = sv => {
   const m = dbgModelBySha(sv.sha256);
   return [m ? labelById(m.id) : (sv.sha256 ? T`모델 ${String(sv.sha256).slice(0, 12)}` : T('모델 모름')), sv.precision === 'fast' ? T('빠름') : sv.precision === 'exact' ? T('정밀') : null,
-    LAYER[sv.layer] || sv.layer || null, sv.yarn ? `YaRN ×${sv.yarn}` : null].filter(Boolean).join(NB);
+    sv.kv8 ? T('KV 8비트') : null, LAYER[sv.layer] || sv.layer || null, sv.yarn ? `YaRN ×${sv.yarn}` : null].filter(Boolean).join(NB);
 };
 async function dbgWaitJob(id, what) {
   const t0 = Date.now();
@@ -5959,7 +5973,7 @@ function dbgGuardSwitch() {
   if (S.streaming) throw new Error(T('답이 흐르는 동안에는 모델을 바꿔 불러올 수 없습니다 — 끝난 뒤에 다시 누르세요'));
   if (benchBusy()) throw new Error(T('벤치마크가 끝나면 계산할 수 있습니다'));
 }
-// 그 서버의 모델로 — 모델만 다르면 바꿔 불러온다. 계산 방식 · 백엔드 · YaRN 이 다르면 '이 실행의 설정으로 불러오기'를 쓰라고 알린다
+// 그 서버의 모델로 — 모델만 다르면 바꿔 불러온다. 계산 방식 · KV 캐시 · 백엔드 · YaRN 이 다르면 '이 실행의 설정으로 불러오기'를 쓰라고 알린다
 async function dbgEnsure(sv) {
   const now = dbgNowServer();
   if (now.ready && !dbgDiff(sv, now).length) return;
@@ -5967,7 +5981,8 @@ async function dbgEnsure(sv) {
   if (!m) throw new Error(T`이 실행의 모델 파일이 설치되어 있지 않습니다(sha256 ${String(sv.sha256 || '?').slice(0, 12)})`);
   const set = (S.st && S.st.settings) || {};
   const prec = now.ready ? now.precision : set.precision;
-  if (sv.precision !== prec || (sv.precision === 'fast' && now.ready && sv.layer !== now.layer)) throw new Error(T('이 실행과 계산 방식 · 백엔드가 다릅니다 — \'이 실행의 설정으로 불러오기\'를 누르세요'));
+  const kv8 = now.ready ? now.kv8 : !!set.kv8_cache;
+  if (sv.precision !== prec || !!sv.kv8 !== kv8 || (sv.precision === 'fast' && now.ready && sv.layer !== now.layer)) throw new Error(T('이 실행과 계산 방식 · KV 캐시 · 백엔드가 다릅니다 — \'이 실행의 설정으로 불러오기\'를 누르세요'));
   if (!runnable(m)) throw new Error(T('이 모델은 이 PC에서 실행할 수 없습니다 — ') + TM(m.device_reason || (m.shape && m.shape.reason) || ''));
   dbgGuardSwitch();
   DBG.busy = T`${labelById(m.id)} 불러오는 중`;
@@ -5977,7 +5992,7 @@ async function dbgEnsure(sv) {
   const left = dbgDiff(sv, n2);
   if (left.length) throw new Error(T`불러온 서버가 이 실행과 다릅니다 — ${left.join(', ')}`);
 }
-// 이 실행의 모델 · 설정(계산 방식 · 빠른 모드의 백엔드)으로 — 앱의 설정을 바꾼다(채팅도 이 설정을 쓴다)
+// 이 실행의 모델 · 설정(계산 방식 · KV 캐시 · 빠른 모드의 백엔드)으로 — 앱의 설정을 바꾼다(채팅도 이 설정을 쓴다)
 async function dbgMatch(sv) {
   const m = dbgModelBySha(sv.sha256);
   if (!m) throw new Error(T`이 실행의 모델 파일이 설치되어 있지 않습니다(sha256 ${String(sv.sha256 || '?').slice(0, 12)})`);
@@ -5985,6 +6000,7 @@ async function dbgMatch(sv) {
   dbgGuardSwitch();
   const set = (S.st && S.st.settings) || {}, body = {};
   if (sv.precision && set.precision !== sv.precision) body.precision = sv.precision;
+  if (!!set.kv8_cache !== !!sv.kv8) body.kv8_cache = !!sv.kv8;   // GeulPUv2 ③b-2
   if (sv.precision === 'fast' && sv.layer && S.st.device.layer !== sv.layer) body.gpu_layer = sv.layer;
   if (Object.keys(body).length) await api('/api/settings', body);
   if (body.gpu_layer) {
@@ -5995,7 +6011,7 @@ async function dbgMatch(sv) {
     if (S.st.device.layer !== sv.layer) throw new Error(T`하드웨어 확인 뒤에도 백엔드가 ${LAYER[S.st.device.layer] || S.st.device.layer}입니다`);
   }
   const sv0 = S.st.server;
-  if (sv0.state === 'ready' && sv0.model === m.id && (sv0.precision !== sv.precision || (sv.precision === 'fast' && sv0.layer !== sv.layer))) {
+  if (sv0.state === 'ready' && sv0.model === m.id && (sv0.precision !== sv.precision || !!sv0.kv8 !== !!sv.kv8 || (sv.precision === 'fast' && sv0.layer !== sv.layer))) {
     DBG.busy = T('서버를 멈추는 중');
     renderDebug(true);
     await api('/api/server/stop', {});
@@ -6391,7 +6407,7 @@ function dbgRunHead(run) {
   return h('div', { class: 'col g12' },
     h('div', null, h('div', { class: 'eyebrow' }, T('실행 로그')), h('div', { class: 'fd-title' }, run.name),
       h('div', { class: 'fd-sub' }, [hm.id ? (modelOf(hm.id) ? labelById(hm.id) : hm.id) : (hm.file || T('모델 모름')), hs.precision === 'fast' ? T('빠름') : hs.precision === 'exact' ? T('정밀') : null,
-        LAYER[hs.layer] || hs.layer || null, hs.context ? T`문맥 ${fmtCtx(hs.context)}` : null, hs.yarn ? `YaRN ×${hs.yarn}` : null].filter(Boolean).join(NB)),
+        hs.kv8 ? T('KV 8비트') : null, LAYER[hs.layer] || hs.layer || null, hs.context ? T`문맥 ${fmtCtx(hs.context)}` : null, hs.yarn ? `YaRN ×${hs.yarn}` : null].filter(Boolean).join(NB)),
       h('div', { class: 'small muted' }, [hd.created ? T`만든 때 ${hd.created}` : null, hd.app ? `GeulPU ${hd.app}` : null, hd.commit ? T`커밋 ${String(hd.commit).slice(0, 7)}` : null,
         (hd.build || {}).server ? T`서버 빌드 ${String(hd.build.server).slice(0, 12)}` : null].filter(Boolean).join(NB))),
     h('div', { class: 'row g8' }, h('span', { class: 'tag' }, T`요청 ${fmtNum(run.reqs.length)}개`), h('span', { class: 'tag' }, T`분기 ${fmtNum(run.branches.length)}개`),
@@ -6627,7 +6643,7 @@ function renderDebug(force) {
   if (!DBG.listing && Date.now() - DBG.listAt > 2500) dbgLoadList();
   if (DBG.sel && !DBG.run && !DBG.loading && !DBG.err) { DBG.loading = DBG.sel; dbgRun(() => dbgOpen(DBG.sel)); }
   const now = dbgNowServer();
-  const sig = [S.conn, now.ready, now.model, now.precision, now.layer, DBG.list && DBG.list.map(r => [r.name, r.bytes]), DBG.rec, DBG.listErr, DBG.sel,
+  const sig = [S.conn, now.ready, now.model, now.precision, now.kv8, now.layer, DBG.list && DBG.list.map(r => [r.name, r.bytes]), DBG.rec, DBG.listErr, DBG.sel,
     DBG.run && [DBG.run.name, DBG.run.bytes], DBG.view, DBG.ri, DBG.bi, DBG.busy, DBG.err, DBG.cmpB, DBG.cmpRun && DBG.cmpRun.bytes, DBG.cmpSel,
     DBG.prog && [DBG.prog.done, DBG.prog.total], DBG.loading, DBG.tick, S.streaming ? 1 : 0];
   if (!changed('dbg', sig) && !force) return;
