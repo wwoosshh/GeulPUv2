@@ -1,0 +1,50 @@
+{"messages": [{"role": "user", "content": "한국의 수도는 어디인가요? 한 문장으로."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "What is the capital of Australia? One sentence."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "17 × 23 을 계산하고 과정을 짧게 보여 주세요."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "Write a Python function that returns the n-th Fibonacci number iteratively."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "다음 문장을 영어로 번역하세요: 오늘은 비가 와서 집에서 책을 읽었다."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "Translate to Korean: The meeting was postponed because the manager was sick."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "JSON 으로만 답하세요. 사과 3개와 배 2개의 목록을 {\"items\": [...]} 꼴로."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "Explain what a hash table is in two sentences."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "다음 코드의 버그를 찾으세요: def avg(xs): return sum(xs) / len(xs) - 빈 목록이면?"}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "List three prime numbers greater than 100."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "서울의 지금 날씨를 알려 주세요."}], "max_tokens": 96, "temperature": 0, "tools": [{"type": "function", "function": {"name": "get_weather", "description": "도시의 지금 날씨를 돌려준다", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "도시 이름"}}, "required": ["city"]}}}]}
+{"messages": [{"role": "user", "content": "Read the file config.yaml and tell me the port."}], "max_tokens": 96, "temperature": 0, "tools": [{"type": "function", "function": {"name": "read_file", "description": "Read a text file and return its contents", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}}]}
+{"messages": [{"role": "user", "content": "짧은 시를 지어 주세요: 가을, 커피, 창문."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "What does the Unix command 'grep -rn foo .' do?"}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "1부터 10까지의 합을 구하는 반복문을 자바스크립트로 쓰세요."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "Summarize in one sentence: Large language models predict the next token given previous tokens."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "물이 끓는 온도는 해발 고도에 따라 어떻게 달라지나요?"}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "Give a SQL query that counts rows per country in a table users(id, country)."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "‘사과’와 ‘배’를 비교하는 표를 마크다운으로 만들어 주세요."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "Is 2027 a prime number? Answer yes or no, then explain briefly."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "깃에서 마지막 커밋을 되돌리는 명령은 무엇인가요?"}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "Write a regular expression that matches an email address (simple version)."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "다음 숫자를 오름차순으로 정렬하세요: 9, 2, 7, 4, 1."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "What is the difference between TCP and UDP? Two bullet points."}], "max_tokens": 96, "temperature": 0}
+{"messages": [{"role": "user", "content": "부산의 날씨와 서울의 날씨를 비교해 주세요."}], "max_tokens": 96, "temperature": 0, "tools": [{"type": "function", "function": {"name": "get_weather", "description": "도시의 지금 날씨를 돌려준다", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "도시 이름"}}, "required": ["city"]}}}]}
+{"messages": [{"role": "user", "content": "한국의 수도는 어디인가요? 한 문장으로."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "What is the capital of Australia? One sentence."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "17 × 23 을 계산하고 과정을 짧게 보여 주세요."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "Write a Python function that returns the n-th Fibonacci number iteratively."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "다음 문장을 영어로 번역하세요: 오늘은 비가 와서 집에서 책을 읽었다."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "Translate to Korean: The meeting was postponed because the manager was sick."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "JSON 으로만 답하세요. 사과 3개와 배 2개의 목록을 {\"items\": [...]} 꼴로."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "Explain what a hash table is in two sentences."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "다음 코드의 버그를 찾으세요: def avg(xs): return sum(xs) / len(xs) - 빈 목록이면?"}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "List three prime numbers greater than 100."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "서울의 지금 날씨를 알려 주세요."}], "max_tokens": 96, "temperature": 0.7, "tools": [{"type": "function", "function": {"name": "get_weather", "description": "도시의 지금 날씨를 돌려준다", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "도시 이름"}}, "required": ["city"]}}}]}
+{"messages": [{"role": "user", "content": "Read the file config.yaml and tell me the port."}], "max_tokens": 96, "temperature": 0.7, "tools": [{"type": "function", "function": {"name": "read_file", "description": "Read a text file and return its contents", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}}]}
+{"messages": [{"role": "user", "content": "짧은 시를 지어 주세요: 가을, 커피, 창문."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "What does the Unix command 'grep -rn foo .' do?"}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "1부터 10까지의 합을 구하는 반복문을 자바스크립트로 쓰세요."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "Summarize in one sentence: Large language models predict the next token given previous tokens."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "물이 끓는 온도는 해발 고도에 따라 어떻게 달라지나요?"}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "Give a SQL query that counts rows per country in a table users(id, country)."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "‘사과’와 ‘배’를 비교하는 표를 마크다운으로 만들어 주세요."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "Is 2027 a prime number? Answer yes or no, then explain briefly."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "깃에서 마지막 커밋을 되돌리는 명령은 무엇인가요?"}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "Write a regular expression that matches an email address (simple version)."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "다음 숫자를 오름차순으로 정렬하세요: 9, 2, 7, 4, 1."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "What is the difference between TCP and UDP? Two bullet points."}], "max_tokens": 96, "temperature": 0.7}
+{"messages": [{"role": "user", "content": "부산의 날씨와 서울의 날씨를 비교해 주세요."}], "max_tokens": 96, "temperature": 0.7, "tools": [{"type": "function", "function": {"name": "get_weather", "description": "도시의 지금 날씨를 돌려준다", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "도시 이름"}}, "required": ["city"]}}}]}
