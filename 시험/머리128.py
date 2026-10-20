@@ -217,14 +217,23 @@ def 참조(X, 최대길이, cos, sin, 첫행=0):
     return out
 
 
-def 견주기(글, 참):
+def 견주기(글, 참, 영부호=None):
+    """다른 칸의 수. 짧은실수 출력(o짧은)에서 0 의 부호만 다른 칸은 다른 칸에 넣지 않고 영부호(dict)에 따로 센다(GeulPUv2 ③b-1): o짧은 은
+    엔진이 쓰지 않는 시험용 출력(정수묶음접기짧은 · 정수조각접기짧은)이고, 판은 타일의 첫 행처럼 그 행에 키가 하나도 없는 조각까지 접어
+    −0 + 0 = +0 이 된다(계약은 그런 조각을 건너뛴다). 엔진이 쓰는 자리 둘(o자리 · o정보)은 ±0 이 같은 바이트다."""
     결과 = {}
     for 이름 in ("q자리", "q정보", "키", "키지수", "값", "값지수", "o자리", "o정보", "o짧은"):
         if 이름 not in 글:                           # RoPE만 — 어텐션 · 접기의 출력이 없다
             continue
         a, b = np.asarray(글[이름]), np.asarray(참[이름])
         if a.dtype == f32:
-            a, b = a.view(np.int32), b.astype(f32).view(np.int32)
+            av, bv = a.reshape(-1), b.astype(f32).reshape(-1)
+            다름 = av.view(np.int32) != bv.view(np.int32)
+            영 = 다름 & (av == 0) & (bv == 0)
+            결과[이름] = int(np.count_nonzero(다름 & ~영))
+            if 영부호 is not None and 영.any():
+                영부호[이름] = int(np.count_nonzero(영))
+            continue
         결과[이름] = int(np.count_nonzero(a.reshape(-1) != b.reshape(-1).astype(a.dtype)))
     return 결과
 
@@ -298,11 +307,11 @@ def main():
     global O자리수
     if "--자리하나" in sys.argv or "--빠른" in sys.argv:     # 33단계 V1 · GeulPUv2 빠른 계약 F1(커널생성 --빠른) — 접기의 출력이 자리 하나
         O자리수 = 1
-    if "--어텐션" in sys.argv:                  # GeulPUv2 2b단계 — F1A 흉내(커널생성 --어텐션한자리 KV · QKV 의 모듈)
+    if "--어텐션" in sys.argv:                  # GeulPUv2 2b단계 — F1A 흉내 · ③b-1 — 8비트 KV 흉내(커널생성 --어텐션한자리 의 모듈)
         변형 = sys.argv[sys.argv.index("--어텐션") + 1]
-        assert 변형 in ("KV", "QKV"), 변형
+        assert 변형 in ("KV", "QKV", "KV8", "V8"), 변형
         C.어텐션한자리 = 변형.lower()
-        print("F1A 흉내:", 변형, flush=True)
+        print("8비트 KV 흉내:" if "8" in 변형 else "F1A 흉내:", 변형, flush=True)
     모양두기(gguf)
     print(f"모양: 너비 {D} · 머리 {NH} · KV 머리 {NKV} (GQA {NH // NKV})", flush=True)
     k = 글커널(ptx)
@@ -357,7 +366,10 @@ def main():
                 길 = 길 + " (RoPE만)"
             else:
                 글 = k.돌리기(X, 덩이들, 최대길이, cos, sin)
-            한["길"][길] = {"덩이 수": len(덩이들), "다른 칸": 견주기(글, 참)}
+            영 = {}
+            한["길"][길] = {"덩이 수": len(덩이들), "다른 칸": 견주기(글, 참, 영)}
+            if 영:
+                한["길"][길]["0 의 부호만"] = 영
             print(이름, 길, 한["길"][길], flush=True)
         결과["경우"].append(한)
     if k.넷 and not 빠르게:
@@ -406,7 +418,10 @@ def main():
                     글["o자리"] = 글["o자리"][:, n3 - 끝:]          # 끝 행만(참조는 그 행만 셈했다)
                     글["o정보"] = 글["o정보"][n3 - 끝:]
                     글["o짧은"] = 글["o짧은"][n3 - 끝:]
-                    한["길"][길] = {"덩이 수": len(덩이들), "다른 칸": 견주기(글, 참)}
+                    영 = {}
+                    한["길"][길] = {"덩이 수": len(덩이들), "다른 칸": 견주기(글, 참, 영)}
+                    if 영:
+                        한["길"][길]["0 의 부호만"] = 영
                     del 글
                 print(한["경우"], 길, 한["길"][길], flush=True)
             결과["경우"].append(한)
