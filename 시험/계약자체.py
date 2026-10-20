@@ -7,6 +7,8 @@
   4. 임베딩K 대 날 블록에서 값 하나씩 푼 것(llama.cpp 의 dequantize_row_q*_K 와 같은 식) — 풀기K 의 배치도 함께 시험한다
   5. 규칙 R(31단계 — 비정규수 버림)의 곱 · 더 · 빼기 · fma32 · 나눔 · 제곱근 대 정확한 유리수 셈 — 막 정규수(2⁻¹²⁶) 둘레의 경계값과
      비정규수 입력. 스위치를 끈 IEEE 쪽(비정규수버림 = False — GPT-2 판)도 같은 자료로 IEEE 반올림과 견준다
+  6. 8비트 KV(GeulPUv2 ③b-2 — 계약 F1A′, 계약.md 2.1): 저장(팔비트KV) 대 정확한 유리수 계산, 스케일이 2 의 거듭제곱일 때 어텐션 대
+     ③b-1 의 에뮬레이션, 어텐션(numpy) 대 계약 문장을 행 하나씩 옮긴 계산
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
@@ -336,6 +338,96 @@ def 시험_로그확률(r):
     LP.자체시험(r, 알림)
 
 
+def _가까운정수(r):
+    """정확한 유리수 r → 가장 가까운 정수(같으면 짝수)."""
+    n = r.numerator // r.denominator
+    나머지 = r - n
+    return n + 1 if 나머지 > Fraction(1, 2) or (나머지 == Fraction(1, 2) and n % 2 == 1) else n
+
+
+def _스케일2(r, n, hd):
+    """[n][hd] fp32 — 블록(값 32 개)마다 정수 m(|m| ≤ 127, 한 값은 ±127) × 2^k(k −10 … −5) 라 8비트 KV 의 스케일 s = 2^k 이고 n · s = x 다.
+    블록 몇은 0."""
+    m = r.integers(-127, 128, (n, hd // 32, 32))
+    m[np.arange(n)[:, None], np.arange(hd // 32)[None, :], r.integers(0, 32, (n, hd // 32))] = np.where(r.random((n, hd // 32)) < 0.5, -127, 127)
+    m[r.random((n, hd // 32)) < 0.03] = 0
+    return (m * 2.0 ** r.integers(-10, -4, (n, hd // 32, 1))).reshape(n, hd).astype(f32)
+
+
+def 시험_KV8(r):
+    """GeulPUv2 ③b-2 — 8비트 KV(계약 F1A′, 계약.md 2.1)."""
+    # 1. 저장 — 팔비트KV 대 정확한 유리수 계산(규칙 R 의 반올림), n · s 대 에뮬레이션(팔비트)
+    x = 활성값(r, 40, 128)
+    x[3, :32] = (r.standard_normal(32) * 2.0 ** -140).astype(f32)              # 비정규수만 — 0 으로 읽는다
+    x[4, :32] = (r.standard_normal(32) * 2.0 ** -124).astype(f32)              # m / 127 이 2⁻¹²⁶ 아래 — s = 0
+    x[4, 32:64] = (r.standard_normal(32) * 2.0 ** -117).astype(f32)            # s 가 막 정규수 둘레
+    x[5, :32] = (r.standard_normal(32) * 2.0 ** 120).astype(f32)
+    x[6, :32] = _스케일2(r, 1, 32)[0]                                         # 스케일이 2 의 거듭제곱
+    n, s = C.팔비트KV(x)
+    nw = np.zeros_like(n)
+    sw = np.zeros_like(s)
+    for i in range(x.shape[0]):
+        for b in range(x.shape[1] // 32):
+            블록 = [Fraction(float(v)) if abs(float(v)) >= 2.0 ** -126 else Fraction(0) for v in x[i, 32 * b:32 * b + 32]]
+            sw[i, b] = 반올림R(max(abs(v) for v in 블록) / 127)
+            if sw[i, b] > 0:
+                nw[i, 32 * b:32 * b + 32] = [_가까운정수(Fraction(float(반올림R(v / Fraction(float(sw[i, b])))))) for v in 블록]
+    dn, ds = int(np.count_nonzero(n != nw)), 다른칸(s, sw)
+    확인("8비트 KV — 저장(팔비트KV) 대 정확한 유리수 계산", dn == 0 and ds == 0 and np.abs(n).max() <= 127,
+         f"n 불일치 {dn} / {n.size}, s 불일치 {ds} / {s.size}")
+    y = C.곱(n.astype(f32), np.repeat(s, 32, 1))
+    확인("8비트 KV — n · s 대 에뮬레이션(팔비트)", bool(np.array_equal(y, C.팔비트(x))), "값 비교(0 의 부호는 보지 않음)")
+    # 2. 스케일이 2 의 거듭제곱이고 값의 크기가 보통이면 어텐션이 ③b-1 의 에뮬레이션과 비트까지 같다 — 타일 · 그룹 병합까지(위치 1100 =
+    #    그룹 둘). 점수 폭이 아주 넓으면 e′ 가 16비트 형식의 지수 −98 아래로 내려가 둘이 다를 수 있다(계약.md 2.1).
+    for hd, 길이 in ((64, 150), (128, 1100)):
+        q = (r.standard_normal((길이, hd)) * 2.0 ** r.integers(-8, -2, (길이, 1))).astype(f32)
+        k, v = _스케일2(r, 길이, hd), _스케일2(r, 길이, hd)
+        C.KV8 = True
+        얻음 = C.어텐션(q, k, v)
+        C.KV8, C.어텐션한자리 = False, "kv8"
+        기대 = C.어텐션(q, k, v)
+        C.어텐션한자리 = ""
+        d = 다른칸(얻음, 기대)
+        확인(f"8비트 KV — 스케일이 2 의 거듭제곱일 때 어텐션 대 에뮬레이션(헤드 크기 {hd}, 위치 {길이})", d == 0, f"불일치 {d} / {얻음.size}")
+    # 3. 어텐션(numpy) 대 계약 문장(2.1 · 2 절 3 · 4 절 1)을 행 하나씩 옮긴 계산 — 타일 하나(위치 64), 스케일은 2 의 거듭제곱이 아니다
+    hd, 길이 = 128, 64
+    q, k, v = 활성값(r, 길이, hd), 활성값(r, 길이, hd), 활성값(r, 길이, hd)
+    C.KV8 = True
+    얻음 = C.어텐션(q, k, v)
+    C.KV8 = False
+    nk, sk = C.팔비트KV(k)
+    nv, sv = C.팔비트KV(v)
+    D, Eq = C.자리로(q, 2)
+    nq, Pq = D[1] * 256 + D[0], C.거듭제곱(Eq)
+    c = C.점수눈금(hd)
+    기대 = np.zeros((길이, hd), f32)
+    for p in range(길이):
+        st = np.zeros(p + 1, f32)
+        for t in range(p + 1):
+            z = None
+            for b in range(hd // 32):
+                u = f32(int(np.dot(nq[p, 32 * b:32 * b + 32], nk[t, 32 * b:32 * b + 32])))        # 정확한 정수 합 → 반올림 하나
+                a = C.곱(u, Pq[p, b])
+                z = C.곱(a, sk[t, b]) if b == 0 else C.fma32(a, sk[t, b], z)
+            st[t] = C.곱(z, c)
+        e = C.적힌지수(C.빼기(st, st.max()))
+        l = f32(sum(int(np.rint(C.곱(ei, f32(8388608.0)))) for ei in e)) * f32(2.0 ** -23)
+        o = np.zeros(hd, f32)
+        for b in range(hd // 32):
+            ep = np.zeros(64, f32)
+            ep[:p + 1] = C.곱(e, sv[:p + 1, b])
+            uj = []
+            for j in (0, 32):
+                ne, Ee = C.e자리(ep[None, j:j + 32])
+                u = [f32(int(np.dot(ne[0], nv[j:j + 32, d]))) for d in range(32 * b, 32 * b + 32)]
+                uj.append((np.array(u, f32), C.거듭제곱(Ee[0, 0])))
+            (u0, P0), (u1, P1) = uj
+            o[32 * b:32 * b + 32] = C.fma32(u1, P1, C.곱(u0, P0))
+        기대[p] = C.나눔(o, l)
+    d = 다른칸(얻음, 기대)
+    확인("8비트 KV — 어텐션 대 계약 문장을 행 하나씩 옮긴 계산(헤드 크기 128, 위치 64)", d == 0, f"불일치 {d} / {얻음.size}")
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -345,6 +437,7 @@ def main():
     시험_규칙R(r)
     시험_머리정규화(r)
     시험_로그확률(r)
+    시험_KV8(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
     return 0 if not 실패 else 1
 
