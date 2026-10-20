@@ -6,7 +6,9 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
-## Unreleased
+## 0.8.0 — 8-bit KV cache: longer contexts, faster long prompts (2026-10-21)
+
+### Added
 
 - **8-bit KV cache** (setting — off by default): with Fast mode, CUDA and k-quant models, the KV cache is kept as 8-bit integers with
   one scale per 32 values and multiplied in that form (contract F1A′ — [contract.md](계약/contract.md) section 2.1). On an RTX 4070 Ti
@@ -17,11 +19,24 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   cache — and Q8_0 and Q4_0 files are blocked because they do not pass. Every path matches the CPU reference bit for bit (long context up
   to 131,072). Prompt-cache chunks are 0.554× the size and never mix with the 16-bit format. Debugger run logs, reproduction files and the
   research panel's provenance record `kv8`, and the debugger and the reproduction check warn when the setting differs.
-  `도구/debugger.py load --kv8 on|off`; `도구/repro_check.py` checks with the 8-bit KV CPU reference.
+  `도구/debugger.py load --kv8 on|off`; `도구/repro_check.py` checks with the 8-bit KV CPU reference. With the setting off (the
+  default), outputs are bit-identical to 0.7.1 for the same model file, computation mode, YaRN factor and request.
+
+### Changed
+
 - **Guides**: every picture in the user guide, the debugger guide and the research panel guide was retaken with 0.7.1 — the new icon and
   the current screen terms (the research panel pictures still showed 0.5.0's wording). The research panel guide now tells you to switch
   to exact mode: its numbers are exact-mode numbers, and the default fast mode answers its first question differently
   (`Vincent van Gogh` instead of `Leonardo da Vinci`).
+
+### Project
+
+- Changes to `main` now go through pull requests with green CI and a squash merge — see [CONTRIBUTING.md](CONTRIBUTING.md).
+- Prompt-cache eviction study ([issue #1](https://github.com/wwoosshh/GeulPUv2/issues/1) —
+  [문서/캐시축출.md](문서/캐시축출.md), Korean): a simulator compared six policies on recorded agent workloads, and the current
+  leaf-first LRU stays.
+- Terminology: coined Korean words in the long-context and cache-eviction documents were replaced with standard terms, and new script
+  options are English.
 
 ## 0.7.1 — New app icon · project direction in the README (2026-10-20)
 
