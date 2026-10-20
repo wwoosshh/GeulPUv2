@@ -150,7 +150,7 @@
       "license": "Apache-2.0",
       "check": "tested",
       "devices": "all",
-      "note": "작은 Qwen3 모델입니다(1.8 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 흉내 낸 Vulkan에서 실행을 확인했습니다(2026-10-15)."
+      "note": "작은 Qwen3 모델입니다(1.8 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 에뮬레이션한 Vulkan에서 실행을 확인했습니다(2026-10-15)."
     },
     {
       "id": "qwen3-14b-q4_k_m",
@@ -210,7 +210,7 @@
       "license": "Llama 3.2 Community License",
       "check": "tested",
       "devices": "all",
-      "note": "작은 Llama 3.2 대화 모델입니다(3.4 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.2 커뮤니티 라이선스(사용 조건 · 이용 정책)를 따릅니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 흉내 낸 Vulkan에서 실행을 확인했습니다(2026-10-16)."
+      "note": "작은 Llama 3.2 대화 모델입니다(3.4 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.2 커뮤니티 라이선스(사용 조건 · 이용 정책)를 따릅니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 에뮬레이션한 Vulkan에서 실행을 확인했습니다(2026-10-16)."
     },
     {
       "id": "mistral-7b-instruct-v0.3-q4_k_m",
@@ -225,7 +225,7 @@
       "license": "Apache-2.0",
       "check": "tested",
       "devices": "k",
-      "note": "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 틀에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16)."
+      "note": "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 템플릿에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16)."
     },
     {
       "id": "mistral-7b-instruct-v0.3-q8_0",

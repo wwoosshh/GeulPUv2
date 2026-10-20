@@ -124,10 +124,10 @@ memory right away; **Browse models** opens Find models, described below.
 - Pick a model with the model button at the top and send a message (**Enter** sends, **Shift+Enter** adds a line).
 - **The first time**, GeulPU builds the kernels for your GPU and model (about 10 seconds on a fast CPU, 1–3 minutes on a slow one) and
   loads the model into graphics memory (about 20 seconds for 7B). Later only the loading happens.
-- **Reasoning models** (Qwen3, DeepSeek-R1) think before answering. The thinking is folded as "Thought for N s"; click it to expand.
+- **Reasoning models** (Qwen3, DeepSeek-R1) think before answering. The thinking is collapsed as "Thought for N s"; click it to expand.
   Token count and speed (tokens/s) appear under the answer.
 
-![Chat — Qwen3-8B Q4_K_M with its thinking folded and the speed under the answer](docs/img/chat-en.png)
+![Chat — Qwen3-8B Q4_K_M with its thinking collapsed and the speed under the answer](docs/img/chat-en.png)
 
 - **To turn Qwen3's thinking off**: **Generation settings** (the slider icon at the top right) → switch off **Thinking**. It then
   answers directly.
@@ -155,7 +155,7 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, **computation mode**, **speculative decoding**, **context store**, model folder, language, new-version notice. Changes are saved
+chat, **computation mode**, **speculative decoding**, **prompt cache**, model folder, language, new-version notice. Changes are saved
 immediately.
 
 **Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded.
@@ -172,7 +172,7 @@ log-probabilities and research-panel values are bit-identical to Off**, while an
 code, rewriting a document, quoting summaries — generate 3.5–4× faster (ordinary chat 1.0–1.5× — [문서/3단계.md](문서/3단계.md), Korean).
 Applies the next time a model is loaded.
 
-**Context store** — **Default** (on when the location is an SSD, off for an HDD) · On · Off. Keeps what the model computed for long
+**Prompt cache** — **Default** (on when the location is an SSD, off for an HDD) · On · Off. Keeps what the model computed for long
 prompts (the KV cache) on the SSD in 256-token chunks and restores it instead of recomputing whenever a request starts the same way —
 even after restarting the app, switching models and back, or another chat taking the slot. For coding agents, which resend long system
 prompts and conversations, the first token drops sharply — after restarting the app, a new task's first request (15k tokens) goes from
@@ -192,15 +192,15 @@ runs therefore comes only from what you changed. Open the panel with the flask b
 flask under an answer (answers received in this version onward — research records stay in this browser).
 
 **New to it? Start with the [research panel guide](docs/research-guide.md)** — seven experiments (where the model hesitated, branching,
-comparing two answers, the effect of quantization, the effect of one word, scoring text, reproduction capsules) with screenshots, how to
+comparing two answers, the effect of quantization, the effect of one word, scoring text, reproduction files) with screenshots, how to
 read the numbers, and API examples.
 
 - **Observe** — the answer as tokens: each token's probability, rank, top-10 alternatives, entropy and the gap between the top two
-  (margin). Close calls (margin < δ — places where a slightly different computation or setting could pick another token) and steps
+  (margin). Low-margin steps (margin < δ — places where a slightly different computation or setting could pick another token) and steps
   where sampling picked a token that wasn't ranked first are marked. The answer header shows where the prompt was reused from (this
-  slot · another slot · the context store) and the **cache break** (which token, the text before it, before → now token) — when an agent
+  slot · another slot · the prompt cache) and the **cache break** (which token, the text before it, before → now token) — when an agent
   puts something that changes every time (a clock, a working-folder path) near the start of its prompt, you can see the cache break there
-  ([guide — where did the prompt cache break](docs/research-guide.md#where-did-the-prompt-cache-break-context-store)).
+  ([guide — where did the prompt cache break](docs/research-guide.md#where-did-the-prompt-cache-break)).
 - **Intervene** — pick an alternative token at any step and **branch here**: generation continues with the same settings, the same
   seed and the same per-step random numbers, so the chosen token is the only change. You can also regenerate with only the
   temperature, seed or max length changed. New answers stay as versions.
@@ -208,7 +208,7 @@ read the numbers, and API examples.
   under the other prompt and see the per-token difference; score the same text with another model (e.g. Q8_0 ↔ Q4_K_M of the same
   model) to see the effect of the quantization alone.
 - **Score** — paste text and get each token's log-probability and the perplexity.
-- **Reproduce** — fingerprints (SHA-256 — the recipe is in [contract](계약/contract.md) §5.2), re-run without the cache and check, export a **reproduction capsule** (request, result,
+- **Reproduce** — fingerprints (SHA-256 — the recipe is in [contract](계약/contract.md) §5.2), re-run without the cache and check, export a **reproduction file** (request, result,
   log-probabilities and logit hashes in one JSON file) and load one to check it, hashes of the engine binaries and kernels.
 - **Export** — every value shown as JSON or CSV, and Python code that fetches the same values.
 
@@ -219,9 +219,9 @@ top-p. The panel computes only when you look, so chat speed is unchanged.
 
 ![Research panel — Compare: the same answer scored again with the same model's Q4_K_M file — the effect of the quantization alone, token by token](docs/img/research-compare-en.png)
 
-A capsule can be checked without a GPU, too — clone the repository (`pip install numpy`) and run
-`python -I 도구/캡슐확인.py <capsule.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
-and log-probabilities (a few minutes for 7B). A capsule records its computation mode and is checked in that mode.
+A reproduction file can be checked without a GPU, too — clone the repository (`pip install numpy`) and run
+`python -I 도구/repro_check.py <repro.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
+and log-probabilities (a few minutes for 7B). A reproduction file records its computation mode and is checked in that mode.
 
 ### Use it from other programs (OpenAI-compatible API)
 
@@ -471,7 +471,7 @@ backends are packaged only after their bytes are checked against the build hashe
   (tests: seventeen requests × correct, wrong and half-wrong drafts, four concurrent slots, CUDA and Vulkan — [stage 3](문서/3단계.md)).
   In the same measurement, llama.cpp b11721's llama-server changed the answers of two of eight greedy requests (summary, math) when
   `--spec-type ngram-simple` was switched on.
-- **The context store gives the same answers.** KV restored from the SSD is byte-identical to recomputed KV (the contract — KV is the same
+- **The prompt cache gives the same answers.** KV restored from the SSD is byte-identical to recomputed KV (the contract — KV is the same
   whichever way it is filled), so with the store on, the tokens and per-step logit hashes equal those with it off. Tests: 54 recorded Qwen
   Code requests sent with recomputation · store off · empty store · after a server restart · one slot alternating conversations · 40
   corrupted chunks — all 1,728 steps identical; a Vulkan server reading chunks written by CUDA matched too. So did a replay that
@@ -534,7 +534,7 @@ reports, paper) lives in the [GeulPU repository](https://github.com/wwoosshh/Geu
 | | |
 |---|---|
 | Models | **Llama-3.1-8B · Llama-3.2-3B · Mistral-7B v0.3** (stage 39 — architecture `llama`: q · k row restore and RoPE scaling factors as contract §4.7; five files bit-identical to the CPU reference, mean KL ≤ 4 × 10⁻⁴ against llama.cpp on every token of the same texts; the 70B shape tested on synthetic models) · **Qwen3-1.7B / 8B / 14B** (stage 37 — per-head Q/K RMSNorm as contract §4.6 and one appended kernel, bit-identical to the CPU reference; the 14B shape tested on synthetic models) · **Qwen2.5-0.5B / 7B / 14B-Instruct** · DeepSeek-R1-Distill-Qwen (chat; Llama-family blocks — RMSNorm · RoPE · SwiGLU · GQA; head sizes 64 and 128). Head-128 Qwen2 shapes are read from the GGUF config; 32B and 72B shapes were bit-tested on 4-layer synthetic models. GPT-2 small and XL (research engine). |
-| App | Stages 36–39 — `GeulPU.exe` (a manager written in geul) and a web UI: find models (browse every Hugging Face GGUF repo, sorted), download, add and verify them; chat (Qwen2.5's ChatML, Qwen3's template with thinking on/off, R1's, Llama 3's and Mistral's templates); self-diagnosis, speed and cross-check runs; result zips; a new-version notice; a **research panel** (stage 38 — per-token probabilities, branching, comparison, scoring and reproduction capsules; log-probabilities as contract §5.2) and an English UI. The release zip (1.4 MB) is built from source by CI when a tag is pushed (as a draft; a person publishes it). Windows x64 only — see [Install](#install). |
+| App | Stages 36–39 — `GeulPU.exe` (a manager written in geul) and a web UI: find models (browse every Hugging Face GGUF repo, sorted), download, add and verify them; chat (Qwen2.5's ChatML, Qwen3's template with thinking on/off, R1's, Llama 3's and Mistral's templates); self-diagnosis, speed and cross-check runs; result zips; a new-version notice; a **research panel** (stage 38 — per-token probabilities, branching, comparison, scoring and reproduction files; log-probabilities as contract §5.2) and an English UI. The release zip (1.4 MB) is built from source by CI when a tag is pushed (as a draft; a person publishes it). Windows x64 only — see [Install](#install). |
 | Weight formats | GGUF **Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K**, including per-tensor mixes as in Q4_K_M · Q5_K_M (stage 26 — tested with files re-quantized on this PC from Q8_0; official Qwen files are not yet tested). |
 | Runner | `빌드/글/실행기.exe model.gguf` (`실행기` = runner) — a geul program: chat (Qwen's ChatML and the Qwen3, Llama 3 and Mistral templates), streamed output, KV cache reused across turns, greedy decoding (the same conversation gives the same answer). About 0.3 s until the prompt runs. |
 | Server | `빌드/글/서버.exe model.gguf` (`서버` = server) — a geul program (stage 28): an OpenAI-compatible HTTP API (chat · completions · SSE streaming) with slots, continuous batching, prompt caching and a sampling contract (the same seed gives the same tokens). A request returns the same bits whatever else runs with it — zero differences over four models × twelve requests × four schedules, while llama-server's greedy answer changed in 11 of 12 cases depending on the concurrent requests. Head-128 Qwen2 (7B · 14B). 7B Q4_0 aggregate throughput: 302 tokens/s with four streams and 508 with eight (llama-server 360 · 632 — a multi-row decode kernel is next); one stream is 4% faster than llama-server. A cached prompt's first token takes 13.8 ms (llama-server 13.0 ms; stage 30 feeds the last rows through the decode step). See [`문서/28단계.md`](https://github.com/wwoosshh/GeulPU/blob/main/문서/28단계.md) · [`문서/30단계.md`](https://github.com/wwoosshh/GeulPU/blob/main/문서/30단계.md) |
@@ -550,11 +550,11 @@ reports, paper) lives in the [GeulPU repository](https://github.com/wwoosshh/Geu
 | [`커널/`](커널/) (kernels) | `커널생성.gl` + `생성*.gl` — the kernel generator: it emits a kernel module (geul source) per model architecture, shape, weight format and device. `진단*.gl` — diagnosis kernels. |
 | [`앱/`](앱/) (app) | `관리자.gl` (GeulPU.exe) and its modules, `web/` (the UI — self-contained HTML · JS · CSS, Korean and English), `data/models.json` (the model catalog), `꾸리기.ps1` (release packaging), `읽어보기.txt` (the zip's README), `DESIGN.md` (design system). |
 | [`계약/`](계약/) (contract) | [계약.md](계약/계약.md) · [contract.md](계약/contract.md) — the precision contract. `정수계약.py` — its CPU reference implementation (every bit comparison is against it), `로그확률.py` — log-probabilities (§5.2) in Python, `gguf읽기.py`. |
-| [`도구/캡슐확인.py`](도구/캡슐확인.py) (tools) | Checks a research-panel reproduction capsule without a GPU, on the CPU reference. |
+| [`도구/repro_check.py`](도구/repro_check.py) (tools) | Checks a research-panel reproduction file without a GPU, on the CPU reference. |
 | [`시험/`](시험/) (tests) | `빠른점검.py` (the quick check run by CI), `계약자체.py` (the contract's CPU self-tests), `참조7B.py` (the CPU reference forward pass for 7B — the end-to-end bit oracle), `판23.py` · `판26.py` · `머리128.py` · `줄128.py` (each kernel against the CPU reference — on the GPU, via `쿠다드라이버.py`), `품질.py` (hidden loss relative to the exact mode, compared with llama.cpp), `뽑기.py` · `로그확률38.py` (sampling and log-probability contracts, Python vs geul), `서버28.py` · `로그확률서버38.py` (server regression tests: bits under concurrency, API, log-probabilities), `모듈해시.txt` · `SASS넘침.txt` · `글저장소커밋.txt`. |
 | [`재기/`](재기/) (measurements) | Speed and quality runs — `견주기2.sh` (prompt time of exact · fast · llama.cpp, order alternating by round) · `견주기요약.py`, `생성2.sh` (decode ms/token), `품질2.sh`, `라마.py` (llama.cpp's C API). The geul test and measurement programs are in `엔진/`: `시험_7B.gl` · `재기_7B.gl` · `재기_프롬프트.gl` · `재기_커널.gl` · `퍼플렉시티.gl`. |
 | [`교차검증/`](교차검증/) (cross-check) | The reference for the app's reproducibility check (Benchmark → cross-check): `expected.json` (the reference PC's outputs and build hashes) · `requests.json` (the 32 problems). Packaging compares the build hashes with it. |
-| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan · [2c단계.md](문서/2c단계.md) — matmul kernels · [3단계.md](문서/3단계.md) — speculative decoding · [4단계.md](문서/4단계.md) — long-prompt attention kernel · [4b단계.md](문서/4b단계.md) — long-context decode fold fix), [긴문맥재기.md](문서/긴문맥재기.md) (long-session prompt and decode vs llama.cpp) — Korean. |
+| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan · [2c단계.md](문서/2c단계.md) — matmul kernels · [3단계.md](문서/3단계.md) — speculative decoding · [4단계.md](문서/4단계.md) — long-prompt attention kernel · [4b단계.md](문서/4b단계.md) — long-context decode merge fix), [긴문맥재기.md](문서/긴문맥재기.md) (long-session prompt and decode vs llama.cpp) — Korean. |
 | [`docs/`](docs/) | English documents — [research-guide.md](docs/research-guide.md) (research panel guide) · [glossary.md](docs/glossary.md) · `img/` (screenshots). |
 | [`연구자안내.md`](연구자안내.md) | The research panel guide in Korean. |
 

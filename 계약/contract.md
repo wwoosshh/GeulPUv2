@@ -77,7 +77,7 @@ Neither changes a single output bit — the stage-27 tests compare against the s
 ### 1.2 Fast contract F1 — one-digit activations in linear layers (GeulPUv2 stage 2, [`문서/2단계.md`](../문서/2단계.md))
 
 Fast-mode modules (`커널생성 … --빠른`) keep the activations of the linear layers — the tile, row and row-tile kernels, the logit kernel,
-and the conversions that feed them (convert, RMS spread, SwiGLU and the fold's epilogue) — as **one digit**. Attention (RoPE's q, the
+and the conversions that feed them (convert, RMS spread, SwiGLU and the merge's epilogue) — as **one digit**. Attention (RoPE's q, the
 KV cache and the e inside attention) keeps the two digits of section 2.
 
 1. E = ⌊log₂ max_k |x_k|⌋, and **if max · 2^(6 − E) < 127.5 then E ← E − 1** (on the float's bits: 23-bit mantissa < 0x7F0000). Then
@@ -110,27 +110,27 @@ chunks of 64 keys:
 3. l = float32(Σ_t round(e_t · 2²³)) × 2⁻²³ — summed exactly as integers, then rounded once.
 4. Output o_d: per 32-key block j, e′_t = e_t × 2^(E_v − 13) is written as two digits, u_j,d = float32(Σ_t n_e,t · n_v,t,d) (exact sum,
    one rounding), and o_d = u₀,d × 2^(E_e,0 − 13) + u₁,d × 2^(E_e,1 − 13) (one rounding).
-5. Chunks are folded as in section 3. The output O / L goes straight into two digits for the output projection.
+5. Key tiles are merged as in section 3. The output O / L goes straight into two digits for the output projection.
 
 Because integer sums do not depend on their order, prefill (tensor-core MMA) and decode (dp4a) produce the same bits — this follows
 directly from the contract.
 
-## 3. Two-level fold (stage 13)
+## 3. Two-level merge (stage 13)
 
-Chunks are grouped (16 chunks = 1024 positions; group g covers positions [1024g, 1024g + 1024)):
+Key tiles (64 positions each) are grouped (16 tiles = 1024 positions; group g covers positions [1024g, 1024g + 1024)):
 
-1. Within a group, chunks are folded in order into a group state (M_g, L_g, O_g) (the group's first chunk is the initial value).
-2. Groups are folded in order g = 0, 1, … with the same formula (the first group is the initial value).
+1. Within a group, tiles are merged in order into a group state (M_g, L_g, O_g) (the group's first tile is the initial value).
+2. Groups are merged in order g = 0, 1, … with the same formula (the first group is the initial value).
 
-The fold (both levels): M′ = max(M, m), α = written_exp(M − M′), β = written_exp(m − M′), L ← fma(l, β, L·α), O ← fma(o, β, O·α).
+The merge (both levels): M′ = max(M, m), α = written_exp(M − M′), β = written_exp(m − M′), L ← fma(l, β, L·α), O ← fma(o, β, O·α).
 Group boundaries depend only on positions, so every way of computing gives the same bits. Up to position 1024 there is one group and
-this equals the one-level fold of stages 9–12. Keeping only group states in global memory lets one (row, head) be split across blocks —
-the reason short chunks at long contexts became fast. Accuracy is unchanged (median error against fp64, new / old: 1.0003× and 0.9994×).
+this equals the one-level merge of stages 9–12. Keeping only group states in global memory lets one (row, head) be split across blocks —
+the reason short prompt chunks at long contexts became fast. Accuracy is unchanged (median error against fp64, new / old: 1.0003× and 0.9994×).
 
 ## 4. Llama-family blocks (stage 14 — Qwen2)
 
 1. **RMSNorm** (one row of width D): lane t (0 … 255) sums p_t = Σ_{c ≡ t (mod 256)} x_c · x_c (ascending c, rounding at every product
-   and sum); the 256 partial sums are folded in halves from 128 down to S; r = 1 / sqrt(S / D + eps) (IEEE round-to-nearest);
+   and sum); the 256 partial sums are reduced in halves from 128 down to S; r = 1 / sqrt(S / D + eps) (IEEE round-to-nearest);
    y_c = (x_c · r) · w_c. When the next operation is a linear layer, y goes straight into two digits.
 2. **RoPE** (NeoX, rotate-half): the cos · sin table [position][32] holds correctly rounded float32 values (θ_i = θ^(−2i/64) correctly
    rounded in fp64, angle = position · θ_i as an fp64 product, cos and sin correctly rounded to float32 — independent of the platform's
@@ -143,12 +143,12 @@ the reason short chunks at long contexts became fast. Accuracy is unchanged (med
    is no position embedding.
 6. **Per-head Q · K normalization** (stage 37 — Qwen3): after the q · k · v linear layers (models without biases add 0, as in 5) and
    before RoPE, every q head and every k head (one head of one row = 128 values x_0 … x_127) gets the RMSNorm of 1 with D = 128. Each
-   lane t < 128 holds one value and the 128-fold adds +0, so it reads: p_t = x_t · x_t, folded in halves from 64 down to S
-   (p_t ← p_t + p_{t+fold}); r = 1 / sqrt(S / 128 + eps); y_t = (x_t · r) · w_t. The weights w are the layer's `attn_q_norm` ·
+   lane t < 128 holds one value and the stride-128 add is +0, so it reads: p_t = x_t · x_t, reduced in halves with strides h = 64, 32, …, 1 down to S
+   (p_t ← p_t + p_{t+h}); r = 1 / sqrt(S / 128 + eps); y_t = (x_t · r) · w_t. The weights w are the layer's `attn_q_norm` ·
    `attn_k_norm` (128 float32 values shared by all heads); eps is the model's (it must equal the generator's constant). v is not
    normalized. RoPE (head size 128, item 2 below) and the integer KV cache follow unchanged. The kernel gives lane l the values
-   d = l + 32·i (i = 0 … 3), so the 64-fold is two adds (p_l + p_{l+64}, p_{l+32} + p_{l+96}), the 32-fold adds those two, and xor
-   shuffles 16 · 8 · 4 · 2 · 1 finish the fold — bit-identical to the order above (checked over 4,096 heads in the contract self-test).
+   d = l + 32·i (i = 0 … 3), so the stride-64 step is two adds (p_l + p_{l+64}, p_{l+32} + p_{l+96}), the stride-32 step adds those two, and xor
+   shuffles 16 · 8 · 4 · 2 · 1 finish the reduction — bit-identical to the order above (checked over 4,096 heads in the contract self-test).
 7. **The llama architecture** (stage 39 — Llama 3.1 · 3.2 · Mistral v0.3): the block is items 1 – 5 unchanged (no biases — 0 is
    added), head size 128 (below). Three things differ:
    1. **q · k row restore**: the GGUF converter (the permute in llama.cpp's `convert_hf_to_gguf.py`) stores the original row
@@ -178,7 +178,7 @@ the reason short chunks at long contexts became fast. Accuracy is unchanged (med
       angle is one fp64 product, and the exact product m · cos is correctly rounded once (q and k are both scaled by m — the attention
       temperature). This is the formula of transformers' `_compute_yarn_parameters` (Qwen's config `rope_scaling: {type: yarn, factor,
       original_max_position_embeddings}`) and llama.cpp's rope_yarn, pinned down in fp64.
-   4. A server with YaRN on puts `YaRN s×L` into the context store's chunk names (the KV bytes differ). Within the position count the
+   4. A server with YaRN on puts `YaRN s×L` into the prompt cache's chunk names (the KV bytes differ). Within the position count the
       table and the KV are byte-for-byte unchanged.
 
 ### Head size 128 (stage 22 — Qwen2.5-7B and larger)
@@ -192,7 +192,7 @@ The head-64 contract is unchanged. Three things differ at head size 128:
 2. **RoPE**: the table is [position][64], θ_i = θ^(−2i/128) (i = 0 … 63, correctly rounded in fp64), rotation pairs (i, i + 64). The
    fma forms are those of head 64.
 3. **Output o_d** uses the formula of section 2.4 for each of the four 32-value blocks of values (d = 0 … 127). Written exp, the sum l
-   and the two-level fold are unchanged. A group or chunk state is (M, L, two spare, O[128]) = 132 values.
+   and the two-level merge are unchanged. A group or tile state is (M, L, two spare, O[128]) = 132 values.
 
 ## 5. Sampling (stage 28 — the server)
 
@@ -262,12 +262,12 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 
 - **Logit hash** (`logit_hashes`, `prompt_logit_hashes`): for each 32-bit value w of a logit row (V float32 values),
   h ← (h ^ w) × 1099511628211 (mod 2⁶⁴), starting from h = 0xcbf29ce484222325 (FNV-1a 64). Written as 16 hex digits.
-- **Fingerprints and reproduction capsules** (research panel — a record format, not part of the arithmetic contract): token fingerprint
+- **Fingerprints and reproduction files** (research panel — a record format, not part of the arithmetic contract): token fingerprint
   = SHA-256(`geulpu-fp/1\nmodel <model file SHA-256>\nprompt <ids,…>\ntokens <ids,…>\n`), logit fingerprint = SHA-256(`<token
-  fingerprint>\n<per-step logit hashes,…>\n`) — the device and backend are not included. A capsule (`geulpu-capsule/1`) holds the request
+  fingerprint>\n<per-step logit hashes,…>\n`) — the device and backend are not included. A capsule (`geulpu-reproduction file/1`) holds the request
   (prompt tokens, temperature, top-k, top-p, min-p, seed as the raw integer, `step_offset`, `max_tokens`), the result (tokens,
   log-probabilities, entropy, top k, logit hashes), the model (name, file, size, SHA-256) and where it was made (device, backend — a
-  record written by the maker, not used in checking). [`도구/캡슐확인.py`](../도구/캡슐확인.py) checks it without a GPU, with this
+  record written by the maker, not used in checking). [`도구/repro_check.py`](../도구/repro_check.py) checks it without a GPU, with this
   contract's CPU reference (sections 1–5): the same tokens, logit hashes, log-probabilities and fingerprints.
 
 ## 6. What the tests check ([`시험/`](../시험))
@@ -280,7 +280,7 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | Cache bytes | whether the KV cache filled by those paths equals the one filled one token at a time |
 | Conversation | chunks of different lengths fed and generated in turns equal one-shot processing, down to tokens and cache |
 | Long context | the new kernels against the CPU reference (two heads), against each other (all heads); megakernel vs separate kernels; split vs one-shot feeding |
-| 7B — head 128 ([`시험/머리128.py`](../시험/머리128.py) · [`시험/줄128.py`](../시험/줄128.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`엔진/시험_7B.gl`](../엔진/시험_7B.gl)) | RoPEKV · group kernels · group fold · chunk kernels · chunk fold (2100 random rows · real values of 7B layer 0, five paths) against the CPU reference; row kernels (five weights × rows 1 … 4 × three epilogues); all rows of logits for three chat prompts + 16 generated tokens against the CPU reference's full forward pass; the five paths (decode graph · all at once · in four · one row at a time · again) — logits and KV cache |
+| 7B — head 128 ([`시험/머리128.py`](../시험/머리128.py) · [`시험/줄128.py`](../시험/줄128.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`엔진/시험_7B.gl`](../엔진/시험_7B.gl)) | RoPEKV · group kernels · group merge · tile kernels · tile merge (2100 random rows · real values of 7B layer 0, five paths) against the CPU reference; row kernels (five weights × rows 1 … 4 × three epilogues); all rows of logits for three chat prompts + 16 generated tokens against the CPU reference's full forward pass; the five paths (decode graph · all at once · in four · one row at a time · again) — logits and KV cache |
 | Qwen2 ([`시험/qwen2.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/qwen2.py)) | every linear kernel (row-major · column-major · row · batched-row) · RMSNorm · RoPE+KV · SwiGLU conversions · GQA attention (five kernels + the decode kernel) against the CPU reference; paths (all at once · one at a time · two pieces · split feeding · small chunks · conversation) — logits and cache; all rows of logits for three chat prompts, and the last row beyond position 1024, against the CPU reference's full forward pass; repeatability of the terminal runner; GPT-2 module source unchanged |
 | Qwen2 decode megakernel ([`시험/메가15.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/메가15.py)) | megakernel vs the stage-14 decode graph — logits and tokens at each of 64 steps for three chat prompts and contexts 1024 · 2100 · 8192, then the KV cache bytes; three turns of the runner's conversation (stopping inside the kernel at the end token) — tokens and cache; GPT-2 module source unchanged |
 | k-quants (stage 26 — [`시험/판26.py`](../시험/판26.py)) | every k-quant kernel (243 cases: 11 tile shapes × epilogues × formats, row kernels, embeddings) on real weights of three GGUF files; full forward passes of Q4_K_M · Q5_K_M · Q6_K against the CPU reference |

@@ -2,8 +2,9 @@
 
 GeulPU is written in **geul (글)**, a Korean programming language whose keywords, types and identifiers are Korean words, and its
 documents are written in Korean. This page gives the English meaning of the terms you will meet, so that the code, the commit
-history and the Korean documents (`문서/`) can be followed without reading Korean fluently. The English documents in `docs/` use
-exactly these translations.
+history and the Korean documents (`문서/`) can be followed without reading Korean fluently. Since 2026-10-20 the documents use
+standard terms — established Korean IT terms with the English on first use ([문서/용어.md](../문서/용어.md)); the Korean words in
+section 4 still appear in code identifiers and older records.
 
 ## 1. Reading geul source
 
@@ -73,24 +74,24 @@ exactly these translations.
 | 슈퍼블록 / 아래블록 | super-block / sub-block | k-quant structure: 256 values = 8 sub-blocks of 32 (Q4_K · Q5_K) or 16 of 16 (Q6_K). |
 | 높은 비트 · 니블 | high bits · nibble | Bits above the low 4 (Q5_K: 1 bit, Q6_K: 2 bits) · a 4-bit value. |
 | 깔기 / 깐 / 배치 | lay out / laid-out / layout | Re-arranging GGUF weights into the engine's GPU layout (same number of bytes read). |
-| 판 | **kernel** (literally "plate") | One generated GPU kernel variant, e.g. a tile shape. "판 11 개" = the 11 tile shapes. |
+| 판 (code) | **kernel variant** | One generated GPU kernel variant, e.g. a tile shape. "판 11 개" = the 11 tile shapes. Documents: 커널 변형. |
 | 타일 판 | tile kernel | Integer-tensor-core GEMM used for prompts (prefill). Names: `정수타일선형` (integer tile linear), `정수넓은…` (wide), `정수긴…` (long), `정수깊은…` (deep), `정수세판…` (three-stage) … |
 | 줄 판 / 정수줄하나 | row kernel / single-row integer kernel | GEMV-style kernels used for decoding (one or a few rows). |
 | 끝손질 | epilogue | What a matmul kernel does after the sums: none (`""`), `_잔차` (add residual), `_SwiGLU정수` (SwiGLU then quantize for the next layer). |
-| 판 고르기 | kernel selection | The engine times the candidate kernels once per shape and keeps the fastest (all candidates give identical bits). |
+| 판 고르기 (code) | kernel selection (autotuning) | The engine times the candidate kernels once per shape and keeps the fastest (all candidates give identical bits). |
 | 메가커널 | megakernel | One cooperative launch that generates a whole token (stage 15). |
 | 걸음띄우기 | step-by-step decode | Decoding without the megakernel: one prompt-path computation per token, waiting for each token (the Vulkan path — SPIR-V has no cooperative launch; identical bits, stage 31). |
-| 벌칸 · 벌칸 층 | Vulkan layer | `호스트/벌칸.gl`: the CUDA driver API's names and signatures implemented over vulkan-1.dll, so the same engine source runs on CUDA or Vulkan (stage 31). |
+| 벌칸 · 벌칸 층 | Vulkan backend | `호스트/벌칸.gl`: the CUDA driver API's names and signatures implemented over vulkan-1.dll, so the same engine source runs on CUDA or Vulkan (stage 31). |
 | 머리 · 몸 (파일) | head · body (file) | A test split in two: the head includes a GPU layer (`쿠다.gl` or `벌칸.gl`), the body holds the program (e.g. `시험_엔진.gl` / `시험_엔진V.gl` + `시험_엔진몸.gl`). |
 | 묶음 (.spvs) | SPIR-V bundle | The SPIR-V backend's output: one SPIR-V module per kernel with its shared-memory size and parameter kinds ("GEULSPV1"). |
 | 장치 한도 | device limit | A kernel the device cannot run (its shared memory exceeds the limit — e.g. 32 KB on Intel UHD 770); tests log it instead of skipping it silently. |
 | 공유32 | 32 KB variant | `커널생성 qwen2Q8 … --공유32`: the 0.5B module for 32 KB devices — prompt attention with one buffer (36 → 20 KB, same arithmetic order), no branch kernels. |
 | 생성 그래프 | decode graph | A CUDA graph replayed per generated token. |
-| 묶음 | group | Attention: a group of 16 chunks = 1024 positions (two-level fold). Elsewhere: a batch of sentences. |
-| 조각 | chunk / part | Attention: 64 keys. Layer splitting (stage 25): a part = an engine owning a range of layers. |
-| 접기 / 두 층 접기 | fold / two-level fold | Online-softmax merge of chunk states (M, L, O), first within a group, then across groups. |
-| 덩이 | prompt chunk | Prompts are processed in chunks of up to 1024 rows. |
-| 걸음 | step | One decoding step. |
+| 묶음 (code) | group · batch | Attention: a group of 16 key tiles = 1024 positions (two-level merge). Elsewhere: a batch of sentences. Documents: 그룹 · 배치. |
+| 조각 (code) | tile · part | Attention: a key tile of 64 positions. Layer splitting (stage 25): a part = an engine owning a range of layers. Documents: 타일 · 분할. |
+| 접기 / 두 층 접기 (code) | merge / two-level merge | Online-softmax merge of tile states (M, L, O), first within a group, then across groups. Documents: 병합. |
+| 덩이 (code) | chunk | Prompts are processed in chunks of up to 1024 rows; the prompt cache stores KV in chunks of 256 tokens. Documents: 청크. |
+| 걸음 (code) | step | One decoding step. Documents: 스텝. |
 | 칸 | cell / element | "다른 칸 0" = zero differing elements (bit comparison). |
 | 길 / 다섯 길 | path / five paths | Ways of computing the same thing: decode graph, all-at-once, in four pieces, one row at a time, again. They must agree bit for bit. |
 | 끝에서 끝 | end-to-end | Full forward pass compared with the CPU reference (all rows of logits). |
@@ -128,3 +129,37 @@ exactly these translations.
 | `준비/` | model preparation |
 | `컴파일러/` | Python reference front end and the Python PTX backend (kept for comparison) |
 | `빌드/`, `모델/`, `도구/` | build output, model files, external tools (not in git) |
+
+## 4. Words still in code identifiers and older records
+
+The documents and the app used Korean coinages for standard terms until 2026-10-20. They were replaced by standard terms
+([문서/용어.md](../문서/용어.md)), but code identifiers (geul is a Korean language) and commit messages keep them:
+
+| In code / older records | Standard term in documents | English |
+|---|---|---|
+| 메아리 (`메아리셈` …) | echo 스코어링 | echo scoring — log-probabilities of given tokens without generating (`echo` in `/v1/completions`) |
+| 갈래 | 분기 | branch — continue from step k with another token, or regenerate an edited request |
+| 멈춤점 | 중단점 | breakpoint — a step to inspect (low margin, low-probability sample, tool-call start) |
+| 여유 · 아슬아슬 | 마진 · 마진이 작은 스텝 | margin (top-1 minus top-2 log-probability) · low-margin step |
+| 견주기 | 비교 | comparison |
+| 실행 파일 (debugger) | 실행 로그 | run log (JSONL of recorded requests and responses) |
+| 머리 (file) | 헤더 | header |
+| 흘림 | 스트리밍 | streaming |
+| 씨앗 | 시드 | seed |
+| 뽑기 | 샘플링 | sampling |
+| 일감 | 작업 | job (one request inside the server) |
+| 덧붙임 | 확장 필드 | extension fields (the `geulpu` object of a response) |
+| 재현 캡슐 | 재현 파일 | reproduction file |
+| 되살리다 | 복원하다 | restore |
+| 문맥 저장소 | 프롬프트 캐시 | prompt cache (prompt KV kept on the SSD in chunks; the API keeps the name `store`) |
+| 캐시가 깨진 자리 | 캐시가 끊긴 위치 | cache break |
+| 판 기억 | 튜닝 캐시 | tuning cache |
+| 시험 묶음 | 테스트 세트 | test set |
+| 무게 · 깃발 · 꾸러미 · 흉내 | 가중치 · 플래그 · 패키지 · 에뮬레이션 | weights · flag · package · emulation |
+| 가닥 · 일꾼 · 끝손질 | 스레드 · 워커 · 에필로그 | thread · worker · epilogue |
+| 채팅 틀 · 꼴 | 채팅 템플릿 · 형식 | chat template · format |
+| 셈 · 셈하다 | 계산 · 계산하다 | computation · compute |
+| 마법수 | 매직 넘버 | magic number |
+| 뒷단 | 백엔드 | (compiler) backend — turns kernel source into PTX · SPIR-V |
+| 판 (app, plans) | 버전 | version — e.g. 디버거 1판 → 디버거 v1 |
+| 열쇠 | 키 | key (JSON, dictionary, cache) |

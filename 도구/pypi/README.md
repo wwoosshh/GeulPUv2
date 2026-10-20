@@ -27,7 +27,7 @@ pipx install geulpu        # 또는 uv tool install geulpu · pip install geulpu
 geulpu                     # 브라우저에 http://127.0.0.1:44544 가 열립니다
 ```
 
-모델 · 이 GPU 용 커널 · 결과 · 설정은 `%USERPROFILE%\GeulPU` 에 저장됩니다(`GEULPU_HOME` 으로 옮김 — 꾸러미를 지워도 그대로).
+모델 · 이 GPU 용 커널 · 결과 · 설정은 `%USERPROFILE%\GeulPU` 에 저장됩니다(`GEULPU_HOME` 으로 옮김 — 패키지를 지워도 그대로).
 업데이트는 `pipx upgrade geulpu`(또는 `pip install -U geulpu`).
 
 Guide, source and changelog: https://github.com/wwoosshh/GeulPUv2 (English: README.en.md). MIT License.

@@ -4,7 +4,7 @@
 
 GeulPU's **research panel** is a workbench next to the chat. It splits an answer into tokens to show where the model hesitated, lets you
 pick a different token and continue from there, and measures how much one word of the question — or one model file — changes the
-probabilities of the same answer. Results can be saved as a single file (a reproduction capsule) that someone else checks, bit for bit,
+probabilities of the same answer. Results can be saved as a single file (a reproduction file) that someone else checks, bit for bit,
 on their own PC.
 
 This guide walks through seven experiments from start to finish and explains every part of the panel along the way. With the same model
@@ -25,7 +25,7 @@ numbers as this guide** — that is the premise of the panel.
   - [Experiment 5. How much does one word of the question change the same answer](#experiment-5-how-much-does-one-word-of-the-question-change-the-same-answer) (Compare)
   - [Experiment 6. How plausible is a line of text](#experiment-6-how-plausible-is-a-line-of-text) (Score)
   - [Experiment 7. Having someone else check your result](#experiment-7-having-someone-else-check-your-result) (Reproduce)
-  - [Where did the prompt cache break (context store)](#where-did-the-prompt-cache-break-context-store) (Observe)
+  - [Where did the prompt cache break](#where-did-the-prompt-cache-break) (Observe)
   - [Getting the data out](#getting-the-data-out) (Export)
 - [5. From scripts — the API](#5-from-scripts--the-api)
 - [6. Caveats and FAQ](#6-caveats-and-faq)
@@ -76,9 +76,9 @@ Send the question `Name one famous painter. Answer with just the name.` and the 
 The panel never touches chat speed. Chat generates as usual; only when you open the panel are the answer's tokens recomputed (scoring —
 `echo`). The recomputed values are **bit-identical** to those of generation (checked in stage 38 on four models and two backends).
 
-![How the research panel gets its numbers — (1) get an answer in chat (2) research record in this browser (3) the panel rescores the same tokens with echo (4) six tabs (5) reproduction capsule → GeulPU on another PC, or without a GPU on the CPU reference](img/guide/00-how-it-works-en.png)
+![How the research panel gets its numbers — (1) get an answer in chat (2) research record in this browser (3) the panel rescores the same tokens with echo (4) six tabs (5) reproduction file → GeulPU on another PC, or without a GPU on the CPU reference](img/guide/00-how-it-works-en.png)
 
-<img src="img/guide/03-panel-en.png" width="460" align="right" alt="Research panel — (1) answer to analyze (2) six tabs (3) answer header (4) six summary numbers (5) close-call threshold δ (6) token strip (7) legend">
+<img src="img/guide/03-panel-en.png" width="460" align="right" alt="Research panel — (1) answer to analyze (2) six tabs (3) answer header (4) six summary numbers (5) low-margin threshold δ (6) token strip (7) legend">
 
 **Parts of the panel** (numbers in the picture)
 
@@ -86,9 +86,9 @@ The panel never touches chat speed. Chat generates as usual; only when you open 
 2. **Six tabs** — Observe, Intervene, Compare, Score, Reproduce, Export (table below).
 3. **Answer header** — model and quantization, temperature (0 = greedy) and seed, token count (including the end token), generation
    speed, and the device and backend it was made on.
-4. **Six summary numbers** — mean log-prob, perplexity, mean entropy, smallest margin, number of close calls, number of non-top tokens.
-5. **Close-call threshold δ** — steps whose top-two gap (margin) is below δ count as close calls. ‹ › jump between them.
-6. **Token strip** — the answer's tokens. Darker = less likely, underline = close call, outline = a step that picked a non-top token.
+4. **Six summary numbers** — mean log-prob, perplexity, mean entropy, smallest margin, number of low-margin steps, number of non-top tokens.
+5. **Low-margin threshold δ** — steps whose top-two gap (margin) is below δ count as low-margin steps. ‹ › jump between them.
+6. **Token strip** — the answer's tokens. Darker = less likely, underline = low-margin step, outline = a step that picked a non-top token.
    Click a token to open that step's card below (arrow keys move too).
 7. **Legend**.
 
@@ -100,7 +100,7 @@ The panel never touches chat speed. Chat generates as usual; only when you open 
 | **Intervene** | What if it had picked another token? | Branch here (pick an alternative at a step and continue), regenerate with other settings |
 | **Compare** | What changes what, and by how much? | The first step where two answers part; per-token Δ of the same answer under another model or another prompt |
 | **Score** | How plausible is this text? | Per-token log-probability and perplexity of pasted text |
-| **Reproduce** | Will others get the same result? | Fingerprints, re-run without the cache, export and check reproduction capsules, engine hashes |
+| **Reproduce** | Will others get the same result? | Fingerprints, re-run without the cache, export and check reproduction files, engine hashes |
 | **Export** | How do I get the data out? | Every visible number as JSON or CSV, and Python code that fetches the same values |
 
 ## 3. Reading the numbers
@@ -112,7 +112,7 @@ The panel never touches chat speed. Chat generates as usual; only when you open 
 | **Rank** | Where the token stood among all tokens at that step. At temperature 0 the top token is always picked. |
 | **Entropy** | How spread out the step's distribution is (nats). 0 = all on one token; 1.08 ≈ e<sup>1.08</sup> ≈ 3 equally likely tokens. |
 | **Margin** | The log-prob gap between #1 and #2 = ln(p₁ / p₂). The smaller, the closer the call. |
-| **Close call** | A step whose margin is below the threshold δ — a place where a slightly different computation or setting could pick another token. Default δ = 0.05 nats (a probability ratio of about 1.05). |
+| **Low-margin step** | A step whose margin is below the threshold δ — a place where a slightly different computation or setting could pick another token. Default δ = 0.05 nats (a probability ratio of about 1.05). |
 | **Non-top tokens** | Steps where sampling (temperature > 0) or a branch picked a token other than #1. |
 | **Perplexity** | exp(−mean log-prob). The closer to 1, the more the model takes the text for granted. |
 | **Δ log-prob** | The difference between the log-probs of the same token under two conditions (that one − this answer). A total Δ of x means the whole answer's probability is multiplied by e<sup>x</sup>. |
@@ -129,10 +129,10 @@ for sampling. So the same token has the same probability whatever temperature yo
 
 **Question**: how sure was the answer `Leonardo da Vinci`?
 
-<img src="img/guide/04-step-en.png" width="460" align="right" alt="Observe — (1) close calls 1 (2) threshold δ 0.5 (3) step 1's token Leon (4) the step's numbers (5) top-10 alternatives">
+<img src="img/guide/04-step-en.png" width="460" align="right" alt="Observe — (1) low-margin steps 1 (2) threshold δ 0.5 (3) step 1's token Leon (4) the step's numbers (5) top-10 alternatives">
 
 1. The panel opens on **Observe**. The summary shows **smallest margin 0.240 (step 1)**.
-2. With the default threshold δ = 0.05 there are no close calls. Type `0.5` into **(2)** the δ box: **(1)** close calls become 1 and
+2. With the default threshold δ = 0.05 there are no low-margin steps. Type `0.5` into **(2)** the δ box: **(1)** low-margin steps become 1 and
    **(3)** `Leon` in the strip gets an underline.
 3. Click `Leon` to open step 1's card.
 
@@ -259,8 +259,8 @@ question). The model is then the answer's model.
 **Question**: can someone else see exactly the numbers I saw, on their own PC?
 
 <p>
-<img align="top" src="img/guide/12-repro-en.png" width="49%" alt="Reproduce — (1) fingerprints, model file, made on (2) re-run and check: all 5 steps match (3) export capsule">
-<img align="top" src="img/guide/13-repro-capsule-en.png" width="49%" alt="Reproduce — (4) load capsule and check (5) bit-identical (6) five engine binaries: matches reference">
+<img align="top" src="img/guide/12-repro-en.png" width="49%" alt="Reproduce — (1) fingerprints, model file, made on (2) re-run and check: all 5 steps match (3) export reproduction file">
+<img align="top" src="img/guide/13-repro-capsule-en.png" width="49%" alt="Reproduce — (4) load reproduction file and check (5) bit-identical (6) five engine binaries: matches reference">
 </p>
 
 In **Reproduce**, with the original answer (version 1) selected:
@@ -271,8 +271,8 @@ In **Reproduce**, with the original answer (version 1) selected:
   [contract §5.2](../계약/contract.md).
 - **(2) Re-run and check** — regenerates the same request (prompt tokens, parameters, seed) without the cache and compares tokens and logit
   hashes step by step: "All 5 steps match".
-- **(3) Export capsule** — the request, result, log-probabilities, logit hashes, fingerprints and the model file's SHA-256 in one JSON file.
-- **(4) Load capsule and check** — the recipient opens it in their own GeulPU. The same model file (SHA-256) must be installed, and that
+- **(3) Export reproduction file** — the request, result, log-probabilities, logit hashes, fingerprints and the model file's SHA-256 in one JSON file.
+- **(4) Load reproduction file and check** — the recipient opens it in their own GeulPU. The same model file (SHA-256) must be installed, and that
   model is loaded during the check. When scoring, regeneration and fingerprints all match you see **(5) "Bit-identical"**. It must match
   across NVIDIA and AMD, CUDA and Vulkan as well.
 - **(6) Show engine and kernel hashes** — whether the five engine binaries equal the official build (the cross-check reference), and which
@@ -282,17 +282,17 @@ Someone without a GPU can check too: clone the repository (`pip install numpy`) 
 implementation (a few minutes for 7B).
 
 ```bash
-python -I 도구/캡슐확인.py capsule.json Qwen2.5-7B-Instruct-Q8_0.gguf
+python -I 도구/repro_check.py geulpu-repro.json Qwen2.5-7B-Instruct-Q8_0.gguf
 ```
 
-### Where did the prompt cache break (context store)
+### Where did the prompt cache break
 
 **Question**: a coding agent resends the same long instructions with every request — how much of the prompt did GeulPU reuse, and
 why was the rest computed again?
 
 GeulPU reuses the computed state (the KV cache) of a prompt's beginning wherever it matches token for token: in the slot itself,
-copied from another slot inside the GPU, or read from the **context store** — 256-token chunks on the SSD that survive restarts and
-model switches (Settings → Context store, on by default for an SSD). KV is byte-identical however it was filled, so reuse never
+copied from another slot inside the GPU, or read from the **prompt cache** — 256-token chunks on the SSD that survive restarts and
+model switches (Settings → Prompt cache, on by default for an SSD). KV is byte-identical however it was filled, so reuse never
 changes an answer; it only skips work. The answer header shows how much was reused and where reuse stopped.
 
 <img src="img/guide/16-cache-break-en.png" width="460" align="right" alt="Answer header — (1) reused prompt: 270 of 576 tokens, copied from another slot (2) cache break at token 270: differs from the earlier content, the day of the date 1 → 2">
@@ -314,7 +314,7 @@ changes an answer; it only skips work. The answer header shows how much was reus
 
 <br clear="right">
 
-<img src="img/guide/17-store-restore-en.png" width="460" align="right" alt="After restarting — (1) reused prompt: 512 of 624 tokens from the context store in 11 ms (2) cache break at token 512: as far as the store had it">
+<img src="img/guide/17-store-restore-en.png" width="460" align="right" alt="After restarting — (1) reused prompt: 512 of 624 tokens from the prompt cache in 11 ms (2) cache break at token 512: as far as the store had it">
 
 3. Restart the app (or load another model and come back) — the slots are empty now — and ask the second chat another question:
    `To add a command that lists only overdue to-dos, which file do I change and how? Two sentences.`
@@ -326,7 +326,7 @@ changes an answer; it only skips work. The answer header shows how much was reus
   question) was computed. Reopening a 31,000-token conversation after a restart takes 0.74 s to the first token instead of 10 s of
   recomputation, 1.1 s when the chunks are not in the OS file cache as after a reboot (Qwen2.5-7B Q4_K_M, stage 4).
 - To check that reuse changed nothing, **Reproduce → Re-run and check** generates the answer again without the cache and without the
-  context store and compares every step.
+  prompt cache and compares every step.
 
 <br clear="right">
 
@@ -384,7 +384,7 @@ one failure case. Tests that need a date never use today's date directly; they p
   also has each step's top 10 plus the prompt tokens, fingerprints and the model's SHA-256.
 - **Scored with another model · Score A's answer under B's prompt** — the same columns plus `other_logprob` and `delta`. They appear after
   experiments 4 and 5.
-- **Scored text · Reproduction capsule**.
+- **Scored text · Reproduction file**.
 - **Python** — code that fetches the same values from the API (with the `openai` package; a standard-library version is in section 5).
 
 ## 5. From scripts — the API
@@ -494,20 +494,20 @@ Things you will use:
 ## 6. Caveats and FAQ
 
 - **There is no flask under an answer.** Research records start with answers received in 0.5.0. Send the question again.
-- **Close calls show 0.** The default δ = 0.05 nats counts only steps closer than a probability ratio of 1.05. Raise it to 0.3–0.7 for a
+- **Low-margin steps show 0.** The default δ = 0.05 nats counts only steps closer than a probability ratio of 1.05. Raise it to 0.3–0.7 for a
   wider net (0.5 ≈ #1 within 1.65× of #2).
-- **The model changed.** Compare's "score with another model", capsule checks and analyses of answers made with another model load the
+- **The model changed.** Compare's "score with another model", reproduction file checks and analyses of answers made with another model load the
   model they need (tens of seconds). Sending a chat message switches back to that chat's model. The API also answers with whatever model
   is loaded, so don't switch models in the panel while a script is running.
 - **The probabilities don't match my generation settings.** The panel shows the model's temperature-1 distribution. Temperature, top-k
   and top-p only decide which token is sampled.
 - **Values like 4.1e-2%.** Probabilities below 0.1 % are shown in exponent form, always in percent.
-- **A capsule check says it differs.** If a capsule is opened and re-saved by another tool, the seed (a 64-bit integer) can lose digits —
-  JavaScript's `JSON.parse` does. Pass the file on unchanged. "Made on" is a record written by whoever made the capsule; it is not used in
+- **A reproduction file check says it differs.** If a reproduction file is opened and re-saved by another tool, the seed (a 64-bit integer) can lose digits —
+  JavaScript's `JSON.parse` does. Pass the file on unchanged. "Made on" is a record written by whoever made the reproduction file; it is not used in
   the check.
 - **Where are the records?** In this browser (localStorage), the latest 60 (up to 1.5 MB). They don't move to another browser or PC, so
   keep what matters with Export.
 - **Does it slow chat down?** No. The panel computes only when you look. Asking the API for log-probabilities during generation adds about
   2 % per token.
 - **Deeper**: the definition of log-probabilities is [contract §5.2](../계약/contract.md); the stage that built this feature is in the
-  [research log](https://github.com/wwoosshh/GeulPU/blob/main/docs/research-log.md); checking without a GPU is [`도구/캡슐확인.py`](../도구/캡슐확인.py).
+  [research log](https://github.com/wwoosshh/GeulPU/blob/main/docs/research-log.md); checking without a GPU is [`도구/repro_check.py`](../도구/repro_check.py).
