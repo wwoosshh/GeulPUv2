@@ -28,8 +28,7 @@ Qwen2.5-7B-Instruct. With the same model file and the same computation mode, **y
 
 ## 1. Setup
 
-1. Use **GeulPU 0.7.0 or later** ([install](user-guide.md#install)). The bug button on the left rail opens the debugger. The pictures
-   in this guide were taken with a pre-release build of 0.7.0, so they show version 0.6.0.
+1. Use **GeulPU 0.7.0 or later** ([install](user-guide.md#install)). The bug button on the left rail opens the debugger.
 2. **Model**: this guide uses **Qwen2.5-7B-Instruct Q4_K_M**, and the comparison in section 6 also uses **Q8_0** of the same model (get
    them from Models → Find models). Any other model works the same way; only the numbers change.
 3. The **computation mode** is the default (fast mode — NVIDIA). In exact mode CUDA ↔ Vulkan (AMD included) also give the same bits, and

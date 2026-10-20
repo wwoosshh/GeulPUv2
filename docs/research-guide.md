@@ -8,8 +8,8 @@ probabilities of the same answer. Results can be saved as a single file (a repro
 on their own PC.
 
 This guide walks through seven experiments from start to finish and explains every part of the panel along the way. With the same model
-file (Qwen2.5-7B-Instruct Q8_0) and the default generation settings (temperature 0), **your PC will show the same answers and the same
-numbers as this guide** — that is the premise of the panel.
+file (Qwen2.5-7B-Instruct Q8_0), exact computation mode and temperature 0, **your PC will show the same answers and the same numbers as
+this guide** — that is the premise of the panel.
 
 ## Contents
 
@@ -53,10 +53,14 @@ real difference. That makes questions like these cleanly answerable:
 1. Install **GeulPU 0.5.0 or later** ([Install in the README](user-guide.md#install)).
 2. **Model**: this guide uses **Qwen2.5-7B-Instruct Q8_0** (Models → Find models). Experiment 4 also needs the same model's **Q4_K_M**.
    Any other model works the same way; only the numbers change.
-3. In the **generation settings** (the sliders button at the top right of the chat), check that **temperature is 0**. It is the default.
+3. In **Settings → Computation mode**, choose **Exact** (research precision; it applies the next time a model is loaded). This guide's
+   numbers are exact-mode numbers. The default fast mode feeds 8-bit activations into the matrix multiplications, so its probabilities
+   differ slightly — with this guide's first question it even answers `Vincent van Gogh` instead of `Leonardo da Vinci`. Both modes are
+   deterministic; exact mode also gives the same bits on NVIDIA and AMD, CUDA and Vulkan.
+4. In the **generation settings** (the sliders button at the top right of the chat), check that **temperature is 0**. It is the default.
    At temperature 0 the same question always gets the same answer, so you can follow this guide's numbers exactly. Leave the system
    prompt empty (the model's default).
-4. Send the question in a **new chat**.
+5. Send the question in a **new chat**.
 
 <img src="img/guide/02-settings-en.png" width="392" alt="Generation settings — (1) temperature 0: the same question always gets the same answer">
 
@@ -314,15 +318,15 @@ changes an answer; it only skips work. The answer header shows how much was reus
 
 <br clear="right">
 
-<img src="img/guide/17-store-restore-en.png" width="460" align="right" alt="After restarting — (1) reused prompt: 512 of 624 tokens from the prompt cache in 11 ms (2) cache break at token 512: as far as the store had it">
+<img src="img/guide/17-store-restore-en.png" width="460" align="right" alt="After restarting — (1) reused prompt: 512 of 619 tokens from the prompt cache in 19 ms (2) cache break at token 512: as far as the store had it">
 
 3. Restart the app (or load another model and come back) — the slots are empty now — and ask the second chat another question:
    `To add a command that lists only overdue to-dos, which file do I change and how? Two sentences.`
 
 **Reading**
-- **(1)** Reused prompt 512/624 tokens — store 512 (11 ms). Nothing was left in the slots, so the beginning of the chat came from the
+- **(1)** Reused prompt 512/619 tokens — store 512 (19 ms). Nothing was left in the slots, so the beginning of the chat came from the
   SSD instead of being computed. The store keeps whole 256-token chunks, and the chat so far filled two.
-- **(2)** Cache break: token 512 — as far as the store had it. Only the rest (112 tokens: the end of the first exchange and the new
+- **(2)** Cache break: token 512 — as far as the store had it. Only the rest (107 tokens: the end of the first exchange and the new
   question) was computed. Reopening a 31,000-token conversation after a restart takes 0.74 s to the first token instead of 10 s of
   recomputation, 1.1 s when the chunks are not in the OS file cache as after a reboot (Qwen2.5-7B Q4_K_M, stage 4).
 - To check that reuse changed nothing, **Reproduce → Re-run and check** generates the answer again without the cache and without the
@@ -391,7 +395,7 @@ one failure case. Tests that need a date never use today's date directly; they p
 
 Every number in the panel is also available from the API. With a model loaded in the app, send requests to `http://127.0.0.1:44544`.
 The Python below uses only the standard library (nothing to install). The API's default temperature is 0.8, independent of the app's
-generation settings, so pass `"temperature": 0` to get this guide's answers.
+generation settings, so pass `"temperature": 0` to get this guide's answers (with the computation mode set to Exact, as in the setup).
 
 ```python
 import json, math, urllib.request

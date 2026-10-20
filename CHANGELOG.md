@@ -6,6 +6,13 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+- **Guides**: every picture in the user guide, the debugger guide and the research panel guide was retaken with 0.7.1 — the new icon and
+  the current screen terms (the research panel pictures still showed 0.5.0's wording). The research panel guide now tells you to switch
+  to exact mode: its numbers are exact-mode numbers, and the default fast mode answers its first question differently
+  (`Vincent van Gogh` instead of `Leonardo da Vinci`).
+
 ## 0.7.1 — New app icon · project direction in the README (2026-10-20)
 
 ### Changed

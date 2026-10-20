@@ -117,7 +117,7 @@ memory right away; **Browse models** opens Find models, described below.
 - Generation settings also hold the temperature (0 gives the same answer to the same question every time), the maximum answer length
   and a system prompt, saved in this browser.
 
-![Generation settings — temperature, max answer length, thinking switch, system prompt](img/generation-settings-en.png)
+![Generation settings — temperature, max answer length, thinking switch, auto-summarize switch, system prompt](img/generation-settings-en.png)
 - You can regenerate an answer or edit and resend your message; earlier answers stay as versions you can flip through (‹ 1 / 2 ›).
   Code, tables and math (LaTeX) are rendered.
 - **Long chats**: when a chat nears the context length per chat, the same model summarizes the earlier conversation (the latest turns
