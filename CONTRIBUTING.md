@@ -47,8 +47,8 @@ server and packaging the app.
 
 ## Checks
 
-CI runs the quick check on every push and pull request, on Windows and Ubuntu, without a GPU or model files (about 5 minutes; longer when
-kernels change). Run it locally before you open a pull request:
+CI runs the quick check on every pull request and after every merge into `main`, on Windows and Ubuntu, without a GPU or model files
+(about 5 minutes; longer when kernels change). Run it locally before you open a pull request:
 
 ```bash
 python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2
@@ -63,9 +63,22 @@ ones you ran and on which GPU.
 
 ## Pull requests
 
+`main` changes only through pull requests, the maintainer's changes included. Direct pushes and force pushes to `main` are rejected,
+and a pull request can be merged only when both CI jobs (`check` on Windows, `linux` on Ubuntu) pass.
+
+1. Branch from the latest `main` and give the branch a short English name with a prefix: `feat/`, `fix/`, `perf/`, `docs/`, `ci/` or
+   `chore/` (for example `fix/replace-overread`). Contributors work in a fork; the maintainer branches in this repository.
+2. Commit on the branch, push it and open a pull request against `main`. Fill in the template and link the issue: `Fixes #…` closes it
+   when the pull request is merged, `Refs #…` only links it.
+3. CI runs on the pull request. Push fixes to the same branch until both jobs are green.
+4. The pull request is squash-merged: `main` gets one commit per pull request, and the branch is deleted.
+
+What a pull request should contain:
+
 - One topic per pull request, without unrelated formatting changes.
 - Describe what changed, why, how you checked it, and whether output bits change.
-- Commit messages: a short title line, a blank line, then the details (English or Korean).
+- Commit messages: a short title line, a blank line, then the details (English or Korean). The pull request title becomes the commit
+  title on `main`, so write it the same way.
 - If users will notice the change, add a line to [CHANGELOG.md](CHANGELOG.md). The Korean changelog
   ([문서/바뀐것.md](문서/바뀐것.md)) can be left to the maintainer.
 - By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE).
@@ -86,9 +99,10 @@ in [docs/versioning.md](docs/versioning.md).
    (`[같음]`, "same").
 4. Test the fresh-install path with the packaged app on another port and an empty data folder
    (`GeulPU.exe --포트 44639 --자료 <empty folder> --열지않음`): add a model, load it, chat, check the version in `/api/state`.
-5. Run the quick check, commit, push, and wait for CI to be green.
-6. Tag and push: `git tag -a vX.Y.Z -m "GeulPU X.Y.Z"` then `git push origin vX.Y.Z`. The release workflow builds the zip, the wheel and
-   `SHA256SUMS.txt` from the tagged commit and creates a **draft** release.
+5. Run the quick check and open a pull request from a `release/X.Y.Z` branch with these changes. Merge it when CI is green.
+6. Tag the merged commit on `main` and push the tag: `git switch main`, `git pull --ff-only`, `git tag -a vX.Y.Z -m "GeulPU X.Y.Z"`,
+   `git push origin vX.Y.Z`. The release workflow builds the zip, the wheel and `SHA256SUMS.txt` from the tagged commit and creates a
+   **draft** release.
 7. Download the draft's files, compare their SHA-256, install the wheel in a fresh virtual environment and run it.
 8. Publish: `gh release edit vX.Y.Z --draft=false --latest`. Publishing starts the PyPI workflow, which waits for approval in the `pypi`
    environment and uploads the same wheel.
