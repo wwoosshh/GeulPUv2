@@ -8,6 +8,16 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ## Unreleased
 
+- **8-bit KV cache** (setting — off by default): with Fast mode, CUDA and k-quant models, the KV cache is kept as 8-bit integers with
+  one scale per 32 values and multiplied in that form (contract F1A′ — [contract.md](계약/contract.md) section 2.1). On an RTX 4070 Ti
+  (12 GB) 1.68× the context fits on the same GPU — Qwen2.5-7B Q4_K_M goes from 87,488 to 131,072 tokens for one chat (47,808 to 80,320 for
+  two), Qwen3-8B from 35,328 to 59,392 and Llama-3.1-8B from 39,936 to 66,688. Nothing gets slower, and at 64k tokens prompts are 22 %,
+  generation 19 % and speculative verification 32 % faster (two tensor-core MMAs instead of four, half the KV bytes read). Quality
+  (criterion B″) for all four k-quants is a KL ratio of 0.75–1.55 against llama.cpp's f16 KV — the same order as llama.cpp's q8_0 KV
+  cache — and Q8_0 and Q4_0 files are blocked because they do not pass. Every path matches the CPU reference bit for bit (long context up
+  to 131,072). Prompt-cache chunks are 0.554× the size and never mix with the 16-bit format. Debugger run logs, reproduction files and the
+  research panel's provenance record `kv8`, and the debugger and the reproduction check warn when the setting differs.
+  `도구/debugger.py load --kv8 on|off`; `도구/repro_check.py` checks with the 8-bit KV CPU reference.
 - **Guides**: every picture in the user guide, the debugger guide and the research panel guide was retaken with 0.7.1 — the new icon and
   the current screen terms (the research panel pictures still showed 0.5.0's wording). The research panel guide now tells you to switch
   to exact mode: its numbers are exact-mode numbers, and the default fast mode answers its first question differently

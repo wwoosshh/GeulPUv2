@@ -138,8 +138,8 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, **computation mode**, **speculative decoding**, **prompt cache**, model folder, language, new-version notice. Changes are saved
-immediately.
+chat, **computation mode**, **8-bit KV cache**, **speculative decoding**, **prompt cache**, model folder, language, new-version notice.
+Changes are saved immediately.
 
 **Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded.
 - **Fast**: the activations entering the matrix multiplications are 8-bit (the same class as llama.cpp). Prompt processing is 1.3–1.6×
@@ -148,6 +148,17 @@ immediately.
 - **Exact**: the contract as it was up to 0.5.0 (16-bit activations — research precision).
 - Both modes match the contract's CPU reference bit for bit, and within one mode every path gives the same bits. The
   reproducibility check and Vulkan devices always use Exact.
+
+**8-bit KV cache** — **Off** (default) or On. When on, the keys and values of the earlier tokens (the KV cache) are kept as 8-bit
+integers with one scale per 32 values and multiplied in that form (contract F1A′ — [contract.md](../계약/contract.md) section 2.1). The
+KV cache is 0.55× the size, so longer contexts fit on the same GPU, and long contexts get faster — on an RTX 4070 Ti (12 GB),
+Qwen2.5-7B Q4_K_M goes from 87,488 to 131,072 tokens for one chat (47,808 to 80,320 for two), Qwen3-8B from 35,328 to 59,392 and
+Llama-3.1-8B from 39,936 to 66,688, and at 64k tokens prompts are 22 % and generation 19 % faster (short contexts are not slower). The
+change in next-token probabilities is of the same order as llama.cpp's q8_0 KV cache. It is used only with **Fast**, CUDA and k-quant
+models (files such as Q4_K_M) and is otherwise the same as Off (Q8_0 and Q4_0 files do not pass the quality bar, so they are blocked).
+The answer bits differ from the 16-bit KV cache but are always the same under the same settings — results match the contract's CPU
+reference bit for bit, and the debugger and reproduction files record this setting and warn when it differs. Applies the next time a
+model is loaded ([문서/긴문맥.md](../문서/긴문맥.md) ③b, Korean).
 
 **Speculative decoding** — **On** (default) or Off. Looks up likely next tokens in the prompt and the answer so far (no draft model)
 and verifies several in one step. Because this engine gives the same bits whatever the number of rows in a step, **answers,
