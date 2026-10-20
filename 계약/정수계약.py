@@ -425,11 +425,47 @@ def _바른반올림32(값, 정밀식):
     return f
 
 
-def rope표(최대길이, theta=1e6, hd=64, 인자=None):
+def 얀인자(hd, theta, 배, 원래=32768):
+    """GeulPUv2 ③a — YaRN(계약 4.8): 짝 i 의 주파수 곱 g [hd/2] (fp64)와 표의 크기 m (fp64).
+    경계(β) = hd · ln(L / (β · 2π)) / (2 · ln θ) — 아래 = ⌊경계(32)⌋, 위 = ⌈경계(1)⌉ 를 [0, hd − 1] 로(같으면 위 += 0.001),
+    r_i = clamp((i − 아래) / (위 − 아래), 0, 1) (fp64 나누기), g_i = r_i / s + (1 − r_i) (fp64 연산 셋 — 이 차례),
+    m = 0.1 · ln s + 1 (ln s 는 fp64 로 바르게 — decimal 60 자리, 곱 · 더하기는 fp64). 경계가 정수에 너무 가까우면 멈춘다."""
+    import decimal
+    import math
+    with decimal.localcontext() as c:
+        c.prec = 60
+        두파이 = 2 * _십진파이()
+        로그밑 = decimal.Decimal(repr(float(theta))).ln()
+
+        def 경계(바퀴):
+            return decimal.Decimal(hd) * (decimal.Decimal(원래) / (decimal.Decimal(바퀴) * 두파이)).ln() / (2 * 로그밑)
+        e아래, e위 = 경계(32), 경계(1)
+        assert abs(e아래 - e아래.to_integral_value()) > decimal.Decimal("1e-6") and abs(e위 - e위.to_integral_value()) > decimal.Decimal("1e-6"), \
+            "YaRN 경계가 정수에 너무 가깝다"
+        아래 = float(math.floor(e아래))
+        위 = float(math.ceil(e위))
+        lns = float(decimal.Decimal(배).ln())
+    아래 = max(아래, 0.0)
+    위 = min(위, float(hd - 1))
+    if 위 == 아래:
+        위 += 0.001
+    s = float(배)
+    g = np.empty(hd // 2, np.float64)
+    for i in range(hd // 2):
+        r = (float(i) - 아래) / (위 - 아래)
+        r = min(max(r, 0.0), 1.0)
+        g[i] = r / s + (1.0 - r)
+    m = 0.1 * lns + 1.0
+    return g, m
+
+
+def rope표(최대길이, theta=1e6, hd=64, 인자=None, 얀=None):
     """RoPE 의 cos · sin 표 [위치][hd/2] (짧은실수) — θ_i = θ^(−2i/hd) 를 fp64 로 바르게 반올림(decimal 60 자리의 거듭제곱 → fp64), 각 = 위치 · θ_i
     (fp64 곱 — IEEE 반올림 하나), cos(각) · sin(각) 을 짧은실수로 바르게 반올림(정확한 값의 반올림 하나 — 플랫폼의 수학 함수와 상관없다).
     표준 라이브러리(decimal)만 쓴다 — 14단계의 처음 판(mpmath 50 자리)과 같은 표임을 위치 32768 까지 확인했다.
-    39단계 — 인자(llama 의 `rope_freqs` — 짧은실수 hd/2 칸, 계약 4.7): θ′_i = θ_i / f_i(fp64 나눗셈 — IEEE 반올림 하나) 로 바꾼 뒤 그대로."""
+    39단계 — 인자(llama 의 `rope_freqs` — 짧은실수 hd/2 칸, 계약 4.7): θ′_i = θ_i / f_i(fp64 나눗셈 — IEEE 반올림 하나) 로 바꾼 뒤 그대로.
+    GeulPUv2 ③a — 얀 = (배, 원래 길이)(계약 4.8): θ′_i = θ_i · g_i (fp64 곱 하나), 표 = 짧은실수(m · cos(각)) · 짧은실수(m · sin(각)) 를 바르게
+    (m · cos 의 정확한 곱의 반올림 하나 — 경계에 가까우면 decimal 80 자리의 m · cos)."""
     import decimal
     with decimal.localcontext() as c:
         c.prec = 60
@@ -439,10 +475,19 @@ def rope표(최대길이, theta=1e6, hd=64, 인자=None):
         f = np.asarray(인자, np.float32).astype(np.float64)
         assert f.shape == inv.shape and (f > 0).all(), "RoPE 늘이기 인자는 hd/2 칸의 양수여야 한다"
         inv = inv / f
+    m = None
+    if 얀 is not None:
+        g, m = 얀인자(hd, theta, 얀[0], 얀[1])
+        inv = inv * g
     각 = np.arange(최대길이, dtype=np.float64)[:, None] * inv[None, :]
     평 = 각.reshape(-1)
-    c_ = _바른반올림32(np.cos(각), lambda j: _십진cos_sin(decimal.Decimal(float(평[j])))[0])
-    s_ = _바른반올림32(np.sin(각), lambda j: _십진cos_sin(decimal.Decimal(float(평[j])))[1])
+    if m is None:
+        c_ = _바른반올림32(np.cos(각), lambda j: _십진cos_sin(decimal.Decimal(float(평[j])))[0])
+        s_ = _바른반올림32(np.sin(각), lambda j: _십진cos_sin(decimal.Decimal(float(평[j])))[1])
+        return c_, s_
+    md = decimal.Decimal(m)                        # m 은 fp64 — Decimal 로 정확히
+    c_ = _바른반올림32(m * np.cos(각), lambda j: md * _십진cos_sin(decimal.Decimal(float(평[j])))[0])
+    s_ = _바른반올림32(m * np.sin(각), lambda j: md * _십진cos_sin(decimal.Decimal(float(평[j])))[1])
     return c_, s_
 
 

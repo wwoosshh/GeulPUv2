@@ -227,7 +227,7 @@ const DICT = {
   "다시 다운로드": "Download again",
   "받은 것 지우기": "Delete the partial file",
   "받은 것 지우기: {} {}": "Delete the partial file: {} {}",
-  "{}{}{}문맥 {}{}": "{}{}{}context {}{}",
+  "{}{}{}문맥 {}{}{}": "{}{}{}context {}{}{}",
   " (최대 {})": " (max {})",
   "무결성 확인 중": "Verifying integrity",
   "무결성 확인 안 됨": "Integrity not verified",
@@ -3314,7 +3314,8 @@ function modelBlocks() {
     const head = g.items.find(m => m.shape && m.shape.ok) || g.items[0];
     const s = head.shape || {};
     const ctxNow = Math.min(s.context || 0, S.st.settings.context || s.context || 0);
-    const sub = s.ok ? T`${s.params ? (s.params / 1e9).toFixed(1) + 'B' + NB : ''}${kindOf(head)}${NB}문맥 ${fmtCtx(ctxNow)}${s.context > ctxNow ? T` (최대 ${fmtCtx(s.context)})` : ''}` : kindOf(head);
+    const yarn = s.yarn_orig > 0 && ctxNow > (s.context_native || 0) ? ' · YaRN' : '';       // GeulPUv2 ③a — 파일의 위치 수를 넘는 문맥은 YaRN 으로
+    const sub = s.ok ? T`${s.params ? (s.params / 1e9).toFixed(1) + 'B' + NB : ''}${kindOf(head)}${NB}문맥 ${fmtCtx(ctxNow)}${yarn}${s.context > ctxNow ? T` (최대 ${fmtCtx(s.context)})` : ''}` : kindOf(head);
     return h('div', { class: 'mblock' },
       h('div', { class: 'mhead' },
         h('div', { class: 'main' }, h('div', { class: 'title' }, h('span', { class: 'nm' }, g.name)), h('div', { class: 'sub' }, sub))),

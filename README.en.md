@@ -270,11 +270,16 @@ commands) through an OpenAI-compatible API can connect.
 - **The bigger the context, the better.** An agent's base instructions alone are 10,000–15,000 tokens (Qwen Code: 14,501), and they
   grow as it works. Feature-level development (for example planning, reviewing, implementing and reporting a login feature) without
   compaction needs 100k tokens or more. Set concurrent chats to 1 and the context length per chat high (e.g. 131072) in Settings; the
-  engine reduces it to the model's maximum and to the graphics memory. Maximum reached on an RTX 4070 Ti (12 GB):
+  engine reduces it to the model's maximum and to the graphics memory. For Qwen2.5 7B and larger and Qwen3, a context beyond the
+  model file's position count (32,768 · 40,960) turns on **YaRN** (the position scaling Qwen recommends — factor 2 or 4) up to 131,072;
+  the model list shows 'YaRN' next to the context. With a scaled context, short texts are computed the same way too (static YaRN, as in
+  other engines), so set a large context only when you need long texts ([문서/긴문맥.md](문서/긴문맥.md), Korean). Maximum reached on an
+  RTX 4070 Ti (12 GB):
 
   | Model | Max context | Limit |
   |---|---|---|
-  | Qwen2.5-7B Q4_K_M · Coder-7B Q8_0 | 32,768 | model maximum |
+  | Qwen2.5-7B Q4_K_M | 87,488 (YaRN — 47,808 with two concurrent chats) | graphics memory |
+  | Qwen2.5-7B · Coder-7B Q8_0 | 38,784 (YaRN) | graphics memory |
   | Qwen3-8B Q4_K_M | 35,328 | graphics memory |
   | Llama-3.1-8B Q4_K_M | 39,936 | graphics memory |
   | Llama-3.2-3B Q8_0 | 57,984 | graphics memory |
@@ -486,7 +491,8 @@ backends are packaged only after their bytes are checked against the build hashe
   - Long sessions ([long-context measurement](문서/긴문맥재기.md), fast mode): filling an empty cache with 16k / 32k tokens takes 1.19 / 1.40×
     llama.cpp's time (Qwen2.5-7B Q4_K_M) and 1.29 / 1.40× (Llama-3.1-8B Q4_K_M); a new 1,024-token input at session depth 8k / 16k / 31k
     takes 1.18 / 1.40 / 1.57× and 1.29 / 1.44 / 1.08× — the attention costs 1.9–2.4× llama.cpp's per token of depth. Decoding at the same
-    depths is 1.01–1.06×. Context goes up to 32,768 for Qwen2.5 (no YaRN) and to about 33k for Llama-3.1-8B on 12 GB.
+    depths is 1.01–1.06×. Context goes up to 87,488 for Qwen2.5-7B Q4_K_M with YaRN (③a — 50 s to the first token for 80k tokens,
+    decoding at 80k depth 38.8 ms/token) and to about 33k for Llama-3.1-8B on 12 GB.
   - Speculative decoding (stage 3 — on by default; Qwen2.5-7B Q4_K_M, fast mode, one slot, median of three rounds, generated tokens
     per second): editing code 329 / 356, rewriting a document 389, a quoting summary 347 — 3.5–4.1× the 95 with speculation off and
     1.2–2.5× llama.cpp b11721's fastest speculation (ngram-simple: 266 / 245 / 188 / 139). Ordinary chat: greedy 112, sampling 97,

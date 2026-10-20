@@ -162,6 +162,25 @@ the reason short chunks at long contexts became fast. Accuracy is unchanged (med
    3. **eps**: RMSNorm eps = 10⁻⁵ (the module constant float32(10⁻⁵) = 0x3727C5AC — it must equal the GGUF's value). The formula
       is item 1 unchanged.
 
+8. **YaRN position scaling** (GeulPUv2 ③a — Qwen2.5 7B and larger · Qwen3, [문서/긴문맥.md](../문서/긴문맥.md), Korean): on only
+   when the context (max length) exceeds the GGUF's position count (`context_length` — Qwen2.5 32,768 · Qwen3 40,960); the factor s
+   is the smallest of 2 · 4 that covers the context (original length L = 32,768, context limit 131,072). Only for architecture qwen2
+   (width 3,584 or more) · qwen3 and only when the GGUF has no `rope.scaling.type` (or none). When on, only the RoPE table changes
+   (kernels unchanged):
+   1. **Bounds**: c(β) = hd · ln(L / (β · 2π)) / (2 · ln θ), computed in double-double and correctly rounded to fp64 — low = ⌊c(32)⌋,
+      high = ⌈c(1)⌉, clamped to [0, hd − 1] (if equal, high += 0.001). Within 10⁻⁶ of an integer it stops. (θ = 10⁶ · hd = 128 ·
+      L = 32,768 give low 23 · high 40 — pairs 24 … 39 are mixed.)
+   2. **Frequencies**: r_i = (i − low) / (high − low) (one fp64 division) clamped to [0, 1], g_i = r_i / s + (1 − r_i) (fp64 division,
+      subtraction and addition — in this order), θ′_i = θ_i · g_i (one fp64 product — θ_i as in item 2 of head size 128). Pairs with
+      r_i of 0 or 1 get g_i = 1 or 1/s exactly.
+   3. **Magnitude**: m = 0.1 · ln s + 1 (ln s correctly rounded to fp64, one fp64 product and one fp64 sum — 1.0693147180559945 and
+      1.138629436111989 for s = 2 and 4). The cos and sin tables hold float32(m · cos(position · θ′_i)) and float32(m · sin(...)) — the
+      angle is one fp64 product, and the exact product m · cos is correctly rounded once (q and k are both scaled by m — the attention
+      temperature). This is the formula of transformers' `_compute_yarn_parameters` (Qwen's config `rope_scaling: {type: yarn, factor,
+      original_max_position_embeddings}`) and llama.cpp's rope_yarn, pinned down in fp64.
+   4. A server with YaRN on puts `YaRN s×L` into the context store's chunk names (the KV bytes differ). Within the position count the
+      table and the KV are byte-for-byte unchanged.
+
 ### Head size 128 (stage 22 — Qwen2.5-7B and larger)
 
 The head-64 contract is unchanged. Three things differ at head size 128:
@@ -268,4 +287,4 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | Fast contract F1 (GeulPUv2 stage 2 — [`시험/판23.py`](../시험/판23.py) · [`시험/판26.py`](../시험/판26.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`시험/품질.py`](../시험/품질.py)) | every linear kernel of the `--빠른` modules (Q8_0 · Q4_0 282 cases, Q4_K_M · Q5_K_M 81 cases — real 7B layer-0 weights, random and extreme activations) against the CPU reference with one digit; the five paths and every row's logits of three chat prompts against the CPU reference's full forward pass; the hidden loss relative to the exact mode (KL · top-1 agreement) compared with llama.cpp (criterion B′) |
 | Qwen3 (stage 37 — [`시험/머리정규화37.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/머리정규화37.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`시험/참조생성.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/참조생성.py)) | the head-norm kernel (rows 1 · 4 · 64 · 2048 × the weights of every layer of 8B, random and extreme values) against the CPU reference — v untouched; every row's logits of three chat prompts + 16 generated tokens for 1.7B · 8B (Q8_0 · Q4_K_M) · two synthetic 14B-shape models against the CPU reference's full forward pass; five-path, Vulkan and shared32-emulation summaries equal to CUDA; greedy generation with the CPU reference (not a criterion — compared with llama.cpp) |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
-| Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |
+| Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS; the RoPE table (item 8 — unscaled and YaRN factors 2 · 4 up to position 131,072 — [`엔진/시험_로프표.gl`](../엔진/시험_로프표.gl) against the CPU reference in [`시험/로프표.py`](../시험/로프표.py), byte for byte) — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |

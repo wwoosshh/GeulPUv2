@@ -6,6 +6,7 @@
   3. 판(타일 모양) 표가 생성기 · 엔진에서 같은가
   4. 글(geul) 언어 프로그램이 빌드되는가 — 커널 생성기와 엔진 프로그램 모두(글 컴파일러)
      4b. 문맥 저장소의 GPU 없는 시험 — 가짜 장치 위의 저장소.gl(엔진/시험_저장소CPU.gl)을 파이썬 참조(시험/저장소CPU.py)와 견줌
+     4c. RoPE 표(GeulPUv2 ③a — YaRN 배 2 · 4 와 늘이지 않은 표) — 엔진/시험_로프표.gl 의 표를 CPU 참조(시험/로프표.py)와 바이트까지
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 글 저장소의 자체SPIRV 뒷단으로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
@@ -357,6 +358,17 @@ def 저장소CPU(출력):
     알림("문맥 저장소(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
 
 
+def 로프표(출력):
+    """GeulPUv2 ③a — 로프.gl 의 표(늘이지 않음 · YaRN 배 2 · 4 — 위치 131,072 까지)가 CPU 참조와 바이트까지 같은가(GPU 없이)"""
+    exe = os.path.join(출력, "시험_로프표" + EXE)
+    if not os.path.exists(exe):
+        알림("RoPE 표(GPU 없이)", False, "시험_로프표 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "로프표.py"), exe], os.path.join(출력, "로프표.txt"))
+    알림("RoPE 표(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
+
+
 def 가져오기검사(출력):
     """윈도: 실행기는 kernel32 · shell32 · nvcuda, 서버는 그에 ws2_32(28단계). 리눅스(29단계): 둘 다 libc.so.6 · libcuda.so.1 뿐."""
     허용 = {"kernel32.dll", "shell32.dll", "nvcuda.dll"}
@@ -418,6 +430,7 @@ def main():
         print("글 도구: " + " · ".join(f"{os.path.basename(x)} {해시(x)[:16]}" for x in 도구), flush=True)
         if 빌드(글, 출력, a.병렬):
             저장소CPU(출력)
+            로프표(출력)
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
                 요약.append("건너뜀  [모듈 · SASS] --모듈없이")
