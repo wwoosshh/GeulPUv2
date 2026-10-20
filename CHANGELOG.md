@@ -6,6 +6,20 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.7.1 — New app icon · project direction in the README (2026-10-20)
+
+### Changed
+
+- **App icon**: the browser-tab icon and the mark at the top of the left rail now show the GeulPU logo — the 글 glyph in the green of the
+  글(geul) language site (#10b981) on a dark tile. The glyph is a vector path traced from Malgun Gothic Bold, so it looks the same
+  whatever fonts are installed. The rest of the screen keeps its colors.
+
+### Project
+
+- The README explains where the project is going ([Where GeulPU is going](README.md#where-geulpu-is-going)) instead of listing
+  planned items, and [CITATION.cff](CITATION.cff) names the author and affiliation. The README pictures show the new icon.
+- Release notes: lines wrapped in the changelogs are joined, because GitHub renders every newline in release notes as a line break.
+
 ## 0.7.0 — Debugger v1 · long context with YaRN · standard terminology (2026-10-20)
 
 ### Added

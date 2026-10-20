@@ -8,6 +8,8 @@
      영문 · 숫자만의 라벨(양자화 · 파라미터 · 라이선스)은 고정폭 대문자(.caps · .qlab), 한글은 고정폭에 넣지 않고(넓은 빈칸) 낱말 단위로 줄을 바꾼다.
    - 상태 점: 초록 = 준비 · 정상(불러옴 · 사용 중 포함), 주황(깜빡임) = 진행 중, 회색 = 꺼짐, 빨강 = 실패.
    - 간격(안쪽 여백 · 바깥 여백 · 틈)은 4의 배수(x.ai 의 2 · 4 · 8 · 12 · 16 · 24 · 32 · 48 단계를 기본으로), 1 ~ 3px 은 선 맞춤에만.
+   - 로고(레일 위의 '글' · 탭 아이콘 favicon.svg)는 글(geul) 언어 사이트의 초록 #10b981 — 강조색과 따로(0.7.1). 모양은 맑은 고딕 Bold 의
+     '글' 윤곽(경로)이라 글꼴과 상관없이 같다.
    - 강조색 선셋 오렌지 하나 — "지금 움직이는 것"(진행 · 도는 상태 · 지금 위치 · 키보드 초점)에만. 고른 것 · 켠 것은 흰색 · 밝은 회색
      (분할 단추 · 스위치 · 체크), 판정 · 상태 점의 성공 · 실패만 초록 · 빨강(빨강에는 늘 경고 아이콘 — 강조색과 헷갈리지 않게 분홍 쪽 빨강),
      추천 · 경고는 무채색 + 아이콘.
@@ -34,6 +36,7 @@
   --accent: #ff7a17;
   --accent-line: rgba(255, 122, 23, 0.6);
   --accent-wash: rgba(255, 122, 23, 0.1);
+  --logo: #10b981;
   --ok: #7fd6a4;
   --err: #ff6b81;
   --err-wash: rgba(255, 107, 129, 0.08);
@@ -101,9 +104,10 @@ h3 { font-size: 17px; line-height: 24px; }
   padding: 16px 0 12px; border-right: 1px solid var(--hairline); background: var(--canvas); z-index: 35;
 }
 .mark {
-  width: 34px; height: 34px; border-radius: var(--r-sm); background: var(--canvas-soft); border: 1px solid var(--hairline-strong);
-  color: var(--accent); display: grid; place-items: center; font-size: 17px; margin-bottom: 16px; user-select: none;
+  width: 34px; height: 34px; border-radius: var(--r-sm); background: var(--canvas); border: 1px solid var(--hairline-strong);
+  color: var(--logo); display: grid; place-items: center; margin-bottom: 16px; user-select: none;
 }
+.mark svg { width: 100%; height: 100%; display: block; }
 .rail-btn {
   position: relative; width: 40px; height: 40px; border: 0; border-radius: var(--r-pill); background: transparent;
   color: var(--mute); display: grid; place-items: center; transition: color .15s, background .15s;

@@ -3,9 +3,12 @@ message: "If you use GeulPU in your research, please cite it as below."
 title: "GeulPU: a deterministic local LLM engine and debugger"
 type: software
 authors:
-  - name: "wwoosshh"
+  - family-names: "Woo"
+    given-names: "Sunghyeun"
+    affiliation: "Chungwoon University"
+    alias: "wwoosshh"
     website: "https://github.com/wwoosshh"
-version: "0.7.0"
+version: "0.7.1"
 date-released: "2026-10-20"
 license: MIT
 repository-code: "https://github.com/wwoosshh/GeulPUv2"

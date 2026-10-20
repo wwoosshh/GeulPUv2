@@ -53,7 +53,7 @@ because it contains no model — you download models inside the app.
 To check that the file arrived intact (optional), compare it with `SHA256SUMS.txt` on the same page. In PowerShell:
 
 ```powershell
-Get-FileHash .\GeulPU-0.7.0-windows-x64.zip
+Get-FileHash .\GeulPU-*-windows-x64.zip
 ```
 
 ### 2. Unzip

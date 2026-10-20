@@ -159,8 +159,9 @@ prompt time. With speculative decoding (on by default), editing code generates 3
 
 Fine-tunes of these models with the same chat template run too. Qwen2.5 (7B and larger) and Qwen3 take up to 131,072 tokens of context
 with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT — on AMD's
-Windows driver only Q8_0 and Q4_0 files run for now). Not yet: other architectures (Gemma, Phi, …), mixture-of-experts models, image
-input, F16 / BF16 and Q2_K · Q3_K · IQ formats, Linux and macOS packages ([details](docs/user-guide.md#supported-models)).
+Windows driver only Q8_0 and Q4_0 files run for now). Releases are built for Windows x64; on Linux GeulPU builds from source (tested
+under WSL2). Not yet: other architectures (Gemma, Phi, …), mixture-of-experts models, image input, F16 / BF16 and Q2_K · Q3_K · IQ
+formats, macOS ([details](docs/user-guide.md#supported-models)).
 
 ## How it works
 
@@ -207,15 +208,25 @@ The folder names are Korean because the code is written in 글(geul):
 | [`교차검증/`](교차검증/) cross-check | The reproducibility reference (outputs and build hashes) |
 | [`문서/`](문서/) · [`docs/`](docs/) | Documents in Korean · in English |
 
-## Status and roadmap
+## Where GeulPU is going
 
-GeulPU is young — its first release was in October 2026 — and is maintained by one person. Releases are Windows x64; Linux builds from
-source and has been tested under WSL2. Planned next: an 8-bit KV cache for longer contexts, and a bridge from the debugger to PyTorch
-and Hugging Face checkpoints (comparing log-probabilities with the original model, exporting per-layer data). See the
-[changelog](CHANGELOG.md) for what each release added.
+GeulPU aims to be the place where local models are tested and debugged: you fine-tune or quantize a model, convert it to GGUF, and run
+it in an engine where every result can be reproduced, inspected and compared — on your own PC, and on anyone else's. Determinism is the
+foundation. When the same input always gives the same bits, every difference has a cause you can find.
 
-The engine came out of a research program — stages 0 to 40, each with its criteria fixed before measuring and every kernel variant
-compared bit for bit before timing. That record, a research log and a paper draft are in the
+The work ahead follows from that:
+
+- **Longer contexts for agents.** A coding agent's instructions alone are 10–15k tokens, and its prompts keep growing as it works. The
+  aim is 100k tokens and more on a consumer GPU, with results that stay bit-exact.
+- **From training to testing.** Connecting the debugger to PyTorch and Hugging Face checkpoints, so that a GGUF file can be compared
+  token by token with the model it was converted from.
+- **Wider coverage.** More model families, weight formats and GPUs — each one checked bit for bit against the CPU reference before it is
+  supported.
+
+What each release added is in the [changelog](CHANGELOG.md).
+
+GeulPU grew out of a research program — 40 stages, each with its criteria fixed before measuring and every kernel variant compared bit
+for bit before it was timed. That record, a research log and a paper draft are in the
 [GeulPU research repository](https://github.com/wwoosshh/GeulPU). Its motto still holds: *it loses only what is written down — and it
 shows what losing less costs.*
 
