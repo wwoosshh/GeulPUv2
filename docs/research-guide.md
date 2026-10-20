@@ -1,6 +1,6 @@
 # GeulPU research panel — a guide for researchers
 
-**[한국어](../연구자안내.md)** · [README](../README.en.md) · [contract §5.2](../계약/contract.md) · [research log](https://github.com/wwoosshh/GeulPU/blob/main/docs/research-log.md)
+**[한국어](../연구자안내.md)** · [README](../README.en.md) · [contract §5.2](../계약/contract.md) · [research log](https://github.com/wwoosshh/GeulPU/blob/main/docs/research-log.md) · [debugger guide](debugger-guide.md)
 
 GeulPU's **research panel** is a workbench next to the chat. It splits an answer into tokens to show where the model hesitated, lets you
 pick a different token and continue from there, and measures how much one word of the question — or one model file — changes the
@@ -511,3 +511,5 @@ Things you will use:
   2 % per token.
 - **Deeper**: the definition of log-probabilities is [contract §5.2](../계약/contract.md); the stage that built this feature is in the
   [research log](https://github.com/wwoosshh/GeulPU/blob/main/docs/research-log.md); checking without a GPU is [`도구/repro_check.py`](../도구/repro_check.py).
+- **Many requests at once?** Recording, replaying, branching and comparing many requests as a run — an agent session or a test set — is
+  in the [debugger guide](debugger-guide.md).

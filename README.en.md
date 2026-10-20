@@ -223,6 +223,32 @@ A reproduction file can be checked without a GPU, too — clone the repository (
 `python -I 도구/repro_check.py <repro.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
 and log-probabilities (a few minutes for 7B). A reproduction file records its computation mode and is checked in that mode.
 
+### 6. Debugger — record · replay · branch · compare
+
+Where the research panel looks into one answer, the **debugger** (the bug button on the left rail) works on **runs** — many requests,
+such as an agent session or a test set. It is for people who build or use local models: run a session or a test set again bit for bit
+and find where and why it changed (it ships in the version after 0.6.0 — until then, [build from source](#build-from-source)).
+
+**New to it? Start with the [debugger guide](docs/debugger-guide.md)** — it follows one test set through recording, replay, observing,
+branching, comparing, export and import with screenshots, and covers the script (`도구/debugger.py`), the API, the run log format and the
+costs.
+
+- **Record** — press **Start recording** and every generation request through the app's `/v1` (agents · scripts · chat) goes into a run
+  log (JSONL), one line each — request and response with the seed, the prompt tokens and every step's logit hash. A test set (JSONL) can
+  also be run as one run. Recording adds 0.35 % to request time.
+- **Replay** — sends the recorded requests and branches again with the same seeds and compares the tokens and every step's logit hash.
+  With the same version · model file · computation mode it matches bit for bit on another PC too.
+- **Observe · breakpoints** — per request, per token: probability · alternatives · margin (echo scoring — the same bits as generation).
+  Breakpoints find low-margin steps · low-probability samples · tool-call starts.
+- **Branch** — generate again from an alternative token at some step, or from an edited request (tool result · system prompt ·
+  settings). Same seed, same random numbers, so any difference comes only from what you changed.
+- **Compare** — two runs of the same request sequence with a different model file · quantization · settings · version, request by
+  request: same answer? · first diverging step · the log-probability difference of the same answer scored by both models.
+- **Export · import** — move a run to another PC as one run log file and replay it there, or check it without a GPU against the precision
+  contract's CPU reference (`도구/repro_check.py`).
+
+![The debugger — run list, run header, request table (after a replay all 50 requests and 2 branches are the same)](docs/img/debugger/01-runs-en.png)
+
 ### Use it from other programs (OpenAI-compatible API)
 
 While a model is loaded in the app (sending one chat message loads it), use `http://127.0.0.1:44544/v1` as an OpenAI-compatible base
@@ -298,8 +324,9 @@ Contract 5.2 ([contract](계약/contract.md)) defines the values, so they are bi
 - `/v1/completions`: `"logprobs": 5`, `"echo": true` (log-probabilities of the prompt tokens too), `"max_tokens": 0` (score only, no
   generation). `prompt` is text or an array of token ids.
 - The `"geulpu"` extension: `"logit_hash": true` (a 64-bit hash of each step's logit row), `"prompt_tokens": true` (the prompt tokens
-  after the chat template), `"echo_from": n` (echo log-probabilities from the token at index n on — 0-based; earlier ones are null), and `entropy` · `top_ids` · `top_logprobs`
-  (aligned with the ids) · `seed` in the response.
+  after the chat template), `"echo_from": n` (echo log-probabilities from the token at index n on — 0-based; earlier ones are null), `"step_offset": n` (start the
+  step index of the sampling random numbers at n — a branch continues with the same random numbers as the rest of the original answer),
+  and `entropy` · `top_ids` · `top_logprobs` (aligned with the ids) · `seed` in the response.
 - `/tokenize` · `/detokenize` · `/tokenizer_info` — in the same shape as vLLM.
 - In `geulpu`, `tokens` and `logit_hashes` include the step that sampled the stop token (EOS), while the log-probability arrays
   (`logprobs`, `entropy`, `top_ids`, `top_logprobs`) cover only the answer's tokens, as in OpenAI — one shorter when the answer ends with
@@ -550,13 +577,14 @@ reports, paper) lives in the [GeulPU repository](https://github.com/wwoosshh/Geu
 | [`커널/`](커널/) (kernels) | `커널생성.gl` + `생성*.gl` — the kernel generator: it emits a kernel module (geul source) per model architecture, shape, weight format and device. `진단*.gl` — diagnosis kernels. |
 | [`앱/`](앱/) (app) | `관리자.gl` (GeulPU.exe) and its modules, `web/` (the UI — self-contained HTML · JS · CSS, Korean and English), `data/models.json` (the model catalog), `꾸리기.ps1` (release packaging), `읽어보기.txt` (the zip's README), `DESIGN.md` (design system). |
 | [`계약/`](계약/) (contract) | [계약.md](계약/계약.md) · [contract.md](계약/contract.md) — the precision contract. `정수계약.py` — its CPU reference implementation (every bit comparison is against it), `로그확률.py` — log-probabilities (§5.2) in Python, `gguf읽기.py`. |
-| [`도구/repro_check.py`](도구/repro_check.py) (tools) | Checks a research-panel reproduction file without a GPU, on the CPU reference. |
+| [`도구/`](도구/) (tools) | [`debugger.py`](도구/debugger.py) — the debugger (record · replay · score · breakpoints · branch · compare run logs) from scripts, Python standard library only. [`repro_check.py`](도구/repro_check.py) — checks a research-panel reproduction file or a debugger run log without a GPU, on the CPU reference. |
 | [`시험/`](시험/) (tests) | `빠른점검.py` (the quick check run by CI), `계약자체.py` (the contract's CPU self-tests), `참조7B.py` (the CPU reference forward pass for 7B — the end-to-end bit oracle), `판23.py` · `판26.py` · `머리128.py` · `줄128.py` (each kernel against the CPU reference — on the GPU, via `쿠다드라이버.py`), `품질.py` (hidden loss relative to the exact mode, compared with llama.cpp), `뽑기.py` · `로그확률38.py` (sampling and log-probability contracts, Python vs geul), `서버28.py` · `로그확률서버38.py` (server regression tests: bits under concurrency, API, log-probabilities), `모듈해시.txt` · `SASS넘침.txt` · `글저장소커밋.txt`. |
 | [`재기/`](재기/) (measurements) | Speed and quality runs — `견주기2.sh` (prompt time of exact · fast · llama.cpp, order alternating by round) · `견주기요약.py`, `생성2.sh` (decode ms/token), `품질2.sh`, `라마.py` (llama.cpp's C API). The geul test and measurement programs are in `엔진/`: `시험_7B.gl` · `재기_7B.gl` · `재기_프롬프트.gl` · `재기_커널.gl` · `퍼플렉시티.gl`. |
 | [`교차검증/`](교차검증/) (cross-check) | The reference for the app's reproducibility check (Benchmark → cross-check): `expected.json` (the reference PC's outputs and build hashes) · `requests.json` (the 32 problems). Packaging compares the build hashes with it. |
-| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan · [2c단계.md](문서/2c단계.md) — matmul kernels · [3단계.md](문서/3단계.md) — speculative decoding · [4단계.md](문서/4단계.md) — long-prompt attention kernel · [4b단계.md](문서/4b단계.md) — long-context decode merge fix), [긴문맥재기.md](문서/긴문맥재기.md) (long-session prompt and decode vs llama.cpp) — Korean. |
-| [`docs/`](docs/) | English documents — [research-guide.md](docs/research-guide.md) (research panel guide) · [glossary.md](docs/glossary.md) · `img/` (screenshots). |
+| [`문서/`](문서/) (documents) | [이관범위.md](문서/이관범위.md) (what was moved) · [바뀐것.md](문서/바뀐것.md) (changelog) · stage records ([2단계.md](문서/2단계.md) — fast contract F1 · [2b단계.md](문서/2b단계.md) — fast attention plan · [2c단계.md](문서/2c단계.md) — matmul kernels · [3단계.md](문서/3단계.md) — speculative decoding · [4단계.md](문서/4단계.md) — long-prompt attention kernel · [4b단계.md](문서/4b단계.md) — long-context decode merge fix), [긴문맥재기.md](문서/긴문맥재기.md) (long-session prompt and decode vs llama.cpp) · [디버거.md](문서/디버거.md) (debugger v1 — plan, stage results, verdicts) — Korean. |
+| [`docs/`](docs/) | English documents — [research-guide.md](docs/research-guide.md) (research panel guide) · [debugger-guide.md](docs/debugger-guide.md) (debugger guide) · [glossary.md](docs/glossary.md) · `img/` (screenshots). |
 | [`연구자안내.md`](연구자안내.md) | The research panel guide in Korean. |
+| [`디버거안내.md`](디버거안내.md) | The debugger guide in Korean. |
 
 ### Build from source
 

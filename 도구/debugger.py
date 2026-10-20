@@ -53,7 +53,8 @@ tokens · logit_hashes 가 있다. 첫 기록기의 헤더({"geulrun": 1, …})�
 해시를 함께 받아 원래와 같은 계산인지 본다. (2) 요청 분기 — 요청을 고쳐(--set messages.2.content=… · --set temperature=0 — 값은 JSON
 이면 JSON, 아니면 글. --set-file 은 파일의 글) 같은 시드로 다시 생성해 원래와 비교한다(프롬프트 토큰이 처음 달라진 자리 · 답이 처음
 갈라진 스텝). 둘 다 --repeat 번 돌려 같은 비트인지 본다. 토큰 분기는 /v1/completions 라 서버가 도구 호출을 풀지 않고(글 그대로),
-parallel_tool_calls 가 거짓(Llama 3 의 틀)이면 채팅 길처럼 첫 호출에서 끝내지 않는다 — 분기의 끝은 끝 토큰 · max_tokens · stop 뿐이다.
+parallel_tool_calls 가 거짓(Llama 3 채팅 템플릿)이어도 /v1/chat/completions 처럼 첫 호출에서 끝내지 않는다 — 분기는 EOS 토큰 ·
+max_tokens · stop 에서만 끝난다.
 
 비교(compare): 실행 A 와 B(같은 요청열 — 다른 모델 파일 · 양자화 · 설정 · GeulPU 버전)를 요청 차례(i)마다 — 같은 요청 · 같은 프롬프트
 토큰인가, 같은 답인가 · 처음 갈라진 스텝, 그리고 A 의 답을 A 의 모델과 B 의 모델로 점수 매긴 로그확률의 차(스텝마다 B − A — 합 · 평균 ·
@@ -665,7 +666,7 @@ def 분기(a):
         print(f"  분기 뒤 {len(새토큰)} 토큰({끝까닭(r)}): {보임(새뒤, 160)}")
         if "null_branch_same" in 검사:
             print("  원래 토큰으로 이은 답: " + ("원래와 같음" if 검사["null_branch_same"] else "원래와 다름")
-                  + (f"(원래보다 {검사['null_branch_longer']} 토큰 김 — 채팅 길의 끝 규칙)" if 검사.get("null_branch_longer") else ""))
+                  + (f"(원래보다 {검사['null_branch_longer']} 토큰 김 — /v1/chat/completions 의 끝 규칙)" if 검사.get("null_branch_longer") else ""))
     else:
         p1, p2 = g["prompt_tokens"], g2.get("prompt_tokens") or []
         검사["prompt_diff_at"] = 처음다른(p1, p2)
