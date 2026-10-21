@@ -6,6 +6,35 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.10.0 — Fast attention: faster long prompts (2026-10-22)
+
+### Added
+
+- **Fast attention** (setting — off by default): used only with the 8-bit KV cache on (Fast mode, CUDA, k-quant models). Attention is
+  computed in a lighter form (contract F2 — [contract.md](계약/contract.md) section 2.2: one value scale per head instead of one per 32
+  values, a base-2 exponential, and probabilities as 16-bit integers with one exponent per 64 keys). On an RTX 4070 Ti, Qwen2.5-7B Q4_K_M
+  processes 1,024 new tokens at depth 32k and 64k 22.6 % and 27.6 % faster than with the 8-bit KV cache alone, and empty-cache prompts of
+  32k and 64k 17.2 % and 23.0 % faster (Llama-3.1-8B: 24.0, 27.5, 18.6 and 23.7 %). For Qwen2.5-7B all four are faster than llama.cpp
+  b11796 with an f16 or a q8_0 KV cache (0.74–0.96× its time). Generation is unchanged and speculative verify steps are 4–6 % faster.
+  Quality (criterion B″) passes for Qwen2.5-7B, Llama-3.1-8B and Mistral-7B — KL ratios 0.77–1.55 against llama.cpp's f16 KV, the same
+  order as the 8-bit KV cache. Qwen3-8B misses the top-1 bar (−0.51 points against −0.5), so Qwen3 models keep the 8-bit KV cache without
+  fast attention. Every path matches the new CPU reference bit for bit. Prompt-cache chunks carry the contract name `|F2` and never mix
+  with the other formats, and the context store refuses chunks whose setting differs from the engine's. The server state, debugger run
+  logs, benchmarks and reproduction files record the setting, and the debugger's compare and the reproduction check warn when it differs.
+  `도구/debugger.py load --fast-attention`; `도구/repro_check.py` checks with the F2 CPU reference. Design, criteria fixed before
+  measuring, and results: [문서/빠른어텐션.md](문서/빠른어텐션.md) (Korean). With the setting off (the default), outputs are
+  bit-identical to 0.9.0 for the same model file, computation mode, YaRN factor and request.
+
+### Project
+
+- The 글(geul) compiler is pinned to its public release 1.4.0 (tag `2g-1.4.0`), and the PTX and SPIR-V backends now live in this
+  repository ([백엔드/](백엔드/)). The engine programs and all 22 kernel modules are byte-identical.
+- For contributors: the tests take the tokenizer from the GGUF file they are given, and the measurement scripts read the model folder and
+  llama.cpp from environment variables (`GEULPU_MODELS`, `GEULPU_LLAMA_BENCH`). The files GPU tests need are listed in
+  [docs/development.md](docs/development.md#checks).
+- Published releases are archived on Zenodo with a DOI; Zenodo reads [CITATION.cff](CITATION.cff) (release step 9 in
+  [CONTRIBUTING.md](CONTRIBUTING.md)).
+
 ## 0.9.0 — Faster generation in long sessions (2026-10-21)
 
 ### Changed
