@@ -21,7 +21,7 @@ jobs:
         id: geul
         shell: bash
         run: echo "sha=$(tr -d '\r\n ' < GeulPUv2/시험/글저장소커밋.txt)" >> "$GITHUB_OUTPUT"
-      - name: 글 저장소 받기(research/gpu 의 고정 커밋)
+      - name: 글 저장소 받기(고정 판 — 시험/글저장소커밋.txt)
         uses: actions/checkout@v7
         with:
           repository: wwoosshh/geul-lang

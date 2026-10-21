@@ -2,7 +2,7 @@
 # 2b단계 2b-1 — F1A 에뮬레이션의 품질(판정 B″ — 문서/2b단계.md): 모델마다 정밀 · F1 · F1+KV(· F1+QKV) 모듈로 엔진/시험_7B --한길 을 돌려,
 # 정밀 모드 대비 KL · 1위 일치를 llama.cpp b11719(f16 KV · 참고로 q8_0 KV)와 견준다(시험/품질.py — 2,048 토큰 글 넷 + 8,192 창 하나).
 #   bash 재기/품질2b.sh <작업 폴더(빠른 디스크 — ASCII 경로)> <결과 폴더> [<모델 이름> …]
-# 모듈은 MODDIR(기본 작업 폴더/모듈)에 만든다(빌드/글/커널생성.exe + 글 저장소의 자체PTX — 있으면 그대로 쓴다). 로짓(모델마다 수십 GB)과
+# 모듈은 MODDIR(기본 작업 폴더/모듈)에 만든다(빌드/글/커널생성.exe + 빌드/글/ptx-backend.exe — 문서/개발.md 의 '소스에서 빌드하기' 2. 있으면 그대로 쓴다). 로짓(모델마다 수십 GB)과
 # 모델의 사본(작업 폴더 — 느린 디스크에서 한 번만 읽는다, COPY_MODEL=0 이면 그대로)은 견준 뒤 지운다.
 # 모델은 고정 경로(F:\geulpu-models — llama.cpp 도구가 한글 경로를 못 연다). 변수 이름은 ASCII(윈도의 Git Bash).
 # GeulPUv2 ③b-2(문서/긴문맥.md) — 변형 KV8 은 실제 8비트 KV 모듈(커널생성 --빠른 --KV8 — 모듈 이름 끝 _KV8), KV8EMU · V8EMU 는 ③b-1 의
@@ -14,7 +14,6 @@ set -u
 W=$1; OUT=$2; shift 2
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 B=$ROOT/빌드/글; LB=${LLAMA_DIR:-F:/geulpu-models/llama-b11719}; M=${MODELS_DIR:-F:/geulpu-models}
-GL=${GEUL_REPO:-$ROOT/../geul-lang-v2}
 MD=${MODDIR:-$W/모듈}; mkdir -p "$OUT" "$MD"
 WT=$ROOT/빌드/wikitext-2/wiki.test.raw
 # 이름 | GGUF | 커널생성의 모양 인자 | 변형(F1 · KV · QKV — 정밀은 늘)
@@ -33,7 +32,7 @@ mod() {  # 이름 모양인자 변형 → 모듈 경로(표준 출력)
     case $3 in F1) f=(--빠른);; KV8) f=(--빠른 --KV8);; KV|QKV) f=(--빠른 --어텐션한자리 "$3");; KV8EMU|V8EMU) f=(--빠른 --어텐션한자리 "${3%EMU}");;
       F2_KV8) f=(--빠른 --F2);; esac
     # shellcheck disable=SC2086  # 모양 인자는 낱말로 나뉘어야 한다
-    if ! { "$B/커널생성.exe" $2 "$g" "${f[@]}" > "$MD/$1_$3.생성.log" 2>&1 && "$GL/build/자체PTX.exe" "$g" -o "$p" > "$MD/$1_$3.ptx.log" 2>&1; }; then
+    if ! { "$B/커널생성.exe" $2 "$g" "${f[@]}" > "$MD/$1_$3.생성.log" 2>&1 && "$B/ptx-backend.exe" "$g" -o "$p" > "$MD/$1_$3.ptx.log" 2>&1; }; then
       echo "  모듈 실패 — $MD/$1_$3.*.log" >&2
       rm -f "$p"
     fi
