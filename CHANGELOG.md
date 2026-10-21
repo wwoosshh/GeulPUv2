@@ -6,6 +6,19 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+- **Faster generation in long sessions** (Fast mode, CUDA — outputs are bit-identical to 0.8.0): the speculative-decoding verify step no
+  longer reads the KV cache once per draft row — rows of the same chat now share each KV tile and the attention merges every 1,024-key
+  group in registers. On an RTX 4070 Ti the 8-row verify step at 64k tokens takes 23.3 ms instead of 91.1 (Qwen2.5-7B, 16-bit KV),
+  19.3 instead of 62.9 (8-bit KV) and 27.1 instead of 114.8 (Llama-3.1-8B, 8-bit KV); at 130k (8-bit KV) 26.0 instead of 111.7. It now costs
+  1.2× a one-row step at every depth (it was 2.3–4.8× at 32k–64k), and the server's draft-length model was refitted to it, so drafts stay
+  long in long sessions. One-row decode is 5–7 % faster at 64k and 12 % at 130k, the decode kernel no longer launches blocks for the whole
+  context setting (8-row steps at short depth 3–12 % faster, most with long context settings), and long prompts are 2–3 % faster. With
+  ~30k tokens of context (8-bit KV), code edits with speculation now generate 289–291 tokens/s instead of 173–184 (0.8.0); llama.cpp b11768's
+  fastest speculative mode reaches 126–175 on the same requests. Long prompts are still slower than llama.cpp (1.0–1.5×). Details:
+  [문서/긴문맥.md](문서/긴문맥.md) ③c (Korean).
+
 ## 0.8.0 — 8-bit KV cache: longer contexts, faster long prompts (2026-10-21)
 
 ### Added
