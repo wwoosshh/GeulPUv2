@@ -7,20 +7,20 @@
          화면(app.js)의 같은 계산도(시험/디버거도구.py · 시험/디버거화면.js)
      2c. 앱 화면 — app.js 문법(node) · 화면 문구가 모두 영어 사전에 있는가(시험/화면사전.py)
   3. 커널 변형(타일 모양) 표가 생성기 · 엔진에서 같은가
-  4. 글(geul) 언어 프로그램이 빌드되는가 — 커널 생성기와 엔진 프로그램 모두(글 컴파일러)
+  4. 글(geul) 언어 프로그램이 빌드되는가 — 커널 생성기 · PTX · SPIR-V 백엔드(백엔드/)와 엔진 프로그램 모두(글 컴파일러)
      4b. 문맥 저장소의 GPU 없는 시험 — 가짜 장치 위의 저장소.gl(엔진/시험_저장소CPU.gl)을 파이썬 참조(시험/저장소CPU.py)와 비교
      4c. RoPE 표(GeulPUv2 ③a — YaRN 배 2 · 4 와 늘이지 않은 표) — 엔진/시험_로프표.gl 의 표를 CPU 참조(시험/로프표.py)와 바이트까지
      4d. 디버거 v1 — 앱 기록기의 JSON 문법 훑기(앱/디버거제이슨.gl — 엔진/시험_디버거제이슨.gl)를 파이썬의 엄격한 풀기(시험/디버거제이슨.py)와
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
-     (31단계 — SPIR-V 는 글 저장소의 자체SPIRV 뒷단으로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다)
+     (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
 
   python -X utf8 시험/빠른점검.py [--글 <글 저장소 — 기본 ../geul-lang-v2>] [--병렬 N] [--출력 <폴더 — 기본 빌드/점검>] [--해시갱신] [--계약없이]
                                 [--모듈없이]
---모듈없이: 5 · 7(모듈 · SASS)을 건너뛴다 — CI 는 커널/ · 시험/모듈해시.txt · 시험/SASS넘침.txt · 시험/글저장소커밋.txt · 이 파일 · ci.yml 이
+--모듈없이: 5 · 7(모듈 · SASS)을 건너뛴다 — CI 는 커널/ · 백엔드/ · 시험/모듈해시.txt · 시험/SASS넘침.txt · 시험/글저장소커밋.txt · 이 파일 · ci.yml 이
 앞 커밋과 같으면 이것으로 돈다(모듈은 그 파일들로만 정해진다 — 엔진/ · 앱/ 은 모듈을 바꾸지 않는다). 하나라도 바뀌면 모두 본다.
-글 저장소에는 build/self_컴파일러.exe · build/자체PTX.exe · build/자체SPIRV.exe(리눅스에서는 확장자 없이)가 있어야 한다
-(README 의 빠른 시작 2). 리눅스(29단계 — 글 D-50)에서는 같은 프로그램을 ELF 로 빌드하고, 모듈은 윈도와 같은 시험/모듈해시.txt 와 견준다.
+글 저장소(고정 판 — 시험/글저장소커밋.txt)에는 build/self_컴파일러.exe(리눅스에서는 확장자 없이)가 있어야 한다(문서/개발.md 의
+'소스에서 빌드하기' 2). 리눅스(29단계 — 글 D-50)에서는 같은 프로그램을 ELF 로 빌드하고, 모듈은 윈도와 같은 시험/모듈해시.txt 와 견준다.
 마지막 줄 "빠른 점검: 모두 통과"(종료 0) 또는 "못 미침 …"(종료 1).
 """
 import argparse
@@ -206,6 +206,8 @@ def 빌드(글, 출력, 병렬):
     컴파일러 = os.path.join(글, "build", "self_컴파일러" + EXE)
     환경 = dict(os.environ, GEUL_ROOT=글)
     일들 = [("커널생성", os.path.join(ROOT, "커널", "커널생성.gl"))] + [(p, os.path.join(ROOT, "엔진", p + ".gl")) for p in 호스트프로그램들()]
+    백엔드들 = [("ptx-backend", os.path.join(ROOT, "백엔드", "PTX", "PTX.gl")), ("spirv-backend", os.path.join(ROOT, "백엔드", "SPIRV", "SPIRV.gl"))]
+    일들 += 백엔드들
     if not 리눅스:
         일들.append(("GeulPU", os.path.join(ROOT, "앱", "관리자.gl")))      # 36단계 — 앱의 관리자(윈도만: WinHTTP · CNG · 셸)
 
@@ -220,7 +222,9 @@ def 빌드(글, 출력, 병렬):
     with ThreadPoolExecutor(병렬) as ex:
         결과 = list(ex.map(하나, 일들))
     틀림 = [f"{이름}: {꼬리}" for 이름, 된, 꼬리 in 결과 if not 된]
-    알림("글 빌드", not 틀림, f"생성기 + 호스트 프로그램 {len(일들) - 1} 개 ({time.time() - t0:.1f} 초)" + (f" — {틀림}" if 틀림 else ""))
+    알림("글 빌드", not 틀림, f"생성기 + 백엔드 둘 + 호스트 프로그램 {len(일들) - 3} 개 ({time.time() - t0:.1f} 초)" + (f" — {틀림}" if 틀림 else ""))
+    if not 틀림:
+        print("백엔드: " + " · ".join(f"{이름} {해시(os.path.join(출력, 이름 + EXE))[:16]}" for 이름, _ in 백엔드들), flush=True)
     return not 틀림
 
 
@@ -236,8 +240,8 @@ def 모듈표읽기():
 
 def 모듈(글, 출력, 병렬, 갱신):
     생성기 = os.path.join(출력, "커널생성" + EXE)
-    뒷단 = os.path.join(글, "build", "자체PTX" + EXE)
-    뒷단V = os.path.join(글, "build", "자체SPIRV" + EXE)
+    뒷단 = os.path.join(출력, "ptx-backend" + EXE)         # 빌드()가 백엔드/ 에서 만든 것
+    뒷단V = os.path.join(출력, "spirv-backend" + EXE)
     표 = 모듈표읽기()
 
     def 하나(항목):
@@ -454,12 +458,12 @@ def main():
     디버거도구(출력)
     화면점검(출력)
     판표()
-    도구 = [os.path.join(글, "build", x + EXE) for x in ("self_컴파일러", "자체PTX", "자체SPIRV")]
+    도구 = [os.path.join(글, "build", "self_컴파일러" + EXE)]
     없는것 = [x for x in 도구 if not os.path.exists(x)]
     if 없는것:
-        알림("글 도구", False, f"없다: {없는것} — README 의 빠른 시작 2")
+        알림("글 컴파일러", False, f"없다: {없는것} — 문서/개발.md 의 '소스에서 빌드하기' 2")
     else:
-        print("글 도구: " + " · ".join(f"{os.path.basename(x)} {해시(x)[:16]}" for x in 도구), flush=True)
+        print("글 컴파일러: " + " · ".join(f"{os.path.basename(x)} {해시(x)[:16]}" for x in 도구), flush=True)
         if 빌드(글, 출력, a.병렬):
             저장소CPU(출력)
             로프표(출력)

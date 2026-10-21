@@ -76,9 +76,9 @@ $Dist = Join-Path $Out ('GeulPU-' + $Ver)
 if (Test-Path -LiteralPath $Dist) { Remove-Item -LiteralPath $Dist -Recurse -Force }
 foreach ($d in @('bin', 'kernels', 'web', 'data', 'data\crosscheck')) { New-Item -ItemType Directory -Path (Join-Path $Dist $d) -Force | Out-Null }
 $Bin = Join-Path $Dist 'bin'
-Say 'PTX · SPIR-V 뒷단...'
-Run $Comp @('research/gpu/자체PTX/PTX.gl', '-o', (Join-Path $Bin 'ptx-backend.exe')) $GeulRoot 'ptx-backend'
-Run $Comp @('research/gpu/자체SPIRV/SPIRV.gl', '-o', (Join-Path $Bin 'spirv-backend.exe')) $GeulRoot 'spirv-backend'
+Say 'PTX · SPIR-V 백엔드...'
+Run $Comp @('백엔드/PTX/PTX.gl', '-o', (Join-Path $Bin 'ptx-backend.exe')) $Root 'ptx-backend'           # 이 저장소의 백엔드 (앞단은 GEUL_ROOT 의 self/)
+Run $Comp @('백엔드/SPIRV/SPIRV.gl', '-o', (Join-Path $Bin 'spirv-backend.exe')) $Root 'spirv-backend'
 $progs = @(
     @('앱/관리자.gl', (Join-Path $Dist 'GeulPU.exe'), 'app'),
     @('엔진/서버.gl', (Join-Path $Bin 'server-cuda.exe'), 'server-cuda'),

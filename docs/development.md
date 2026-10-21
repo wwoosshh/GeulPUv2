@@ -23,6 +23,7 @@ This page is for building GeulPU from source and finding your way around the cod
 |---|---|
 | [`엔진/`](../엔진/) (engine) | The engine in geul: `gguf.gl` (GGUF reader), `가중치.gl` · `가중치K.gl` (weight layout, k-quants), `로프.gl` (RoPE tables), `토크나이저.gl` (BPE, SentencePiece, Unicode 15.0 tables), `엔진.gl` · `엔진K.gl` · `엔진표.gl` (kernel selection, CUDA graphs, decoding, slots), `조각.gl` (layer split), `뽑기.gl` · `로그확률.gl` (sampling and log-probabilities — contract §5 · §5.2), `서버.gl` · `서버V.gl` · `서버몸.gl` (the OpenAI-compatible HTTP server — CUDA and Vulkan heads), `장치C.gl` · `장치V.gl` (device check), `진단.gl` · `진단V.gl` · `진단몸.gl` (self-diagnosis), `실행기.gl` (terminal runner), `쿠다*.gl` · `벌칸*.gl` (GPU layers). `리눅스/` holds the Linux-target overlays. |
 | [`커널/`](../커널/) (kernels) | `커널생성.gl` + `생성*.gl` — the kernel generator: it emits a kernel module (geul source) per model architecture, shape, weight format and device. `진단*.gl` — diagnosis kernels. |
+| [`백엔드/`](../백엔드/) (backends) | The PTX and SPIR-V backends that turn a kernel module (geul source) into PTX or SPIR-V — `PTX/PTX.gl`, `SPIRV/SPIRV.gl` (+ `구조.gl`, `낱말.gl`). They include the geul compiler's front end (`self/하강.gl`, from the geul repository) and lower its IR. Imported from the geul repository's `research/gpu` branch (2026-10-21; that branch stays frozen as the record of the GeulPU research). |
 | [`앱/`](../앱/) (app) | `관리자.gl` (GeulPU.exe) and its modules, `web/` (the UI — self-contained HTML · JS · CSS, Korean and English), `data/models.json` (the model catalog), `꾸리기.ps1` (release packaging), `읽어보기.txt` (the zip's README), `DESIGN.md` (design system). |
 | [`계약/`](../계약/) (contract) | [계약.md](../계약/계약.md) · [contract.md](../계약/contract.md) — the precision contract. `정수계약.py` — its CPU reference implementation (every bit comparison is against it), `로그확률.py` — log-probabilities (§5.2) in Python, `gguf읽기.py`. |
 | [`도구/`](../도구/) (tools) | [`debugger.py`](../도구/debugger.py) — the debugger (record · replay · score · breakpoints · branch · compare run logs) from scripts, Python standard library only. [`repro_check.py`](../도구/repro_check.py) — checks a research-panel reproduction file or a debugger run log without a GPU, on the CPU reference. |
@@ -39,16 +40,20 @@ This page is for building GeulPU from source and finding your way around the cod
 
 1. **Requirements**: Windows (or Linux x86-64 — see 4) with an NVIDIA driver (Ampere or newer) or a Vulkan driver. The app and the
    server need only this and the geul compiler; the tests need Python 3.12 and `pip install -r requirements.txt` (numpy).
-2. **geul compiler and backends**: clone the `research/gpu` branch of the geul repository next to this one as `../geul-lang-v2`, check
-   out the pinned commit ([`시험/글저장소커밋.txt`](../시험/글저장소커밋.txt) — CI, packaging and the cross-check reference all use it) and
-   build the self-hosted compiler and the PTX and SPIR-V backends:
+2. **geul compiler and backends**: clone the geul repository next to this one as `../geul-lang-v2`, check out the pinned release
+   ([`시험/글저장소커밋.txt`](../시험/글저장소커밋.txt) — the commit of geul 1.4.0, tag `2g-1.4.0`; CI, packaging and the cross-check
+   reference all use it) and build the self-hosted compiler. The PTX and SPIR-V backends live in this repository under
+   [`백엔드/`](../백엔드/) and are built with that compiler (the front end they include, `self/하강.gl`, comes from the geul repository
+   in `GEUL_ROOT`):
    ```
-   git clone -b research/gpu https://github.com/wwoosshh/geul-lang ../geul-lang-v2
+   git clone https://github.com/wwoosshh/geul-lang ../geul-lang-v2
    cd ../geul-lang-v2
    git checkout $(tr -d '\r\n ' < ../GeulPUv2/시험/글저장소커밋.txt)
    python build.py selfhost 컴파일러
-   GEUL_ROOT=. build/self_컴파일러.exe research/gpu/자체PTX/PTX.gl -o build/자체PTX.exe
-   GEUL_ROOT=. build/self_컴파일러.exe research/gpu/자체SPIRV/SPIRV.gl -o build/자체SPIRV.exe
+   cd ../GeulPUv2
+   mkdir -p 빌드/글
+   GEUL_ROOT=../geul-lang-v2 ../geul-lang-v2/build/self_컴파일러.exe 백엔드/PTX/PTX.gl -o 빌드/글/ptx-backend.exe
+   GEUL_ROOT=../geul-lang-v2 ../geul-lang-v2/build/self_컴파일러.exe 백엔드/SPIRV/SPIRV.gl -o 빌드/글/spirv-backend.exe
    ```
 3. **Package the app** (what a release is): `앱\꾸리기.ps1 -GeulRoot ..\geul-lang-v2 [-GeulC ..\geul-lang-v2\build\self_컴파일러.exe] -NoZip`
    builds `빌드\앱\GeulPU-<version>\` — `GeulPU.exe`, `bin\` (server-cuda, server-vulkan, device-cuda, device-vulkan, diag-cuda,
@@ -64,7 +69,7 @@ This page is for building GeulPU from source and finding your way around the cod
    GEUL_ROOT=../geul-lang-v2 ../geul-lang-v2/build/self_컴파일러.exe 커널/커널생성.gl -o 빌드/글/커널생성.exe
    GEUL_ROOT=../geul-lang-v2 ../geul-lang-v2/build/self_컴파일러.exe 엔진/서버.gl -o 빌드/글/서버.exe
    빌드/글/커널생성.exe qwen2큰 K 3584 28 4 18944 152064 빌드/글/qwen2K_3584x28x4x18944x152064.gl     # Qwen2.5-7B k-quant module
-   ../geul-lang-v2/build/자체PTX.exe 빌드/글/qwen2K_3584x28x4x18944x152064.gl -o 빌드/글/qwen2K_3584x28x4x18944x152064.ptx
+   빌드/글/ptx-backend.exe 빌드/글/qwen2K_3584x28x4x18944x152064.gl -o 빌드/글/qwen2K_3584x28x4x18944x152064.ptx
    빌드/글/서버.exe model.gguf --슬롯 4 --문맥 4096 --포트 8080
    ```
 4. **Linux**: the same sources build as ELF with the geul compiler's Linux target (they import only `libc.so.6` and `libcuda.so.1`).
@@ -76,8 +81,8 @@ This page is for building GeulPU from source and finding your way around the cod
 
 - **Quick check on every push** — GitHub Actions, a Windows and an Ubuntu runner, no GPU and no model files, about 5 minutes
   ([`시험/빠른점검.py`](../시험/빠른점검.py); the same command runs locally: `python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2`). The geul
-  compiler is a CPU program, so everything up to PTX and SPIR-V can be produced without a GPU: the check builds the geul compiler and
-  both backends at the pinned geul commit, builds the generator and every engine program, regenerates the 18 kernel modules (Qwen2 ·
+  compiler is a CPU program, so everything up to PTX and SPIR-V can be produced without a GPU: the check builds the geul compiler at
+  the pinned geul release and, with it, both backends ([`백엔드/`](../백엔드/)), the generator and every engine program, regenerates the 18 kernel modules (Qwen2 ·
   Qwen3 · Llama shapes and formats, shared-32 and one-digit variants) from scratch and compares source, PTX and SPIR-V byte for byte
   with [`시험/모듈해시.txt`](../시험/모듈해시.txt), assembles every module to SASS for sm_89 with NVIDIA `ptxas` (a checker only) and fails on
   new or larger register spills ([`시험/SASS넘침.txt`](../시험/SASS넘침.txt)), runs the contract's CPU self-tests

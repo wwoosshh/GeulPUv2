@@ -1,8 +1,9 @@
 # GeulPU 빠른 점검 — GPU · 모델 파일 없이 커밋마다(시험/빠른점검.py). 글(geul) 컴파일러는 CPU 프로그램이라 커널 소스 → PTX 까지는
-# GPU 없이 만들 수 있다: 글 컴파일러 · PTX 뒷단을 글 저장소의 고정 커밋(시험/글저장소커밋.txt)에서 빌드하고, 생성기 · 호스트 프로그램을
-# 빌드하고, 모듈을 처음부터 만들어(소스 · PTX · SPIR-V 묶음 — 31단계) 시험/모듈해시.txt 와 바이트까지 견준다. 그다음 NVIDIA ptxas(검사에만 — 엔진은 쓰지 않는다)로
+# GPU 없이 만들 수 있다: 글 컴파일러를 글 저장소의 고정 판(시험/글저장소커밋.txt — 글 1.4.0)에서 빌드하고, 이 저장소의 PTX · SPIR-V
+# 백엔드(백엔드/) · 생성기 · 호스트 프로그램을 빌드하고, 모듈을 처음부터 만들어(소스 · PTX · SPIR-V 묶음 — 31단계) 시험/모듈해시.txt 와
+# 바이트까지 견준다. 그다음 NVIDIA ptxas(검사에만 — 엔진은 쓰지 않는다)로
 # PTX → SASS(sm_89)까지 — 커널마다 레지스터 · 넘침(spill)을 적는다. GPU 의 비트 대조 · 속도는 단계마다의 공식 실행(공식실행/)이 한다.
-# GeulPUv2 0.6.0 뒤 — 모듈은 커널/ · 시험/모듈해시.txt · 시험/SASS넘침.txt · 시험/글저장소커밋.txt(와 이 점검 · 이 파일)로만 정해진다. 그것들이
+# GeulPUv2 0.6.0 뒤 — 모듈은 커널/ · 백엔드/ · 시험/모듈해시.txt · 시험/SASS넘침.txt · 시험/글저장소커밋.txt(와 이 점검 · 이 파일)로만 정해진다. 그것들이
 # 앞 커밋과 같으면 모듈 · SASS(6 ~ 8 분)를 건너뛰고(빠른점검 --모듈없이 — 문법 · 계약 · 빌드 · 가져오기 표는 늘), 하나라도 바뀌면 모두 본다.
 # main 은 풀 리퀘스트(pull request)로만 바뀐다(CONTRIBUTING.md) — 작업 브랜치는 풀 리퀘스트에서 한 번, main 은 병합(merge)된 뒤 한 번 돈다.
 # 같은 풀 리퀘스트에 새로 푸시하면 앞 실행은 취소된다.
@@ -36,7 +37,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           from="${BASE:-$BEFORE}"
-          paths="커널 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
+          paths="커널 백엔드 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
           if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$from^{commit}" 2>/dev/null; then
             echo "full=1" >> "$GITHUB_OUTPUT"; echo "견줄 앞 커밋이 없다 — 모두 본다"
           elif git diff --quiet "$from" HEAD -- $paths; then
@@ -47,7 +48,7 @@ jobs:
       - name: 글 저장소의 고정 커밋 읽기
         id: geul
         run: echo "sha=$(tr -d '\r\n ' < GeulPUv2/시험/글저장소커밋.txt)" >> "$GITHUB_OUTPUT"
-      - name: 글 저장소 받기(research/gpu 의 고정 커밋)
+      - name: 글 저장소 받기(고정 판 — 시험/글저장소커밋.txt)
         uses: actions/checkout@v7
         with:
           repository: wwoosshh/geul-lang
@@ -65,16 +66,13 @@ jobs:
             python -c "import importlib.util, os; p = importlib.util.find_spec('nvidia.cuda_nvcc').submodule_search_locations[0]; print(os.path.join(p, 'bin', 'ptxas.exe'))" > ptxas경로.txt
             cat ptxas경로.txt
           fi
-      - name: 글 컴파일러 · PTX 뒷단 캐시
+      - name: 글 컴파일러 캐시
         id: cache
         uses: actions/cache@v6
         with:
-          path: |
-            geul-lang-v2/build/self_컴파일러.exe
-            geul-lang-v2/build/자체PTX.exe
-            geul-lang-v2/build/자체SPIRV.exe
-          key: geul-tools-${{ steps.geul.outputs.sha }}
-      - name: 글 컴파일러 · PTX · SPIR-V 뒷단 빌드(파이썬 참조 구현 → 글로 쓴 컴파일러 → 뒷단 둘)
+          path: geul-lang-v2/build/self_컴파일러.exe
+          key: geul-compiler-${{ steps.geul.outputs.sha }}
+      - name: 글 컴파일러 빌드(파이썬 참조 구현 → 글로 쓴 컴파일러 — 백엔드 둘은 빠른 점검이 백엔드/ 에서 빌드한다)
         if: steps.cache.outputs.cache-hit != 'true'
         working-directory: geul-lang-v2
         env:
@@ -82,8 +80,6 @@ jobs:
         run: |
           mkdir -p build
           GEUL_ROOT=. python ref/geulc.py self/컴파일러.gl -o build/self_컴파일러.exe
-          GEUL_ROOT=. build/self_컴파일러.exe research/gpu/자체PTX/PTX.gl -o build/자체PTX.exe
-          GEUL_ROOT=. build/self_컴파일러.exe research/gpu/자체SPIRV/SPIRV.gl -o build/자체SPIRV.exe
       - name: 빠른 점검
         working-directory: GeulPUv2
         env:
@@ -103,7 +99,7 @@ jobs:
           if-no-files-found: ignore
 
   linux:
-    # 29단계 — 리눅스(글 D-50): 같은 고정 커밋의 글 컴파일러 · PTX 뒷단을 리눅스에서 만들고(ELF), 생성기 · 호스트 프로그램을 빌드하고,
+    # 29단계 — 리눅스(글 D-50): 같은 고정 판의 글 컴파일러를 리눅스에서 만들고(ELF), 백엔드 둘 · 생성기 · 호스트 프로그램을 빌드하고,
     # 모듈을 처음부터 만들어 윈도와 같은 시험/모듈해시.txt 와 바이트까지 견준다. 가져오기는 libc.so.6 · libcuda.so.1 뿐이어야 한다.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -124,7 +120,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           from="${BASE:-$BEFORE}"
-          paths="커널 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
+          paths="커널 백엔드 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
           if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$from^{commit}" 2>/dev/null; then
             echo "full=1" >> "$GITHUB_OUTPUT"; echo "견줄 앞 커밋이 없다 — 모두 본다"
           elif git diff --quiet "$from" HEAD -- $paths; then
@@ -135,7 +131,7 @@ jobs:
       - name: 글 저장소의 고정 커밋 읽기
         id: geul
         run: echo "sha=$(tr -d '\r\n ' < GeulPUv2/시험/글저장소커밋.txt)" >> "$GITHUB_OUTPUT"
-      - name: 글 저장소 받기(research/gpu 의 고정 커밋)
+      - name: 글 저장소 받기(고정 판 — 시험/글저장소커밋.txt)
         uses: actions/checkout@v7
         with:
           repository: wwoosshh/geul-lang
@@ -153,15 +149,13 @@ jobs:
             python -c "import importlib.util, os; p = importlib.util.find_spec('nvidia.cuda_nvcc').submodule_search_locations[0]; print(os.path.join(p, 'bin', 'ptxas'))" > ptxas경로.txt
             cat ptxas경로.txt
           fi
-      - name: 글 컴파일러 · PTX · SPIR-V 뒷단 빌드(파이썬 참조 구현 → 글로 쓴 컴파일러(ELF) → 뒷단 둘(ELF))
+      - name: 글 컴파일러 빌드(파이썬 참조 구현 → 글로 쓴 컴파일러(ELF) — 백엔드 둘은 빠른 점검이 백엔드/ 에서 빌드한다)
         working-directory: geul-lang-v2
         env:
           PYTHONUTF8: "1"
         run: |
           mkdir -p build
           GEUL_ROOT=. python ref/geulc.py self/컴파일러.gl -o build/self_컴파일러
-          GEUL_ROOT=. build/self_컴파일러 research/gpu/자체PTX/PTX.gl -o build/자체PTX
-          GEUL_ROOT=. build/self_컴파일러 research/gpu/자체SPIRV/SPIRV.gl -o build/자체SPIRV
       - name: 빠른 점검(리눅스)
         working-directory: GeulPUv2
         env:
