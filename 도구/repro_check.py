@@ -93,7 +93,7 @@ def 실행확인(a, 줄들):
             return x["server"]
         hs = 헤더.get("server") or {}
         return {"sha256": (헤더.get("model") or {}).get("sha256"), "precision": hs.get("precision"), "kv8": bool(hs.get("kv8")),
-                "layer": hs.get("layer"), "yarn": hs.get("yarn")}
+                "fast_attention": bool(hs.get("fast_attention")), "layer": hs.get("layer"), "yarn": hs.get("yarn")}
 
     항목 = []
     for i in 고른요청:
@@ -122,6 +122,7 @@ def 실행확인(a, 줄들):
         sv = 서버(x)
         REF.선형자리수 = 1 if sv.get("precision") == "fast" else 2           # GeulPUv2 빠른 계약 F1(계약.md 1.2) — 선형층의 활성값 자리 하나
         REF.C.KV8 = REF.선형자리수 == 1 and bool(sv.get("kv8"))               # GeulPUv2 ③b-2 — 8비트 KV(계약 F1A′, 계약.md 2.1)
+        REF.C.F2 = REF.C.KV8 and bool(sv.get("fast_attention"))               # GeulPUv2 빠른 어텐션(계약 F2, 계약.md 2.2 — 8비트 KV 위에서)
         rq = x.get("request") or {}
         gp = ((x.get("response") or {}).get("geulpu")) or {}
         if x.get("type") == "branch" and x.get("kind") == "token":
@@ -141,10 +142,11 @@ def 실행확인(a, 줄들):
         seed, off = int(gp["seed"]), int((rq.get("geulpu") or {}).get("step_offset", 0))
         점수 = next((s for s in 점수들 if x.get("type") != "branch" and s.get("of") == x.get("i") and (s.get("server") or {}).get("sha256") == sha
                      and (s.get("server") or {}).get("precision") == sv.get("precision")
-                     and bool((s.get("server") or {}).get("kv8")) == bool(sv.get("kv8"))), None)
+                     and bool((s.get("server") or {}).get("kv8")) == bool(sv.get("kv8"))
+                     and bool((s.get("server") or {}).get("fast_attention")) == bool(sv.get("fast_attention"))), None)
         n, k = len(toks), (len(점수["top_ids"][0]) if 점수 and 점수.get("top_ids") and 점수["top_ids"][0] else 0)
         S = np.array(P + toks[:-1], np.int64)
-        계약이름 = ("빠른 · 8비트 KV" if REF.C.KV8 else "빠른") if REF.선형자리수 == 1 else "정밀"
+        계약이름 = (("빠른 · 8비트 KV · 빠른 어텐션" if REF.C.F2 else "빠른 · 8비트 KV") if REF.C.KV8 else "빠른") if REF.선형자리수 == 1 else "정밀"
         print(f"{이름}: CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 답 {n} 토큰 · {계약이름} 계약) …", flush=True)
         t0 = time.time()
         로짓, _ = REF.앞으로(g, [S], 말=False)
@@ -216,9 +218,12 @@ def main():
     if (cap.get("made_on") or {}).get("precision") == "fast":
         REF.선형자리수 = 1          # GeulPUv2 빠른 계약 F1(계약.md 1.2) — 선형층의 활성값 자리 하나
         REF.C.KV8 = bool((cap.get("made_on") or {}).get("kv8"))       # GeulPUv2 ③b-2 — 8비트 KV(계약 F1A′, 계약.md 2.1)
+        REF.C.F2 = REF.C.KV8 and bool((cap.get("made_on") or {}).get("fast_attention"))   # GeulPUv2 빠른 어텐션(계약 F2, 계약.md 2.2)
     계약 = "exact (two digits)"
     if REF.선형자리수 == 1:
         계약 = "F1 (one digit in linear layers) + F1A′ (8-bit KV cache)" if REF.C.KV8 else "F1 (one digit in linear layers)"
+        if REF.C.F2:
+            계약 += " + F2 (fast attention)"
     결과 = {"file": os.path.basename(a.repro_file), "model": cap["model"], "made_on": cap.get("made_on"), "steps": len(rs["tokens"]),
             "contract": 계약}
     if not a.skip_hash:
