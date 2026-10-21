@@ -8,10 +8,12 @@
 # GeulPUv2 ③b-2(문서/긴문맥.md) — 변형 KV8 은 실제 8비트 KV 모듈(커널생성 --빠른 --KV8 — 모듈 이름 끝 _KV8), KV8EMU · V8EMU 는 ③b-1 의
 # 에뮬레이션(커널생성 --어텐션한자리 KV8 · V8 — 이름 끝이 _KV8 이 아니어서 엔진이 16비트 KV 로 올린다). VARIANTS="F1 KV8" 처럼 주면
 # 모델마다의 변형 목록 대신 그것을 쓴다.
+# 빠른 어텐션 F2(문서/빠른어텐션.md) — 변형 F2_KV8 은 F2 모듈(커널생성 --빠른 --F2 — 이름 끝 _F2_KV8). MODELS_DIR ·
+# LLAMA_DIR 로 모델 · llama.cpp 의 폴더를 바꾼다(ASCII 경로 — 기본은 F:\geulpu-models).
 set -u
 W=$1; OUT=$2; shift 2
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-B=$ROOT/빌드/글; LB=F:/geulpu-models/llama-b11719; M=F:/geulpu-models
+B=$ROOT/빌드/글; LB=${LLAMA_DIR:-F:/geulpu-models/llama-b11719}; M=${MODELS_DIR:-F:/geulpu-models}
 GL=${GEUL_REPO:-$ROOT/../geul-lang-v2}
 MD=${MODDIR:-$W/모듈}; mkdir -p "$OUT" "$MD"
 WT=$ROOT/빌드/wikitext-2/wiki.test.raw
@@ -28,7 +30,8 @@ mod() {  # 이름 모양인자 변형 → 모듈 경로(표준 출력)
   local p=$MD/$1_$3.ptx g=$MD/$1_$3.gl
   if [ ! -f "$p" ]; then
     local f=()
-    case $3 in F1) f=(--빠른);; KV8) f=(--빠른 --KV8);; KV|QKV) f=(--빠른 --어텐션한자리 "$3");; KV8EMU|V8EMU) f=(--빠른 --어텐션한자리 "${3%EMU}");; esac
+    case $3 in F1) f=(--빠른);; KV8) f=(--빠른 --KV8);; KV|QKV) f=(--빠른 --어텐션한자리 "$3");; KV8EMU|V8EMU) f=(--빠른 --어텐션한자리 "${3%EMU}");;
+      F2_KV8) f=(--빠른 --F2);; esac
     # shellcheck disable=SC2086  # 모양 인자는 낱말로 나뉘어야 한다
     if ! { "$B/커널생성.exe" $2 "$g" "${f[@]}" > "$MD/$1_$3.생성.log" 2>&1 && "$GL/build/자체PTX.exe" "$g" -o "$p" > "$MD/$1_$3.ptx.log" 2>&1; }; then
       echo "  모듈 실패 — $MD/$1_$3.*.log" >&2

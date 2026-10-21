@@ -9,6 +9,8 @@
      비정규수 입력. 스위치를 끈 IEEE 쪽(비정규수버림 = False — GPT-2 판)도 같은 자료로 IEEE 반올림과 견준다
   6. 8비트 KV(GeulPUv2 ③b-2 — 계약 F1A′, 계약.md 2.1): 저장(팔비트KV) 대 정확한 유리수 계산, 스케일이 2 의 거듭제곱일 때 어텐션 대
      ③b-1 의 에뮬레이션, 어텐션(numpy) 대 계약 문장을 행 하나씩 옮긴 계산
+  7. 빠른 어텐션 계약 F2(계약.md 2.2): 지수2 · q 의 자리 둘(지수를 헤드마다) · 값의 저장(스케일을 헤드마다) 대 정확한 유리수 계산,
+     어텐션F2(numpy) 대 계약 문장을 행 하나씩 옮긴 계산(그룹 둘)
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
@@ -428,6 +430,119 @@ def 시험_KV8(r):
     확인("8비트 KV — 어텐션 대 계약 문장을 행 하나씩 옮긴 계산(헤드 크기 128, 위치 64)", d == 0, f"불일치 {d} / {얻음.size}")
 
 
+def _바닥로그2(m):
+    """양의 유리수 m 의 ⌊log₂ m⌋."""
+    e = m.numerator.bit_length() - m.denominator.bit_length()
+    if Fraction(2) ** e > m:
+        e -= 1
+    elif Fraction(2) ** (e + 1) <= m:
+        e += 1
+    return e
+
+
+def _지수2정확(x):
+    """계약.md 2.2 의 4(지수2)를 정확한 유리수 셈과 규칙 R 의 반올림으로 — 연산 하나마다 반올림 하나(곱해더하기는 곱을 반올림하지 않는다)."""
+    F = lambda v: Fraction(float(v))                                       # noqa: E731 — 짧은실수 → 정확한 유리수
+    xc = max(F(x), Fraction(-126))
+    t = 반올림R(xc + 12582912)
+    r = 반올림R(xc - F(반올림R(F(t) - 12582912)))
+    rf = F(r)
+    c = [Fraction(float(v)) for v in C._k2]                                  # c₅ … c₁ (fp32)
+    p = Fraction(float(반올림R(c[0] * rf + c[1])))
+    for ck in c[2:]:
+        p = Fraction(float(반올림R(p * rf + ck)))
+    p = 반올림R(p * rf + 1)
+    bits = (int(np.float32(p).view(np.int32)) + (int(np.float32(t).view(np.int32)) << 23)) & 0xFFFFFFFF
+    return np.uint32(bits).view(f32)
+
+
+def 시험_F2(r):
+    """GeulPUv2 빠른 어텐션 계약 F2(계약.md 2.2)."""
+    # 1. 지수2 대 정확한 유리수 셈 — 넓은 범위, 반올림 경계(n ± ½), 자르기(−126) 둘레, 0
+    xs = np.concatenate([-(r.random(3000) * 30).astype(f32), -(r.random(500) * 0.6).astype(f32),
+                         np.array([0.0, -0.5, -1.5, -2.5, -125.6, -126.0, -126.4, -300.0, -3.0e38], f32),
+                         (np.arange(1, 200) * -0.5 + r.standard_normal(199) * 1e-6).astype(f32)]).astype(f32)
+    얻음 = C.지수2(xs)
+    기대 = np.array([_지수2정확(x) for x in xs], f32)
+    d = 다른칸(얻음, 기대)
+    확인("F2 — 지수2 대 정확한 유리수 셈", d == 0, f"불일치 {d} / {xs.size}")
+    # 2. 저장 — 자리로머리(q) · 팔비트KV머리(값) 대 정확한 유리수 셈
+    x = 활성값(r, 30, 128)
+    x[2] = 0
+    x[3, 5] = (2.0 ** -140)
+    D, E = C.자리로머리(x, 2)
+    dw = 0
+    for i in range(x.shape[0]):
+        m = max(abs(Fraction(float(v))) for v in x[i])
+        Ew = -98 if m == 0 else max(-98, min(100, _바닥로그2(m)))
+        nw = [_가까운정수(Fraction(float(v)) * Fraction(2) ** (13 - Ew)) for v in x[i]]
+        n = D[1, i] * 256 + D[0, i]
+        dw += int(Ew != E[i]) + int(np.count_nonzero(n != np.array(nw)))
+    확인("F2 — q 의 자리 둘(지수를 헤드마다 하나) 대 정확한 유리수 셈", dw == 0, f"불일치 {dw}")
+    n, s = C.팔비트KV머리(x)
+    nw = np.zeros_like(n)
+    sw = np.zeros_like(s)
+    for i in range(x.shape[0]):
+        행 = [Fraction(float(v)) if abs(float(v)) >= 2.0 ** -126 else Fraction(0) for v in x[i]]
+        sw[i] = 반올림R(max(abs(v) for v in 행) / 127)
+        if sw[i] > 0:
+            nw[i] = [_가까운정수(Fraction(float(반올림R(v / Fraction(float(sw[i])))))) for v in 행]
+    dn, ds = int(np.count_nonzero(n != nw)), 다른칸(s, sw)
+    확인("F2 — 값의 저장(헤드마다 스케일 하나) 대 정확한 유리수 셈", dn == 0 and ds == 0, f"n 불일치 {dn}, s 불일치 {ds}")
+    # 3. 어텐션F2(numpy) 대 계약 문장(2.2 의 1 ~ 6, 3 절)을 행 하나씩 옮긴 계산 — 위치 1100(타일 18 · 그룹 둘, 끝 타일은 반쯤)
+    hd, 길이 = 128, 1100
+    q = (r.standard_normal((길이, hd)) * 2.0 ** r.integers(-6, 0, (길이, 1))).astype(f32)
+    k, v = 활성값(r, 길이, hd), 활성값(r, 길이, hd)
+    C.F2 = True
+    얻음 = C.어텐션(q, k, v)
+    C.F2 = False
+    Dq, Eq = C.자리로머리(q, 2)
+    nq = Dq[1] * 256 + Dq[0]
+    nk, sk = C.팔비트KV(k)
+    nv, sv = C.팔비트KV머리(v)
+    기대 = np.zeros((길이, hd), f32)
+    for p in range(길이):
+        qc = C.곱(C.거듭제곱(Eq[p]), C.점수눈금2)
+        그룹들 = []
+        for g0 in range(0, p + 1, 1024):
+            M = L = O = None
+            for t0 in range(g0, min(g0 + 1024, p + 1), 64):
+                ks = np.arange(t0, min(t0 + 64, p + 1))                         # 이 행에 보이는 타일의 키(가린 키는 지수가 0 이라 빼도 같다)
+                z = None
+                for b in range(hd // 32):
+                    u = (nk[ks, 32 * b:32 * b + 32] @ nq[p, 32 * b:32 * b + 32]).astype(f32)
+                    z = C.곱(u, sk[ks, b]) if b == 0 else C.fma32(u, sk[ks, b], z)
+                st = C.곱(z, qc)
+                m = st.max()
+                e = C.지수2(C.빼기(st, m))
+                l = f32(int(np.rint((e * f32(8388608.0)).astype(f32)).astype(np.int64).sum())) * f32(2.0 ** -23)
+                ep = C.곱(e, sv[ks])
+                mm = float(ep.max())
+                E = -98 if mm == 0 else max(-98, min(100, int(np.frexp(mm)[1]) - 1))
+                ne = np.rint(ep.astype(np.float64) * 2.0 ** (13 - E)).astype(np.int64)
+                U = (ne @ nv[ks]).astype(f32)
+                P = C.거듭제곱(E)
+                if M is None:
+                    M, L, O = m, l, C.fma32(U, P, f32(0))
+                else:
+                    M2 = max(M, m)
+                    가, 나 = C.지수2(C.빼기(M, M2)), C.지수2(C.빼기(m, M2))
+                    L = C.fma32(l, 나, C.곱(L, 가))
+                    O = C.fma32(U, C.곱(P, 나), C.곱(O, 가))
+                    M = M2
+            그룹들.append((M, L, O))
+        M, L, O = 그룹들[0]
+        for m, l, o in 그룹들[1:]:
+            M2 = max(M, m)
+            가, 나 = C.지수2(C.빼기(M, M2)), C.지수2(C.빼기(m, M2))
+            L = C.fma32(l, 나, C.곱(L, 가))
+            O = C.fma32(o, 나, C.곱(O, 가))
+            M = M2
+        기대[p] = C.나눔(O, L)
+    d = 다른칸(얻음, 기대)
+    확인("F2 — 어텐션 대 계약 문장을 행 하나씩 옮긴 계산(헤드 크기 128, 위치 1100 — 그룹 둘)", d == 0, f"불일치 {d} / {얻음.size}")
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -438,6 +553,7 @@ def main():
     시험_머리정규화(r)
     시험_로그확률(r)
     시험_KV8(r)
+    시험_F2(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
     return 0 if not 실패 else 1
 
