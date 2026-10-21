@@ -13,6 +13,7 @@ branch from any token, and compare models and quantizations request by request.
 [![PyPI](https://img.shields.io/pypi/v/geulpu?label=pypi&color=10b981)](https://pypi.org/project/geulpu/)
 [![Quick check](https://img.shields.io/github/actions/workflow/status/wwoosshh/GeulPUv2/ci.yml?branch=main&label=quick%20check)](https://github.com/wwoosshh/GeulPUv2/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23548056.svg)](https://doi.org/10.5281/zenodo.23548056)
 ![Windows x64](https://img.shields.io/badge/platform-Windows%20x64-555)
 ![CUDA | Vulkan](https://img.shields.io/badge/GPU-CUDA%20%7C%20Vulkan-555)
 
@@ -239,6 +240,8 @@ for features, PATCH for fixes. Security problems: [SECURITY.md](SECURITY.md).
 ## Citation
 
 If you use GeulPU in research, please cite it — GitHub's **Cite this repository** button reads [CITATION.cff](CITATION.cff).
+Every release is archived on Zenodo: [10.5281/zenodo.23548056](https://doi.org/10.5281/zenodo.23548056) stands for all versions,
+and the Zenodo page lists the DOI of each version.
 
 ## License
 

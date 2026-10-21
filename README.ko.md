@@ -13,6 +13,7 @@
 [![PyPI](https://img.shields.io/pypi/v/geulpu?label=pypi&color=10b981)](https://pypi.org/project/geulpu/)
 [![Quick check](https://img.shields.io/github/actions/workflow/status/wwoosshh/GeulPUv2/ci.yml?branch=main&label=quick%20check)](https://github.com/wwoosshh/GeulPUv2/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23548056.svg)](https://doi.org/10.5281/zenodo.23548056)
 ![Windows x64](https://img.shields.io/badge/platform-Windows%20x64-555)
 ![CUDA | Vulkan](https://img.shields.io/badge/GPU-CUDA%20%7C%20Vulkan-555)
 
@@ -231,6 +232,8 @@ GeulPU는 연구에서 나왔습니다 — 40단계에 걸쳐 단계마다 측�
 ## 인용
 
 연구에 GeulPU를 쓰셨다면 인용해 주세요 — GitHub의 **Cite this repository** 단추가 [CITATION.cff](CITATION.cff)를 읽습니다.
+릴리스는 모두 Zenodo에 보관됩니다: [10.5281/zenodo.23548056](https://doi.org/10.5281/zenodo.23548056)은 모든 버전을 가리키고, 버전마다의
+DOI는 Zenodo 페이지에 있습니다.
 
 ## 라이선스
 
