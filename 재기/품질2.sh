@@ -2,10 +2,11 @@
 # 2단계 판정 B′ — 정밀 모드를 기준으로 F1 과 llama.cpp 의 숨은 손실(모든 행의 KL · 1위 일치)을 모델마다 잰다(시험/품질.py).
 #   bash 재기/품질2.sh <작업 폴더(F:)> <결과 폴더>
 # 큰 파일(로짓 — 모델마다 약 7 GB)은 작업 폴더에 두고, 견준 뒤 지운다. 결과 JSON · 기록만 결과 폴더에.
+# 모델 폴더는 GEULPU_MODELS(기본 F:/geulpu-models), llama.cpp 는 GEULPU_LLAMA_BENCH(기본 F:/geulpu-models/llama-b11719) — 둘 다 ASCII 경로.
 set -u
 W=$1; OUT=$2
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-B=$ROOT/빌드/글; P=$ROOT/빌드/점검; LB=F:/geulpu-models/llama-b11719; M=F:/geulpu-models
+B=$ROOT/빌드/글; P=$ROOT/빌드/점검; LB=${GEULPU_LLAMA_BENCH:-F:/geulpu-models/llama-b11719}; M=${GEULPU_MODELS:-F:/geulpu-models}
 mkdir -p "$OUT"
 # 이름 | GGUF | 정밀 모듈 | 빠른 모듈 | 입력 폴더(품질.py 입력 — 토크나이저가 같은 모델끼리 같다)
 MODELS=(

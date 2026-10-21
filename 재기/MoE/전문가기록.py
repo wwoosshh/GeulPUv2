@@ -2,6 +2,7 @@
 """MoE 재기 — llama.cpp(b11727) C API 로 토큰열을 넣으며 층마다 고른 전문가(ffn_moe_topk)를 기록한다(ctypes).
 
   python 전문가기록.py <gguf> <일감.json> <출력.npz> [--ub 2048] [--ctx 131072]
+  llama.cpp(b11727)의 DLL 폴더는 환경 변수 GEULPU_LLAMA(기본 E:/geulpu-work/moe/llama-b11727 — 이 PC 의 것).
 
 일감.json: {"spans": [{"tokens": [...], "kind": "prompt"|"output"|"reprocess", "req": i, "reset": bool}, ...]}
   reset 이 참이면 그 조각 앞에서 KV 를 비운다(처음부터 다시). 조각은 차례대로 이어 넣는다.

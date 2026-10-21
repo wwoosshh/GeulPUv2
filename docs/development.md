@@ -82,8 +82,8 @@ This page is for building GeulPU from source and finding your way around the cod
 - **Quick check on every push** — GitHub Actions, a Windows and an Ubuntu runner, no GPU and no model files, about 5 minutes
   ([`시험/빠른점검.py`](../시험/빠른점검.py); the same command runs locally: `python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2`). The geul
   compiler is a CPU program, so everything up to PTX and SPIR-V can be produced without a GPU: the check builds the geul compiler at
-  the pinned geul release and, with it, both backends ([`백엔드/`](../백엔드/)), the generator and every engine program, regenerates the 18 kernel modules (Qwen2 ·
-  Qwen3 · Llama shapes and formats, shared-32 and one-digit variants) from scratch and compares source, PTX and SPIR-V byte for byte
+  the pinned geul release and, with it, both backends ([`백엔드/`](../백엔드/)), the generator and every engine program, regenerates the 22 kernel modules (Qwen2 ·
+  Qwen3 · Llama shapes and formats, shared-32, one-digit and fast-contract variants) from scratch and compares source, PTX and SPIR-V byte for byte
   with [`시험/모듈해시.txt`](../시험/모듈해시.txt), assembles every module to SASS for sm_89 with NVIDIA `ptxas` (a checker only) and fails on
   new or larger register spills ([`시험/SASS넘침.txt`](../시험/SASS넘침.txt)), runs the contract's CPU self-tests
   ([`시험/계약자체.py`](../시험/계약자체.py)), checks that the tile tables agree between the generator and the engine, and checks the DLL
@@ -91,6 +91,16 @@ This page is for building GeulPU from source and finding your way around the cod
 - **GPU tests** (by hand): end-to-end bit comparisons against the CPU reference ([`시험/참조7B.py`](../시험/참조7B.py)) and the server
   regression tests ([`시험/서버28.py`](../시험/서버28.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)). The scripts that produced each
   research stage's verdicts are in [GeulPU's `공식실행/`](https://github.com/wwoosshh/GeulPU/tree/main/공식실행).
+- **Files the GPU tests and measurements need** (not in the repository — `모델/` and `빌드/` are git-ignored):
+  - Models (GGUF): the tests and measurement scripts take GGUF paths as arguments. The scripts in `재기/` look for models in the folder
+    named by the environment variable `GEULPU_MODELS` (default `F:/geulpu-models`, the maintainer's PC) and for llama.cpp in
+    `GEULPU_LLAMA_BENCH` (default an `llama-b<build>` folder under it). Both must be ASCII paths — llama.cpp's tools cannot open Korean
+    paths. `재기/MoE/전문가기록.py` takes the llama.cpp DLL folder from `GEULPU_LLAMA`.
+  - Tokenizer: the layer-0 chat cases of [`시험/머리128.py`](../시험/머리128.py) use the tokenizer inside the GGUF given to the test, so
+    there is nothing else to download.
+  - wikitext-2: the quality and long-context runs (`시험/품질.py`, `재기/품질2b.sh`, `재기/추측3.py`, …) read
+    `빌드/wikitext-2/wiki.test.raw`, the same file llama.cpp's perplexity tool uses: put `wikitext-2-raw/wiki.test.raw` from the
+    `wikitext-2-raw-v1.zip` that llama.cpp's `scripts/get-wikitext-2.sh` downloads there (sha256 `173c87a53759e020…`).
 
 ## Research log
 

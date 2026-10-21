@@ -2,12 +2,12 @@
 # 2단계 판정 C 의 생성 쪽 — 정밀 모드와 빠른 모드(F1)의 생성 ms/토큰(엔진/재기_7B: 채팅 질문 · 문맥 2048 · 8192, 일곱 번 × 세 묶음의
 # 가운데)을 모델마다, 바퀴마다 차례를 바꿔 잰다. 판정: F1 이 정밀의 ±2 % 안(생성은 가중치를 읽는 시간이 정한다).
 #   bash 재기/생성2.sh <출력 폴더> <바퀴 수>
-# 모델 · 모듈 · 입력은 재기/견주기2.sh 와 같다.
+# 모델 · 모듈 · 입력은 재기/견주기2.sh 와 같다(모델 폴더는 GEULPU_MODELS — 기본 F:/geulpu-models).
 set -u
 OUT=$1; ROUNDS=${2:-2}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 B=$ROOT/빌드/글; P=$ROOT/빌드/점검; IN=$ROOT/빌드/재기입력
-M=F:/geulpu-models
+M=${GEULPU_MODELS:-F:/geulpu-models}
 mkdir -p "$OUT"
 # 이름 | GGUF | 정밀 모듈 | 빠른 모듈 | 재기 입력
 MODELS=(

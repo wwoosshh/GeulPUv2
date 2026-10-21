@@ -4,16 +4,16 @@
 #   bash 재기/품질2b.sh <작업 폴더(빠른 디스크 — ASCII 경로)> <결과 폴더> [<모델 이름> …]
 # 모듈은 MODDIR(기본 작업 폴더/모듈)에 만든다(빌드/글/커널생성.exe + 빌드/글/ptx-backend.exe — 문서/개발.md 의 '소스에서 빌드하기' 2. 있으면 그대로 쓴다). 로짓(모델마다 수십 GB)과
 # 모델의 사본(작업 폴더 — 느린 디스크에서 한 번만 읽는다, COPY_MODEL=0 이면 그대로)은 견준 뒤 지운다.
-# 모델은 고정 경로(F:\geulpu-models — llama.cpp 도구가 한글 경로를 못 연다). 변수 이름은 ASCII(윈도의 Git Bash).
+# 모델 폴더는 GEULPU_MODELS(기본 F:/geulpu-models), llama.cpp 는 GEULPU_LLAMA_BENCH(기본 F:/geulpu-models/llama-b11719) — 둘 다 ASCII
+# 경로(llama.cpp 도구가 한글 경로를 못 연다). 변수 이름은 ASCII(윈도의 Git Bash).
 # GeulPUv2 ③b-2(문서/긴문맥.md) — 변형 KV8 은 실제 8비트 KV 모듈(커널생성 --빠른 --KV8 — 모듈 이름 끝 _KV8), KV8EMU · V8EMU 는 ③b-1 의
 # 에뮬레이션(커널생성 --어텐션한자리 KV8 · V8 — 이름 끝이 _KV8 이 아니어서 엔진이 16비트 KV 로 올린다). VARIANTS="F1 KV8" 처럼 주면
 # 모델마다의 변형 목록 대신 그것을 쓴다.
-# 빠른 어텐션 F2(문서/빠른어텐션.md) — 변형 F2_KV8 은 F2 모듈(커널생성 --빠른 --F2 — 이름 끝 _F2_KV8). MODELS_DIR ·
-# LLAMA_DIR 로 모델 · llama.cpp 의 폴더를 바꾼다(ASCII 경로 — 기본은 F:\geulpu-models).
+# 빠른 어텐션 F2(문서/빠른어텐션.md) — 변형 F2_KV8 은 F2 모듈(커널생성 --빠른 --F2 — 이름 끝 _F2_KV8).
 set -u
 W=$1; OUT=$2; shift 2
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-B=$ROOT/빌드/글; LB=${LLAMA_DIR:-F:/geulpu-models/llama-b11719}; M=${MODELS_DIR:-F:/geulpu-models}
+B=$ROOT/빌드/글; LB=${GEULPU_LLAMA_BENCH:-F:/geulpu-models/llama-b11719}; M=${GEULPU_MODELS:-F:/geulpu-models}
 MD=${MODDIR:-$W/모듈}; mkdir -p "$OUT" "$MD"
 WT=$ROOT/빌드/wikitext-2/wiki.test.raw
 # 이름 | GGUF | 커널생성의 모양 인자 | 변형(F1 · KV · QKV — 정밀은 늘)

@@ -59,7 +59,8 @@ The last line is `빠른 점검: 모두 통과` ("quick check: all passed"). If 
 pull request.
 
 GPU tests — bit comparisons against the CPU reference and the server regression tests — are run by hand. Say in the pull request which
-ones you ran and on which GPU.
+ones you ran and on which GPU. The files they need (GGUF models, wikitext-2) and the environment variables the measurement scripts read
+are listed in [docs/development.md](docs/development.md#checks).
 
 ## Pull requests
 
