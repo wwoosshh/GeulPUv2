@@ -6,7 +6,9 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
-## Unreleased
+## 0.9.0 — Faster generation in long sessions (2026-10-21)
+
+### Changed
 
 - **Faster generation in long sessions** (Fast mode, CUDA — outputs are bit-identical to 0.8.0): the speculative-decoding verify step no
   longer reads the KV cache once per draft row — rows of the same chat now share each KV tile and the attention merges every 1,024-key
