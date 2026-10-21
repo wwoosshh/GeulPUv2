@@ -4,13 +4,14 @@
 # - 글(geul) 쪽: 엔진/재기_프롬프트.gl — 프롬프트 + 첫 토큰(마지막 행의 탐욕 토큰), 일곱 번 × 세 묶음의 가운데.
 # - llama.cpp: llama-bench -o json, -fa 0 · 1 × -ub 512 · 1024 · 2048(-b 8192), 다섯 번 — 요약(재기/견주기요약.py)이 표본(samples_ns)의
 #   가운데 값으로 길이마다 가장 빠른 설정을 고른다.
-# - 모델은 고정 경로(F:\geulpu-models — llama.cpp 도구가 한글 경로를 못 연다), 재기 입력은 빌드/재기입력/.
+# - 모델 폴더는 GEULPU_MODELS(기본 F:/geulpu-models), llama.cpp 는 GEULPU_LLAMA_BENCH(기본 F:/geulpu-models/llama-b11719) — 둘 다
+#   ASCII 경로(llama.cpp 도구가 한글 경로를 못 연다). 재기 입력은 빌드/재기입력/.
 set -u
 OUT=$1; ROUNDS=${2:-1}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 B=$ROOT/빌드/글; P=$ROOT/빌드/점검; IN=$ROOT/빌드/재기입력
 LB=${GEULPU_LLAMA_BENCH:-F:/geulpu-models/llama-b11719}
-M=F:/geulpu-models
+M=${GEULPU_MODELS:-F:/geulpu-models}
 mkdir -p "$OUT"
 # 이름 | GGUF | 정밀 모듈(빌드/점검) | 빠른 모듈(빌드/글) | 재기 입력
 MODELS=(

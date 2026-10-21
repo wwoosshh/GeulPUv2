@@ -322,12 +322,17 @@ def 층0qkv(gguf, ids):
     return np.concatenate(out, 1).astype(f32)
 
 
-def 채팅토큰(질문):
+_토크나이저 = {}
+
+
+def 채팅토큰(질문, gguf):
+    """채팅 질문의 토큰(Qwen2.5 의 바이트 BPE · ChatML). 토크나이저는 시험에 주는 GGUF 의 것(tokenizer.ggml.tokens · merges —
+    시험/토크나이저.py)이라 이 저장소와 그 GGUF 만으로 돈다. Hugging Face 의 vocab.json · merges.txt 와 같은 토큰이다 — 이 질문 셋과
+    견본 열(빈 글 · 공백 · 줄바꿈 · 코드 · 이모지 · 여러 언어 · 특수 토큰 모양 · URL · 긴 반복)에서 확인했다(2026-10-21)."""
     import 토크나이저 as TK
-    # Qwen2.5 의 BPE(vocab.json · merges.txt — 7B 와 같다). GeulPUv2 에는 모델/ 이 없어, 옆의 연구 저장소 GeulPU 의 것을 읽기만 한다
-    후보 = [os.path.join(ROOT, "모델", "qwen2.5-0.5b-instruct"), os.path.join(ROOT, "..", "GeulPU", "모델", "qwen2.5-0.5b-instruct")]
-    tk = TK.Qwen토크나이저(next((p for p in 후보 if os.path.exists(os.path.join(p, "vocab.json"))), 후보[0]))
-    return tk.나누기(TK.채팅틀([{"role": "user", "content": 질문}]))
+    if "tk" not in _토크나이저:
+        _토크나이저["tk"] = TK.Qwen토크나이저(gguf=gguf)
+    return _토크나이저["tk"].나누기(TK.채팅틀([{"role": "user", "content": 질문}]))
 
 
 def main():
@@ -376,7 +381,7 @@ def main():
         if k.넷:
             경우들[-1][3]["생성 판 넷"] = [(0, 560)] + [(s, 1, "넷") for s in range(560, 600)]
         for qi, 질문 in enumerate(질문들):
-            ids = 채팅토큰(질문)
+            ids = 채팅토큰(질문, gguf)
             Xr = 층0qkv(gguf, ids)
             m = len(ids)
             경우들.append((f"층 0 · 질문 {qi + 1} (토큰 {m})", Xr, 1024,

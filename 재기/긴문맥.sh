@@ -2,13 +2,14 @@
 # GeulPUv2 — 긴 문맥 실사용 재기(문서/긴문맥재기.md): 글 엔진(엔진/재기_긴문맥 — F1 모듈)과 llama.cpp(llama-bench)를 같은 꼴로.
 #   (가) 빈 캐시 프롬프트 N, (나) 깊이 d 에서 새 입력 1,024 토큰, (다) 깊이 d 에서 생성(글: 표 걸음 행 1 · 8, llama.cpp: tg128).
 #   bash 재기/긴문맥.sh <결과 폴더> [모델 이름 …]
-# 모델은 고정 경로(F:\geulpu-models — llama.cpp 도구가 한글 경로를 못 연다). 깊이는 32k 안(Qwen2.5-7B 의 GGUF 위치 수가 32,768 — 글 엔진은 그 너머를
+# 모델 폴더는 GEULPU_MODELS(기본 F:/geulpu-models), llama.cpp 는 GEULPU_LLAMA_BENCH(기본 F:/geulpu-models/llama-b11721) — 둘 다 ASCII
+# 경로(llama.cpp 도구가 한글 경로를 못 연다). 깊이는 32k 안(Qwen2.5-7B 의 GGUF 위치 수가 32,768 — 글 엔진은 그 너머를
 # 받지 않는다(YaRN 없음), Llama-3.1-8B 는 KV 가 토큰당 133 KB 라 12 GB 에 32k 남짓) — 두 모델 같은 칸: 빈 16k · 32k, 깊이 8k · 16k · 31k.
 # 글 엔진의 생성 걸음은 모든 깊이에서(4b단계 — 고치기 앞의 모듈은 생성 길의 접기가 위치 10,240 부터 틀려 --생성끝 10240 으로 쟀다).
 set -u
 OUT=$1; shift
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-B=$ROOT/빌드/글; IN=$ROOT/빌드/재기입력; M=F:/geulpu-models
+B=$ROOT/빌드/글; IN=$ROOT/빌드/재기입력; M=${GEULPU_MODELS:-F:/geulpu-models}
 LB=${GEULPU_LLAMA_BENCH:-F:/geulpu-models/llama-b11721}
 mkdir -p "$OUT"
 # 이름 | GGUF | 빠른 모듈 | 재기 입력 | 최대길이 | 빈 N | 깊이 d

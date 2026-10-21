@@ -1,7 +1,7 @@
 #!/bin/bash
 # MoE 재기 — 흉내(LRU)가 llama.cpp 의 실제 캐시 적중률과 맞는지: llama-completion 으로 같은 설정 · 고정 글을 생성하고(끝날 때 통계를 적는다),
 # 그 토큰열로 전문가를 기록해 같은 슬롯 수의 LRU 를 흉내 낸다.
-#   bash 검증.sh <작업 폴더(E:/geulpu-work/moe)> <출력 토큰 수>
+#   bash 검증.sh <작업 폴더 — llama-b11727/ · models/ · valid/ 를 둔 곳(ASCII 경로)> <출력 토큰 수>
 set -eu
 D=$1; N=${2:-768}
 H=$(cd "$(dirname "$0")" && pwd)
