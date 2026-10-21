@@ -107,11 +107,11 @@ in [docs/versioning.md](docs/versioning.md).
 7. Download the draft's files, compare their SHA-256, install the wheel in a fresh virtual environment and run it.
 8. Publish: `gh release edit vX.Y.Z --draft=false --latest`. Publishing starts the PyPI workflow, which waits for approval in the `pypi`
    environment and uploads the same wheel.
-9. Publishing also archives the release on Zenodo (GitHub integration — Zenodo reads [CITATION.cff](CITATION.cff)) and mints a DOI.
-   Check the record on Zenodo's GitHub page. After the first archived release, put the concept DOI (the one that stands for all
-   versions — it does not change between releases) in `CITATION.cff` as `doi:` and add the badge to [README.md](README.md) and
-   [README.ko.md](README.ko.md):
-   `[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.NNNNNNN.svg)](https://doi.org/10.5281/zenodo.NNNNNNN)`.
+9. Publishing also archives the release on Zenodo (GitHub integration — Zenodo reads [CITATION.cff](CITATION.cff)) and mints a DOI
+   for that version. Check the record on Zenodo's GitHub page. The concept DOI, which stands for all versions and does not change
+   between releases, is [10.5281/zenodo.23548056](https://doi.org/10.5281/zenodo.23548056) (first archived release: 0.10.0). It is
+   already in `CITATION.cff` (`doi:`) and in the badges of [README.md](README.md) and [README.ko.md](README.ko.md), so nothing needs
+   to change.
 
 ## Code of conduct
 
