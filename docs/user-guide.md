@@ -138,7 +138,8 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, **computation mode**, **8-bit KV cache**, **speculative decoding**, **prompt cache**, model folder, language, new-version notice.
+chat, **computation mode**, **8-bit KV cache**, **fast attention**, **speculative decoding**, **prompt cache**, model folder, language,
+new-version notice.
 Changes are saved immediately.
 
 **Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded.
@@ -159,6 +160,17 @@ models (files such as Q4_K_M) and is otherwise the same as Off (Q8_0 and Q4_0 fi
 The answer bits differ from the 16-bit KV cache but are always the same under the same settings — results match the contract's CPU
 reference bit for bit, and the debugger and reproduction files record this setting and warn when it differs. Applies the next time a
 model is loaded ([문서/긴문맥.md](../문서/긴문맥.md) ③b, Korean).
+
+**Fast attention** — **Off** (default) or On. Used only with the **8-bit KV cache** on; otherwise the same as Off. When on, attention is
+computed in a lighter form (contract F2 — [contract.md](../계약/contract.md) section 2.2: one value scale per head instead of one per 32
+values, a base-2 exponential, and probabilities as 16-bit integers with one exponent per 64 keys). Long prompts get faster — on an RTX
+4070 Ti, 1,024 new tokens at depth 32k and 64k are 22.6 % and 27.6 % faster for Qwen2.5-7B Q4_K_M and empty-cache prompts of 32k and
+64k 17.2 % and 23.0 % faster (Llama-3.1-8B is similar), and all four are faster than the latest llama.cpp (b11796) with an f16 or a q8_0
+KV cache. Generation is unchanged and speculative verify steps are 4–6 % faster. The change in next-token probabilities is of the same
+order as the 8-bit KV cache (Qwen2.5, Llama-3.1 and Mistral passed the quality bar; Qwen3 models did not, so for them it is the same as
+Off). The answer bits differ from Off but are always the same under the same settings — results match the contract's CPU reference bit
+for bit, and the debugger and reproduction files record this setting and warn when it differs. Applies the next time a model is loaded
+([문서/빠른어텐션.md](../문서/빠른어텐션.md), Korean).
 
 **Speculative decoding** — **On** (default) or Off. Looks up likely next tokens in the prompt and the answer so far (no draft model)
 and verifies several in one step. Because this engine gives the same bits whatever the number of rows in a step, **answers,
