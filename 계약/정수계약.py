@@ -336,10 +336,10 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0):
     return 나눔(O, L[:, None])
 
 
-# ── GeulPUv2 빠른 어텐션 F2(문서/빠른어텐션.md — F2-1 의 시험용 계약, 아직 계약.md 에 없다): 커널생성 --f2proto 와 같은 비트 —
-#    1 V128(값 스케일을 헤드의 값 128 개마다 하나), 2 P(확률을 타일마다 한 지수), 4 P7(확률 7비트 — F1 활성값의 규칙, 없으면 16비트),
-#    8 X2(밑이 2 인 지수 함수, 점수 눈금 c · log₂e), 16 Q1E(q 의 지수를 헤드마다 하나). 지금은 27 · 31 만(KV8 과 함께) ──────────────
-F2 = 0
+# ── GeulPUv2 빠른 어텐션 계약 F2(계약.md 2.2 — 문서/빠른어텐션.md): 8비트 KV(F1A′) 위에서 값 스케일을 헤드의 값 128 개마다 하나(V128),
+#    확률 e′ 를 타일(키 64)마다 지수 하나의 16비트로(P16), 밑이 2 인 지수 함수와 점수 눈금 c · log₂e(X2), q 의 지수를 헤드마다 하나(Q1E).
+#    참이면 어텐션 이 어텐션F2 로 간다(커널생성 --F2 — 머리 128) ──────────────────────────────────────────────────────────────────
+F2 = False
 지수2상수 = ("0.001333355787210166454315185546875", "0.009618128649890422821044921875", "0.0555041097104549407958984375",
             "0.2402265071868896484375", "0.693147182464599609375")
 _k2 = [f32(float(v)) for v in 지수2상수]
@@ -390,21 +390,18 @@ def 팔비트KV머리(x):
     return n, s
 
 
-def _지수P(m, 일곱):
-    """F2 P — 행마다 타일의 e′ 최댓값 m → (E, s). 일곱(P7): F1 규칙(⌊log₂ m⌋, m · 2^(6 − E) < 127.5 면 E − 1, 최댓값이 64 ~ 127),
-    s = 2^(5 − E). 아니면 자리 둘의 규칙 s = 2^(13 − E). 자르기 [−98, 100], m = 0 이면 −98."""
-    m64 = m.astype(np.float64)
-    e = np.frexp(m64)[1] - 1
-    if 일곱:
-        e = e - (np.ldexp(m64, 6 - e) < 127.5).astype(e.dtype)
+def _지수P(m):
+    """F2 P16 — 행마다 타일의 e′ 최댓값 m → (E, s): 자리 둘의 규칙 E = ⌊log₂ m⌋([−98, 100] 로 자르고, m = 0 이면 −98), s = 2^(13 − E)."""
+    e = np.frexp(m.astype(np.float64))[1] - 1
     E = np.where(m > 0, np.clip(e, -98, 100), -98).astype(np.int64)
-    return E, np.ldexp(f32(1), ((5 if 일곱 else 13) - E)).astype(f32)
+    return E, np.ldexp(f32(1), (13 - E)).astype(f32)
 
 
 def _조각몫F2(nq, nk, nv, Eq, Pk, sv, Rr, 시작, n):
     """F2 — 행 Rr 의 키 타일 [시작, 시작 + 64) 몫 (m, l, U, Pe): 점수 z = 블록 넷의 체인(첫 블록은 곱, 그다음 FMA — u_b 는 정확한 정수 합의
     fp32), s = z · qc(qc = fp32(2^(E_q − 13) · c′)), 최댓값 m, e = 지수2(s − m)(가린 키는 0), l 은 F1A′ 와 같은 정수 합, e′ = e · s_v(키마다
-    하나), 행마다 e′ 최댓값의 지수 E 로 n = 가까운정수(e′ · 2^(P − E)), U_d = fp32(Σ_t n_t · v_t,d)(P7 은 |·| < 2²⁰ 이라 정확), Pe = 2^(E − P)."""
+    하나), 행마다 e′ 최댓값의 지수 E 로 n = 가까운정수(e′ · 2^(13 − E)) ∈ [0, 2¹⁴], U_d = fp32(Σ_t n_t · v_t,d)(정확한 정수 합에 반올림
+    하나), Pe = 2^(E − 13)."""
     hd = nq.shape[1]
     keys = np.arange(시작, min(시작 + 64, n))
     valid = keys[None, :] <= Rr[:, None]
@@ -421,12 +418,11 @@ def _조각몫F2(nq, nk, nv, Eq, Pk, sv, Rr, 시작, n):
     e = np.where(valid, 지수2(빼기(s, m[:, None])), f32(0)).astype(f32)
     l = (np.rint((e * f32(8388608.0)).astype(f32)).astype(np.int64).sum(1).astype(f32) * f32(2.0 ** -23)).astype(f32)
     ep = 곱(e, sv[keys][None, :])
-    일곱 = bool(F2 & 4)
-    E, sP = _지수P(ep.max(1), 일곱)
+    E, sP = _지수P(ep.max(1))
     ne = np.rint(ep.astype(np.float64) * sP.astype(np.float64)[:, None]).astype(np.int64)
-    assert ne.min() >= 0 and ne.max() <= (127 if 일곱 else 2 ** 14)
+    assert ne.min() >= 0 and ne.max() <= 2 ** 14
     U = (ne @ nv[keys]).astype(f32)
-    return m, l, U, (거듭제곱(E + 8) if 일곱 else 거듭제곱(E))
+    return m, l, U, 거듭제곱(E)
 
 
 def _접기2(M, L, O, m, l, o):
@@ -441,7 +437,6 @@ def 어텐션F2(q, k, v, 조각=64, 묶음=16, 첫행=0):
     """F2 의 어텐션(머리 하나 — 머리 128, 8비트 KV) — 어텐션 과 같은 꼴. 그룹 안의 타일 병합은 커널의 식 그대로:
     첫 타일 O = fma(U, Pe, +0), 그다음 M′ = max(M, m), 가 = 지수2(M − M′), 나 = 지수2(m − M′), L′ = fma(l, 나, L · 가),
     O′ = fma(U, fp32(Pe · 나), O · 가). 그룹 사이는 _접기2. 출력 O / L."""
-    assert F2 in (27, 31), F2
     q, k, v = (np.asarray(x, f32) for x in (q, k, v))
     n, hd = q.shape
     Dq, Eq = 자리로머리(q, 2)
@@ -476,6 +471,24 @@ def 어텐션F2(q, k, v, 조각=64, 묶음=16, 첫행=0):
         else:
             M[selg], L[selg], O[selg] = _접기2(M[selg], L[selg], O[selg], Mg, Lg, Og)
     return 나눔(O, L[:, None])
+
+
+def 값캐시F2(v, 최대길이):
+    """F2 의 값 캐시(헤드 하나): 바이트는 값캐시KV8 과 같은 배치(n 은 팔비트KV머리), 스케일 [최대길이][4] 는 헤드의 스케일 하나를 블록 넷의
+    칸에 같은 값으로(커널의 배치 — 8비트 KV 와 같다)."""
+    n8, s = 팔비트KV머리(np.asarray(v, f32))
+    n, hd = n8.shape
+    키 = np.zeros(32, np.int64)
+    for h in range(2):
+        for c in range(4):
+            키[(2 * c + h) * 4:(2 * c + h) * 4 + 4] = [16 * h + 2 * c, 16 * h + 2 * c + 1, 16 * h + 8 + 2 * c, 16 * h + 8 + 2 * c + 1]
+    Dp = np.zeros((최대길이, hd), np.int64)
+    Dp[:n] = n8
+    blk = Dp.reshape(최대길이 // 32, 32, hd)[:, 키, :]
+    out = np.ascontiguousarray(blk.transpose(0, 2, 1)).astype(np.int8)
+    sc = np.zeros((최대길이, hd // 32), f32)
+    sc[:n] = s[:, None]
+    return out, sc
 
 
 def 낱말차례(바이트):

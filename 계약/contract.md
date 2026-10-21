@@ -140,6 +140,37 @@ its contribution is exactly 0, while the 16-bit format keeps it as a value with 
 below −98. [`시험/계약자체.py`](../시험/계약자체.py) checks the storage, the match with the emulation, and a computation that follows this
 section's text row by row.
 
+### 2.2 Fast attention contract F2 (GeulPUv2, [`문서/빠른어텐션.md`](../문서/빠른어텐션.md))
+
+The fast mode's KV cache setting "8-bit · fast attention" (kernel generator `--빠른 --F2` — head size 128). Keys are as in 2.1 (int8 and a
+float32 scale per 32 values); what differs is the scale of q and of the values, the unit of the scores and of the exponential, and the
+probabilities of the weighted sum.
+
+1. **q**: the 16-bit format (two 8-bit digits) with one exponent E_q per head (128 values) — E_q = ⌊log₂ max_d |q_d|⌋ (clamped to
+   [−98, 100]; −98 if the maximum is 0), n_q,d = nearest integer of q_d · 2^(13 − E_q).
+2. **Values**: int8 with one float32 scale per head (128 values) — s_v = max_d |v_d| / 127 (float32 division, one rounding); if s_v > 0,
+   n is the integer nearest to the float32 quotient v / s_v (ties to even), else 0. The cache's scale slots [position][4] hold the same
+   value four times (the layout of 2.1).
+3. **Score** (log₂ units): per block b, u_b,t = float32(Σ n_q · n_k) (the exact integer sum of 2.1, one rounding); z ← u_0,t × s_k,t,0,
+   then z ← fma(u_b,t, s_k,t,b, z) for b = 1, 2, 3 in order, and s_t = z × q_c with q_c = 2^(E_q − 13) × c′ (exact),
+   c′ = float32(float32(1/√128) × float32(log₂e)) = 0x3E0293EE. Masked keys (t > p) get −3 × 10³⁸.
+4. **exp2** (x ≤ 0): x_c = max(x, −126), t = x_c + 1.5 · 2²³ (rounded to the nearest integer), r = x_c − (t − 1.5 · 2²³) (exact — |r| ≤ ½),
+   p = the fma chain (((((c₅ · r + c₄) · r + c₃) · r + c₂) · r + c₁) · r + 1) with c_k = float32((ln 2)^k / k!) (c₁ … c₅ = 0x3F317218 ·
+   0x3E75FDF0 · 0x3D635847 · 0x3C1D955B · 0x3AAEC3FF), and the result's bits = p's bits + (t's bits ≪ 23) (mod 2³² — adds n to the
+   exponent).
+5. **Tile** (64 keys): m = max_t s_t, e_t = exp2(s_t − m) (0 for masked keys), l as in section 2 step 3 (integer sum).
+   e′_t = e_t × s_v,t (one rounding). Per row, from the tile's largest e′: E = ⌊log₂ max_t e′_t⌋ (the two-digit rule — [−98, 100], −98 if
+   0), n_t = nearest integer of e′_t · 2^(13 − E) ∈ [0, 2¹⁴], U_d = float32(Σ_t n_t · n_v,t,d) (the exact integer sum over the tile's 64
+   keys, one rounding), P = 2^(E − 13).
+6. **Merge** (the two levels of section 3 — the exponential is exp2): the group's first tile gives (M, L, O) = (m, l, fma(U, P, +0)); for
+   each following tile M′ = max(M, m), α = exp2(M − M′), β = exp2(m − M′), L ← fma(l, β, L · α), O ← fma(U, float32(P · β), O · α), M ← M′.
+   Groups merge with section 3's formulas using exp2. The output is O / L.
+
+All float32 operations follow rule R; determinism, bit identity with the CPU reference and path invariance hold as before. The operations
+differ from 2.1, so the output bits differ. The four value blocks share one set of e′ digits (2.1 makes one per block), the weighted sum
+converts integers to float32 once per 64 keys (2.1: per 32) and the exponential is shorter — prompt attention runs about a third fewer
+instructions. The CPU reference is `어텐션F2` in [`계약/정수계약.py`](정수계약.py) (`F2 = True`).
+
 ## 3. Two-level merge (stage 13)
 
 Key tiles (64 positions each) are grouped (16 tiles = 1024 positions; group g covers positions [1024g, 1024g + 1024)):
