@@ -7,7 +7,7 @@
     python 도구/debugger.py record-stop
     python 도구/debugger.py get NAME FILE.jsonl         # 실행 로그를 받아 파일로
     python 도구/debugger.py delete NAME
-    python 도구/debugger.py load MODEL [--precision exact|fast] [--kv8 on|off] [--layer cuda|vulkan]
+    python 도구/debugger.py load MODEL [--precision exact|fast] [--kv8 on|off] [--fast-attention on|off] [--layer cuda|vulkan]
                                                        # 앱의 모델을 불러온다(모델 아이디 · sha256 앞 8 자 이상 · run:실행)
     python 도구/debugger.py run-set TESTSET.jsonl NAME [--seed 1000]
     python 도구/debugger.py replay RUN [--out REPORT.json] [--requests 3,7] [--ignore-header]
@@ -215,7 +215,7 @@ def 지금헤더(앱):
             "model_info": {"id": (m or {}).get("id"), "file": os.path.basename((m or {}).get("path") or ""), "sha256": (m or {}).get("sha256"),
                            "vocab": s.get("vocab"), "template": (m or {}).get("template")},
             "server": {"sha256": (m or {}).get("sha256"), "layer": sv.get("layer"), "precision": sv.get("precision"),
-                       "kv8": bool(sv.get("kv8")), "context": sv.get("context"), "yarn": 얀}}
+                       "kv8": bool(sv.get("kv8")), "fast_attention": bool(sv.get("fast_attention")), "context": sv.get("context"), "yarn": 얀}}
 
 
 def 준비된서버(앱):
@@ -243,6 +243,7 @@ def 빌드다름(헤더, 지금):
             다름.append(f"서버 빌드 {짧게(b['server'])} → {짧게(지금서버)}")
         지금모듈 = (지금.get("build") or {}).get("module_sha256")
         if (sv.get("precision") == 지금["server"]["precision"] and bool(sv.get("kv8")) == bool(지금["server"].get("kv8"))
+                and bool(sv.get("fast_attention")) == bool(지금["server"].get("fast_attention"))
                 and b.get("module_sha256") and 지금모듈 and b["module_sha256"] != 지금모듈):
             다름.append(f"모듈 {짧게(b['module_sha256'])} → {짧게(지금모듈)}")
     return 다름
@@ -254,11 +255,12 @@ def 기록서버(헤더, x):
         return x["server"]
     sv = 헤더.get("server") or {}
     return {"sha256": (헤더.get("model") or {}).get("sha256"), "layer": sv.get("layer"), "precision": sv.get("precision"),
-            "kv8": bool(sv.get("kv8")), "context": sv.get("context"), "yarn": sv.get("yarn")}
+            "kv8": bool(sv.get("kv8")), "fast_attention": bool(sv.get("fast_attention")), "context": sv.get("context"), "yarn": sv.get("yarn")}
 
 
 def 서버다름(기록, 지금):
-    """비트가 같으려면 같아야 하는 것 — 모델 sha256 · 계산 방식 · KV 캐시(8비트 — 없으면 16비트) · YaRN 배, 빠른 모드면 백엔드도
+    """비트가 같으려면 같아야 하는 것 — 모델 sha256 · 계산 방식 · KV 캐시(8비트 — 없으면 16비트) · 빠른 어텐션(없으면 끔) · YaRN 배,
+    빠른 모드면 백엔드도
     (CUDA ↔ Vulkan 은 정밀 모드만 같다)"""
     다름 = []
     for k, 이름 in (("sha256", "모델 sha256"), ("precision", "계산 방식"), ("yarn", "YaRN 배")):
@@ -266,6 +268,8 @@ def 서버다름(기록, 지금):
             다름.append(f"{이름} {짧게(기록.get(k))} → {짧게(지금.get(k))}")
     if bool(기록.get("kv8")) != bool(지금.get("kv8")):          # GeulPUv2 ③b-2
         다름.append(f"KV 캐시 {'8비트' if 기록.get('kv8') else '16비트'} → {'8비트' if 지금.get('kv8') else '16비트'}")
+    if bool(기록.get("fast_attention")) != bool(지금.get("fast_attention")):      # GeulPUv2 빠른 어텐션(계약 F2)
+        다름.append(f"빠른 어텐션 {'켬' if 기록.get('fast_attention') else '끔'} → {'켬' if 지금.get('fast_attention') else '끔'}")
     if 기록.get("precision") == "fast" == 지금.get("precision") and 기록.get("layer") != 지금.get("layer"):
         다름.append(f"백엔드 {기록.get('layer')} → {지금.get('layer')}(빠른 모드)")
     return 다름
@@ -696,7 +700,7 @@ def 분기(a):
 
 # ---- 비교 ----
 def 서버글(sv):
-    kv = " · KV 8비트" if (sv or {}).get("kv8") else ""
+    kv = (" · KV 8비트" if (sv or {}).get("kv8") else "") + (" · 빠른 어텐션" if (sv or {}).get("fast_attention") else "")
     return f"{짧게((sv or {}).get('sha256'))} · {(sv or {}).get('precision')}{kv} · {(sv or {}).get('layer')}"
 
 
@@ -832,7 +836,7 @@ def 지우기(a):
 
 def 불러오기(a):
     """앱의 모델을 불러온다 — 모델 아이디 · sha256 앞 8 자 이상 · run:실행(그 실행의 첫 요청을 생성한 모델). 설정(계산 방식 · KV 캐시 ·
-    문맥 · 슬롯)은 앱의 설정 그대로(--precision · --kv8 · --layer 를 주면 바꾼다)"""
+    문맥 · 슬롯)은 앱의 설정 그대로(--precision · --kv8 · --fast-attention · --layer 를 주면 바꾼다)"""
     st = 묻기(a.app, "GET", "/api/state")
     모델들 = st.get("models") or []
     대상 = a.model
@@ -850,6 +854,8 @@ def 불러오기(a):
     바꿈 = {k: v for k, v in (("precision", a.precision), ("gpu_layer", a.layer)) if v}
     if a.kv8:                                        # GeulPUv2 ③b-2 — KV 캐시 8비트(빠름 · CUDA · k-양자화 모델에서만 쓴다)
         바꿈["kv8_cache"] = a.kv8 == "on"
+    if a.fast_attention:                             # GeulPUv2 빠른 어텐션(계약 F2 — KV 캐시 8비트를 켰을 때만 쓴다)
+        바꿈["fast_attention"] = a.fast_attention == "on"
     if 바꿈:                                         # 앱의 설정을 바꾼다(다음에 불러올 때 적용 — 아래에서 다시 불러온다)
         묻기(a.app, "POST", "/api/settings", 바꿈)
     if a.layer and (st.get("device") or {}).get("layer") != a.layer:   # 앱이 쓰는 백엔드는 하드웨어 확인이 정한다 — 다시 확인
@@ -869,7 +875,8 @@ def 불러오기(a):
 
     def 맞나(sv):
         return (sv.get("state") == "ready" and sv.get("model") == m["id"] and (not a.precision or sv.get("precision") == a.precision)
-                and (not a.layer or sv.get("layer") == a.layer) and (not a.kv8 or bool(sv.get("kv8")) == (a.kv8 == "on")))
+                and (not a.layer or sv.get("layer") == a.layer) and (not a.kv8 or bool(sv.get("kv8")) == (a.kv8 == "on"))
+                and (not a.fast_attention or bool(sv.get("fast_attention")) == (a.fast_attention == "on")))
     if 맞나(sv):
         print(f"이미 불러옴: {m['id']} · {sv.get('precision')} · {sv.get('layer')} · 문맥 {sv.get('context')}")
         return
@@ -1021,6 +1028,7 @@ def main():
     s.add_argument("model")
     s.add_argument("--precision", choices=("exact", "fast"), help="계산 방식(앱의 설정을 바꾼다)")
     s.add_argument("--kv8", choices=("on", "off"), help="KV 캐시 8비트(앱의 설정을 바꾼다 — 빠름 · CUDA · k-양자화 모델에서만 쓴다)")
+    s.add_argument("--fast-attention", choices=("on", "off"), help="빠른 어텐션(계약 F2 — 앱의 설정을 바꾼다 · KV 캐시 8비트를 켰을 때만 쓴다)")
     s.add_argument("--layer", choices=("cuda", "vulkan"), help="백엔드(앱의 설정을 바꾼다)")
     s.add_argument("--timeout", type=int, default=900, help="기다릴 초")
     s = sp.add_parser("run-set", help="테스트 세트를 실행 하나로 기록")

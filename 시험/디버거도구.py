@@ -198,6 +198,8 @@ def 시험_점수():
     같다("YaRN 배", len(d.서버다름(서버A, dict(서버A, yarn=2))), 1)
     같다("KV 캐시 8비트", len(d.서버다름(서버A, dict(서버A, kv8=True))), 1)                 # GeulPUv2 ③b-2
     같다("KV 캐시 — 없으면 16비트", d.서버다름(dict(서버A, kv8=False), 서버A), [])
+    같다("빠른 어텐션", len(d.서버다름(서버A, dict(서버A, kv8=True, fast_attention=True))), 2)    # GeulPUv2 빠른 어텐션(계약 F2)
+    같다("빠른 어텐션 — 없으면 끔", d.서버다름(dict(서버A, fast_attention=False), 서버A), [])
     같다("해시 같음", d.해시검사(서버A, 서버A, ["1", "2"], ["1", "2"]), "same")
     같다("해시 다름", d.해시검사(서버A, 서버A, ["1", "2"], ["1", "3"]), "different")
     같다("다른 모델의 해시", d.해시검사(서버A, 서버B, ["1"], ["9"]), "other_model")
