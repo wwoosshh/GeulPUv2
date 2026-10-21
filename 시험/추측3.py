@@ -159,13 +159,15 @@ def main():
     ap.add_argument("--ptx"); ap.add_argument("--포트", type=int, default=8095)
     ap.add_argument("--문맥", type=int, default=4096); ap.add_argument("--슬롯", type=int, default=4)
     ap.add_argument("--출력")
+    ap.add_argument("--far", help="GeulPUv2 ③c — 서버의 앞쪽 그룹 한도 '행 하나,행 여럿'(0,0 이면 다 찬 그룹을 모두 새 커널로)")
     a = ap.parse_args()
     os.makedirs(a.작업, exist_ok=True)
+    더 = ("--far", a.far) if a.far else ()
     모드들 = ("켬", "정답", "반쯤", "틀림")
     결과 = {"가": {}, "나": {}, "다름": []}
     다름 = 0
     # (가) 슬롯 1
-    sv = 서버(a.exe, a.gguf, a.포트, 1, a.문맥, ptx=a.ptx, 로그=os.path.join(a.작업, "서버_추측_가.log"))
+    sv = 서버(a.exe, a.gguf, a.포트, 1, a.문맥, ptx=a.ptx, 로그=os.path.join(a.작업, "서버_추측_가.log"), 더=더)
     try:
         s, ti = 요청(a.포트, "GET", "/tokenizer_info")
         어휘 = ti["vocab_size"] if s == 200 and isinstance(ti, dict) else 32000
@@ -224,7 +226,7 @@ def main():
     finally:
         sv.끄기()
     # (나) 슬롯 S — 켬 · 정답 · 틀림을 모두 한꺼번에
-    sv = 서버(a.exe, a.gguf, a.포트, a.슬롯, a.문맥, ptx=a.ptx, 로그=os.path.join(a.작업, "서버_추측_나.log"))
+    sv = 서버(a.exe, a.gguf, a.포트, a.슬롯, a.문맥, ptx=a.ptx, 로그=os.path.join(a.작업, "서버_추측_나.log"), 더=더)
     try:
         일들 = []
         for 이름, 길, 몸 in 요들:

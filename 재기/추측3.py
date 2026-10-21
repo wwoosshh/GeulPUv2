@@ -1,8 +1,13 @@
 """GeulPUv2 3단계 재기 — 생성 속도: 추측 디코딩(프롬프트 찾기) 켬 · 끔, 그리고 llama.cpp 의 llama-server(추측 없음 · ngram-simple ·
---spec-default)와. 표준 라이브러리만.
+ngram-mod)와. 표준 라이브러리만.
 
     python -I 재기/추측3.py <모델.gguf> <결과 폴더> --글서버 <서버.exe> --ptx <모듈> --라마 <llama-b… 폴더> [--바퀴 3] [--포트 8096]
-                            [--일 이름,…] [--라마끔]
+                            [--일 이름,…] [--라마끔] [--depth N] [--ctx L] [--ctk q8_0] [--yarn F]
+
+GeulPUv2 ③c — 긴 문맥: --depth N 이면 요청마다 앞에 배경 글(빌드/wikitext-2/wiki.test.raw 의 앞부분 — 약 N 토큰, 일과 상관없음)을 붙여 생성이
+깊이 N 근처에서 일어나게 한다(두 서버 모두 같은 앞부분을 캐시로 다시 쓴다). --ctx 는 두 서버의 문맥(기본 8,192), --ctk 는 llama-server 의 KV
+형식(-ctk · -ctv — 8비트 KV 와 비교할 때 q8_0), --yarn F 는 llama-server 의 YaRN(Qwen 이 32,768 을 넘을 때 — GeulPU 는 문맥을 덮는 가장 작은
+배 2 · 4 를 스스로 쓴다). llama.cpp b11768 에는 --spec-default 가 없어 추측 방식은 --spec-type ngram-simple · ngram-mod.
 
 일 여덟(문서/3단계.md 견줄 것 C): 코드 고치기 둘 · 문서 다시 쓰기 · 요약(되풀이가 많은 묶음 — 프롬프트에 답의 조각이 있다), 채팅 탐욕 ·
 채팅 뽑기 · 수학(보통 채팅 묶음), 번역(따로 — 반복 묶음에서 뺀다). 번갈아 세 바퀴: 바퀴마다 글 서버(슬롯 1 · 덩이 512 — 앱과 같다)에
@@ -149,8 +154,13 @@ class Inventory:
          "그렇게 고친 시계는 다시 몇십 년을 갔다. 사람들은 그 가게를 지나며 시계 소리를 들었고, 그 소리로 시간을 알았다.")
 
 
+배경 = ""          # ③c — --depth 의 배경 글(main 이 채운다)
+
+
 def 일들():
     def 채팅(글, **kw):
+        if 배경:
+            글 = "Background notes (not related to the task below):\n\n" + 배경 + "\n\nTask:\n" + 글
         return {"messages": [{"role": "user", "content": 글}], **kw}
     탐 = dict(temperature=0)
     return [
@@ -202,8 +212,14 @@ def main():
     ap.add_argument("--글서버", required=True); ap.add_argument("--ptx", required=True); ap.add_argument("--라마")
     ap.add_argument("--바퀴", type=int, default=3); ap.add_argument("--포트", type=int, default=8096)
     ap.add_argument("--일"); ap.add_argument("--라마끔", action="store_true")
+    ap.add_argument("--depth", type=int, default=0); ap.add_argument("--ctx", type=int, default=8192)
+    ap.add_argument("--ctk"); ap.add_argument("--yarn", type=int)
     a = ap.parse_args()
     os.makedirs(a.결과, exist_ok=True)
+    if a.depth > 0:                                   # ③c — 배경 글(약 4 글자 = 토큰 하나)
+        global 배경
+        위키 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "빌드", "wikitext-2", "wiki.test.raw")
+        배경 = open(위키, encoding="utf-8").read()[: a.depth * 4]
     목록 = 일들()
     if a.일:
         고른 = set(a.일.split(","))
@@ -211,13 +227,18 @@ def main():
     라마들 = [] if (a.라마끔 or not a.라마) else [
         ("llama 추측없음", []),
         ("llama ngram-simple", ["--spec-type", "ngram-simple"]),
-        ("llama spec-default", ["--spec-default"]),
+        ("llama ngram-mod", ["--spec-type", "ngram-mod"]),
     ]
+    라마더 = []
+    if a.ctk:
+        라마더 += ["-ctk", a.ctk, "-ctv", a.ctk]
+    if a.yarn:
+        라마더 += ["--rope-scaling", "yarn", "--rope-scale", str(a.yarn), "--yarn-orig-ctx", "32768"]
     기록 = {"일": [x[0] for x in 목록], "바퀴": []}
     for 바퀴 in range(a.바퀴):
         한바퀴 = {}
         # 글 서버 — 끔 · 켬 (바퀴마다 차례를 바꾼다)
-        sv = 띄움([os.path.abspath(a.글서버), a.gguf, "--포트", str(a.포트), "--슬롯", "1", "--문맥", "8192", "--ptx", a.ptx],
+        sv = 띄움([os.path.abspath(a.글서버), a.gguf, "--포트", str(a.포트), "--슬롯", "1", "--문맥", str(a.ctx), "--ptx", a.ptx],
                   a.포트, os.path.join(a.결과, f"글서버_{바퀴}.log"))
         try:
             for 이름, 묶음, 몸 in 목록:
@@ -238,7 +259,7 @@ def main():
         # llama-server 셋
         for 라이름, 더 in 라마들:
             인자 = [os.path.join(a.라마, "llama-server.exe"), "-m", a.gguf, "--port", str(a.포트), "-ngl", "99", "-fa", "on",
-                   "-c", "8192", "--parallel", "1", *더]
+                   "-c", str(a.ctx), "--parallel", "1", *라마더, *더]
             sv = 띄움(인자, a.포트, os.path.join(a.결과, f"{라이름.replace(' ', '_')}_{바퀴}.log"))
             try:
                 for 이름, 묶음, 몸 in 목록:
