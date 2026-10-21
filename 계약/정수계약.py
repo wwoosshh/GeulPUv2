@@ -301,6 +301,8 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0):
     조각을 차례로 접어 묶음의 (M_g, L_g, O_g) 를 만들고(묶음의 첫 조각이 처음 값), 묶음들을 차례로 같은 식으로 접는다(첫 묶음이 처음 값).
     위치 1024 까지는 묶음이 하나라 9~12단계의 한 층 접기와 같다. 묶음=None 이면 한 층(9~12단계 계약 — 견주기용).
     첫행: 이 행부터만 계산한다(긴 문맥의 짧은 덩이 대조 — 앞 행은 건너뛴다; 값은 모든 행을 계산할 때의 그 행과 같다)."""
+    if F2:                                                          # GeulPUv2 빠른 어텐션 F2(시험용)
+        return 어텐션F2(q, k, v, 조각, 묶음, 첫행)
     q, k, v = (np.asarray(x, f32) for x in (q, k, v))
     n = q.shape[0]
     (Dq, Eq), (Dk, Ek), (Dv, Ev) = 어텐션자리로(q, "q"), 어텐션자리로(k, "k"), 어텐션자리로(v, "v")   # 2b단계 — F1A 면 에뮬레이션
@@ -331,6 +333,148 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0):
             M[selg], L[selg], O[selg] = Mg, Lg, Og
         else:
             M[selg], L[selg], O[selg] = _접기(M[selg], L[selg], O[selg], Mg, Lg, Og)
+    return 나눔(O, L[:, None])
+
+
+# ── GeulPUv2 빠른 어텐션 F2(문서/빠른어텐션.md — F2-1 의 시험용 계약, 아직 계약.md 에 없다): 커널생성 --f2proto 와 같은 비트 —
+#    1 V128(값 스케일을 헤드의 값 128 개마다 하나), 2 P(확률을 타일마다 한 지수), 4 P7(확률 7비트 — F1 활성값의 규칙, 없으면 16비트),
+#    8 X2(밑이 2 인 지수 함수, 점수 눈금 c · log₂e), 16 Q1E(q 의 지수를 헤드마다 하나). 지금은 27 · 31 만(KV8 과 함께) ──────────────
+F2 = 0
+지수2상수 = ("0.001333355787210166454315185546875", "0.009618128649890422821044921875", "0.0555041097104549407958984375",
+            "0.2402265071868896484375", "0.693147182464599609375")
+_k2 = [f32(float(v)) for v in 지수2상수]
+점수눈금2 = f32(0.1275174319744110107421875)                # fp32(fp32(1/√128) · fp32(log₂e)) — 0x3E0293EE
+
+
+def 지수2(x):
+    """F2 X2 — 2^x (x ≤ 0): xc = max(x, −126), t = xc + 1.5·2²³(가까운 정수로 반올림), r = xc − (t − 1.5·2²³)(정확 — r ∈ [−½, ½]),
+    5차 다항식(곱해더하기 체인 — 지수2상수, 끝은 + 1), 결과의 비트 = p 의 비트 + (t 의 비트 ≪ 23)(2³² 의 나머지 — 지수에 n 을 더한다)."""
+    x = np.asarray(x, f32)
+    xc = np.maximum(x, f32(-126.0)).astype(f32)
+    t = 더(xc, f32(12582912.0))
+    r = 빼기(xc, 빼기(t, f32(12582912.0)))
+    p = fma32(_k2[0], r, _k2[1])
+    for c in _k2[2:]:
+        p = fma32(p, r, c)
+    p = fma32(p, r, f32(1.0))
+    bits = (p.view(np.int32).astype(np.int64) + (t.view(np.int32).astype(np.int64) << 23)) & 0xFFFFFFFF
+    return bits.astype(np.uint32).view(f32)
+
+
+def 자리로머리(x, 자리수=2):
+    """F2 Q1E — 자리로 와 같은 식이고 지수는 행마다 하나(값 hd 개의 최댓값). (자리 [자리수][행][hd] int64, E [행] int64)."""
+    x = np.asarray(x, f32)
+    P = 8 * 자리수 - 3
+    m = np.abs(x).max(1)
+    e = np.frexp(m.astype(np.float64))[1] - 1
+    E = np.where(m > 0, np.clip(e, -98, 100), -98).astype(np.int64)
+    s = np.ldexp(f32(1), (P - E)).astype(f32)
+    n = np.rint(x * s[:, None]).astype(np.int64)
+    assert np.abs(n).max() <= 2 ** (P + 1)
+    D = []
+    for _ in range(자리수 - 1):
+        d = ((n + 128) & 255) - 128
+        D.append(d)
+        n = (n - d) >> 8
+    D.append(n)
+    return np.stack(D), E
+
+
+def 팔비트KV머리(x):
+    """F2 V128 — 팔비트KV 의 식을 값 hd 개(헤드 하나)마다 스케일 하나로. (n [행][hd] int64, s [행] fp32)."""
+    x = 버림(np.asarray(x, f32))
+    s = 나눔(np.abs(x).max(1), f32(127.0))
+    양 = s > 0
+    n = np.where(양[:, None], np.rint(나눔(x, np.where(양, s, f32(1.0))[:, None])), f32(0.0)).astype(np.int64)
+    assert np.abs(n).max() <= 127
+    return n, s
+
+
+def _지수P(m, 일곱):
+    """F2 P — 행마다 타일의 e′ 최댓값 m → (E, s). 일곱(P7): F1 규칙(⌊log₂ m⌋, m · 2^(6 − E) < 127.5 면 E − 1, 최댓값이 64 ~ 127),
+    s = 2^(5 − E). 아니면 자리 둘의 규칙 s = 2^(13 − E). 자르기 [−98, 100], m = 0 이면 −98."""
+    m64 = m.astype(np.float64)
+    e = np.frexp(m64)[1] - 1
+    if 일곱:
+        e = e - (np.ldexp(m64, 6 - e) < 127.5).astype(e.dtype)
+    E = np.where(m > 0, np.clip(e, -98, 100), -98).astype(np.int64)
+    return E, np.ldexp(f32(1), ((5 if 일곱 else 13) - E)).astype(f32)
+
+
+def _조각몫F2(nq, nk, nv, Eq, Pk, sv, Rr, 시작, n):
+    """F2 — 행 Rr 의 키 타일 [시작, 시작 + 64) 몫 (m, l, U, Pe): 점수 z = 블록 넷의 체인(첫 블록은 곱, 그다음 FMA — u_b 는 정확한 정수 합의
+    fp32), s = z · qc(qc = fp32(2^(E_q − 13) · c′)), 최댓값 m, e = 지수2(s − m)(가린 키는 0), l 은 F1A′ 와 같은 정수 합, e′ = e · s_v(키마다
+    하나), 행마다 e′ 최댓값의 지수 E 로 n = 가까운정수(e′ · 2^(P − E)), U_d = fp32(Σ_t n_t · v_t,d)(P7 은 |·| < 2²⁰ 이라 정확), Pe = 2^(E − P)."""
+    hd = nq.shape[1]
+    keys = np.arange(시작, min(시작 + 64, n))
+    valid = keys[None, :] <= Rr[:, None]
+    z = None
+    for b in range(hd // 32):
+        sl = slice(32 * b, 32 * b + 32)
+        u = (nq[Rr][:, sl] @ nk[keys][:, sl].T).astype(f32)
+        kb = np.broadcast_to(Pk[keys, b][None, :], u.shape)
+        z = 곱(u, kb) if b == 0 else fma32(u, kb, z)
+    qc = 곱(거듭제곱(Eq[Rr]), 점수눈금2)
+    s = 곱(z, qc[:, None])
+    s = np.where(valid, s, f32(-3.0e38)).astype(f32)
+    m = s.max(1)
+    e = np.where(valid, 지수2(빼기(s, m[:, None])), f32(0)).astype(f32)
+    l = (np.rint((e * f32(8388608.0)).astype(f32)).astype(np.int64).sum(1).astype(f32) * f32(2.0 ** -23)).astype(f32)
+    ep = 곱(e, sv[keys][None, :])
+    일곱 = bool(F2 & 4)
+    E, sP = _지수P(ep.max(1), 일곱)
+    ne = np.rint(ep.astype(np.float64) * sP.astype(np.float64)[:, None]).astype(np.int64)
+    assert ne.min() >= 0 and ne.max() <= (127 if 일곱 else 2 ** 14)
+    U = (ne @ nv[keys]).astype(f32)
+    return m, l, U, (거듭제곱(E + 8) if 일곱 else 거듭제곱(E))
+
+
+def _접기2(M, L, O, m, l, o):
+    """F2 — 그룹 병합(두 층의 둘째): _접기 와 같은 식, 지수는 지수2."""
+    M2 = np.maximum(M, m)
+    가 = 지수2(빼기(M, M2))
+    나 = 지수2(빼기(m, M2))
+    return M2, fma32(l, 나, 곱(L, 가)), fma32(o, 나[:, None], 곱(O, 가[:, None]))
+
+
+def 어텐션F2(q, k, v, 조각=64, 묶음=16, 첫행=0):
+    """F2 의 어텐션(머리 하나 — 머리 128, 8비트 KV) — 어텐션 과 같은 꼴. 그룹 안의 타일 병합은 커널의 식 그대로:
+    첫 타일 O = fma(U, Pe, +0), 그다음 M′ = max(M, m), 가 = 지수2(M − M′), 나 = 지수2(m − M′), L′ = fma(l, 나, L · 가),
+    O′ = fma(U, fp32(Pe · 나), O · 가). 그룹 사이는 _접기2. 출력 O / L."""
+    assert F2 in (27, 31), F2
+    q, k, v = (np.asarray(x, f32) for x in (q, k, v))
+    n, hd = q.shape
+    Dq, Eq = 자리로머리(q, 2)
+    nq = Dq[1] * 256 + Dq[0]
+    nk, Pk = 팔비트KV(k)
+    nv, sv = 팔비트KV머리(v)
+    R_ = np.arange(첫행, n)
+    M = np.zeros(len(R_), f32)
+    L = np.zeros(len(R_), f32)
+    O = np.zeros((len(R_), hd), f32)
+    폭 = 조각 * 묶음
+    for g0 in range(0, n, 폭):
+        selg = R_ >= g0
+        Mg = np.zeros(int(selg.sum()), f32)
+        Lg = np.zeros(int(selg.sum()), f32)
+        Og = np.zeros((int(selg.sum()), hd), f32)
+        for 시작 in range(g0, min(g0 + 폭, n), 조각):
+            sel = R_ >= 시작
+            m, l, U, Pe = _조각몫F2(nq, nk, nv, Eq, Pk, sv, R_[sel], 시작, n)
+            idx = np.nonzero(sel[selg])[0]
+            if 시작 == g0:
+                Mg[idx], Lg[idx], Og[idx] = m, l, fma32(U, Pe[:, None], f32(0))
+            else:
+                M2 = np.maximum(Mg[idx], m)
+                가 = 지수2(빼기(Mg[idx], M2))
+                나 = 지수2(빼기(m, M2))
+                Lg[idx] = fma32(l, 나, 곱(Lg[idx], 가))
+                Og[idx] = fma32(U, 곱(Pe, 나)[:, None], 곱(Og[idx], 가[:, None]))
+                Mg[idx] = M2
+        if g0 == 0:
+            M[selg], L[selg], O[selg] = Mg, Lg, Og
+        else:
+            M[selg], L[selg], O[selg] = _접기2(M[selg], L[selg], O[selg], Mg, Lg, Og)
     return 나눔(O, L[:, None])
 
 
