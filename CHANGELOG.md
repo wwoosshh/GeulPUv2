@@ -67,6 +67,12 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   `rope.freq_base` is not a finite number above 1 is refused instead of hanging the load. A damaged tuning cache (plan memory) for a
   k-quant model is dropped and measured again instead of indexing past its kernel table — a bad entry ended in a divide-by-zero crash.
 
+### Project
+- **CI checks more of the host-side arithmetic** ([#27](https://github.com/wwoosshh/GeulPUv2/issues/27)): the quick check now compares
+  the geul sampler and log-probabilities with the contract's Python reference (12,000 sampling cases including sums of exactly 1 and
+  just above 1), checks the fast contract's one-digit matmuls and the RMSNorm eps constants in the contract self-test, compiles and runs
+  `--help` for the tools in `도구/`, and treats `엔진/파일.gl` (included by the kernel generator) as a kernel file.
+
 ## 0.10.1 — Security fixes (2026-10-22)
 
 ### Security

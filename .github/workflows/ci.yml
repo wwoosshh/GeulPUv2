@@ -37,7 +37,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           from="${BASE:-$BEFORE}"
-          paths="커널 백엔드 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
+          paths="커널 백엔드 엔진/파일.gl 엔진/리눅스/파일.gl 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
           if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$from^{commit}" 2>/dev/null; then
             echo "full=1" >> "$GITHUB_OUTPUT"; echo "견줄 앞 커밋이 없다 — 모두 본다"
           elif git diff --quiet "$from" HEAD -- $paths; then
@@ -120,7 +120,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           from="${BASE:-$BEFORE}"
-          paths="커널 백엔드 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
+          paths="커널 백엔드 엔진/파일.gl 엔진/리눅스/파일.gl 시험/모듈해시.txt 시험/SASS넘침.txt 시험/글저장소커밋.txt 시험/빠른점검.py .github/workflows/ci.yml"
           if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$from^{commit}" 2>/dev/null; then
             echo "full=1" >> "$GITHUB_OUTPUT"; echo "견줄 앞 커밋이 없다 — 모두 본다"
           elif git diff --quiet "$from" HEAD -- $paths; then
