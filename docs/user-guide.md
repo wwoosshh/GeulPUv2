@@ -227,8 +227,9 @@ top-p. The panel computes only when you look, so chat speed is unchanged.
 
 ![Research panel — Compare: the same answer scored again with the same model's Q4_K_M file — the effect of the quantization alone, token by token](img/research-compare-en.png)
 
-A reproduction file can be checked without a GPU, too — clone the repository (`pip install numpy`) and run
-`python -I 도구/repro_check.py <repro.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
+A reproduction file can be checked without a GPU, too — clone the repository, install numpy in a virtual environment
+(`python -m venv .venv`, then `.venv/Scripts/pip install numpy` — `python -I` ignores packages installed with `pip install --user`) and run
+`.venv/Scripts/python -I 도구/repro_check.py <repro.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
 and log-probabilities (a few minutes for 7B). A reproduction file records its computation mode and is checked in that mode.
 
 ### 6. Debugger — record · replay · branch · compare
