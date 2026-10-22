@@ -12,6 +12,8 @@
      4c. RoPE 표(GeulPUv2 ③a — YaRN 배 2 · 4 와 늘이지 않은 표) — 엔진/시험_로프표.gl 의 표를 CPU 참조(시험/로프표.py)와 바이트까지
      4d. 디버거 v1 — 앱 기록기의 JSON 문법 훑기(앱/디버거제이슨.gl — 엔진/시험_디버거제이슨.gl)를 파이썬의 엄격한 풀기(시험/디버거제이슨.py)와
      4e. 추론 서버의 브라우저 지킴(엔진/요청지킴.gl — Host 는 127.0.0.1 · localhost 만, Origin 이 있으면 거부)을 경우마다(엔진/시험_요청지킴.gl)
+     4f. 망가진 GGUF — 엔진의 GGUF 열기(엔진/시험_GGUF열기.gl)가 조작된 파일 서른 남짓을 오류로 끝내는가(시험/망가진입력.py gguf)
+     4g. 유한하지 않은 로짓 — 뽑기(엔진/시험_뽑기.gl)가 NaN · ±Inf 가 섞인 행에서 범위 안의 번호를 고르는가(시험/망가진입력.py 뽑기)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
@@ -414,6 +416,20 @@ def 요청지킴(출력):
     알림("서버의 요청 지킴(GPU 없이)", rc == 0, 꼬리)
 
 
+def 망가진입력(출력):
+    """GHSA-4v72 — 조작된 GGUF 를 엔진의 GGUF 열기가 오류로 끝내는가(접근 위반 · 멈춤 · 그냥 열림이 아니라), NaN · ±Inf 로짓에서 뽑기가
+    범위 안의 번호를 고르는가(GPU 없이)"""
+    for 이름, 갈래, exe이름 in (("망가진 GGUF 열기(GPU 없이)", "gguf", "시험_GGUF열기"), ("유한하지 않은 로짓의 뽑기(GPU 없이)", "뽑기", "시험_뽑기")):
+        exe = os.path.join(출력, exe이름 + EXE)
+        if not os.path.exists(exe):
+            알림(이름, False, f"{exe이름} 이 없다(빌드 실패)")
+            continue
+        t0 = time.time()
+        rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "망가진입력.py"), 갈래, exe],
+                          os.path.join(출력, f"망가진입력_{갈래}.txt"))
+        알림(이름, rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
+
+
 def 가져오기검사(출력):
     """윈도: 실행기는 kernel32 · shell32 · nvcuda, 서버는 그에 ws2_32(28단계). 리눅스(29단계): 둘 다 libc.so.6 · libcuda.so.1 뿐."""
     허용 = {"kernel32.dll", "shell32.dll", "nvcuda.dll"}
@@ -480,6 +496,7 @@ def main():
             로프표(출력)
             디버거제이슨(출력)
             요청지킴(출력)
+            망가진입력(출력)
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
                 요약.append("건너뜀  [모듈 · SASS] --모듈없이")
