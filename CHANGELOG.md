@@ -17,6 +17,16 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   fewer than 32,768 positions (for example Qwen2.5-Math-7B, 4,096) are no longer scaled from an assumed 32,768. The server state, debugger
   run logs and reproduction files record the factor the server reports (`yarn`) instead of recomputing it. Outputs without YaRN are
   unchanged.
+- **A model file replaced at the same path no longer keeps its old SHA-256** ([#19](https://github.com/wwoosshh/GeulPUv2/issues/19)).
+  The app passes the model's SHA-256 to the server as the prompt cache's seed (`--모델해시`) and kept the value in `모델목록.json` even
+  after the file at that path was replaced — for example by a requantized or fine-tuned file of the same architecture — so chunks written
+  for the old file could be restored as the new file's KV, and answers were wrong without a warning. The list now stores the file's size
+  and modification time with the hash (`sha256_size`, `sha256_mtime`); when they differ, the hash and the verified mark are dropped at
+  start or at the next load, and the SHA-256 is counted again before the prompt cache uses it. A load waits for a verification in
+  progress instead of taking the old value, and the reproducibility check also counts again when the file changed. Hashes in lists
+  written by 0.10.1 and earlier have no time stamp: they are shown as before and counted once more before the prompt cache uses them (the
+  verified mark stays when the bytes are unchanged). Like other quick checks (rsync, make), a replacement that keeps both the size and
+  the modification time is not noticed — use **Verify file integrity again** then.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 

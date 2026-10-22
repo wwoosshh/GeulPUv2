@@ -1156,6 +1156,8 @@ const TMX = [
   [/모델 준비 완료\(([\d.]+)초, 슬롯당 문맥 (\d+)\)\./g, 'Model ready ($1 s, context $2 per slot).'],
   [/30분이 지나도 모델이 준비되지 않았습니다\./g, 'The model was not ready after 30 minutes.'],
   [/이 모델은 이미 불러와 있습니다\./g, 'This model is already loaded.'],
+  [/모델 파일의 SHA-256 을 계산하는 중\(프롬프트 캐시의 이름에 쓴다 — 처음이거나 파일이 바뀌었을 때\)/g, "Computing the model file's SHA-256 (it names the prompt cache — the first time, or after the file changed)"],
+  [/모델 파일의 SHA-256 을 정하지 못해 이번에는 프롬프트 캐시 없이 불러옵니다\./g, "Could not determine the model file's SHA-256 — loading without the prompt cache this time."],
   [/추론 서버를 실행하지 못했습니다: /g, 'Could not run the inference server: '],
   [/추론 서버가 종료되었습니다\(종료 코드 (-?\d+)\)([.:]) ?/g, 'The inference server exited (exit code $1)$2 '],
   [/실행하지 못했습니다: /g, 'Could not run: '],

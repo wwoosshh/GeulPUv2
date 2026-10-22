@@ -184,7 +184,9 @@ even after restarting the app, switching models and back, or another chat taking
 prompts and conversations, the first token drops sharply — after restarting the app, a new task's first request (15k tokens) goes from
 3.2 s to 0.3 s, and reopening a 31k-token conversation from 10.0 s to 0.74 s (0.52 s and 1.1 s when the chunks are not in the OS file
 cache, as after a reboot — Qwen2.5-7B, RTX 4070 Ti). Because this engine produces
-the same KV bytes whichever way it is filled, **answers, log-probabilities and research-panel values are bit-identical to Off.** The
+the same KV bytes whichever way it is filled, **answers, log-probabilities and research-panel values are bit-identical to Off.** Chunks
+are told apart by the model file's SHA-256; when the file at a path is replaced (its size or modification time changes), the app counts
+the SHA-256 again at the next load. The
 location (default: data folder\문맥저장소), size limit (default 20 GB — the longest-unused chunks go first), writing (all · only when
 evicted · read only) and **Clear the store** are here too. The chunks are derived from your chats, so turn it off or clear it on a shared
 PC. Applies the next time a model is loaded ([문서/문맥저장소.md](../문서/문맥저장소.md), Korean).
