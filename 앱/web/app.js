@@ -1300,13 +1300,14 @@ const TMX = [
   [/(\S+) 텐서가 없습니다/g, 'The $1 tensor is missing'],
   [/어휘 수\((\d+)\)가 256 ~ 1,048,576 밖인 파일은 지원하지 않습니다/g, 'Files whose vocabulary size ($1) is outside 256 – 1,048,576 are not supported'],
   [/k-양자화 모델은 너비와 FFN 폭이 256의 배수여야 합니다/g, 'For k-quant models the hidden size and FFN width must be multiples of 256'],
-  [/k-양자화 파일의 임베딩 형식\((.+?)\)은 지원하지 않습니다 — Q4_K · Q5_K · Q6_K여야 합니다/g, 'The embedding format ($1) of this k-quant file is not supported — it must be Q4_K · Q5_K · Q6_K'],
-  [/k-양자화 파일의 출력 가중치 형식\((.+?)\)은 지원하지 않습니다 — Q4_K · Q5_K · Q6_K여야 합니다/g, 'The output weight format ($1) of this k-quant file is not supported — it must be Q4_K · Q5_K · Q6_K'],
-  [/k-양자화 파일의 층 가중치 (\d+)개가 Q4_K · Q5_K · Q6_K 형식이 아닙니다/g, '$1 layer weights of this k-quant file are not Q4_K · Q5_K · Q6_K'],
+  [/k-양자화 파일의 임베딩 형식\((.+?)\)은 지원하지 않습니다 — Q4_K · Q5_K · Q6_K · IQ4_XS여야 합니다/g, 'The embedding format ($1) of this k-quant file is not supported — it must be Q4_K · Q5_K · Q6_K · IQ4_XS'],
+  [/k-양자화 파일의 출력 가중치 형식\((.+?)\)은 지원하지 않습니다 — Q4_K · Q5_K · Q6_K · IQ4_XS여야 합니다/g, 'The output weight format ($1) of this k-quant file is not supported — it must be Q4_K · Q5_K · Q6_K · IQ4_XS'],
+  [/k-양자화 파일의 층 가중치 (\d+)개가 Q4_K · Q5_K · Q6_K · IQ4_XS 형식이 아닙니다/g, '$1 layer weights of this k-quant file are not Q4_K · Q5_K · Q6_K · IQ4_XS'],
   [/임베딩 형식\((.+?)\)이 다른 가중치\((.+?)\)와 다릅니다 — 모든 가중치가 같은 형식인 파일만 지원합니다/g, 'The embedding format ($1) differs from the other weights ($2) — only files whose weights all share one format are supported'],
   [/출력 가중치 형식\((.+?)\)이 다른 가중치\((.+?)\)와 다릅니다 — 모든 가중치가 같은 형식인 파일만 지원합니다\(공식 q4_0 파일은 출력이 Q6_K\)/g, 'The output weight format ($1) differs from the other weights ($2) — only files whose weights all share one format are supported (official q4_0 files keep the output in Q6_K)'],
   [/층 가중치 (\d+)개가 다른 형식입니다\(기준 (.+?)\)/g, '$1 layer weights use a different format (expected $2)'],
-  [/지원하지 않는 가중치 형식입니다\((.+?)\) — Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K만 지원합니다/g, 'Unsupported weight format ($1) — only Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K are supported'],
+  [/지원하지 않는 가중치 형식입니다\((.+?)\) — Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS만 지원합니다/g, 'Unsupported weight format ($1) — only Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS are supported'],
+  [/IQ4_XS 파일은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\. 같은 모델의 Q4_K_M · Q8_0 파일은 Vulkan에서도 실행됩니다\./g, "IQ4_XS files run only on CUDA (NVIDIA GPUs) for now. The same model's Q4_K_M · Q8_0 files also run on Vulkan."],
   [/GeulPU가 지원하지 않는 파일입니다/g, "GeulPU doesn't support this file"],
   [/이 GPU에서는 Q4_K_M 같은 k-양자화 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_0 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run k-quant files such as Q4_K_M yet. The same model's Q8_0 · Q4_0 files run (a limit of GPUs with 32 KB of shared memory)."],
   // 받기
@@ -1804,6 +1805,7 @@ function fitOf(c) {
   if (!d || !d.checked) return null;
   if (!d.layer) return { k: 'nogpu', t: T('쓸 수 있는 GPU 없음') };
   if (c.devices === 'k' && d.layer === 'vulkan' && d.variant === '공유32') return { k: 'unsup', t: T('이 GPU 미지원') };
+  if (c.devices === 'cuda' && d.layer === 'vulkan') return { k: 'unsup', t: T('이 GPU 미지원') };      // 1.0.0 1-6c — IQ4_XS 는 CUDA 먼저
   const big = isBig(c);
   const mem = d.memory / GIB, size = c.size / GIB;
   if (mem >= size + (big ? 4 : 2.5)) return { k: 'ok', t: T('이 PC에 맞음') };
@@ -3884,9 +3886,9 @@ async function browse(path, pick) {
 // 목록 · 자세히 · 파일 목록 · 모델 설명(README)은 브라우저가 Hugging Face API 에 바로 묻는다(정렬 · 거르기 · 검색어가 Hugging Face 로 간다).
 // 받기 전 확인(파일 앞 몇 MB 의 GGUF 머리)과 받기는 관리자가 — 주소는 관리자가 저장소 · 파일 이름으로 짓는다.
 const HFHOST = 'https://huggingface.co';
-// GeulPU 가 받는 형식(엔진: Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K) — 파일 이름으로 먼저 어림한다(확인은 GGUF 머리로)
+// GeulPU 가 받는 형식(엔진: Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS) — 파일 이름으로 먼저 어림한다(확인은 GGUF 머리로)
 const quantFromName = n => { const m = /(IQ\d_[A-Z]+|Q\d_K(?:_[SML])?|Q\d_\d|BF16|F16|F32)/i.exec(n || ''); return m ? m[1].toUpperCase() : ''; };
-const quantOk = q => /^(Q8_0|Q4_0|Q4_K(_[SM])?|Q5_K(_[SM])?|Q6_K)$/.test(q);
+const quantOk = q => /^(Q8_0|Q4_0|Q4_K(_[SM])?|Q5_K(_[SM])?|Q6_K|IQ4_XS)$/.test(q);      // 1.0.0 1-6c — IQ4_XS(CUDA 먼저)
 const hfName = id => String(id).split('/').pop().replace(/[-_.]?GGUF$/i, '');
 const archOk = a => a === 'qwen2' || a === 'qwen3' || a === 'llama';      // 39단계 — llama(Llama 3.1 · 3.2 · Mistral)
 // 크기로 어림하는 지원 여부(확인은 받기 전에 GGUF 머리로) — 매개변수 수(미세조정도 바탕과 같고, 출력을 따로 둔 변환은 낱말표만큼 크다).
@@ -4299,7 +4301,7 @@ function fdDetail(repo) {
 function fdBest(rows, sup) {
   if (sup.k === 'arch' || sup.k === 'size' || sup.k === 'task') return null;
   const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOk(q) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
-  const fit = f => fitOf({ size: f.size, params: '', id: '', devices: /K/.test(quantFromName(f.path)) ? 'k' : 'all' });
+  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: q === 'IQ4_XS' ? 'cuda' : /K/.test(q) ? 'k' : 'all' }); };
   const good = ok.filter(f => { const t = fit(f); return t && t.k === 'ok'; });
   if (good.length) return good.find(f => quantFromName(f.path) === 'Q4_K_M') || good.sort((a, b) => b.size - a.size)[0];
   const tight = ok.filter(f => { const t = fit(f); return t && t.k === 'tight'; }).sort((a, b) => a.size - b.size);

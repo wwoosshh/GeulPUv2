@@ -28,7 +28,8 @@ from 판23 import 극단활성값    # noqa: E402
 
 f32 = np.float32
 u64, i64 = G.c_u64, G.c_i64
-형식이름 = {12: "Q4_K", 13: "Q5_K", 14: "Q6_K"}
+형식이름 = {12: "Q4_K", 13: "Q5_K", 14: "Q6_K", 23: "IQ4_XS"}
+블록바이트 = {12: 144, 13: 176, 14: 210, 23: 136}                 # 1.0.0 1-6c — IQ4_XS
 # 타일 판(생성타일.gl 의 판 표에서 — 이름 · BM = 16 · MT · WM · BN = 8 · NT · WN · 스레드 32 · WM · WN)
 _판표 = [("정수타일선형", 2, 2, 2, 8), ("정수좁은타일선형", 2, 2, 2, 4), ("정수작은타일선형", 2, 2, 1, 4), ("정수아주작은타일선형", 2, 2, 1, 2),
         ("정수넓은타일선형", 2, 4, 2, 8), ("정수긴타일선형", 1, 4, 2, 8), ("정수긴4타일선형", 1, 4, 2, 8), ("정수긴2타일선형", 1, 4, 2, 8),
@@ -44,6 +45,22 @@ def 엔진배치K(t, raw, N, K):
     형식, q, a, b = C.풀기K(t, raw, N, K)
     KB, KS = K // 32, K // 256
     Np = (N + 63) // 64 * 64
+    if 형식 == "IQ4_XS":                                                    # 1.0.0 1-6c — 엔진/가중치K.gl 의 IQ4낱말 · 척 그대로
+        bl = np.asarray(raw).reshape(N, KS, 136)
+        qs = bl[:, :, 8:136].reshape(N, KS, 8, 16).astype(np.uint32)
+        번호 = np.concatenate([qs & 15, qs >> 4], 3).reshape(N, KB, 32)       # 칸 i < 16 은 아래 니블, 16 + i 는 위 니블
+        낱 = np.zeros((KB, N, 4), np.uint32)
+        for tw, (b0, b1) in enumerate(((0, 8), (16, 24), (4, 12), (20, 28))):
+            for i in range(4):
+                낱[:, :, tw] |= 번호[:, :, b0 + i].T << (4 * i)
+                낱[:, :, tw] |= 번호[:, :, b1 + i].T << (16 + 4 * i)
+        척 = np.zeros((KS, N, 16), np.uint8)
+        척[:, :, 0:2] = bl[:, :, 0:2].transpose(1, 0, 2)
+        sh = (bl[:, :, 2].astype(np.int64) | (bl[:, :, 3].astype(np.int64) << 8))
+        for j in range(8):
+            ls = ((bl[:, :, 4 + j // 2].astype(np.int64) >> (4 * (j % 2))) & 15) | (((sh >> (2 * j)) & 3) << 4)
+            척[:, :, 2 + j] = ((ls - 32) & 255).astype(np.uint8).T
+        return np.ascontiguousarray(낱).tobytes(), np.ascontiguousarray(척).tobytes(), (형식, q, a, b)
     qq = q.astype(np.int16)
     if 형식 == "Q6_K":
         qq = qq + 32                                                        # 6비트 그대로(0 … 63)
@@ -61,7 +78,7 @@ def 엔진배치K(t, raw, N, K):
         밀기 = (8 * i + 6 - 2 * (2 * jl + hh)).astype(np.uint32)            # G′ = 2(j % 2) + hh
         낱 = (h << 밀기[None, None, None]).sum((3, 4, 5)).astype(np.uint32)   # [KB][N][2]
         부분.append(np.ascontiguousarray(낱).tobytes())
-    bb = {12: 144, 13: 176, 14: 210}[t]
+    bb = 블록바이트[t]
     bl = np.asarray(raw).reshape(N, KS, bb)
     if 형식 == "Q6_K":
         척 = np.ascontiguousarray(bl[:, :, 192:208].transpose(1, 0, 2)).tobytes()
@@ -75,11 +92,11 @@ def 엔진배치K(t, raw, N, K):
 
 def 극단날(t, raw, N, K, r):
     """k-양자화 날 바이트의 반실수 척도(d · dmin — Q6_K 는 d)를 슈퍼블록의 절반(무작위)에서 2⁻¹⁴ 배로(반실수로 반올림)."""
-    bb = {12: 144, 13: 176, 14: 210}[t]
+    bb = 블록바이트[t]
     KS = K // 256
     bl = np.array(raw, dtype=np.uint8, copy=True).reshape(N, KS, bb)
     작게 = r.random((N, KS)) < 0.5
-    for a in ((0, 2) if t in (12, 13) else (208,)):
+    for a in ((0, 2) if t in (12, 13) else (0,) if t == 23 else (208,)):
         h = np.ascontiguousarray(bl[:, :, a:a + 2]).view(np.float16)[..., 0]
         h2 = np.where(작게, (h.astype(f32) * f32(2.0 ** -14)).astype(np.float16), h).astype(np.float16)
         bl[:, :, a:a + 2] = np.ascontiguousarray(h2).view(np.uint8).reshape(N, KS, 2)
@@ -151,7 +168,7 @@ def main():
                  ("down", ["blk.0.ffn_down.weight"], "_잔차", None),
                  ("down3", ["blk.3.ffn_down.weight"], "_잔차", None),
                  ("gu", ["blk.0.ffn_gate.weight", "blk.0.ffn_up.weight"], "_SwiGLU정수", None),
-                 ("로짓", ["output.weight"], "", None)]
+                 ("로짓", ["output.weight" if "output.weight" in g.tensors else "token_embd.weight"], "", None)]     # 37단계 — 묶인 출력(Qwen3)
         for 이름, 텐서들, e, 치들 in 행렬들:
             원들 = [g.원(n) for n in 텐서들]
             ts = {t for t, _, _ in 원들}
@@ -163,7 +180,7 @@ def main():
             raw = np.concatenate([np.asarray(x) for _, _, x in 원들])
             if 이름 == "gu":                                     # gate · up 을 출력 32 열마다 번갈아(엔진과 같다)
                 F = Ns[0]
-                bb = {12: 144, 13: 176, 14: 210}[t]
+                bb = 블록바이트[t]
                 rows = raw.reshape(N, K // 256 * bb)
                 순 = np.empty(2 * F, np.int64)
                 for j in range(F // 32):
@@ -175,7 +192,8 @@ def main():
             값, 척, w = 엔진배치K(t, raw, N, K)
             형식 = w[0]
             p값, p척 = up(값), up(척)
-            치 = np.concatenate([g.풀기(n) for n in 치들]).astype(f32) if 치들 else np.zeros(N, f32)
+            치 = (np.concatenate([g.풀기(n) if n in g.tensors else np.zeros(Ns[k], f32) for k, n in enumerate(치들)]).astype(f32)
+                 if 치들 else np.zeros(N, f32))                       # 치우침이 없는 모델(Qwen3)은 0
             p치 = up(치)
             X = 극단활성값(r, 1, K) if 극단 else (r.standard_normal((1, K)) * 10.0 ** r.uniform(-1, 1, (1, 1))).astype(f32)
             바이트, M0 = 자리바이트(X, 자리수)

@@ -17,6 +17,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   (hidden 1,024, query width 2,048) every path matches the CPU reference bit for bit in the exact and fast modes, with Q8_0 and k-quant
   weights. Modules for models that ran before are byte-identical, so their outputs do not change. Mistral NeMo · Small still need their
   tekken tokenizer.
+- **IQ4_XS files** (CUDA for now). IQ4_XS (4.25 bits per weight — smaller than Q4_K_M at close quality, common in community repositories)
+  joins the k-quant family: its codebook values are integers within ±127, so the contract computes it like Q8_0 with a per-32 scale
+  d · (ls − 32). Files that mix IQ4_XS with Q5_K · Q6_K tensors (as llama.cpp writes them) load with a new module family (KI — the k-quant
+  kernels plus IQ4_XS kernels); every IQ4_XS kernel variant matches the CPU reference bit for bit with real weights, extreme values and
+  both modes, and so does every path of a whole model. On Vulkan the app says IQ4_XS is not supported yet.
 
 ### Changed
 
