@@ -146,9 +146,10 @@ def 치우침(g, 이름, n):
     return g.풀기(이름) if 이름 in g.tensors else np.zeros(n, f32)
 
 
-def 앞으로(g, 경우, 말=True, 끝행만=False):
+def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
     """정수 계약의 앞으로 — 토큰열들(경우마다 위치 0 부터)의 모든 행 로짓 [Σ 행][어휘]과 경우의 시작 행. 끝행만: 경우마다 끝 행의 로짓만
-    [경우][어휘] (탐욕 생성 — 시험/참조생성.py; 행마다의 값은 같다)."""
+    [경우][어휘] (탐욕 생성 — 시험/참조생성.py; 행마다의 값은 같다). 얀: YaRN (배, 원래 길이)(계약 4.8) — 서버가 그 요청을 셈할 때 쓴
+    배(재현 파일 · 실행 로그의 yarn). 없으면 늘이지 않는다(#23 — 긴 문맥의 서버가 낸 답을 늘이지 않은 RoPE 로 다시 셈해 '다름'이 났다)."""
     s_ = 설정(g)
     NL, NH, NKV, eps, θ = s_["층"], s_["머리"], s_["KV머리"], s_["eps"], s_["θ"]
     qwen3 = s_["구조"] == "qwen3"
@@ -168,7 +169,7 @@ def 앞으로(g, 경우, 말=True, 끝행만=False):
     del we
     시작 = np.cumsum([0] + [len(S) for S in 경우])
     인자 = g.풀기("rope_freqs.weight") if llama and "rope_freqs.weight" in g.tensors else None      # 39단계 — 계약 4.7 (2)
-    cos, sin = C.rope표(max(64, int(max(len(S) for S in 경우))), θ, hd=HD, 인자=인자)
+    cos, sin = C.rope표(max(64, int(max(len(S) for S in 경우))), θ, hd=HD, 인자=인자, 얀=얀)
     for l in range(NL):
         tl = time.time()
         p = f"blk.{l}."

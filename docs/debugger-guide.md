@@ -170,7 +170,8 @@ python -I 도구/repro_check.py test50-q4km.jsonl Qwen2.5-7B-Instruct-Q4_K_M.ggu
 ```
 
 It compares every step's logit hash and sampled token, the log-probabilities · entropy · top-k when a score line exists, and the logit
-hashes of a branch's earlier steps (echo rows). A 7B model takes 9–19 minutes per request or branch on the CPU (depending on the answer
+hashes of a branch's earlier steps (echo rows). It uses the computation mode and YaRN factor of the server recorded in the run log, so runs recorded
+with a long context check as they are. A 7B model takes 9–19 minutes per request or branch on the CPU (depending on the answer
 length), so pick what to check.
 
 ## 8. From scripts — debugger.py · API · run log

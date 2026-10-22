@@ -567,6 +567,8 @@ const DICT = {
   "KV 캐시 8비트를 켰을 때만 씁니다 — 그 밖에는 끔과 같고, Qwen3 계열 모델도 끔과 같습니다(품질 기준에 못 미쳤습니다). 긴 프롬프트(수만 토큰)의 어텐션이 빨라집니다. 답의 비트는 끔과 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용": "Used only with the 8-bit KV cache on — otherwise the same as off, and also off for Qwen3 models (they did not pass the quality bar). Attention over long prompts (tens of thousands of tokens) runs faster. The answer bits differ from off, but the same settings always give the same bits (reproduction and the research panel work as before). Applies the next time a model is loaded",
   "재현 파일과 빠른 어텐션 설정이 다릅니다 — 설정의 빠른 어텐션을 재현 파일과 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different fast attention setting — set Fast attention in Settings to match it and load the model again",
   "재현 파일과 KV 캐시 설정이 다릅니다 — 설정의 KV 캐시 8비트를 재현 파일과 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different KV cache setting — set 8-bit KV cache in Settings to match it and load the model again",
+  "재현 파일과 YaRN 배가 다릅니다(재현 파일 {} · 지금 {}) — 설정의 문맥 길이를 재현 파일을 만들 때와 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different YaRN factor (file {} · now {}) — set the context length in Settings to what it was and load the model again",
+  "YaRN 없음": "no YaRN",
   "빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
   "추측 디코딩": "Speculative decoding",
   "프롬프트 캐시": "Prompt cache",
@@ -4857,7 +4859,7 @@ function traceAfter(asst, rp, rr, body) {
     slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '',
     spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,   // GeulPUv2 3단계 — 추측 초안(답은 같다)
     store: rr.gp.store || null,   // GeulPUv2 문맥 저장소 — 다시 쓴 토큰(이 슬롯 · 다른 슬롯 · 저장소) · 캐시가 깨진 자리
-    layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8), fast_attention: !!(S.st && S.st.server.fast_attention), bodyHash: '',
+    layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8), fast_attention: !!(S.st && S.st.server.fast_attention), yarn: (S.st && S.st.server.yarn) || 0, bodyHash: '',
   };
   if (Array.isArray(rr.gp.prompt_tokens) && rr.gp.prompt_tokens.length) tr.promptIds = rr.gp.prompt_tokens;   // 서버가 쓴 그대로
   TRACES[tid] = tr;
@@ -5361,7 +5363,7 @@ async function labBranch(i, alt) {
         slot: rr.gp.slot, cached: rr.gp.prompt_tokens_cached || 0, first_us: rr.gp.first_token_ms, gen_us: rr.gp.generate_us, finish: rr.finish || '', bodyHash: '',
         spec: rr.gp.draft_proposed ? { p: rr.gp.draft_proposed, a: rr.gp.draft_accepted || 0, s: rr.gp.draft_steps || 0 } : null,
         store: rr.gp.store || null,
-        layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8), fast_attention: !!(S.st && S.st.server.fast_attention),
+        layer: (S.st && S.st.server.layer) || '', device: (S.st && S.st.device.name) || '', precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8), fast_attention: !!(S.st && S.st.server.fast_attention), yarn: (S.st && S.st.server.yarn) || 0,
       });
       asst.tid = nt;
       saveTraces();
@@ -5620,7 +5622,7 @@ function labCapsuleText(tid) {
     format: 'geulpu-capsule/1', created: new Date().toISOString(), contract: '5.2',
     app: { version: S.st ? S.st.app.version : '', commit: S.st ? S.st.app.commit : '' },
     model: { name: tr.name, quant: tr.quant, file: m ? String(m.path || '').split(/[\\/]/).pop() : '', size: m ? m.size : null, sha256: trSha(tr) },
-    made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact', kv8: !!tr.kv8, fast_attention: !!tr.fast_attention },
+    made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact', kv8: !!tr.kv8, fast_attention: !!tr.fast_attention, yarn: tr.yarn || 0 },
     request: req,
     result: {
       tokens: cp.tokens, token_logprobs: an.lp.slice(o), entropy: an.ent.slice(o), top_ids: an.topIds.slice(o), top_logprobs: an.topLp.slice(o),
@@ -5690,6 +5692,8 @@ async function labCapsuleCheck(file) {
   const precCap = md.precision || 'exact', precHere = (S.st && S.st.server.precision) || 'exact';
   const kv8Cap = !!md.kv8, kv8Here = !!(S.st && S.st.server.kv8);   // GeulPUv2 ③b-2 — 없으면 16비트 KV 캐시
   const f2Cap = !!md.fast_attention, f2Here = !!(S.st && S.st.server.fast_attention);   // GeulPUv2 빠른 어텐션(계약 F2) — 없으면 끔
+  const yCap = md.yarn || 0, yHere = (S.st && S.st.server.yarn) || 0;   // #23 — YaRN 배(계약 4.8 — 문맥이 모델의 위치 수를 넘으면 켜진다)
+  const yTxt = y => y ? '×' + y : T('YaRN 없음');
   const here = `${(S.st && S.st.device.name) || '-'} · ${LAYER[S.st && S.st.server.layer] || '-'}`;
   const where = T` (재현 파일에 적힌 만든 곳 ${md.device || '-'} · ${LAYER[md.layer] || md.layer || '-'} → 여기 ${here})`;
   const ok = scoreOk && genOk && fpOk;
@@ -5700,7 +5704,8 @@ async function labCapsuleCheck(file) {
         fpOk ? null : T('지문이 다름'),
         precCap !== precHere ? T('재현 파일과 계산 방식이 다릅니다 — 설정의 계산 방식을 재현 파일과 같게 하고 모델을 다시 불러오세요') : null,
         kv8Cap !== kv8Here ? T('재현 파일과 KV 캐시 설정이 다릅니다 — 설정의 KV 캐시 8비트를 재현 파일과 같게 하고 모델을 다시 불러오세요') : null,
-        f2Cap !== f2Here ? T('재현 파일과 빠른 어텐션 설정이 다릅니다 — 설정의 빠른 어텐션을 재현 파일과 같게 하고 모델을 다시 불러오세요') : null].filter(Boolean).join(NB) + where,
+        f2Cap !== f2Here ? T('재현 파일과 빠른 어텐션 설정이 다릅니다 — 설정의 빠른 어텐션을 재현 파일과 같게 하고 모델을 다시 불러오세요') : null,
+        yCap !== yHere ? T`재현 파일과 YaRN 배가 다릅니다(재현 파일 ${yTxt(yCap)} · 지금 ${yTxt(yHere)}) — 설정의 문맥 길이를 재현 파일을 만들 때와 같게 하고 모델을 다시 불러오세요` : null].filter(Boolean).join(NB) + where,
   };
 }
 function labProvView(p) {
@@ -5757,7 +5762,7 @@ function labOut() {
     const fx = labFpOf(LAB.tid);
     const meta = {
       model: { name: tr.name, quant: tr.quant, sha256: trSha(tr) }, params: { temperature: tr.req.temp, max_tokens: labMax(tr), seed: tr.req.temp > 0 ? tr.seed : null, branch: tr.branch || null },
-      prompt_tokens: an.prompt, fingerprint: fx && fx.fp ? { token: fx.fp, logit: fx.fpLogit } : null, made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact', kv8: !!tr.kv8, fast_attention: !!tr.fast_attention },
+      prompt_tokens: an.prompt, fingerprint: fx && fx.fp ? { token: fx.fp, logit: fx.fpLogit } : null, made_on: { device: tr.device, layer: tr.layer, precision: tr.precision || 'exact', kv8: !!tr.kv8, fast_attention: !!tr.fast_attention, yarn: tr.yarn || 0 },
     };
     out.push(item(T('이 답의 토큰 표'), T`스텝마다 토큰 · 로그확률 · 확률 · 순위 · 엔트로피 · 마진 · 로짓 해시 · 상위 ${LAB_K}`, [
       dl('JSON', () => [base + '-answer-' + stamp() + '.json', json(head('answer', Object.assign({}, meta, { steps: labRows(an, tr.tokens) }))), 'application/json']),
