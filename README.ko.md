@@ -158,7 +158,7 @@ RTX 4070 Ti(12 GB), Qwen2.5-7B-Instruct Q4_K_M, 빠른 모드:
 같은 채팅 템플릿을 쓰는 미세조정 모델도 돕니다. Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다. GPU: NVIDIA RTX
 30 시리즈 이상은 CUDA, 그 밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버에서는 아직 Q8_0 · Q4_0만).
 릴리스는 Windows x64용이고, Linux에서는 소스에서 빌드합니다(WSL2에서 시험). 아직 안 되는 것: 다른 구조(Gemma · Phi 등), MoE 모델,
-이미지 입력, F16 · BF16 · Q2_K · Q3_K · IQ 형식, macOS([자세히](사용안내.md#지원하는-모델)).
+이미지 입력, F16 · BF16 · Q2_K · Q3_K · IQ4_XS 밖의 IQ 형식(IQ4_XS 는 CUDA 에서), macOS([자세히](사용안내.md#지원하는-모델)).
 
 ## 동작 방식
 

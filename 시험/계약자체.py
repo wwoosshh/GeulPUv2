@@ -3,8 +3,8 @@
 견주고, 바탕 연산은 정확한 유리수 셈과 견준다:
   1. fma32(반올림 한 번의 곱해더하기) 대 정확한 유리수의 반올림(가까운 쪽, 같으면 짝수)
   2. 행렬곱(느린 — 자리 둘) 대 행렬곱빠른 대 행렬곱블라스 — Q8_0 · Q4_0 의 정수와 반실수 척도. 빠른 계약 F1(자리 하나)도 느린 대 블라스(#27)
-  3. 행렬곱K(느린) 대 행렬곱K블라스 — Q4_K · Q5_K · Q6_K 의 날 블록(GGUF 꼴)을 만들어 풀기K 로(자리 둘 · 하나)
-  4. 임베딩K 대 날 블록에서 값 하나씩 푼 것(llama.cpp 의 dequantize_row_q*_K 와 같은 식) — 풀기K 의 배치도 함께 시험한다
+  3. 행렬곱K(느린) 대 행렬곱K블라스 — Q4_K · Q5_K · Q6_K · IQ4_XS 의 날 블록(GGUF 꼴)을 만들어 풀기K 로(자리 둘 · 하나)
+  4. 임베딩K 대 날 블록에서 값 하나씩 푼 것(llama.cpp 의 dequantize_row_q*_K · iq4_xs 와 같은 식) — 풀기K 의 배치도 함께 시험한다
   5. 규칙 R(31단계 — 비정규수 버림)의 곱 · 더 · 빼기 · fma32 · 나눔 · 제곱근 대 정확한 유리수 셈 — 막 정규수(2⁻¹²⁶) 둘레의 경계값과
      비정규수 입력. 스위치를 끈 IEEE 쪽(비정규수버림 = False — GPT-2 판)도 같은 자료로 IEEE 반올림과 견준다
   6. 8비트 KV(GeulPUv2 ③b-2 — 계약 F1A′, 계약.md 2.1): 저장(팔비트KV) 대 정확한 유리수 계산, 스케일이 2 의 거듭제곱일 때 어텐션 대
@@ -143,10 +143,12 @@ def 시험_행렬곱(r):
 
 
 def 날블록(r, t, N, KS):
-    """GGUF k-양자화의 날 바이트 [N][KS][블록 바이트] — d · m 은 유한한 반실수, 나머지는 무작위 바이트."""
-    bb = {12: 144, 13: 176, 14: 210}[t]
+    """GGUF k-양자화의 날 바이트 [N][KS][블록 바이트] — d · m 은 유한한 반실수, 나머지는 무작위 바이트(1.0.0 1-6c — IQ4_XS 23 도)."""
+    bb = {12: 144, 13: 176, 14: 210, 23: 136}[t]
     raw = r.integers(0, 256, (N, KS, bb)).astype(np.uint8)
-    if t in (12, 13):
+    if t == 23:
+        raw[:, :, 0:2] = 반실수(r, (N, KS), 1e-5, 0.002).astype(np.float16)[..., None].view(np.uint8)
+    elif t in (12, 13):
         raw[:, :, 0:2] = 반실수(r, (N, KS), 1e-4, 0.02).astype(np.float16)[..., None].view(np.uint8)
         raw[:, :, 2:4] = 반실수(r, (N, KS), 1e-4, 0.02).astype(np.float16)[..., None].view(np.uint8)
     else:
@@ -155,15 +157,26 @@ def 날블록(r, t, N, KS):
 
 
 def 값하나씩(t, raw, N, K):
-    """날 블록 → 값 [N][K] (짧은실수) — llama.cpp 의 dequantize_row_q4_K · q5_K · q6_K 와 같은 식을 칸마다(풀기K 와 따로 쓴 것)."""
-    bb = {12: 144, 13: 176, 14: 210}[t]
+    """날 블록 → 값 [N][K] (짧은실수) — llama.cpp 의 dequantize_row_q4_K · q5_K · q6_K · iq4_xs 와 같은 식을 칸마다(풀기K 와 따로 쓴 것)."""
+    bb = {12: 144, 13: 176, 14: 210, 23: 136}[t]
     bl = np.asarray(raw).reshape(N, K // 256, bb)
     y = np.zeros((N, K), f32)
+    코드북 = [-127, -104, -83, -65, -49, -35, -22, -10, 1, 13, 25, 38, 53, 69, 89, 113]    # llama.cpp 의 kvalues_iq4nl
     for n in range(N):
         for s in range(K // 256):
             b = bl[n, s]
             o = 256 * s
-            if t in (12, 13):
+            if t == 23:                                             # 1.0.0 1-6c — IQ4_XS(dequantize_row_iq4_xs)
+                d = f32(b[0:2].view(np.float16)[0])
+                sh = int(b[2]) | (int(b[3]) << 8)
+                for ib in range(8):
+                    ls = ((int(b[4 + ib // 2]) >> (4 * (ib % 2))) & 15) | (((sh >> (2 * ib)) & 3) << 4)
+                    dl = f32(d * f32(ls - 32))
+                    for j in range(16):
+                        q = int(b[8 + 16 * ib + j])
+                        y[n, o + 32 * ib + j] = f32(dl * f32(코드북[q & 15]))
+                        y[n, o + 32 * ib + 16 + j] = f32(dl * f32(코드북[q >> 4]))
+            elif t in (12, 13):
                 d = f32(b[0:2].view(np.float16)[0])
                 m = f32(b[2:4].view(np.float16)[0])
                 sc = [int(v) for v in b[4:16]]
@@ -205,7 +218,7 @@ def 시험_K(r):
     M, K, N = 7, 512, 24
     x = 활성값(r, M, K)
     치 = r.standard_normal(N).astype(f32)
-    for t, 이름 in ((12, "Q4_K"), (13, "Q5_K"), (14, "Q6_K")):
+    for t, 이름 in ((12, "Q4_K"), (13, "Q5_K"), (14, "Q6_K"), (23, "IQ4_XS")):
         raw = 날블록(r, t, N, K // 256)
         w = C.풀기K(t, raw, N, K)
         느린 = C.행렬곱K(x, w, 치)

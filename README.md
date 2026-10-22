@@ -162,7 +162,7 @@ Fine-tunes of these models with the same chat template run too. Qwen2.5 (7B and 
 with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT — on AMD's
 Windows driver only Q8_0 and Q4_0 files run for now). Releases are built for Windows x64; on Linux GeulPU builds from source (tested
 under WSL2). Not yet: other architectures (Gemma, Phi, …), mixture-of-experts models, image input, F16 / BF16 and Q2_K · Q3_K · IQ
-formats, macOS ([details](docs/user-guide.md#supported-models)).
+formats other than IQ4_XS (which runs on CUDA), macOS ([details](docs/user-guide.md#supported-models)).
 
 ## How it works
 

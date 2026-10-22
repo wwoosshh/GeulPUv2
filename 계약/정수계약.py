@@ -856,9 +856,26 @@ def _척최소K(sc):
     return s, t
 
 
+IQ4코드북 = np.array([-127, -104, -83, -65, -49, -35, -22, -10, 1, 13, 25, 38, 53, 69, 89, 113], np.int8)   # llama.cpp 의 kvalues_iq4nl
+
+
 def 풀기K(t, raw, N, K):
-    """GGUF k-양자화 텐서(타입 12 Q4_K · 13 Q5_K · 14 Q6_K, 날 바이트 — 행 N 개, 행마다 깊이 K) → (형식, q, a, b) (위의 꼴)."""
+    """GGUF k-양자화 텐서(타입 12 Q4_K · 13 Q5_K · 14 Q6_K, 날 바이트 — 행 N 개, 행마다 깊이 K) → (형식, q, a, b) (위의 꼴).
+    GeulPUv2 1.0.0 1-6c — 타입 23 IQ4_XS(슈퍼블록 256 = 136 바이트: 반실수 d, scales_h 16비트, scales_l 4 바이트, 니블 128 바이트):
+    아래블록 j(32 칸)의 6비트 척도 ls_j = (scales_l[j/2] 의 니블 j%2) | (scales_h 의 비트 2j · 2j+1) << 4, a_j = d · (ls_j − 32)
+    (반실수 × 6비트 정수 — 짧은실수로 정확), 칸 i < 16 은 qs[16j + i] 의 아래 니블, 16 + i 는 위 니블의 번호 → q = 코드북[번호] (int8)."""
     KS = K // 256
+    if t == 23:
+        bl = np.asarray(raw).reshape(N, KS, 136)
+        d = np.ascontiguousarray(bl[:, :, 0:2]).view(np.float16).astype(f32)[..., 0]
+        sh = np.ascontiguousarray(bl[:, :, 2:4]).view(np.uint16)[..., 0].astype(np.int64)
+        sl = bl[:, :, 4:8].astype(np.int64)
+        j = np.arange(8)
+        ls = ((sl[:, :, j // 2] >> (4 * (j % 2))) & 15) | (((sh[:, :, None] >> (2 * j)) & 3) << 4)
+        a = (d[..., None] * (ls - 32).astype(f32)).astype(f32).reshape(N, K // 32)
+        qs = bl[:, :, 8:136].reshape(N, KS, 8, 16)
+        번호 = np.concatenate([qs & 15, qs >> 4], 3)                               # 아래블록마다 칸 0 … 15 (아래 니블) · 16 … 31 (위 니블)
+        return "IQ4_XS", IQ4코드북[번호].reshape(N, K), a, None
     if t in (12, 13):
         bl = np.asarray(raw).reshape(N, KS, 144 if t == 12 else 176)
         d = np.ascontiguousarray(bl[:, :, 0:2]).view(np.float16).astype(f32)[..., 0]
@@ -893,8 +910,12 @@ def 행렬곱K(x, w, 치우침, 자리수=2):
     Q4_K · Q5_K: 아래블록 j(= 활성값 블록 j)마다 S_j = Σ n · q, T_j = Σ n (정확), u_j = S_j · 2^(E − 13), w_j = T_j · 2^(E − 13) (정확),
     y ← 곱해더하기(u_j, a_j, y), y ← 곱해더하기(−w_j, b_j, y) (j 차례, 0 에서 — 사슬 하나), 출력 = y + 치우침.
     Q6_K: 아래블록 k(16 칸)마다 S_k = Σ n · q, u_k = S_k · 2^(E_⌊k/2⌋ − 13), y ← 곱해더하기(u_k, a_k, y), 출력 = y + 치우침.
-    GeulPUv2 빠른 계약 F1(자리수 1): n 은 한 자리(|n| ≤ 127), 2^(E − 13) 대신 2^(E − 5) — 나머지 식 · 차례는 같다."""
+    GeulPUv2 빠른 계약 F1(자리수 1): n 은 한 자리(|n| ≤ 127), 2^(E − 13) 대신 2^(E − 5) — 나머지 식 · 차례는 같다.
+    GeulPUv2 1.0.0 1-6c — IQ4_XS: 코드북 값이 |q| ≤ 127 이라 S = Σ n · q 가 2²⁴ 를 넘을 수 있어 Q8_0 과 같은 정수 블록 계약(1 절 3 · 4 —
+    자리마다 S_j, u = v₁ + v₀ 의 반올림 하나)에 q = 코드북 값, d = a_j 로 — 행렬곱 그대로."""
     형식, q, a, b = w
+    if 형식 == "IQ4_XS":
+        return 행렬곱(x, np.asarray(q, np.int64).T, np.ascontiguousarray(np.asarray(a, f32).T), 치우침, 자리수)
     D, E = 자리로(np.asarray(x, f32), 자리수)
     n = (D[0] if 자리수 == 1 else D[1] * 256 + D[0]).astype(np.int64)     # |n| ≤ 2¹⁴ (자리 하나 127)
     P = 8 * 자리수 - 3
@@ -918,9 +939,11 @@ def 행렬곱K(x, w, 치우침, 자리수=2):
 def 행렬곱K블라스(x, w, 치우침, 일꾼=8, 칸한도=1 << 25, 자리수=2):
     """행렬곱K 와 같은 값(큰 모양의 CPU 참조). 블록 합 S 를 자리마다 짧은실수 행렬곱(BLAS)으로 — 자리 하나의 부분합이 정수로 2²⁴ 아래
     (Q5_K: 128 · 31 · 32)라 어느 순서로 더해도 정확하다 — S = 256 · S₁ + S₀ 는 fp64 로(정확). 열을 덩이로 나눠 일꾼에게.
-    GeulPUv2 빠른 계약 F1(자리수 1): S = S₀, 척 2^(E − 5)."""
+    GeulPUv2 빠른 계약 F1(자리수 1): S = S₀, 척 2^(E − 5). 1-6c — IQ4_XS 는 Q8_0 의 계약(행렬곱블라스 — q = 코드북 값, d = a_j)."""
     from concurrent.futures import ThreadPoolExecutor
     형식, q, a, b = w
+    if 형식 == "IQ4_XS":
+        return 행렬곱블라스(x, q, a, 치우침, 일꾼=일꾼, 칸한도=칸한도, 자리수=자리수)
     D, E = 자리로(np.asarray(x, f32), 자리수)
     P = 8 * 자리수 - 3
     M, K = D.shape[1:]
@@ -960,10 +983,13 @@ def 행렬곱K블라스(x, w, 치우침, 일꾼=8, 칸한도=1 << 25, 자리수=
 
 
 def 임베딩K(w, ids):
-    """낱말표가 k-양자화일 때의 임베딩 [토큰][D] — Q4_K · Q5_K: a_j · q − b_j (곱은 정확, 뺄셈에서 반올림 하나), Q6_K: a_k · q (정확)."""
+    """낱말표가 k-양자화일 때의 임베딩 [토큰][D] — Q4_K · Q5_K: a_j · q − b_j (곱은 정확, 뺄셈에서 반올림 하나), Q6_K: a_k · q (정확).
+    1-6c — IQ4_XS: a_j · q (a_j 는 가수 17 비트 안, |q| ≤ 127 — 곱이 정확)."""
     형식, q, a, b = w
     ids = np.asarray(ids)
     qq = q[ids].astype(f32)
     if 형식 == "Q6_K":
         return 곱(qq, np.repeat(a[ids], 16, axis=1))
+    if 형식 == "IQ4_XS":
+        return 곱(qq, np.repeat(a[ids], 32, axis=1))
     return 빼기(곱(qq, np.repeat(a[ids], 32, axis=1)), np.repeat(b[ids], 32, axis=1))

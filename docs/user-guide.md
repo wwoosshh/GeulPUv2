@@ -371,15 +371,15 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 | qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 8B · 14B run on this project's PC |
 | llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, and their fine-tunes that use the same chat templates | 3B · 7B · 8B — 70B checked as a shape with a synthetic model |
 
-- **Formats**: Q8_0 · Q4_K_M · Q5_K_M · Q6_K, and Q4_0 files whose tensors are all Q4_0.
+- **Formats**: Q8_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS, and Q4_0 files whose tensors are all Q4_0.
 - **Licenses** differ by model. In the app's list, Llama 3.1 · 3.2 use Meta's community licenses (usage conditions and an Acceptable
   Use Policy — services with more than 700 million monthly users need permission from Meta), the Mistral 7B v0.3, Qwen2.5 and Qwen3 files
   are Apache 2.0, and DeepSeek-R1-Distill is MIT (also shown in the app's model descriptions).
 - **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (their tekken tokenizer), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …), llama-architecture
-  fine-tunes with other chat templates (ChatML, …), image input, Q2_K · Q3_K · IQ · Q5_0 · F16 · BF16. Find models hides such files by
+  fine-tunes with other chat templates (ChatML, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0 · F16 · BF16. Find models hides such files by
   default.
 - **Depending on the GPU**: k-quants (Q4_K_M, …) run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. With AMD's
-  Windows driver (32 KB of shared memory) only Q8_0 (and Q4_0) files run for now.
+  Windows driver (32 KB of shared memory) only Q8_0 (and Q4_0) files run for now. IQ4_XS runs only on CUDA (NVIDIA GPUs) for now.
 
 ### Which model fits your PC
 
