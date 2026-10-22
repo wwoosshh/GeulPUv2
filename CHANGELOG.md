@@ -25,6 +25,10 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ### Changed
 
+- **Exact mode checks speculated tokens much faster in long conversations** (CUDA). Exact modules now use the same table-step kernels
+  for the full KV groups in front of the rows as fast mode does (the rows of one slot read those groups once): on Qwen2.5-7B Q4_K_M a
+  verification step of 8 rows takes 18.8 ms instead of 51.9 ms at a depth of 32k (1.24× a 1-row step instead of 3.42×) and 23.6 ms instead
+  of 91.3 ms at 64k. The results are bit-identical. Vulkan modules are unchanged.
 - **The computation mode is shown where you chat.** A chip next to the model shows **Exact** or **Fast** (with **8-bit KV** and **fast
   attention** when they are on) and switches it — the loaded model reloads in that mode. Every answer carries a tag with the mode it was
   computed in, and the research panel says which mode the answer was made in. The panel computes its values with the server that is
