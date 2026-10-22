@@ -81,7 +81,7 @@ section 4 still appear in code identifiers and older records.
 | 판 고르기 (code) | kernel selection (autotuning) | The engine times the candidate kernels once per shape and keeps the fastest (all candidates give identical bits). |
 | 메가커널 | megakernel | One cooperative launch that generates a whole token (stage 15). |
 | 걸음띄우기 | step-by-step decode | Decoding without the megakernel: one prompt-path computation per token, waiting for each token (the Vulkan path — SPIR-V has no cooperative launch; identical bits, stage 31). |
-| 벌칸 · 벌칸 층 | Vulkan backend | `호스트/벌칸.gl`: the CUDA driver API's names and signatures implemented over vulkan-1.dll, so the same engine source runs on CUDA or Vulkan (stage 31). |
+| 벌칸 · 벌칸 층 | Vulkan backend | `엔진/벌칸.gl` · `엔진/벌칸쿠다.gl`: the CUDA driver API's names and signatures implemented over vulkan-1.dll, so the same engine source runs on CUDA or Vulkan (stage 31). |
 | 머리 · 몸 (파일) | head · body (file) | A test split in two: the head includes a GPU layer (`쿠다.gl` or `벌칸.gl`), the body holds the program (e.g. `시험_엔진.gl` / `시험_엔진V.gl` + `시험_엔진몸.gl`). |
 | 묶음 (.spvs) | SPIR-V bundle | The SPIR-V backend's output: one SPIR-V module per kernel with its shared-memory size and parameter kinds ("GEULSPV1"). |
 | 장치 한도 | device limit | A kernel the device cannot run (its shared memory exceeds the limit — e.g. 32 KB on Intel UHD 770); tests log it instead of skipping it silently. |
@@ -120,8 +120,7 @@ section 4 still appear in code identifiers and older records.
 |---|---|
 | `계약/` | contract — CPU reference implementation (`정수계약.py`) |
 | `커널/` | kernels — the kernel generator (`커널생성.gl` and `생성*.gl`, geul), legacy Python generator |
-| `호스트/` | host — engine, runner, GGUF loader, tokenizer, tests and benchmarks written in geul |
-| `엔진/` | Python engine (legacy, used for comparison and GPT-2 research) |
+| `엔진/` | engine — the engine, server, runner, GGUF reader, tokenizer, tests and benchmarks written in geul (the research repository's `호스트/`; its Python engine stayed there) |
 | `시험/` | tests |
 | `재기/` | benchmarks and result collectors |
 | `문서/` | Korean documents (stage reports, contract) — English versions in `docs/` |

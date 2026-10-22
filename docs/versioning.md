@@ -28,7 +28,8 @@ GeulPU is used by programs as well as people, and what it promises is reproducib
 2. **Files.** Run logs (`"format": "geulpu-run-log/1"`), reproduction files, and the settings and model list in the data folder. A version
    must read every file the previous version wrote. A changed format gets a new format version (`geulpu-run-log/2`), and dropping an old
    one is incompatible. Caches — kernel modules, the prompt cache, the tuning cache — are rebuilt when needed and are not covered.
-3. **Output bits.** For the same model file, computation mode, YaRN factor and request (seed included), the tokens, log-probabilities and
+3. **Output bits.** For the same model file, computation mode (with its 8-bit KV cache and fast attention settings), YaRN factor and
+   request (seed included), the tokens, log-probabilities and
    logit hashes stay the same from version to version, so a run log recorded on the previous version replays bit for bit. Changing them
    is incompatible — unless the change fixes a result that did not match the [precision contract](../계약/contract.md)'s CPU reference;
    such a fix is a PATCH and is marked **Output change** in the changelog. A new computation mode can come in a MINOR version.

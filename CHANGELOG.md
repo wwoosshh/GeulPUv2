@@ -68,10 +68,16 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   k-quant model is dropped and measured again instead of indexing past its kernel table — a bad entry ended in a divide-by-zero crash.
 
 ### Project
+
 - **CI checks more of the host-side arithmetic** ([#27](https://github.com/wwoosshh/GeulPUv2/issues/27)): the quick check now compares
   the geul sampler and log-probabilities with the contract's Python reference (12,000 sampling cases including sums of exactly 1 and
   just above 1), checks the fast contract's one-digit matmuls and the RMSNorm eps constants in the contract self-test, compiles and runs
   `--help` for the tools in `도구/`, and treats `엔진/파일.gl` (included by the kernel generator) as a kernel file.
+- **The guides agree with the code again** ([#28](https://github.com/wwoosshh/GeulPUv2/issues/28)): the conditions for the same bits (model
+  file, computation mode, 8-bit KV cache, fast attention, YaRN factor, and in fast mode the backend) in the debugger guide and the
+  versioning rules; the development guide says the server also has a Vulkan build (only the terminal runner is CUDA-only); the glossary
+  points at `엔진/`; the `repro_check` instructions install numpy in a virtual environment (`python -I` does not see packages installed
+  with `pip install --user`); the bug report template's version example is 0.10.1.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 

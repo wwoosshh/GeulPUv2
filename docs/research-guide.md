@@ -282,11 +282,13 @@ In **Reproduce**, with the original answer (version 1) selected:
 - **(6) Show engine and kernel hashes** — whether the five engine binaries equal the official build (the cross-check reference), and which
   kernel module is in use.
 
-Someone without a GPU can check too: clone the repository (`pip install numpy`) and recompute with the contract's CPU reference
-implementation (a few minutes for 7B).
+Someone without a GPU can check too: clone the repository, install numpy in a virtual environment (venv) and recompute with the
+contract's CPU reference implementation (a few minutes for 7B).
 
 ```bash
-python -I 도구/repro_check.py geulpu-repro.json Qwen2.5-7B-Instruct-Q8_0.gguf
+python -m venv .venv                      # once — `python -I` ignores packages installed with `pip install --user`
+.venv/Scripts/pip install numpy               # Linux · macOS: .venv/bin/pip
+.venv/Scripts/python -I 도구/repro_check.py geulpu-repro.json Qwen2.5-7B-Instruct-Q8_0.gguf
 ```
 
 ### Where did the prompt cache break

@@ -163,10 +163,12 @@ app's settings (chat uses them too). If you replay on a different server, the sc
 `--ignore-header` it goes ahead).
 
 **Checking without a GPU**: compute the requests and branches of a received run log with the CPU reference of the precision contract —
-without GeulPU — and check them bit for bit (Python + numpy).
+without GeulPU — and check them bit for bit (Python + numpy in a virtual environment).
 
-```
-python -I 도구/repro_check.py test50-q4km.jsonl Qwen2.5-7B-Instruct-Q4_K_M.gguf --requests 0,25 --branches 0
+```bash
+python -m venv .venv                      # once — `python -I` ignores packages installed with `pip install --user`
+.venv/Scripts/pip install numpy               # Linux · macOS: .venv/bin/pip
+.venv/Scripts/python -I 도구/repro_check.py test50-q4km.jsonl Qwen2.5-7B-Instruct-Q4_K_M.gguf --requests 0,25 --branches 0
 ```
 
 It compares every step's logit hash and sampled token, the log-probabilities · entropy · top-k when a score line exists, and the logit
@@ -238,7 +240,8 @@ Recording adds 0.35 % to request time. Checking without a GPU computes the 7B mo
 
 ## 10. Caveats and FAQ
 
-- **For the same bits** you need the same model file (sha256) · computation mode · YaRN factor, and in fast mode the same backend.
+- **For the same bits** you need the same model file (sha256) · computation mode · 8-bit KV cache setting · fast attention setting ·
+  YaRN factor, and in fast mode the same backend (the list replay checks).
   Context length · slots · prompt cache · speculative decoding · concurrent requests do not matter. If the GeulPU version · server build ·
   module differ, replay tells you first — a build with changed kernels may change the bits, and replay shows that right away.
 - **Replay · scoring · branches stop while recording** — their requests would go into the run log being recorded too. Stop recording
