@@ -6,8 +6,8 @@ Security fixes go into the latest release. Please check that the problem still h
 
 | Version | Supported |
 |---|---|
-| 0.7.x | Yes |
-| older than 0.7 | No — update to the latest release |
+| 0.10.x | Yes |
+| older than 0.10 | No — update to the latest release |
 
 ## Reporting a vulnerability
 
@@ -23,7 +23,9 @@ What GeulPU is designed to do, so that you can tell a vulnerability from expecte
 - **Local only.** The app (`GeulPU.exe` / `geulpu`) and the inference server it starts listen only on `127.0.0.1`; other devices cannot
   connect. There is **no authentication**: any program running on the same PC can use the API.
 - **Browser protection.** The app refuses requests whose `Host` header is not its own address (DNS rebinding) and write requests that
-  come from another origin (other websites open in your browser), and it sends no CORS headers.
+  come from another origin (other websites open in your browser). The inference server it starts accepts only `127.0.0.1` and
+  `localhost` as `Host` and refuses every request that carries an `Origin` header — browsers send one, while the app's `/v1` and other
+  programs do not. Neither sends CORS headers.
 - **Downloads.** Models come from Hugging Face over HTTPS and are checked against the SHA-256 that Hugging Face reports. The new-version
   check contacts GitHub (or PyPI for the Python package) and can be switched off in Settings. No usage data is sent.
 - **Model files are untrusted input.** The engine parses GGUF files itself; a crafted GGUF file that makes the engine read or write out of

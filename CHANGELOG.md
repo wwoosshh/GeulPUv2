@@ -6,6 +6,21 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+### Security
+
+- **Inference server: requests from web pages and from other host names are refused**
+  ([GHSA-8jjh-hfp7-hg9p](https://github.com/wwoosshh/GeulPUv2/security/advisories/GHSA-8jjh-hfp7-hg9p)). The app already did this, but
+  the inference server it starts (127.0.0.1, from port 44545) checked neither and sent `Access-Control-Allow-Origin: *`. It now accepts
+  only `127.0.0.1` and `localhost` as `Host` (DNS rebinding), refuses every request that carries an `Origin` header, and sends no CORS
+  headers. Programs (OpenAI SDK, coding agents, curl) and the app's `/v1` send no `Origin` and are not affected; outputs are unchanged.
+  The quick check tests the rule without a GPU (`엔진/시험_요청지킴.gl`).
+
+### Project
+
+- [SECURITY.md](SECURITY.md) lists 0.10.x as the supported version (it still said 0.7.x).
+
 ## 0.10.0 — Fast attention: faster long prompts (2026-10-22)
 
 ### Added
