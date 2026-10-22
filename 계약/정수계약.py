@@ -800,7 +800,8 @@ def qwen2_앞으로(W, 설정, ids, cos, sin, 첫위치=0, 캐시=None, 묶음=1
     짧은실수) 또는 짧은실수 배열 — embed(q [어휘][D], d [어휘][D/32] — 행 = 토큰), head(q [D][어휘], d [D/32][어휘]), 층 l 의 wq · wk · wv · wo ·
     wg · wu · wd (q [K][N], d [K/32][N]) 와 bq · bk · bv,
     n1 · n2 · norm. 캐시(사전, 없으면 새로): 층마다 k · v (RoPE 뒤 짧은실수 [위치][KV머리][hd]) — 이어 계산(대화)을 위해 첫위치 앞의 키 · 값을 담는다.
-    머리 크기 hd = D / 머리 수 (cos · sin 표의 폭은 hd/2 — rope표(…, hd=hd)).
+    머리 크기 hd = wq 의 열 수 / 머리 수 (cos · sin 표의 폭은 hd/2 — rope표(…, hd=hd)). GeulPUv2 1.0.0 1-6a — 질의 폭(머리 수 · hd)은
+    너비 D 와 다를 수 있다(wo 의 깊이가 질의 폭).
     끝행: 로짓을 마지막 끝행 행만(긴 열의 CPU 시간 — 행마다의 값은 같다)."""
     NH, NKV, NL = 설정["머리"], 설정["KV머리"], 설정["층"]
     eps = 설정["eps"]
@@ -811,7 +812,7 @@ def qwen2_앞으로(W, 설정, ids, cos, sin, 첫위치=0, 캐시=None, 묶음=1
     위치 = np.arange(첫위치, 첫위치 + n)
     캐시 = {} if 캐시 is None else 캐시
     G = NH // NKV
-    hd = x.shape[1] // NH                                          # 머리 크기(0.5B 64, 7B 128)
+    hd = W["0.wq"][0].shape[1] // NH                               # 머리 크기(0.5B 64, 7B 128) — 질의 폭 / 머리 수
     for l in range(NL):
         h = rms정규화(x, W[f"{l}.n1"], eps)
         q = 행렬곱빠른(h, *W[f"{l}.wq"], W[f"{l}.bq"])

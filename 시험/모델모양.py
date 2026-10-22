@@ -4,6 +4,8 @@
   - qwen2 의 RMSNorm eps 가 10⁻⁶ · 10⁻⁵ 이 아니면 그 까닭(#16 — 모듈의 상수와 다른 eps 로 셈하지 않게)
   - eps 10⁻⁶ · 10⁻⁵ · 열쇠 없음은 eps 규칙을 지나 다음 검사(모델 크기)에서 멈춘다
   - qwen2 에 RoPE 늘이기 정보(rope.scaling.type — none 이 아님)가 있으면 그 까닭(#17 — 늘이지 않은 RoPE 로 셈하지 않게)
+  - GeulPUv2 1.0.0 1-6a — 질의 폭(머리 × 128)이 너비와 다른 qwen3(0.6B 의 모양)은 모양 규칙을 지나 다음 검사(토크나이저)에서 멈추고,
+    key_length 가 없어 머리 크기(너비 / 머리 수)가 128 이 아니면 그 까닭
 
   python -I 시험/모델모양.py <GeulPU.exe> <빈 자료 폴더>
 
@@ -21,6 +23,8 @@ import urllib.request
 EPS_까닭 = "RMSNorm eps가 10⁻⁶ · 10⁻⁵이 아닌 Qwen2 파일은 지원하지 않습니다"
 크기_까닭 = "지원하지 않는 모델 크기입니다"
 ROPE_까닭 = "RoPE 늘이기(yarn)가 들어간 Qwen2 파일은 지원하지 않습니다"
+토큰_까닭 = "지원하지 않는 토크나이저입니다"
+머리_까닭 = "지원하지 않는 헤드 크기입니다"
 
 
 def 글(x):
@@ -29,11 +33,13 @@ def 글(x):
 
 
 def 머리(메타):
-    """GGUF v3 머리 — 텐서 0 개, 메타는 (열쇠, 값) — 값이 글이면 string(8), 실수면 float32(6)."""
+    """GGUF v3 머리 — 텐서 0 개, 메타는 (열쇠, 값) — 값이 글이면 string(8), 정수면 uint32(4), 실수면 float32(6)."""
     몸 = b"GGUF" + struct.pack("<I", 3) + struct.pack("<q", 0) + struct.pack("<q", len(메타))
     for 열쇠, 값 in 메타:
         if isinstance(값, str):
             몸 += 글(열쇠) + struct.pack("<I", 8) + 글(값)
+        elif isinstance(값, int):
+            몸 += 글(열쇠) + struct.pack("<I", 4) + struct.pack("<I", 값)
         else:
             몸 += 글(열쇠) + struct.pack("<I", 6) + struct.pack("<f", 값)
     return 몸 + b"\0" * ((-len(몸)) % 32)
@@ -50,6 +56,19 @@ def 경우들():
         ("eps 열쇠가 없으면 10⁻⁶ 으로 지난다", [구조], 크기_까닭),
         ("RoPE 늘이기 yarn 은 받지 않는다", [구조, (eps, 1e-6), ("qwen2.rope.scaling.type", "yarn")], ROPE_까닭),
         ("RoPE 늘이기 none 은 지난다", [구조, (eps, 1e-6), ("qwen2.rope.scaling.type", "none")], 크기_까닭),
+    ] + 질의폭경우들()
+
+
+def 질의폭경우들():
+    """1-6a — qwen3 의 질의 폭(머리 × 128)이 너비와 다른 모양(Qwen3-0.6B: 너비 1024 · 머리 16 · KV 머리 8 · 확장폭 3072)."""
+    q3 = [("general.architecture", "qwen3"), ("qwen3.attention.layer_norm_rms_epsilon", 1e-6), ("qwen3.block_count", 28),
+          ("qwen3.embedding_length", 1024), ("qwen3.feed_forward_length", 3072)]
+    머리 = [("qwen3.attention.head_count", 16), ("qwen3.attention.head_count_kv", 8)]
+    길이 = [("qwen3.attention.key_length", 128), ("qwen3.attention.value_length", 128)]
+    return [
+        ("qwen3 질의 폭 2048 ≠ 너비 1024 는 모양 규칙을 지난다", q3 + 머리 + 길이, 토큰_까닭),
+        ("qwen3 key_length 가 없으면 머리 크기 너비 / 머리 = 64 — 받지 않는다", q3 + 머리, 머리_까닭),
+        ("qwen3 머리 수가 없으면 모델 크기에서 멈춘다", q3 + 길이, 크기_까닭),
     ]
 
 
