@@ -43,6 +43,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   community "128K" GGUFs (131,072 positions) then computed long contexts without the scaling the file asks for. qwen2 now follows qwen3,
   llama and the CPU reference: such a file is refused with a message. The same model's file without scaling information still reaches
   131,072 tokens (7B and up) through the engine's own YaRN.
+- **Loading a SentencePiece model no longer fails at random** ([#20](https://github.com/wwoosshh/GeulPUv2/issues/20)). While loading, the
+  tokenizer worker built the byte-token names (`<0x00>` … `<0xFF>`) with the formatting functions, whose one global buffer the main
+  thread was using at the same time to name tensors, so the two could overwrite each other's text and the load stopped with
+  "바이트 토큰 … 가 없다" or "텐서 … 없다" (Mistral-7B-Instruct-v0.3). The worker now builds those names without formatting. The console
+  runner also waits for the kernel-plan worker before it prints (that worker formats the plan-memory file names), as the server did.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 
