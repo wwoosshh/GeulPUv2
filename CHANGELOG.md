@@ -6,7 +6,7 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
-## Unreleased
+## 0.10.2 — Fixes: correctness, reproducibility, stability (2026-10-22)
 
 ### Fixed
 
@@ -16,7 +16,7 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   and with factor 2 at 59,392. The factor now follows the context you set (clamped to the model's limit): 4 in both cases. Files with
   fewer than 32,768 positions (for example Qwen2.5-Math-7B, 4,096) are no longer scaled from an assumed 32,768. The server state, debugger
   run logs and reproduction files record the factor the server reports (`yarn`) instead of recomputing it. Outputs without YaRN are
-  unchanged.
+  unchanged. **Output change** — with YaRN on, wherever 0.10.1 picked another factor for the same settings.
 - **A model file replaced at the same path no longer keeps its old SHA-256** ([#19](https://github.com/wwoosshh/GeulPUv2/issues/19)).
   The app passes the model's SHA-256 to the server as the prompt cache's seed (`--모델해시`) and kept the value in `모델목록.json` even
   after the file at that path was replaced — for example by a requantized or fine-tuned file of the same architecture — so chunks written
@@ -38,6 +38,7 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   GeulPU's own CPU reference. qwen2 files with eps 10⁻⁵ now get their own module (`qwen2e5…`, generator `qwen2e5큰`) whose RMSNorm uses
   10⁻⁵, and the engine checks that the module matches the file; other eps values are refused with a message. The first load builds the
   new module once. The 14B's answers change (they now match the CPU reference bit for bit); every other model is unchanged.
+  **Output change** — DeepSeek-R1-Distill-Qwen-14B only.
 - **Qwen2 files with RoPE scaling metadata are refused instead of run unscaled** ([#17](https://github.com/wwoosshh/GeulPUv2/issues/17)).
   The engine and the app dropped `rope.scaling.type` for the qwen2 architecture and ran plain RoPE up to the file's position count —
   community "128K" GGUFs (131,072 positions) then computed long contexts without the scaling the file asks for. qwen2 now follows qwen3,
