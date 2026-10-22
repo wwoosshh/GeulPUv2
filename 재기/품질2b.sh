@@ -30,7 +30,7 @@ mod() {  # 이름 모양인자 변형 → 모듈 경로(표준 출력)
   if [ ! -f "$p" ]; then
     local f=()
     case $3 in F1) f=(--빠른);; KV8) f=(--빠른 --KV8);; KV|QKV) f=(--빠른 --어텐션한자리 "$3");; KV8EMU|V8EMU) f=(--빠른 --어텐션한자리 "${3%EMU}");;
-      F2_KV8) f=(--빠른 --F2);; esac
+      F2_KV8) f=(--빠른 --F2);; Q_F2_KV8) f=(--빠른 --F2블록q);; esac
     # shellcheck disable=SC2086  # 모양 인자는 낱말로 나뉘어야 한다
     if ! { "$B/커널생성.exe" $2 "$g" "${f[@]}" > "$MD/$1_$3.생성.log" 2>&1 && "$B/ptx-backend.exe" "$g" -o "$p" > "$MD/$1_$3.ptx.log" 2>&1; }; then
       echo "  모듈 실패 — $MD/$1_$3.*.log" >&2

@@ -169,8 +169,8 @@ values, a base-2 exponential, and probabilities as 16-bit integers with one expo
 4070 Ti, 1,024 new tokens at depth 32k and 64k are 22.6 % and 27.6 % faster for Qwen2.5-7B Q4_K_M and empty-cache prompts of 32k and
 64k 17.2 % and 23.0 % faster (Llama-3.1-8B is similar), and all four are faster than the latest llama.cpp (b11796) with an f16 or a q8_0
 KV cache. Generation is unchanged and speculative verify steps are 4–6 % faster. The change in next-token probabilities is of the same
-order as the 8-bit KV cache (Qwen2.5, Llama-3.1 and Mistral passed the quality bar; Qwen3 models did not, so for them it is the same as
-Off). The answer bits differ from Off but are always the same under the same settings — results match the contract's CPU reference bit
+order as the 8-bit KV cache (Qwen2.5, Llama-3.1 and Mistral passed the quality bar; Qwen3 models pass it with F2B, a variant that keeps the
+exponent of q per block). The answer bits differ from Off but are always the same under the same settings — results match the contract's CPU reference bit
 for bit, and the debugger and reproduction files record this setting and warn when it differs. Applies the next time a model is loaded
 ([문서/빠른어텐션.md](../문서/빠른어텐션.md), Korean).
 
