@@ -157,7 +157,7 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
     we = 가중(g, "token_embd.weight")
     D = we[1].shape[1]
     HD = int(s_["머리크기"] or D // NH)
-    A = NH * HD                                                       # 질의 폭(qwen2 · 이번 범위의 qwen3 는 너비와 같다)
+    A = NH * HD                                                       # 질의 폭(1.0.0 1-6a — 너비와 다를 수 있다: Qwen3-0.6B · 4B)
     KVW = NKV * HD
     G_ = NH // NKV
     if we[0] in ("Q8_0", "Q4_0"):

@@ -33,16 +33,18 @@ import 정수계약 as C        # noqa: E402
 f32 = np.float32
 u64, i64 = G.c_u64, G.c_i64
 D, NH, NKV, HD = 3584, 28, 4, 128         # 7B — 24단계부터는 main 이 GGUF 의 설정으로 다시 둔다(모양두기)
-QKV = D + 2 * NKV * HD                     # 4608
+A = NH * HD                                # GeulPUv2 1.0.0 1-6a — 질의 폭(q · 어텐션 출력 · o 의 입력). 너비 D 와 다를 수 있다(Qwen3-0.6B · 4B)
+QKV = A + 2 * NKV * HD                     # 4608
 O자리수 = 2                                # 33단계 — 접기의 출력(o 의 입력) 자리 수: --자리하나 면 1 (어텐션 안의 q · k · v · e 는 늘 둘)
 KV8 = False                                # GeulPUv2 ③b-2 — 8비트 KV 모듈(커널생성 --KV8): 키 · 값 int8 + 스케일 fp32 (계약 F1A′)
 F2 = False                                 # GeulPUv2 빠른 어텐션 계약 F2(커널생성 --F2 — KV8 위에서)
-KB = D // 32                               # 112
+KB = A // 32                               # 112 — q · o 의 블록 수
 SH = HD + 4                            # 묶음 상태 하나의 칸 (M, L, 빈 둘, O 128)
 
 
 def 모양두기(경로):
-    """24단계 — GGUF 의 메타데이터(바이트 몇 십 MB 만 읽는다)에서 너비 · 머리 · KV 머리. 머리 크기는 128."""
+    """24단계 — GGUF 의 메타데이터(바이트 몇 십 MB 만 읽는다)에서 너비 · 머리 · KV 머리. 머리 크기는 128. 1-6a — 구조의 앞머리
+    (qwen2 · qwen3 · llama)로 읽고, 머리 크기는 key_length(없으면 너비 / 머리 수), 질의 폭 = 머리 × 128."""
     import struct
     with open(경로, "rb") as f:
         b = f.read(96 * 1024 * 1024)
@@ -55,13 +57,15 @@ def 모양두기(경로):
         t = struct.unpack_from("<I", b, o + 8 + n)[0]
         v, o = GR._값(b, o + 12 + n, t)
         메타[키] = v
-    global D, NH, NKV, QKV, KB
-    D = 메타["qwen2.embedding_length"]
-    NH = 메타["qwen2.attention.head_count"]
-    NKV = 메타["qwen2.attention.head_count_kv"]
-    assert D == NH * HD, (D, NH)
-    QKV = D + 2 * NKV * HD
-    KB = D // 32
+    global D, NH, NKV, QKV, KB, A
+    k = 메타.get("general.architecture", "qwen2") + "."
+    D = 메타[k + "embedding_length"]
+    NH = 메타[k + "attention.head_count"]
+    NKV = 메타[k + "attention.head_count_kv"]
+    assert 메타.get(k + "attention.key_length", D // NH) == HD, (D, NH)
+    A = NH * HD
+    QKV = A + 2 * NKV * HD
+    KB = A // 32
     return 메타
 질문들 = ["What is the capital of France? Answer in one word.", "대한민국의 수도는 어디야? 한 단어로 답해.",
          "Write a short poem about the sea."]
@@ -119,18 +123,18 @@ class 글커널:
         폭max = (Mmax + 63) // 64 * 64
         묶음수 = (최대길이 + 1023) // 1024
         p입력 = dr.할당(Mmax * QKV * 4)
-        p자q, p정q = dr.할당(2 * Mmax * D), dr.할당(KB * 폭max * 4)
+        p자q, p정q = dr.할당(2 * Mmax * A), dr.할당(KB * 폭max * 4)
         자 = 1 if KV8 else 2                      # ③b-2 — 키 · 값의 자리 수, 지수 바이트 대신 fp32 스케일
         p키, p값 = dr.할당(NKV * 자 * 최대길이 * HD), dr.할당(NKV * 최대길이 * 자 * HD)
         p키지, p값지 = dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1)), dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1))
         p묶 = dr.할당(Mmax * NH * 묶음수 * SH * 4)
-        p자, p정 = dr.할당(2 * Mmax * D), dr.할당(KB * 폭max * 4)
-        p출 = dr.할당(Mmax * D * 4)
+        p자, p정 = dr.할당(2 * Mmax * A), dr.할당(KB * 폭max * 4)
+        p출 = dr.할당(Mmax * A * 4)
         p코, p사 = dr.할당(최대길이 * 64 * 4), dr.할당(최대길이 * 64 * 4)
         dr.올리기(p코, np.ascontiguousarray(cos, f32))
         dr.올리기(p사, np.ascontiguousarray(sin, f32))
-        out = {"q자리": np.zeros((2, n, D), np.int8), "q정보": np.zeros((n, KB), np.int32), "o자리": np.zeros((O자리수, n, D), np.int8),
-               "o정보": np.zeros((n, KB), np.int32), "o짧은": np.zeros((n, D), f32)}
+        out = {"q자리": np.zeros((2, n, A), np.int8), "q정보": np.zeros((n, KB), np.int32), "o자리": np.zeros((O자리수, n, A), np.int8),
+               "o정보": np.zeros((n, KB), np.int32), "o짧은": np.zeros((n, A), f32)}
         KV = [(1, p키), (1, p값), (1, p키지), (1, p값지)]
         for s, m, 판 in 덩이들:
             폭 = (m + 63) // 64 * 64
@@ -158,13 +162,13 @@ class 글커널:
                 self.띄우기("정수묶음접기", (NH, m), 128, [(1, p묶), (1, p정), (1, p자), (0, m), (0, m), (0, s), (0, 최대길이)])
                 self.띄우기("정수묶음접기짧은", (NH, m), 128, [(1, p묶), (1, p출), (0, m), (0, m), (0, s), (0, 최대길이)])
             dr.맞추기()
-            out["q자리"][:, s:s + m] = dr.내리기(p자q, np.empty((2, m, D), np.int8))
+            out["q자리"][:, s:s + m] = dr.내리기(p자q, np.empty((2, m, A), np.int8))
             out["q정보"][s:s + m] = dr.내리기(p정q, np.empty((KB, 폭), np.int32))[:, :m].T
             if RoPE만:
                 continue
-            out["o자리"][:, s:s + m] = dr.내리기(p자, np.empty((O자리수, m, D), np.int8))
+            out["o자리"][:, s:s + m] = dr.내리기(p자, np.empty((O자리수, m, A), np.int8))
             out["o정보"][s:s + m] = dr.내리기(p정, np.empty((KB, 폭), np.int32))[:, :m].T
-            out["o짧은"][s:s + m] = dr.내리기(p출, np.empty((m, D), f32))
+            out["o짧은"][s:s + m] = dr.내리기(p출, np.empty((m, A), f32))
         if KV8:
             out["키"] = dr.내리기(p키, np.empty((NKV, 최대길이, HD), np.int8))
             out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, HD, 32), np.int8))
@@ -220,7 +224,7 @@ def 참조(X, 최대길이, cos, sin, 첫행=0):
     셈할 때와 같다). q 자리 · KV 캐시는 모든 행."""
     n = X.shape[0]
     위치 = np.arange(n)
-    q, k, v = X[:, :D], X[:, D:D + NKV * HD], X[:, D + NKV * HD:]
+    q, k, v = X[:, :A], X[:, A:A + NKV * HD], X[:, A + NKV * HD:]
     qr = np.concatenate([C.rope(q[:, HD * a:HD * a + HD], cos, sin, 위치) for a in range(NH)], 1)
     kr = [C.rope(k[:, HD * g:HD * g + HD], cos, sin, 위치) for g in range(NKV)]
     vv = [np.ascontiguousarray(v[:, HD * g:HD * g + HD]) for g in range(NKV)]
@@ -286,40 +290,37 @@ def 극단(n, 씨):
     X = r.standard_normal((n, QKV)).astype(np.float64)
     X *= np.repeat(np.exp2(r.uniform(-60, 20, QKV // HD)), HD)[None, :]
     X *= np.exp2(r.integers(-20, 21, n)).astype(np.float64)[:, None] ** (r.random(n) < 0.1)[:, None]
-    큰채널 = D + HD * np.arange(NKV)[:, None] + r.integers(0, HD, (NKV, 3))
+    큰채널 = A + HD * np.arange(NKV)[:, None] + r.integers(0, HD, (NKV, 3))
     X[:, 큰채널.reshape(-1)] *= 256.0
     영 = r.random((n, QKV // 32)) < 0.02
     X.reshape(n, QKV // 32, 32)[영] = 0.0
     작은 = r.random((n, NKV * HD)) < 0.001
-    X[:, D:D + NKV * HD][작은] = np.ldexp(1.0, -140)
+    X[:, A:A + NKV * HD][작은] = np.ldexp(1.0, -140)
     return np.clip(X, -2.0 ** 100, 2.0 ** 100).astype(f32)
 
 
 def 층0qkv(gguf, ids):
-    """7B 층 0 의 q · k · v (bias 포함, RoPE 앞) — CPU 참조의 임베딩 · RMS · 행렬곱빠른(계약 그대로)."""
+    """층 0 의 q · k · v (치우침 포함, RoPE 앞) — CPU 참조의 임베딩 · RMS · 행렬곱(계약 그대로). 1-6a — 구조 · 형식과 상관없이
+    시험/참조7B.py 의 앞으로 와 같은 식: 치우침이 없으면 0, llama 는 q · k 의 줄을 되돌린 뒤, qwen3 는 머리 정규화 뒤(엔진이 RoPE 에 주는 값)."""
+    import 참조7B as R
     g = GR.GGUF(gguf)
-
-    def q8(name):                                   # Q8_0 · Q4_0 (니블 − 8) — 24단계
-        t, dims, raw = g.원(name)
-        K, N = dims
-        if t == GR.Q4_0:
-            bl = np.asarray(raw).reshape(N, K // 32, 18)
-            d = np.ascontiguousarray(bl[:, :, :2]).view(np.float16).reshape(N, K // 32).astype(f32)
-            qs = bl[:, :, 2:]
-            q = (np.concatenate([qs & 15, qs >> 4], 2).astype(np.int16) - 8).astype(np.int8).reshape(N, K)
-            return q, d
-        bl = np.asarray(raw).reshape(N, K // 32, 34)
-        d = np.ascontiguousarray(bl[:, :, :2]).view(np.float16).reshape(N, K // 32).astype(f32)
-        q = np.ascontiguousarray(bl[:, :, 2:]).view(np.int8).reshape(N, K)
-        return q, d
-    eq, ed = q8("token_embd.weight")
-    x = (eq[ids].astype(f32) * np.repeat(ed[ids], 32, axis=1)).astype(f32)
-    h = C.rms정규화(x, g.풀기("blk.0.attn_norm.weight"), float(g.meta["qwen2.attention.layer_norm_rms_epsilon"]))
-    out = []
-    for a in ("q", "k", "v"):
-        q, d = q8(f"blk.0.attn_{a}.weight")
-        out.append(C.행렬곱빠른(h, q.T, np.ascontiguousarray(d.T), g.풀기(f"blk.0.attn_{a}.bias")))
-    return np.concatenate(out, 1).astype(f32)
+    s_ = R.설정(g)
+    we = R.가중(g, "token_embd.weight")
+    if we[0] in ("Q8_0", "Q4_0"):
+        x = (we[1][ids].astype(f32) * np.repeat(we[2][ids], 32, axis=1)).astype(f32)
+    else:
+        x = C.임베딩K(we, ids)
+    h = C.rms정규화(x, g.풀기("blk.0.attn_norm.weight"), s_["eps"])
+    ws = [R.가중(g, f"blk.0.attn_{a}.weight") for a in ("q", "k", "v")]
+    bs = [R.치우침(g, f"blk.0.attn_{a}.bias", w[1].shape[0]) for w, a in zip(ws, ("q", "k", "v"))]
+    if s_["구조"] == "llama":
+        ws[0], bs[0] = R.줄되돌리기(ws[0], NH, HD), R.줄되돌리기(bs[0], NH, HD)
+        ws[1], bs[1] = R.줄되돌리기(ws[1], NKV, HD), R.줄되돌리기(bs[1], NKV, HD)
+    qkv = np.concatenate([R.곱(h, w, b) for w, b in zip(ws, bs)], 1)
+    if s_["구조"] == "qwen3":
+        qkv = np.concatenate([C.머리정규화(qkv[:, :A], g.풀기("blk.0.attn_q_norm.weight"), s_["eps"], HD),
+                              C.머리정규화(qkv[:, A:A + NKV * HD], g.풀기("blk.0.attn_k_norm.weight"), s_["eps"], HD), qkv[:, A + NKV * HD:]], 1)
+    return qkv.astype(f32)
 
 
 _토크나이저 = {}
@@ -354,7 +355,7 @@ def main():
         C.어텐션한자리 = 변형.lower()
         print("8비트 KV 에뮬레이션:" if "8" in 변형 else "F1A 에뮬레이션:", 변형, flush=True)
     모양두기(gguf)
-    print(f"모양: 너비 {D} · 머리 {NH} · KV 머리 {NKV} (GQA {NH // NKV})", flush=True)
+    print(f"모양: 너비 {D} · 질의 폭 {A} · 머리 {NH} · KV 머리 {NKV} (GQA {NH // NKV})", flush=True)
     k = 글커널(ptx)
     결과 = {"커널 속성": k.속성(), "경우": []}
     print(json.dumps(결과["커널 속성"], ensure_ascii=False), flush=True)

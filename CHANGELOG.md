@@ -8,6 +8,16 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ## Unreleased
 
+### Added
+
+- **Models whose query width differs from the hidden size.** The query width (heads × 128 — the width of q, of the attention output
+  and of the input to the output projection) is now its own size instead of being taken from the hidden size, so Qwen3-0.6B · 4B · 32B
+  load (before, the engine and the app refused them). The kernel generator, the engine (weights, buffers and the output projection in the
+  prompt path, the generation graph and the table step), the app's model check and the CPU reference all follow it. On Qwen3-0.6B
+  (hidden 1,024, query width 2,048) every path matches the CPU reference bit for bit in the exact and fast modes, with Q8_0 and k-quant
+  weights. Modules for models that ran before are byte-identical, so their outputs do not change. Mistral NeMo · Small still need their
+  tekken tokenizer.
+
 ### Changed
 
 - **The computation mode is shown where you chat.** A chip next to the model shows **Exact** or **Fast** (with **8-bit KV** and **fast
