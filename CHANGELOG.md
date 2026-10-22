@@ -57,6 +57,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   its own token ids from 1,000 to 100,999, so with a small vocabulary (Mistral-7B-Instruct-v0.3 has 32,768) most of them were out of
   range and the embedding read past its table — a CUDA error or meaningless timings. The ids are now taken modulo the vocabulary size;
   for vocabularies of 101,000 or more (Qwen, Llama 3) they are unchanged, and so are the measurements.
+- **The app and the server no longer leak memory while they run** ([#22](https://github.com/wwoosshh/GeulPUv2/issues/22)). The
+  screen asks for `/api/state` every second, and writing the catalog copied twelve strings per entry without freeing them — about
+  14 KB per call, over 1 GB a day. The JSON parser shared by the app and the server kept a small header per string, and when a body was
+  malformed it kept the whole partly built tree (a truncated 16 MB body cost over 1 GB). Both are fixed; a new GPU-less quick check
+  (`시험/앱누수.py`) repeats `/api/state` and valid and truncated bodies and fails if the app's private memory grows by more than 1 MB.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 

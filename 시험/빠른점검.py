@@ -17,6 +17,7 @@
      4h. 앱의 모델 해시 지문(#19) — 같은 경로의 모델 파일이 바뀌면 옛 SHA-256 을 버리는가(시험/모델해시.py — 윈도만, 앱을 임시 자료로 띄워)
      4i. 앱의 모델 모양 — 셈할 수 없는 파일(qwen2 의 RMSNorm eps 가 10⁻⁶ · 10⁻⁵ 이 아님 — #16, qwen2 의 RoPE 늘이기 정보 — #17)을 까닭과
          함께 받지 않는가(시험/모델모양.py — 윈도만)
+     4j. 앱의 메모리 누수(#22) — /api/state · 올바른 본문 · 잘린 본문을 되풀이해도 앱의 private 메모리가 늘지 않는가(시험/앱누수.py — 윈도만)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
@@ -461,6 +462,20 @@ def 모델모양(출력):
     알림("앱의 모델 모양(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
 
 
+def 앱누수(출력):
+    """#22 — 오래 켜 둔 앱의 메모리가 늘지 않는가: /api/state 와 JSON 본문(올바른 · 잘린)을 되풀이하며 private 메모리를 잰다(GPU 없이 — 윈도만)"""
+    if 리눅스:
+        return
+    exe = os.path.join(출력, "GeulPU" + EXE)
+    if not os.path.exists(exe):
+        알림("앱의 메모리 누수(GPU 없이)", False, "GeulPU 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "앱누수.py"), exe, os.path.join(출력, "앱누수"),
+                       os.path.join(ROOT, "앱", "data", "models.json")], os.path.join(출력, "앱누수.txt"))
+    알림("앱의 메모리 누수(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
+
+
 def 가져오기검사(출력):
     """윈도: 실행기는 kernel32 · shell32 · nvcuda, 서버는 그에 ws2_32(28단계). 리눅스(29단계): 둘 다 libc.so.6 · libcuda.so.1 뿐."""
     허용 = {"kernel32.dll", "shell32.dll", "nvcuda.dll"}
@@ -530,6 +545,7 @@ def main():
             망가진입력(출력)
             모델해시(출력)
             모델모양(출력)
+            앱누수(출력)
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
                 요약.append("건너뜀  [모듈 · SASS] --모듈없이")
