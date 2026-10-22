@@ -350,6 +350,15 @@ details.fold > :not(summary) { margin-top: 12px; }
 .model-pill .q { font: 400 11px/16px var(--font-mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--mute); white-space: nowrap; flex: none; }
 .model-state { display: inline-flex; align-items: center; gap: 8px; color: var(--mute); font-size: 13px; white-space: nowrap; overflow: hidden; min-width: 0; }
 .model-state > span { overflow: hidden; text-overflow: ellipsis; }
+/* 계산 방식 칩 — 누르면 정밀 · 빠름을 고른다(정밀 = 정밀도 계약 그대로, 연구 · 검증의 수치). 좁은 창에서도 남긴다 */
+.mode-chip {
+  display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 12px; flex: none;
+  border: 1px solid var(--line-pill); border-radius: var(--r-pill); background: transparent; color: var(--mute); font-size: 12px; white-space: nowrap;
+}
+.mode-chip:hover, .mode-chip[aria-expanded=true] { border-color: var(--line-pill-hover); background: var(--hover); color: var(--ink); }
+.mode-chip.exact, .mode-chip.exact:hover, .mode-chip.exact[aria-expanded=true] { color: var(--ok); }
+.mode-chip.exact { border-color: rgba(127, 214, 164, 0.4); }
+.mode-chip:disabled { opacity: 0.6; cursor: default; }
 /* 스크롤 막대 자리를 양쪽에 — 글 열의 가운데가 입력창의 가운데와 같다 */
 #msgs { flex: 1; overflow: auto; scrollbar-gutter: stable both-edges; }
 .thread { max-width: 816px; margin: 0 auto; padding: 32px 24px 24px; }
@@ -417,6 +426,7 @@ details.fold > :not(summary) { margin-top: 12px; }
 .msg .tools { display: flex; align-items: center; gap: 2px; margin-top: 8px; min-height: 28px; }
 .msg .tools .icon-btn { width: 28px; height: 28px; }
 .msg .stats { font: 400 12px/16px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--mute); margin-left: 8px; }
+.msg .tools .mtag { margin-left: 8px; }
 .msg.notice .ncard { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-raise); }
 .msg.notice .ncard .row { flex-wrap: nowrap; align-items: flex-start; }
 .msg.notice .ncard .row .dot { margin-top: 8px; }
@@ -517,6 +527,10 @@ details.fold > :not(summary) { margin-top: 12px; }
 .pop .opt.q .sz { color: var(--mute); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pop .opt.q .why { color: var(--mute); font-size: 12px; white-space: nowrap; }
 .pop-title { padding: 8px 12px 4px; color: var(--mute); font-size: 12px; line-height: 16px; }
+/* 계산 방식 고르기 — 설명이 두 줄까지 */
+.pop .opt.mode, .pop .opt.wrap { align-items: flex-start; }
+.pop .opt.mode .s, .pop .opt.wrap .s { white-space: normal; }
+.pop-note { padding: 4px 12px 8px; color: var(--mute); font-size: 12px; line-height: 16px; }
 /* 다운로드 목록 */
 .dlpop { width: 380px; max-width: calc(100vw - 48px); }
 .dlpop .dlrow { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-top: 1px solid var(--hairline); }
@@ -788,6 +802,8 @@ details.fold > :not(summary) { margin-top: 12px; }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #modal .foot .btn { height: 32px; padding: 0 12px; font-size: 13px; }
   .model-state { display: none; }
+  .mode-chip { padding: 0 10px; }
+  .mode-chip svg.i { display: none; }
   .bench-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "pick" "diag" "speed" "cc"; }
   table.results .c-res { display: none; }
   table.results .c-kind { white-space: normal; }
@@ -797,7 +813,7 @@ details.fold > :not(summary) { margin-top: 12px; }
   .spec .cell .v { font-size: 15px; line-height: 22px; }
   .spec .cell .s { display: none; }
   #toast { left: 12px; right: 12px; top: 12px; max-width: none; width: auto; transform: none; }
-  .model-pill { max-width: calc(100vw - 120px); }
+  .model-pill { max-width: calc(100vw - 216px); }   /* 계산 방식 칩 · 연구 패널 · 생성 설정 단추가 들어가게 */
   h1 { font-size: 26px; line-height: 32px; }
   .hello h1 { font-size: 28px; line-height: 36px; }
   .thread { padding: 20px 16px; }
@@ -827,6 +843,11 @@ details.fold > :not(summary) { margin-top: 12px; }
 .lab-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 32px 12px; }
 .lab-empty svg { color: var(--faint); }
 .lab-ans { display: flex; flex-direction: column; gap: 4px; }
+/* 이 답을 셈한 계산 방식 — 정밀은 조용히, 빠름은 연구 수치의 기준이 아님을 알린다 */
+.lab-mode { margin-top: 8px; padding: 8px 12px; border-radius: 4px; background: var(--fill); }
+.lab-mode.exact svg { color: var(--ok); }
+.lab-mode.fast { background: var(--accent-wash); }
+.lab-mode.fast svg { color: var(--accent); }
 .sec.lab-sec { font-size: 15px; line-height: 22px; margin-top: 12px; }
 .kpis.lab-kpis { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
 .kpis.lab-kpis .kpi { padding: 10px 12px; }

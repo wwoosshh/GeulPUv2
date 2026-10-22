@@ -142,7 +142,9 @@ chat, **computation mode**, **8-bit KV cache**, **fast attention**, **speculativ
 new-version notice.
 Changes are saved immediately.
 
-**Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded.
+**Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded. The computation mode chip above the chat
+switches it too and reloads the loaded model in that mode. Every answer carries a tag with the mode it was computed in (Fast · Exact,
+8-bit KV · fast attention).
 - **Fast**: the activations entering the matrix multiplications are 8-bit (the same class as llama.cpp). Prompt processing is 1.3–1.6×
   faster than Exact (CUDA · 7B · 8B), and the change in next-token probabilities is of the same order as llama.cpp's
   ([문서/2단계.md](../문서/2단계.md)).

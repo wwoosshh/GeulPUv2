@@ -6,6 +6,16 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+### Changed
+
+- **The computation mode is shown where you chat.** A chip next to the model shows **Exact** or **Fast** (with **8-bit KV** and **fast
+  attention** when they are on) and switches it — the loaded model reloads in that mode. Every answer carries a tag with the mode it was
+  computed in, and the research panel says which mode the answer was made in. The panel computes its values with the server that is
+  loaded; when that server's mode differs from the answer's, it now says so and offers to recompute them in the answer's mode (before, it
+  silently showed values from whatever mode was loaded — a greedy fast-mode answer could show tokens that were not the top choice).
+
 ## 0.10.2 — Fixes: correctness, reproducibility, stability (2026-10-22)
 
 ### Fixed
