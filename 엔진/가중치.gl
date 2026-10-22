@@ -21,6 +21,7 @@
 실수 로프밑 = 0.0.          (* rope.freq_base (θ) *)
 참거짓 qwen3모델 = 거짓.    (* 37단계 — 구조 qwen3: 치우침이 없으면 0 을 더하고(계약 4.5), RoPE 앞에 머리마다 q · k 정규화(계약 4.6 — 머리정규화128) *)
 참거짓 llama모델 = 거짓.    (* 39단계 — 구조 llama(Llama 3.x · Mistral): q · k 줄 되돌리기 · RoPE 늘이기 인자 · eps 10⁻⁵ (계약 4.7) *)
+참거짓 eps5모델 = 거짓.     (* #16 — 구조 qwen2 에 RMSNorm eps 10⁻⁵ (DeepSeek-R1-Distill-Qwen-14B): 모듈 qwen2e5…(커널생성 qwen2e5큰 — 계약 4.1) *)
 실수 참조 로프인자 = 없음.  (* 39단계 — rope_freqs(짧은실수 64 칸을 실수로) — 없으면 없음. 로프.gl 의 표가 θ_i / f_i 로 쓴다 *)
 정수 얀원래 = 0.            (* GeulPUv2 ③a — YaRN 의 원래 길이(Qwen 공식 32,768 — Qwen2.5 7B 이상 · Qwen3), 0 이면 늘이지 않는 모델 *)
 
@@ -425,6 +426,7 @@
     문자열 구조 = 메타글(g, "general.architecture").
     qwen3모델 = 문자열_같은가(구조, "qwen3").                    (* 37단계 *)
     llama모델 = 문자열_같은가(구조, "llama").                    (* 39단계 *)
+    eps5모델 = 거짓.
     (아닌 문자열_같은가(구조, "qwen2") 그리고 아닌 qwen3모델 그리고 아닌 llama모델)이면 { 파일에_쓰기(표준오류(), "qwen2 · qwen3 · llama 모델만 받는다(%s)\n", 구조). 1로 종료하다. }
     문자열 앞 = "qwen2".
     qwen3모델이면 { 앞 = "qwen3". }
@@ -436,6 +438,15 @@
     확장폭 = 메타정수(g, 서식글("%s.feed_forward_length", 앞)).
     모델위치 = 메타정수(g, 서식글("%s.context_length", 앞)).
     로프밑 = 메타실수(g, 서식글("%s.rope.freq_base", 앞)).
+    (* #16 — Qwen2: eps 는 모듈의 상수와 같아야 한다 — 10⁻⁶(qwen2… — Qwen2.5 · R1-Distill-Qwen-7B) · 10⁻⁵(qwen2e5… — R1-Distill-Qwen-14B).
+       그 밖은 받지 않는다. 열쇠가 없는 파일은 지금까지처럼 10⁻⁶ *)
+    (아닌 qwen3모델 그리고 아닌 llama모델 그리고 메타있음(g, "qwen2.attention.layer_norm_rms_epsilon"))이면 {
+        실수 eps0 = 메타실수(g, "qwen2.attention.layer_norm_rms_epsilon").
+        (eps0 >= 0.0000099999 그리고 eps0 <= 0.0000100001)이면 { eps5모델 = 참. }
+        아니면 (eps0 < 0.00000099999 또는 eps0 > 0.00000100001)이면 {
+            파일에_쓰기(표준오류(), "Qwen2: RMSNorm eps %g 은 받지 않는다(모듈의 상수 10⁻⁶ · 10⁻⁵)\n", eps0). 1로 종료하다.
+        }
+    }
     qwen3모델이면 {                 (* 37단계 — 이번 범위: 머리 128 · 질의 폭(머리 × 128) = 너비, eps 는 생성기의 상수(10⁻⁶), RoPE 늘이기 없음 *)
         정수 hd = 128.
         메타있음(g, "qwen3.attention.key_length")이면 { hd = 메타정수(g, "qwen3.attention.key_length"). }
@@ -502,6 +513,7 @@
     }
     머리크기 = 너비 / 머리수.
     큰모델 = 큰.
+    (eps5모델 그리고 아닌 큰)이면 { 파일에_쓰기(표준오류(), "Qwen2: RMSNorm eps 10⁻⁵ 는 머리 128 의 모델만 받는다(0.5B 판의 상수는 10⁻⁶)\n"). 1로 종료하다. }
     가중형식 = 정수목록_값(g→텐서형식, 텐서찾기(g, "blk.0.attn_q.weight")).
     K모델 = K형식인가(가중형식).                    (* 26단계 — k-양자화: 텐서마다 형식(Q4_K · Q5_K · Q6_K) *)
     K모델이면 {
@@ -532,6 +544,7 @@
 [모듈구조]는 -> 문자열 {
     qwen3모델이면 { 반환 "qwen3". }
     llama모델이면 { 반환 "llama". }                 (* 39단계 — 머리 128 모듈에 eps 10⁻⁵ (커널생성 llama큰) *)
+    eps5모델이면 { 반환 "qwen2e5". }               (* #16 — qwen2 에 eps 10⁻⁵ (커널생성 qwen2e5큰 — 모듈 끝에 eps5표시) *)
     반환 "qwen2".
 }
 

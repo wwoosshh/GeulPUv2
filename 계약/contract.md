@@ -188,6 +188,9 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
 1. **RMSNorm** (one row of width D): lane t (0 … 255) sums p_t = Σ_{c ≡ t (mod 256)} x_c · x_c (ascending c, rounding at every product
    and sum); the 256 partial sums are reduced in halves from 128 down to S; r = 1 / sqrt(S / D + eps) (IEEE round-to-nearest);
    y_c = (x_c · r) · w_c. When the next operation is a linear layer, y goes straight into two digits.
+   eps is a module constant and must equal the GGUF's `layer_norm_rms_epsilon` — for Qwen2 either float32(10⁻⁶) = 0x358637BD (modules
+   qwen2… — Qwen2.5, R1-Distill-Qwen-7B) or float32(10⁻⁵) = 0x3727C5AC (modules qwen2e5… — R1-Distill-Qwen-14B, `커널생성 qwen2e5큰`);
+   other values are refused (#16).
 2. **RoPE** (NeoX, rotate-half): the cos · sin table [position][32] holds correctly rounded float32 values (θ_i = θ^(−2i/64) correctly
    rounded in fp64, angle = position · θ_i as an fp64 product, cos and sin correctly rounded to float32 — independent of the platform's
    math library; computed with Python's standard `decimal`). x′_i = fma(x_i, cos, −(x_{i+32} · sin)), x′_{i+32} = fma(x_{i+32}, cos,

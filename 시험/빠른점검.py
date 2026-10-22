@@ -15,6 +15,7 @@
      4f. 망가진 GGUF — 엔진의 GGUF 열기(엔진/시험_GGUF열기.gl)가 조작된 파일 서른 남짓을 오류로 끝내는가(시험/망가진입력.py gguf)
      4g. 유한하지 않은 로짓 — 뽑기(엔진/시험_뽑기.gl)가 NaN · ±Inf 가 섞인 행에서 범위 안의 번호를 고르는가(시험/망가진입력.py 뽑기)
      4h. 앱의 모델 해시 지문(#19) — 같은 경로의 모델 파일이 바뀌면 옛 SHA-256 을 버리는가(시험/모델해시.py — 윈도만, 앱을 임시 자료로 띄워)
+     4i. 앱의 모델 모양 — 셈할 수 없는 파일(qwen2 의 RMSNorm eps 가 10⁻⁶ · 10⁻⁵ 이 아님 — #16)을 까닭과 함께 받지 않는가(시험/모델모양.py — 윈도만)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
@@ -445,6 +446,20 @@ def 모델해시(출력):
     알림("앱의 모델 해시 지문(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
 
 
+def 모델모양(출력):
+    """앱이 셈할 수 없는 모델 파일을 까닭과 함께 받지 않는가 — 머리만 있는 작은 GGUF 로(GPU 없이 — 앱은 윈도만)"""
+    if 리눅스:
+        return
+    exe = os.path.join(출력, "GeulPU" + EXE)
+    if not os.path.exists(exe):
+        알림("앱의 모델 모양(GPU 없이)", False, "GeulPU 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "모델모양.py"), exe, os.path.join(출력, "모델모양자료")],
+                      os.path.join(출력, "모델모양.txt"))
+    알림("앱의 모델 모양(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
+
+
 def 가져오기검사(출력):
     """윈도: 실행기는 kernel32 · shell32 · nvcuda, 서버는 그에 ws2_32(28단계). 리눅스(29단계): 둘 다 libc.so.6 · libcuda.so.1 뿐."""
     허용 = {"kernel32.dll", "shell32.dll", "nvcuda.dll"}
@@ -513,6 +528,7 @@ def main():
             요청지킴(출력)
             망가진입력(출력)
             모델해시(출력)
+            모델모양(출력)
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
                 요약.append("건너뜀  [모듈 · SASS] --모듈없이")
