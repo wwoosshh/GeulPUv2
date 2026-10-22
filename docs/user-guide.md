@@ -110,7 +110,7 @@ memory right away; **Browse models** opens Find models, described below.
 - **Reasoning models** (Qwen3, DeepSeek-R1) think before answering. The thinking is collapsed as "Thought for N s"; click it to expand.
   Token count and speed (tokens/s) appear under the answer.
 
-![Chat — Qwen3-8B Q4_K_M with its thinking collapsed and the speed under the answer](img/chat-en.png)
+![Chat — Qwen3-8B Q4_K_M with its thinking collapsed and the speed under the answer; the chip above the chat and the answer's tag show the computation mode (Fast)](img/chat-en.png)
 
 - **To turn Qwen3's thinking off**: **Generation settings** (the slider icon at the top right) → switch off **Thinking**. It then
   answers directly.

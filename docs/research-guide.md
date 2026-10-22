@@ -73,11 +73,13 @@ real difference. That makes questions like these cleanly answerable:
 
 Send the question `Name one famous painter. Answer with just the name.` and the answer is `Leonardo da Vinci`.
 
-![The chat — (1) the flask under the answer: open this answer in the panel (2) the flask above the chat: open or close the panel (3) generation settings](img/guide/01-chat-en.png)
+![The chat — (1) the flask under the answer: open this answer in the panel (2) the flask above the chat: open or close the panel (3) generation settings (4) the computation mode chip: Exact (5) the answer's tag: the mode this answer was computed in](img/guide/01-chat-en.png)
 
 - **(1)** The **flask button** under an answer opens the panel on the right and analyzes that answer token by token (a few seconds).
 - **(2)** The flask above the chat opens and closes the panel. In a narrow window the panel covers the chat.
 - **(3)** Generation settings (temperature, maximum length, system prompt).
+- **(4)** The **computation mode** chip — the mode the loaded model computes in now (**Exact** or **Fast**). Click it to switch (setup step 3).
+- **(5)** The answer's tag — the mode that answer was computed in. Every answer in this guide is **Exact**.
 
 The panel never touches chat speed. Chat generates as usual; only when you open the panel are the answer's tokens recomputed (scoring —
 `echo`). The recomputed values are **bit-identical** to those of generation (checked in stage 38 on four models and two backends).
@@ -91,7 +93,8 @@ The panel never touches chat speed. Chat generates as usual; only when you open 
 1. **Answer to analyze** — pick an answer of this chat (question, version, branch). Earlier versions are listed too.
 2. **Six tabs** — Observe, Intervene, Compare, Score, Reproduce, Export (table below).
 3. **Answer header** — model and quantization, temperature (0 = greedy) and seed, token count (including the end token), generation
-   speed, and the device and backend it was made on.
+   speed, the device and backend it was made on, and the **computation mode** this answer was computed in (a green line for Exact —
+   with the same model file and request, the same bits on any PC or GPU).
 4. **Six summary numbers** — mean log-prob, perplexity, mean entropy, smallest margin, number of low-margin steps, number of non-top tokens.
 5. **Low-margin threshold δ** — steps whose top-two gap (margin) is below δ count as low-margin steps. ‹ › jump between them.
 6. **Token strip** — the answer's tokens. Darker = less likely, underline = low-margin step, outline = a step that picked a non-top token.
@@ -310,7 +313,7 @@ changes an answer; it only skips work. The answer header shows how much was reus
 2. Change the date to `2026-10-20`, start a **new chat** with the same model, ask the same question, and open this answer in the panel.
 
 **Reading**
-- **(1)** Reused prompt 270/576 tokens — this slot 0, another slot 270, store 0. The new chat took the free slot and copied the shared
+- **(1)** Reused prompt 270/576 tokens — this slot 0, another slot 270, prompt cache 0. The new chat took the free slot and copied the shared
   beginning from the first chat's slot.
 - **(2)** Cache break: token 270 — differs from the earlier content, then the 12 tokens before it (…`'s date: 2026-10-`) and the token
   at that place before → now (`"1"` → `"2"`). The date changed, so everything after it — the project notes and the question, 306
@@ -322,15 +325,15 @@ changes an answer; it only skips work. The answer header shows how much was reus
 
 <br clear="right">
 
-<img src="img/guide/17-store-restore-en.png" width="460" align="right" alt="After restarting — (1) reused prompt: 512 of 619 tokens from the prompt cache in 19 ms (2) cache break at token 512: as far as the store had it">
+<img src="img/guide/17-store-restore-en.png" width="460" align="right" alt="After restarting — (1) reused prompt: 512 of 619 tokens from the prompt cache in 10 ms (2) cache break at token 512: as far as the prompt cache had it">
 
 3. Restart the app (or load another model and come back) — the slots are empty now — and ask the second chat another question:
    `To add a command that lists only overdue to-dos, which file do I change and how? Two sentences.`
 
 **Reading**
-- **(1)** Reused prompt 512/619 tokens — store 512 (19 ms). Nothing was left in the slots, so the beginning of the chat came from the
-  SSD instead of being computed. The store keeps whole 256-token chunks, and the chat so far filled two.
-- **(2)** Cache break: token 512 — as far as the store had it. Only the rest (107 tokens: the end of the first exchange and the new
+- **(1)** Reused prompt 512/619 tokens — prompt cache 512 (10 ms). Nothing was left in the slots, so the beginning of the chat came from the
+  SSD instead of being computed. The prompt cache keeps whole 256-token chunks, and the chat so far filled two.
+- **(2)** Cache break: token 512 — as far as the prompt cache had it. Only the rest (107 tokens: the end of the first exchange and the new
   question) was computed. Reopening a 31,000-token conversation after a restart takes 0.74 s to the first token instead of 10 s of
   recomputation, 1.1 s when the chunks are not in the OS file cache as after a reboot (Qwen2.5-7B Q4_K_M, stage 4).
 - To check that reuse changed nothing, **Reproduce → Re-run and check** generates the answer again without the cache and without the
