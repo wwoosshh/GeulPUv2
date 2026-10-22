@@ -1269,6 +1269,7 @@ const TMX = [
   [/GGUF 파일이 아닙니다/g, 'Not a GGUF file'],
   [/파일을 열 수 없습니다/g, 'Cannot open the file'],
   [/(\S+) 텐서가 없습니다/g, 'The $1 tensor is missing'],
+  [/어휘 수\((\d+)\)가 256 ~ 1,048,576 밖인 파일은 지원하지 않습니다/g, 'Files whose vocabulary size ($1) is outside 256 – 1,048,576 are not supported'],
   [/k-양자화 모델은 너비와 FFN 폭이 256의 배수여야 합니다/g, 'For k-quant models the hidden size and FFN width must be multiples of 256'],
   [/k-양자화 파일의 임베딩 형식\((.+?)\)은 지원하지 않습니다 — Q4_K · Q5_K · Q6_K여야 합니다/g, 'The embedding format ($1) of this k-quant file is not supported — it must be Q4_K · Q5_K · Q6_K'],
   [/k-양자화 파일의 출력 가중치 형식\((.+?)\)은 지원하지 않습니다 — Q4_K · Q5_K · Q6_K여야 합니다/g, 'The output weight format ($1) of this k-quant file is not supported — it must be Q4_K · Q5_K · Q6_K'],

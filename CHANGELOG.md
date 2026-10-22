@@ -16,6 +16,13 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   only `127.0.0.1` and `localhost` as `Host` (DNS rebinding), refuses every request that carries an `Origin` header, and sends no CORS
   headers. Programs (OpenAI SDK, coding agents, curl) and the app's `/v1` send no `Origin` and are not affected; outputs are unchanged.
   The quick check tests the rule without a GPU (`엔진/시험_요청지킴.gl`).
+- **Crafted model files can no longer make the engine read or write out of bounds**
+  ([GHSA-4v72-rvjg-8pvw](https://github.com/wwoosshh/GeulPUv2/security/advisories/GHSA-4v72-rvjg-8pvw)). The engine's GGUF reader now
+  checks every length, count, nesting depth, dimension and tensor range against the file size and stops with an error instead of crashing
+  (an alignment of 0, a negative or oversized length, a tensor past the end of the file …). Before laying out the weights it checks that
+  every matrix, norm and bias has the shape the model settings imply, and it refuses vocabularies under 256, as the app's model check now
+  does too. Non-finite logits no longer make sampling pick a token outside the vocabulary. Outputs of valid files are unchanged. The quick
+  check opens 32 crafted GGUF files and samples rows with NaN and ±Inf without a GPU (`시험/망가진입력.py`).
 
 ### Project
 
