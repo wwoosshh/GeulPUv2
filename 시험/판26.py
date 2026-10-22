@@ -3,7 +3,9 @@
 (파일의 정수 · 척도 그대로 — 엔진과 같은 배치로 깔아)와 무작위 활성값으로: 정수줄하나 × 끝손질 셋(qkv 의 구간 · o · down 잔차 · gate·up
 SwiGLU정수 · 로짓), (뒤에) 타일 판 · 임베딩.
 
-  python -I 시험/판26.py <ptx> <gguf …> <출력.json> [--극단]
+  python -I 시험/판26.py <ptx> <gguf …> <출력.json> [--극단] [--빠른] [--행합]
+--행합(1.0.0 1-1 — 행 합 판의 모듈: 정밀 CUDA k-양자화 모듈 — 커널생성 --먼): SwiGLU정수 끝손질이 정보 뒤에 쓴 블록마다의 행 합 T 도
+본다. 입력의 정보는 늘 두 배로 올리고 뒤에 T 를 둔다(행 합 판의 타일 판이 읽는다 — 다른 모듈은 읽지 않는다).
 --극단(31단계 — 규칙 R 의 경계): 슈퍼블록의 절반에서 반실수 척도(d · dmin, Q6_K 는 d)를 2⁻¹⁴ 배로, 활성값은 블록마다 크기를
 2⁻⁹⁰ … 2⁻¹²⁰ 과 0 으로 — P · a 가 2⁻¹²⁶ 아래로 내려가는 칸이 생긴다(예전의 타일 끝셈 S · (P · a) 가 줄 판과 갈리던 경우).
 """
@@ -103,6 +105,23 @@ def 극단날(t, raw, N, K, r):
     return bl.reshape(-1)
 
 
+def 자리행합(x, 자리수=2):
+    """1.0.0 1-1 — 행 합 판: 블록(32 칸)마다 정수 n = Σ_j 256^j · D_j 의 합 T [행][블록] (int32 — 정확)."""
+    Dg, _ = C.자리로(np.asarray(x, f32), 자리수)
+    n, w = Dg.shape[1], Dg.shape[2]
+    v = sum((256 ** j) * Dg[j].astype(np.int64) for j in range(자리수))
+    return v.reshape(n, w // 32, 32).sum(axis=2).astype(np.int32)
+
+
+def 정보판(M0, T, 폭):
+    """정보 [블록][폭] 과 그 뒤의 행 합 T [블록][폭] — [2 · 블록][폭]"""
+    n, nb = M0.shape
+    정보 = np.zeros((2 * nb, 폭), np.int32)
+    정보[:nb, :n] = M0.T
+    정보[nb:, :n] = T.T
+    return 정보
+
+
 def 다른칸(a, b):
     a, b = np.asarray(a), np.asarray(b)
     assert a.shape == b.shape, (a.shape, b.shape)
@@ -116,7 +135,8 @@ def main():
     극단 = "--극단" in sys.argv
     줄타일만 = "--줄타일만" in sys.argv          # 32단계 — 줄 타일 판만(행 1 … 8)
     자리수 = 1 if ("--빠른" in sys.argv or "--자리하나" in sys.argv) else 2     # GeulPUv2 빠른 계약 F1(커널생성 --빠른 의 모듈)
-    인자 = [a for a in sys.argv[1:] if a not in ("--극단", "--줄타일만", "--빠른", "--자리하나")]
+    행합 = "--행합" in sys.argv          # 1.0.0 1-1 — 행 합 판의 모듈: 끝손질이 쓴 T 도 본다
+    인자 = [a for a in sys.argv[1:] if a not in ("--극단", "--줄타일만", "--빠른", "--자리하나", "--행합")]
     ptx, 출력 = 인자[0], 인자[-1]
     파일들 = 인자[1:-1]
     dr = 시험장치.드라이버()
@@ -197,8 +217,7 @@ def main():
             p치 = up(치)
             X = 극단활성값(r, 1, K) if 극단 else (r.standard_normal((1, K)) * 10.0 ** r.uniform(-1, 1, (1, 1))).astype(f32)
             바이트, M0 = 자리바이트(X, 자리수)
-            정보 = np.zeros((K // 32, 64), np.int32)
-            정보[:, :1] = M0.T
+            정보 = 정보판(M0, 자리행합(X, 자리수), 64)
             p자, p정 = up(바이트), up(정보)
             y = C.행렬곱K블라스(X, w, 치, 자리수=자리수)
             W = 64 if e == "_SwiGLU정수" else 32
@@ -218,20 +237,23 @@ def main():
                         continue
                     for m in range(1, 9):
                         바이트m, M0m = 자리바이트(X8[:m], 자리수)
-                        정보m = np.zeros((K // 32, 64), np.int32)
-                        정보m[:, :m] = M0m.T
+                        정보m = 정보판(M0m, 자리행합(X8[:m], 자리수), 64)
                         p자m, p정m = up(바이트m), up(정보m)
                         앞 = [(1, p자m), (1, p정m), (1, p값), (1, p척), (1, p치)]
                         뒤 = [(0, m), (0, K), (0, N), (0, Np), (0, 0), (0, 0), (0, N)]
                         grid = ((N + W8 - 1) // W8, 1)
                         if e == "_SwiGLU정수":
                             gcol = np.concatenate([np.arange(64 * j, 64 * j + 32) for j in range(N // 64)])
-                            참자리8, 참정보8 = 자리바이트(C.swiglu(y8[:m][:, gcol], y8[:m][:, gcol + 32]), 자리수)
-                            p다자, p다정 = dr.할당(자리수 * m * (N // 2)), dr.할당((N // 64) * 64 * 4)
+                            h8 = C.swiglu(y8[:m][:, gcol], y8[:m][:, gcol + 32])
+                            참자리8, 참정보8 = 자리바이트(h8, 자리수)
+                            p다자, p다정 = dr.할당(자리수 * m * (N // 2)), dr.할당(2 * (N // 64) * 64 * 4)
                             띄우기(kn8, grid, 32 * NW, 앞 + [(1, p다정), (1, p다자)] + 뒤)
                             dr.맞추기()
+                            글정8 = dr.내리기(p다정, np.empty((2 * (N // 64), 64), np.int32))
                             다8 = {"자리": 다른칸(dr.내리기(p다자, np.empty((자리수, m, N // 2), np.int8)), 참자리8),
-                                  "정보": 다른칸(dr.내리기(p다정, np.empty((N // 64, 64), np.int32))[:, :m].T, 참정보8)}
+                                  "정보": 다른칸(글정8[:N // 64, :m].T, 참정보8)}
+                            if 행합:
+                                다8["행합"] = 다른칸(글정8[N // 64:, :m].T, 자리행합(h8, 자리수))
                         else:
                             p출 = dr.할당(m * N * 4)
                             if e == "_잔차":
@@ -253,12 +275,16 @@ def main():
             if not 넘는가(kn, {"파일": 이름파일, "가중치": 이름, "형식": 형식}):
                 if e == "_SwiGLU정수":
                     gcol = np.concatenate([np.arange(64 * j, 64 * j + 32) for j in range(N // 64)])
-                    참자리, 참정보 = 자리바이트(C.swiglu(y[:, gcol], y[:, gcol + 32]), 자리수)
-                    p다자, p다정 = dr.할당(자리수 * N // 2), dr.할당((N // 64) * 64 * 4)
+                    h1 = C.swiglu(y[:, gcol], y[:, gcol + 32])
+                    참자리, 참정보 = 자리바이트(h1, 자리수)
+                    p다자, p다정 = dr.할당(자리수 * N // 2), dr.할당(2 * (N // 64) * 64 * 4)
                     띄우기(kn, ((N + W - 1) // W, 1), 128, [(1, p자), (1, p정), (1, p값), (1, p척), (1, p치), (1, p다정), (1, p다자), (0, 1), (0, K), (0, N)])
                     dr.맞추기()
+                    글정 = dr.내리기(p다정, np.empty((2 * (N // 64), 64), np.int32))
                     다 = {"자리": 다른칸(dr.내리기(p다자, np.empty((자리수, 1, N // 2), np.int8)), 참자리[:, :1]),
-                         "정보": 다른칸(dr.내리기(p다정, np.empty((N // 64, 64), np.int32))[:, :1].T, 참정보[:1])}
+                         "정보": 다른칸(글정[:N // 64, :1].T, 참정보[:1])}
+                    if 행합:
+                        다["행합"] = 다른칸(글정[N // 64:, :1].T, 자리행합(h1, 자리수)[:1])
                 else:
                     p출 = dr.할당(N * 4)
                     참 = y
@@ -279,8 +305,7 @@ def main():
             Xm = 극단활성값(r, M, K) if 극단 else (r.standard_normal((M, K)) * 10.0 ** r.uniform(-1, 1, (M, 1))).astype(f32)
             바이트m, M0m = 자리바이트(Xm, 자리수)
             폭 = (M + 63) // 64 * 64
-            정보m = np.zeros((K // 32, 폭), np.int32)
-            정보m[:, :M] = M0m.T
+            정보m = 정보판(M0m, 자리행합(Xm, 자리수), 폭)
             p자m, p정m = up(바이트m), up(정보m)
             ym = C.행렬곱K블라스(Xm, w, 치, 자리수=자리수)
             Np = (N + 63) // 64 * 64
@@ -295,12 +320,16 @@ def main():
                 뒤 = [(0, M), (0, K), (0, N), (0, Np), (0, 0), (0, 0), (0, N)]          # 출력폭 = N
                 if e == "_SwiGLU정수":
                     gcol = np.concatenate([np.arange(64 * j, 64 * j + 32) for j in range(N // 64)])
-                    참자리m, 참정보m = 자리바이트(C.swiglu(ym[:, gcol], ym[:, gcol + 32]), 자리수)
-                    p다자, p다정 = dr.할당(자리수 * M * (N // 2)), dr.할당((N // 64) * 폭 * 4)
+                    hm = C.swiglu(ym[:, gcol], ym[:, gcol + 32])
+                    참자리m, 참정보m = 자리바이트(hm, 자리수)
+                    p다자, p다정 = dr.할당(자리수 * M * (N // 2)), dr.할당(2 * (N // 64) * 폭 * 4)
                     띄우기(kn2, grid, T, 앞 + [(1, p다정), (1, p다자)] + 뒤)
                     dr.맞추기()
+                    글정m = dr.내리기(p다정, np.empty((2 * (N // 64), 폭), np.int32))
                     다2 = {"자리": 다른칸(dr.내리기(p다자, np.empty((자리수, M, N // 2), np.int8)), 참자리m),
-                          "정보": 다른칸(dr.내리기(p다정, np.empty((N // 64, 폭), np.int32))[:, :M].T, 참정보m)}
+                          "정보": 다른칸(글정m[:N // 64, :M].T, 참정보m)}
+                    if 행합:
+                        다2["행합"] = 다른칸(글정m[N // 64:, :M].T, 자리행합(hm, 자리수))
                 else:
                     p출 = dr.할당(M * N * 4)
                     참m = ym

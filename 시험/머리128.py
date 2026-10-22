@@ -128,7 +128,7 @@ class 글커널:
         p키, p값 = dr.할당(NKV * 자 * 최대길이 * HD), dr.할당(NKV * 최대길이 * 자 * HD)
         p키지, p값지 = dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1)), dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1))
         p묶 = dr.할당(Mmax * NH * 묶음수 * SH * 4)
-        p자, p정 = dr.할당(2 * Mmax * A), dr.할당(KB * 폭max * 4)
+        p자, p정 = dr.할당(2 * Mmax * A), dr.할당(2 * KB * 폭max * 4)      # 1.0.0 1-1 — 행 합 판의 모듈은 접기가 정보 뒤에 T 도 쓴다
         p출 = dr.할당(Mmax * A * 4)
         p코, p사 = dr.할당(최대길이 * 64 * 4), dr.할당(최대길이 * 64 * 4)
         dr.올리기(p코, np.ascontiguousarray(cos, f32))

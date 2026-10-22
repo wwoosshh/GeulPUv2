@@ -76,6 +76,11 @@ How the kernels reach these values is free as long as the bits are the same. Sin
   they keep the plain path.
 - Q6_K tiles use one m16n8k16 integer MMA per 16-value sub-block with B = 4(q − 32) and the scale a/4: S′ = 4S and
   fma(4u, a/4, y) = fma(u, a, y) exactly.
+- (GeulPUv2 1.0.0 1-1 — CUDA modules) Two-digit Q4_K · Q5_K tiles no longer add the row sum T with integer MMAs: the kernel
+  that produced the linear layer's input also writes T per block after the info words (the row-sum plane), and the tile
+  reads it. T is an exact integer, so the value is the same. Two-digit Q8_0 tiles compute the epilogue as
+  fma(float(T) · P, d, y): u = float(T) · P is exact (|u| ≥ 2⁻¹¹¹ when T ≠ 0), and the product inside the fma is the same
+  real number as in the stage-31 form fma(float(T) · 2⁻²⁴, (P · 2²⁴) · d, y), so the bits are the same.
 
 Neither changes a single output bit — the stage-27 tests compare against the same CPU reference.
 
