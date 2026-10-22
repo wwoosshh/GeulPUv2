@@ -181,6 +181,13 @@ differ from 2.1, so the output bits differ. The four value blocks share one set 
 converts integers to float32 once per 64 keys (2.1: per 32) and the exponential is shorter — prompt attention runs about a third fewer
 instructions. The CPU reference is `어텐션F2` in [`계약/정수계약.py`](정수계약.py) (`F2 = True`).
 
+**F2B** (1.0.0 step 1-4 — fast attention for the qwen3 architecture, kernel generator `--빠른 --F2B`): only q in steps 1 and 3 differs
+from F2 — q keeps one exponent per block of 32 values (E_q,b) as in 2.1 (the two digits of 1.2), and the score uses, per block b,
+w_b,t = u_b,t × 2^(E_q,b − 13) (exact), z ← w_0,t × s_k,t,0, then z ← fma(w_b,t, s_k,t,b, z), and s_t = z × c′ (c′ = 0x3E0293EE as above).
+Values, exp2, the tile and the merge are those of F2. After Qwen3's per-head normalization (4.6) the blocks of q differ in size, and with
+one exponent per head (Q1E) the top-1 agreement of quality bar B″ fell short ([`문서/빠른어텐션.md`](../문서/빠른어텐션.md), step 1-4).
+The CPU reference sets `F2 = True` and `F2B = True`.
+
 ## 3. Two-level merge (stage 13)
 
 Key tiles (64 positions each) are grouped (16 tiles = 1024 positions; group g covers positions [1024g, 1024g + 1024)):

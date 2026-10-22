@@ -514,16 +514,22 @@ def 시험_F2(r):
     hd, 길이 = 128, 1100
     q = (r.standard_normal((길이, hd)) * 2.0 ** r.integers(-6, 0, (길이, 1))).astype(f32)
     k, v = 활성값(r, 길이, hd), 활성값(r, 길이, hd)
-    C.F2 = True
+    for 블록q in (False, True):                                     # 1.0.0 1-4 — F2B(qwen3): q 의 지수를 블록마다
+        시험_F2어텐션(q, k, v, hd, 길이, 블록q)
+
+
+def 시험_F2어텐션(q, k, v, hd, 길이, 블록q):
+    """F2(블록q 거짓) · F2B(참)의 어텐션(numpy) 대 계약 문장을 행 하나씩 옮긴 계산."""
+    C.F2, C.F2B = True, 블록q
     얻음 = C.어텐션(q, k, v)
-    C.F2 = False
-    Dq, Eq = C.자리로머리(q, 2)
+    C.F2, C.F2B = False, False
+    Dq, Eq = C.자리로(q, 2) if 블록q else C.자리로머리(q, 2)
     nq = Dq[1] * 256 + Dq[0]
     nk, sk = C.팔비트KV(k)
     nv, sv = C.팔비트KV머리(v)
     기대 = np.zeros((길이, hd), f32)
     for p in range(길이):
-        qc = C.곱(C.거듭제곱(Eq[p]), C.점수눈금2)
+        qc = C.점수눈금2 if 블록q else C.곱(C.거듭제곱(Eq[p]), C.점수눈금2)
         그룹들 = []
         for g0 in range(0, p + 1, 1024):
             M = L = O = None
@@ -532,6 +538,8 @@ def 시험_F2(r):
                 z = None
                 for b in range(hd // 32):
                     u = (nk[ks, 32 * b:32 * b + 32] @ nq[p, 32 * b:32 * b + 32]).astype(f32)
+                    if 블록q:                                           # F2B — 블록마다 u · 2^(E_q,b − 13)(정확)
+                        u = C.곱(u, C.거듭제곱(Eq[p, b]))
                     z = C.곱(u, sk[ks, b]) if b == 0 else C.fma32(u, sk[ks, b], z)
                 st = C.곱(z, qc)
                 m = st.max()
@@ -561,7 +569,8 @@ def 시험_F2(r):
             M = M2
         기대[p] = C.나눔(O, L)
     d = 다른칸(얻음, 기대)
-    확인("F2 — 어텐션 대 계약 문장을 행 하나씩 옮긴 계산(헤드 크기 128, 위치 1100 — 그룹 둘)", d == 0, f"불일치 {d} / {얻음.size}")
+    이름 = "F2B" if 블록q else "F2"
+    확인(f"{이름} — 어텐션 대 계약 문장을 행 하나씩 옮긴 계산(헤드 크기 128, 위치 1100 — 그룹 둘)", d == 0, f"불일치 {d} / {얻음.size}")
 
 
 def 시험_상수():

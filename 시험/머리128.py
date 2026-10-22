@@ -11,6 +11,7 @@
   python -I 시험/머리128.py <qwen2Q8_7b.ptx> <7B gguf> <출력.json> [--빠르게] [--KV8]
   --KV8: 8비트 KV 모듈(GeulPUv2 ③b-2 — 커널생성 --빠른 --KV8). 캐시는 키 · 값 int8 과 스케일 fp32(키스케일 · 값스케일)로 견준다.
   --F2: 빠른 어텐션 계약 F2 의 모듈(커널생성 --빠른 --F2 — 8비트 KV 위에서, 계약.md 2.2). q 의 지수 · 값 스케일은 헤드마다 하나.
+  --F2B: 1.0.0 1-4 — F2B 의 모듈(커널생성 --빠른 --F2B — qwen3 구조): F2 에서 q 의 지수만 블록마다.
 """
 import ctypes
 import json
@@ -38,6 +39,7 @@ QKV = A + 2 * NKV * HD                     # 4608
 O자리수 = 2                                # 33단계 — 접기의 출력(o 의 입력) 자리 수: --자리하나 면 1 (어텐션 안의 q · k · v · e 는 늘 둘)
 KV8 = False                                # GeulPUv2 ③b-2 — 8비트 KV 모듈(커널생성 --KV8): 키 · 값 int8 + 스케일 fp32 (계약 F1A′)
 F2 = False                                 # GeulPUv2 빠른 어텐션 계약 F2(커널생성 --F2 — KV8 위에서)
+F2B = False                                # 1.0.0 1-4 — F2B(커널생성 --F2B): F2 에서 q 의 지수만 블록마다
 KB = A // 32                               # 112 — q · o 의 블록 수
 SH = HD + 4                            # 묶음 상태 하나의 칸 (M, L, 빈 둘, O 128)
 
@@ -201,8 +203,8 @@ def 자리바이트(x, 자리수=2):
 
 def q자리바이트(qr):
     """RoPE 뒤 q 의 자리 둘 바이트 · 정보 M_0 — 자리바이트(qr) 와 같고, 2b단계 F1A 의 QKV 면 에뮬레이션(정수계약.어텐션자리로).
-    F2 면 지수가 헤드(값 128 개)마다 하나 — 블록 넷의 정보가 같은 값(정수계약.자리로머리)."""
-    if F2:
+    F2 면 지수가 헤드(값 128 개)마다 하나 — 블록 넷의 정보가 같은 값(정수계약.자리로머리). F2B 는 블록마다(F1A′ 와 같다)."""
+    if F2 and not F2B:
         qr = np.asarray(qr, f32)
         n_, w_ = qr.shape
         Dg = np.zeros((2, n_, w_), np.int64)
@@ -340,13 +342,16 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     ptx, gguf, 출력 = sys.argv[1:4]
     빠르게 = "--빠르게" in sys.argv
-    global O자리수, KV8, F2
-    if "--KV8" in sys.argv or "--F2" in sys.argv:     # GeulPUv2 ③b-2 — 8비트 KV 모듈(계약 F1A′)
+    global O자리수, KV8, F2, F2B
+    if "--KV8" in sys.argv or "--F2" in sys.argv or "--F2B" in sys.argv:     # GeulPUv2 ③b-2 — 8비트 KV 모듈(계약 F1A′)
         KV8 = C.KV8 = True
         print("8비트 KV(계약 F1A′)", flush=True)
-    if "--F2" in sys.argv:                      # GeulPUv2 빠른 어텐션 계약 F2(계약.md 2.2)
+    if "--F2" in sys.argv or "--F2B" in sys.argv:     # GeulPUv2 빠른 어텐션 계약 F2(계약.md 2.2)
         F2 = C.F2 = True
         print("빠른 어텐션 계약 F2", flush=True)
+    if "--F2B" in sys.argv:                     # 1.0.0 1-4 — F2B(q 의 지수를 블록마다)
+        F2B = C.F2B = True
+        print("F2B(q 의 지수를 블록마다)", flush=True)
     if "--자리하나" in sys.argv or "--빠른" in sys.argv or KV8:     # 33단계 V1 · GeulPUv2 빠른 계약 F1(커널생성 --빠른) — 접기의 출력이 자리 하나
         O자리수 = 1
     if "--어텐션" in sys.argv:                  # GeulPUv2 2b단계 — F1A 에뮬레이션 · ③b-1 — 8비트 KV 에뮬레이션(커널생성 --어텐션한자리 의 모듈)

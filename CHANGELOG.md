@@ -10,6 +10,13 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ### Added
 
+- **Fast attention for Qwen3 models.** The fast-attention setting now applies to Qwen3 models through F2B, a variant of the contract
+  that keeps one exponent of q per block of 32 values instead of one per head: Qwen3 normalizes q per head before RoPE, which leaves the
+  blocks of a head at different sizes, and with one exponent per head Qwen3-8B fell short of the quality bar's top-1 agreement (−0.65
+  points against llama.cpp with an f16 KV cache). F2B passes it (KL ratio 1.50, top-1 −0.42 points; the 8-bit KV cache alone is 1.48 ·
+  −0.37). On Qwen3-8B Q4_K_M it makes a 32k-token prompt 19.3 % faster and 1,024 new tokens at a depth of 32k 24.9 % faster than the
+  8-bit KV cache, with generation unchanged. The modules are new (`_빠른_F2B_KV8`); F2 and every other module are byte-identical, and
+  F2B's prompt-cache chunks are kept apart from F2's. Every path matches the CPU reference bit for bit.
 - **Models whose query width differs from the hidden size.** The query width (heads × 128 — the width of q, of the attention output
   and of the input to the output projection) is now its own size instead of being taken from the hidden size, so Qwen3-0.6B · 4B · 32B
   load (before, the engine and the app refused them). The kernel generator, the engine (weights, buffers and the output projection in the

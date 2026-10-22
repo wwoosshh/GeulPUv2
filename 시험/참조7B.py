@@ -2,7 +2,7 @@
 """22a (2) — 7B 의 끝에서 끝: 글 엔진(엔진/시험_7B.gl — GeulPU 저장소)이 낸 모든 행 로짓(채팅 질문 셋 — 프롬프트 + 생성 16 토큰의 토큰열 S, 행마다)을
 CPU 참조(정수 계약의 Qwen2 앞으로 — 계약/정수계약.py, 행렬곱은 행렬곱블라스)와 비트까지 견준다. 다른 칸이 0 이어야 한다.
 
-  python -I 시험/참조7B.py <7B gguf> <글 도구의 출력폴더> <출력.json> [--자체시험만] [--빠른] [--어텐션 KV|QKV|KV8|V8] [--KV8] [--F2]
+  python -I 시험/참조7B.py <7B gguf> <글 도구의 출력폴더> <출력.json> [--자체시험만] [--빠른] [--어텐션 KV|QKV|KV8|V8] [--KV8] [--F2] [--F2B]
   (GeulPUv2: --빠른 은 빠른 계약 F1 — 선형층 자리 하나, --어텐션 은 2b단계 F1A 에뮬레이션 — 커널생성의 같은 플래그로 만든 모듈과 비교한다.
    --KV8 은 ③b-2 의 8비트 KV 캐시(계약 F1A′ — 커널생성 --빠른 --KV8 의 모듈) — --빠른 을 함께 뜻한다.
    --F2 는 빠른 어텐션 계약 F2(계약.md 2.2 — 커널생성 --빠른 --F2 의 모듈) — --빠른 · --KV8 을 함께 뜻한다)
@@ -220,12 +220,15 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     global 선형자리수
-    if "--빠른" in sys.argv or "--KV8" in sys.argv or "--F2" in sys.argv:
+    F2B인자 = "--F2B" in sys.argv                 # 1.0.0 1-4 — F2B(커널생성 --F2B — qwen3): F2 에서 q 의 지수만 블록마다
+    if "--빠른" in sys.argv or "--KV8" in sys.argv or "--F2" in sys.argv or F2B인자:
         선형자리수 = 1
-    if "--KV8" in sys.argv or "--F2" in sys.argv:     # GeulPUv2 ③b-2 — 8비트 KV 캐시(계약 F1A′)
+    if "--KV8" in sys.argv or "--F2" in sys.argv or F2B인자:     # GeulPUv2 ③b-2 — 8비트 KV 캐시(계약 F1A′)
         C.KV8 = True
-    if "--F2" in sys.argv:                      # GeulPUv2 빠른 어텐션 계약 F2(계약.md 2.2)
+    if "--F2" in sys.argv or F2B인자:           # GeulPUv2 빠른 어텐션 계약 F2(계약.md 2.2)
         C.F2 = True
+    if F2B인자:
+        C.F2B = True
     인자 = list(sys.argv[1:])
     if "--어텐션" in 인자:                      # GeulPUv2 2b단계 — F1A 에뮬레이션 · ③b-1 — 8비트 KV 에뮬레이션(커널생성 --어텐션한자리 의 모듈)
         i = 인자.index("--어텐션")
