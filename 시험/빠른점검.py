@@ -18,6 +18,7 @@
      4i. 앱의 모델 모양 — 셈할 수 없는 파일(qwen2 의 RMSNorm eps 가 10⁻⁶ · 10⁻⁵ 이 아님 — #16, qwen2 의 RoPE 늘이기 정보 — #17)을 까닭과
          함께 받지 않는가(시험/모델모양.py — 윈도만)
      4j. 앱의 메모리 누수(#22) — /api/state · 올바른 본문 · 잘린 본문을 되풀이해도 앱의 private 메모리가 늘지 않는가(시험/앱누수.py — 윈도만)
+     4k. 뽑기 · 로그확률의 글 판이 계약의 파이썬 참조와 같은가(시험/뽑기.py 대조 · 시험/로그확률38.py 대조 — #27)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
@@ -80,7 +81,7 @@ def 돌리기(명령, 기록, 환경=None, 폴더=None):
 def 파이썬문법():
     수, 틀림 = 0, []
     for 폴더, 아래, 파일들 in os.walk(ROOT):
-        아래[:] = [d for d in 아래 if d not in (".git", "빌드", "모델", "도구", "__pycache__", "점검결과")]
+        아래[:] = [d for d in 아래 if d not in (".git", "빌드", "모델", "__pycache__", "점검결과")]      # #27 — 도구/ 도 본다
         for 이름 in 파일들:
             if 이름.endswith(".py"):
                 경로 = os.path.join(폴더, 이름)
@@ -90,6 +91,11 @@ def 파이썬문법():
                 except SyntaxError as e:
                     틀림.append(f"{os.path.relpath(경로, ROOT)}:{e.lineno} {e.msg}")
     알림("파이썬 문법", not 틀림, f"파일 {수} 개" + (f" — {틀림[:5]}" if 틀림 else ""))
+    # #27 — 사용자가 직접 돌리는 도구는 문법만이 아니라 불러오기(import)까지: --help 가 종료 0 인가
+    for 이름 in ("debugger.py", "repro_check.py"):
+        rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "도구", 이름), "--help"],
+                          os.path.join(tempfile.gettempdir(), f"geulpu_help_{이름}.txt"))
+        알림(f"도구 {이름} --help", rc == 0, 꼬리[-200:] if rc != 0 else "")
 
 
 def bash찾기():
@@ -420,6 +426,21 @@ def 요청지킴(출력):
     알림("서버의 요청 지킴(GPU 없이)", rc == 0, 꼬리)
 
 
+def 계약대조(출력):
+    """#27 — 호스트 쪽 셈(뽑기 · 로그확률)의 글 판이 계약의 파이썬 참조와 같은가 — 시험/뽑기.py 대조(합성 행 · 매개변수 열두 벌) ·
+    시험/로그확률38.py 대조(한 번에 · 하나씩). 커널은 모듈 해시가 지키지만 이 셈은 글(geul) 컴파일러의 f64 코드가 바뀌어도 CI 가 몰랐다"""
+    for 이름, 스크립트, exe이름 in (("뽑기의 계약 대조(GPU 없이)", "뽑기.py", "시험_뽑기"), ("로그확률의 계약 대조(GPU 없이)", "로그확률38.py", "시험_로그확률")):
+        exe = os.path.join(출력, exe이름 + EXE)
+        if not os.path.exists(exe):
+            알림(이름, False, f"{exe이름} 이 없다(빌드 실패)")
+            continue
+        t0 = time.time()
+        rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", 스크립트), "대조", exe],
+                          os.path.join(출력, f"계약대조_{exe이름}.txt"))
+        다름들 = [int(x) for x in re.findall(r"다름 (\d+)", 꼬리)]               # 뽑기.py 는 다름이 있어도 종료 0 이라 글로 본다
+        알림(이름, rc == 0 and bool(다름들) and not any(다름들), f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
 def 망가진입력(출력):
     """GHSA-4v72 — 조작된 GGUF 를 엔진의 GGUF 열기가 오류로 끝내는가(접근 위반 · 멈춤 · 그냥 열림이 아니라), NaN · ±Inf 로짓에서 뽑기가
     범위 안의 번호를 고르는가(GPU 없이)"""
@@ -546,6 +567,7 @@ def main():
             모델해시(출력)
             모델모양(출력)
             앱누수(출력)
+            계약대조(출력)
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
                 요약.append("건너뜀  [모듈 · SASS] --모듈없이")
