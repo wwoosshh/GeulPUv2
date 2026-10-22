@@ -25,6 +25,18 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ### Changed
 
+- **Faster generation and speculative verification in long conversations** (CUDA fast modules and exact `--먼` modules). The
+  table-step kernels for the full KV groups in front of the rows load the next 64-key tile while computing the current one (8-bit KV),
+  the attention merge folds those groups' states directly and runs as a 128-thread kernel when such groups exist, and each step launches
+  only the kernels it needs (a graph per row count and kernel set). On Qwen2.5-7B Q4_K_M an 8-row verification step is 5.8–8.3 % faster
+  at depths of 16k–64k with 8-bit KV and fast attention (12.84 → 12.10 ms at 16k, 18.18 → 16.67 ms at 64k) and 4.3–6.4 % faster with
+  16-bit KV; a 1-row step is 0.6–2.3 % faster. The draft-length cost model was refitted to the new kernels (it had priced an extra row
+  1.7–3.4× too high). In the recorded Qwen Code agent replay, generation is 4.5 % faster per token with 8-bit KV and fast attention
+  (5.10 → 4.87 ms) and 2.0 % faster with 16-bit KV. Outputs are bit-identical (every speculative-step and long-context test passes on
+  eight module kinds, and the agent replay's prompt and answer tokens are identical); Vulkan modules are unchanged.
+- **The first token comes sooner on long agent prompts.** The tokenizer remembers the tokens of each text piece between special tokens
+  (identical bytes give identical tokens), so a request that resends the earlier messages tokenizes only the new ones: 31 ms → 4 ms per
+  request on average in the agent replay (1.5 s less over its 54 requests). Token ids are identical.
 - **Faster prompts in both modes** (CUDA). The prompt matrix-multiply kernels do less per 32-value block: k-quant tiles load through
   running pointers instead of 64-bit index arithmetic and interleave each column tile's MMAs with the previous tile's epilogue; in exact
   mode the row sums that Q4_K · Q5_K need for their min term are written once per block by the kernel that produces the activations
