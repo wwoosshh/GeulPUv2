@@ -13,10 +13,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      # GHSA-4cgh — 토큰을 .git/config 에 남기지 않는다(빌드는 git 인증이 들지 않고, 토큰은 초안 릴리스 단계의 GH_TOKEN 에만)
       - name: GeulPU 받기
         uses: actions/checkout@v7
         with:
           path: GeulPUv2
+          persist-credentials: false
       - name: 글 저장소의 고정 커밋 읽기
         id: geul
         shell: bash
@@ -27,17 +29,23 @@ jobs:
           repository: wwoosshh/geul-lang
           ref: ${{ steps.geul.outputs.sha }}
           path: geul-lang-v2
+          persist-credentials: false
       - name: 파이썬(글 컴파일러의 첫 빌드 — 참조 구현)
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      # GHSA-4cgh — 태그 이름은 스크립트 글에 끼워 넣지 않고(Actions 의 식은 pwsh 가 읽기 전에 글로 바뀌어, 태그 속 '$(…)' 가 그대로
+      # 돈다) env 로 받아, 쓰기 전에 v<MAJOR>.<MINOR>.<PATCH> 꼴인지 본다
       - name: 판과 태그 견주기
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
+          if ($env:TAG -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw "태그 꼴이 아니다(v<MAJOR>.<MINOR>.<PATCH>): $env:TAG" }
           $pan = [IO.File]::ReadAllText("GeulPUv2/앱/판.gl", [Text.Encoding]::UTF8)
           if ($pan -notmatch '앱판 = "([^"]+)"') { throw '앱/판.gl 에서 판을 읽지 못했다' }
-          if ("v$($Matches[1])" -ne "${{ github.ref_name }}") { throw "태그 ${{ github.ref_name }} 와 앱/판.gl 의 판 $($Matches[1]) 이 다르다" }
+          if ("v$($Matches[1])" -ne $env:TAG) { throw "태그 $env:TAG 와 앱/판.gl 의 판 $($Matches[1]) 이 다르다" }
       - name: 꾸리기
         shell: pwsh
         env:
@@ -73,11 +81,14 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          $ver = "${{ github.ref_name }}".TrimStart('v')
+          if ($env:TAG -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw "태그 꼴이 아니다(v<MAJOR>.<MINOR>.<PATCH>): $env:TAG" }
+          $ver = $env:TAG.TrimStart('v')
           # 0.7.0 — 노트는 영어(CHANGELOG.md 의 '## <버전>' 절)가 먼저, 한국어(문서/바뀐것.md 의 같은 절)는 접어서. 상대 링크는 릴리스
           # 페이지에서 깨지므로 이 태그의 절대 주소로(파일이 있는 폴더 기준 — '../' 는 풀어서)
-          $blob = "https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/"
+          $blob = "https://github.com/$env:REPO/blob/$env:TAG/"
           function Section([string]$path, [string]$dir) {
             $log = [IO.File]::ReadAllText("GeulPUv2/$path", [Text.Encoding]::UTF8)
             $m = [regex]::Match($log, "(?ms)^## $([regex]::Escape($ver))\b.*?(?=^## |\z)")
@@ -103,4 +114,4 @@ jobs:
             "GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행. 파이썬으로 깐 앱은 앱을 끈 뒤 ``pipx upgrade geulpu``. " +
             "안내: [사용안내.md]($($blob)사용안내.md).`n`n</details>`n"
           [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
-          gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --draft --title "GeulPU $ver" --notes-file "$env:RUNNER_TEMP/notes.md" "out/GeulPU-$ver-windows-x64.zip" "out/SHA256SUMS.txt" "out/wheel/geulpu-$ver-py3-none-win_amd64.whl"
+          gh release create $env:TAG --repo $env:REPO --draft --title "GeulPU $ver" --notes-file "$env:RUNNER_TEMP/notes.md" "out/GeulPU-$ver-windows-x64.zip" "out/SHA256SUMS.txt" "out/wheel/geulpu-$ver-py3-none-win_amd64.whl"

@@ -23,6 +23,13 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   every matrix, norm and bias has the shape the model settings imply, and it refuses vocabularies under 256, as the app's model check now
   does too. Non-finite logits no longer make sampling pick a token outside the vocabulary. Outputs of valid files are unchanged. The quick
   check opens 32 crafted GGUF files and samples rows with NaN and ±Inf without a GPU (`시험/망가진입력.py`).
+- **Release and PyPI workflows hardened**
+  ([GHSA-4cgh-2775-jg3m](https://github.com/wwoosshh/GeulPUv2/security/advisories/GHSA-4cgh-2775-jg3m)). The release workflow no longer
+  writes the tag name into its PowerShell scripts, where a tag containing `$(…)` ran commands with write access to the repository: it reads
+  the tag from an environment variable and accepts only `v<MAJOR>.<MINOR>.<PATCH>`, and its checkouts no longer leave the token in
+  `.git/config`. The PyPI workflow downloads only this version's wheel, requires exactly one matching line in `SHA256SUMS.txt` and uploads
+  only that file — before, another wheel attached to the release was uploaded unchecked. Only someone who can push tags or edit releases
+  could use either.
 
 ### Project
 

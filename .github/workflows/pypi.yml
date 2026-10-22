@@ -26,11 +26,16 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
           GH_TOKEN: ${{ github.token }}
+        # GHSA-4cgh — 이 판의 휠 이름 하나만 받고, SHA256SUMS 에 그 이름이 꼭 한 줄 있어야 하며, 그 파일만 올린다(릴리스에 덧붙인
+        # 다른 휠이 검사 없이 PyPI 에 가지 않게)
         run: |
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "태그 꼴이 아니다: $TAG"; exit 1; }
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "geulpu-*.whl" --pattern "SHA256SUMS.txt" --dir dl
-          test -f "dl/geulpu-${TAG#v}-py3-none-win_amd64.whl"
-          (cd dl && sha256sum -c --ignore-missing SHA256SUMS.txt)
-          mkdir dist && mv dl/*.whl dist/ && ls -l dist
+          WHL="geulpu-${TAG#v}-py3-none-win_amd64.whl"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$WHL" --pattern "SHA256SUMS.txt" --dir dl
+          test -f "dl/$WHL"
+          LINE=$(awk -v f="$WHL" '{ n = $2; sub(/^\*/, "", n) } n == f' dl/SHA256SUMS.txt)
+          [ -n "$LINE" ] && [ "$(printf '%s\n' "$LINE" | wc -l)" -eq 1 ] || { echo "SHA256SUMS.txt 에 $WHL 이 한 줄로 있지 않다"; exit 1; }
+          (cd dl && printf '%s\n' "$LINE" | sha256sum -c --strict -)
+          mkdir dist && mv "dl/$WHL" dist/ && ls -l dist
       - name: PyPI 에 올리기(신뢰 게시)
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
