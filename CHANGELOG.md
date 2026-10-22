@@ -66,6 +66,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   writes its prompt's KV to the context store on disk (only reading was off; the prompt stayed in the data folder). A GGUF whose
   `rope.freq_base` is not a finite number above 1 is refused instead of hanging the load. A damaged tuning cache (plan memory) for a
   k-quant model is dropped and measured again instead of indexing past its kernel table — a bad entry ended in a divide-by-zero crash.
+- **Long contexts load on GPUs with a small single-allocation limit (Vulkan)** ([#25](https://github.com/wwoosshh/GeulPUv2/issues/25)).
+  The KV cache was one allocation across all layers, so on AMD (2 GiB per allocation) a long context failed to load even with enough
+  memory — with two slots Qwen2.5-7B past about 37k tokens, Llama 3.1 8B past 16k. When the cache would exceed the limit it is now
+  allocated per layer, as the weights already were; the kernels see the same bytes. A buffer that cannot be split (one layer of the
+  cache, the attention's intermediate buffers) now shrinks the context to fit the limit, with a message, instead of failing to load.
 
 ### Project
 

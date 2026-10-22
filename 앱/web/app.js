@@ -1192,6 +1192,7 @@ const TMX = [
   [/프롬프트가 비었다/g, 'The prompt is empty'],
   [/줄이 가득 찼다 — 잠시 뒤에/g, 'The queue is full — try again shortly'],
   [/장치 메모리에 맞춰 문맥을 (\d+) → (\d+) 로 줄였다\(남은 ([\d.]+) GB\)/g, 'Reduced the context from $1 to $2 to fit the device memory ($3 GB left)'],
+  [/장치의 한 번 할당 한도\((\d+) MiB\)에 맞춰 문맥을 (\d+) → (\d+) 로 줄였다/g, 'Reduced the context from $2 to $3 to fit the single-allocation limit ($1 MiB)'],
   [/모델의 위치 수에 맞춰 문맥을 (\d+) → (\d+) 로 줄였다/g, "Reduced the context from $1 to $2, the model's maximum"],
   [/장치 메모리 (\d+) 바이트가 장치\((.+?)\)의 한 번 할당 한도 (\d+) 바이트를 넘는다/g, 'Device memory of $1 bytes exceeds the single-allocation limit of $3 bytes on $2'],
   [/장치 메모리가 모자라다/g, 'Not enough device memory'],
