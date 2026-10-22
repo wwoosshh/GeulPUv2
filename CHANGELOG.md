@@ -25,6 +25,14 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ### Changed
 
+- **Faster prompts in both modes** (CUDA). The prompt matrix-multiply kernels do less per 32-value block: k-quant tiles load through
+  running pointers instead of 64-bit index arithmetic and interleave each column tile's MMAs with the previous tile's epilogue; in exact
+  mode the row sums that Q4_K · Q5_K need for their min term are written once per block by the kernel that produces the activations
+  (RMSNorm, the attention merge, the SwiGLU epilogue) instead of being recomputed with integer MMAs in every tile (11 % of the tensor
+  work); exact Q8_0 tiles drop one multiply per value from the epilogue; fast Q8_0 tiles also load through running pointers. On an
+  RTX 4070 Ti, prompt processing (512 · 2,048 · 8,192 tokens) is 2.4–3.5 % faster in exact mode and 1.2–1.9 % in fast mode on
+  Qwen2.5-7B and Llama-3.1-8B Q4_K_M, and 4.1–5.6 % (exact) and 0.9–2.2 % (fast) faster on Qwen2.5-7B Q8_0. Outputs are bit-identical (every row of logits is byte-identical
+  to the previous modules on all paths and models tested, and matches the CPU reference); Vulkan modules are unchanged.
 - **Exact mode checks speculated tokens much faster in long conversations** (CUDA). Exact modules now use the same table-step kernels
   for the full KV groups in front of the rows as fast mode does (the rows of one slot read those groups once): on Qwen2.5-7B Q4_K_M a
   verification step of 8 rows takes 18.8 ms instead of 51.9 ms at a depth of 32k (1.24× a 1-row step instead of 3.42×) and 23.6 ms instead
