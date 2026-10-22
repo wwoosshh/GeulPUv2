@@ -32,6 +32,12 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   not an object, or whose `role` was not a string, made the server read a null pointer and exit — one local request dropped every
   request in progress. The template now checks every message first, as the Llama 3 and Mistral templates already did, and answers 400
   (`/v1/chat/completions` and `/tokenize`). Valid requests render the same prompt as before.
+- **DeepSeek-R1-Distill-Qwen-14B computes with its own RMSNorm eps** ([#16](https://github.com/wwoosshh/GeulPUv2/issues/16)). The
+  kernels for the qwen2 architecture had eps 10⁻⁶ built in, and neither the engine nor the app read the file's value. This catalog model
+  declares 10⁻⁵ (its 7B sibling and Qwen2.5 use 10⁻⁶), so it loaded without a warning and every logit differed from the model and from
+  GeulPU's own CPU reference. qwen2 files with eps 10⁻⁵ now get their own module (`qwen2e5…`, generator `qwen2e5큰`) whose RMSNorm uses
+  10⁻⁵, and the engine checks that the module matches the file; other eps values are refused with a message. The first load builds the
+  new module once. The 14B's answers change (they now match the CPU reference bit for bit); every other model is unchanged.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 
