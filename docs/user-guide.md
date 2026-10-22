@@ -304,9 +304,10 @@ commands) through an OpenAI-compatible API can connect.
   compaction needs 100k tokens or more. Set concurrent chats to 1 and the context length per chat high (e.g. 131072) in Settings; the
   engine reduces it to the model's maximum and to the graphics memory. For Qwen2.5 7B and larger and Qwen3, a context beyond the
   model file's position count (32,768 · 40,960) turns on **YaRN** (the position scaling Qwen recommends — factor 2 or 4) up to 131,072;
-  the model list shows 'YaRN' next to the context. With a scaled context, short texts are computed the same way too (static YaRN, as in
-  other engines), so set a large context only when you need long texts ([문서/긴문맥.md](../문서/긴문맥.md), Korean). Maximum reached on an
-  RTX 4070 Ti (12 GB):
+  the model list shows 'YaRN' next to the context. The factor follows the context you set (2 up to 65,536, 4 above), not the context
+  the engine ends up with after fitting the graphics memory, so the same settings always give the same bits. Files with fewer than 32,768
+  positions are not scaled. With a scaled context, short texts are computed the same way too (static YaRN, as in other engines), so set a
+  large context only when you need long texts ([문서/긴문맥.md](../문서/긴문맥.md), Korean). Maximum reached on an RTX 4070 Ti (12 GB):
 
   | Model | Max context | Limit |
   |---|---|---|

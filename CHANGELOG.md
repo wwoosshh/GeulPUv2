@@ -6,6 +6,18 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+### Fixed
+
+- **The YaRN factor no longer depends on free graphics memory** ([#18](https://github.com/wwoosshh/GeulPUv2/issues/18)). The engine
+  chose YaRN's factor from the context left after fitting the graphics memory, so the same settings could compute with no YaRN, factor 2
+  or factor 4 depending on what else was using the GPU — for example Qwen3-8B with a context of 131,072 ran without YaRN at 35,328 tokens
+  and with factor 2 at 59,392. The factor now follows the context you set (clamped to the model's limit): 4 in both cases. Files with
+  fewer than 32,768 positions (for example Qwen2.5-Math-7B, 4,096) are no longer scaled from an assumed 32,768. The server state, debugger
+  run logs and reproduction files record the factor the server reports (`yarn`) instead of recomputing it. Outputs without YaRN are
+  unchanged.
+
 ## 0.10.1 — Security fixes (2026-10-22)
 
 ### Security

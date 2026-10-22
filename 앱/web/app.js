@@ -5948,9 +5948,8 @@ function dbgServerOf(run, x) {
   return { sha256: (run.header.model || {}).sha256 || null, layer: hs.layer, precision: hs.precision, kv8: !!hs.kv8, fast_attention: !!hs.fast_attention, context: hs.context, yarn: hs.yarn || 0 };
 }
 function dbgNowServer() {
-  const sv = (S.st && S.st.server) || {}, m = modelOf(sv.model), s = (m && m.shape) || {};
-  let yarn = 0;
-  if (s.yarn_orig > 0 && sv.context > s.context_native) yarn = sv.context <= 2 * s.yarn_orig ? 2 : 4;
+  const sv = (S.st && S.st.server) || {}, m = modelOf(sv.model);
+  const yarn = sv.yarn || 0;          // #18 — 서버가 정한 배(설정의 문맥으로 — 그래픽 메모리에 맞춰 줄인 문맥으로 다시 셈하지 않는다)
   return { sha256: m ? m.sha256 : null, layer: sv.layer, precision: sv.precision, kv8: !!sv.kv8, fast_attention: !!sv.fast_attention, context: sv.context, yarn, ready: sv.state === 'ready', model: sv.model || null };
 }
 const dbgSvPlain = n => ({ sha256: n.sha256, layer: n.layer, precision: n.precision, kv8: !!n.kv8, fast_attention: !!n.fast_attention, context: n.context, yarn: n.yarn });
