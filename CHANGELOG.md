@@ -15,6 +15,7 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   computed in, and the research panel says which mode the answer was made in. The panel computes its values with the server that is
   loaded; when that server's mode differs from the answer's, it now says so and offers to recompute them in the answer's mode (before, it
   silently showed values from whatever mode was loaded — a greedy fast-mode answer could show tokens that were not the top choice).
+  The pictures in the user guide and the research panel guide are retaken with the chip, the tags and the panel's mode line.
 
 ## 0.10.2 — Fixes: correctness, reproducibility, stability (2026-10-22)
 
