@@ -62,6 +62,10 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   14 KB per call, over 1 GB a day. The JSON parser shared by the app and the server kept a small header per string, and when a body was
   malformed it kept the whole partly built tree (a truncated 16 MB body cost over 1 GB). Both are fixed; a new GPU-less quick check
   (`시험/앱누수.py`) repeats `/api/state` and valid and truncated bodies and fails if the app's private memory grows by more than 1 MB.
+- **Three robustness fixes** ([#26](https://github.com/wwoosshh/GeulPUv2/issues/26)). A request with `cache_prompt: false` no longer
+  writes its prompt's KV to the context store on disk (only reading was off; the prompt stayed in the data folder). A GGUF whose
+  `rope.freq_base` is not a finite number above 1 is refused instead of hanging the load. A damaged tuning cache (plan memory) for a
+  k-quant model is dropped and measured again instead of indexing past its kernel table — a bad entry ended in a divide-by-zero crash.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 
