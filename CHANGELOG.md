@@ -38,6 +38,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   GeulPU's own CPU reference. qwen2 files with eps 10⁻⁵ now get their own module (`qwen2e5…`, generator `qwen2e5큰`) whose RMSNorm uses
   10⁻⁵, and the engine checks that the module matches the file; other eps values are refused with a message. The first load builds the
   new module once. The 14B's answers change (they now match the CPU reference bit for bit); every other model is unchanged.
+- **Qwen2 files with RoPE scaling metadata are refused instead of run unscaled** ([#17](https://github.com/wwoosshh/GeulPUv2/issues/17)).
+  The engine and the app dropped `rope.scaling.type` for the qwen2 architecture and ran plain RoPE up to the file's position count —
+  community "128K" GGUFs (131,072 positions) then computed long contexts without the scaling the file asks for. qwen2 now follows qwen3,
+  llama and the CPU reference: such a file is refused with a message. The same model's file without scaling information still reaches
+  131,072 tokens (7B and up) through the engine's own YaRN.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 
