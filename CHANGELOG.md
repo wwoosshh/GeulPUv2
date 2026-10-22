@@ -48,6 +48,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   thread was using at the same time to name tensors, so the two could overwrite each other's text and the load stopped with
   "바이트 토큰 … 가 없다" or "텐서 … 없다" (Mistral-7B-Instruct-v0.3). The worker now builds those names without formatting. The console
   runner also waits for the kernel-plan worker before it prints (that worker formats the plan-memory file names), as the server did.
+- **`repro_check` and the CPU reference apply the server's YaRN factor** ([#23](https://github.com/wwoosshh/GeulPUv2/issues/23)). Runs
+  recorded with a context past the model's position count (YaRN on) were recomputed with unscaled RoPE and reported "different" even
+  though they were right. The run log's server `yarn` and the reproduction file's new `made_on.yarn` now go to the CPU reference, score
+  lines are matched on the factor too, and the reproduction file check tells you when the factor differs from the current server. With
+  no `top_p` · `min_p` in a reproduction file the check now uses the server's defaults (0.95 · 0.05), as for run logs.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 

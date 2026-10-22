@@ -323,10 +323,11 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
   h ← (h ^ w) × 1099511628211 (mod 2⁶⁴), starting from h = 0xcbf29ce484222325 (FNV-1a 64). Written as 16 hex digits.
 - **Fingerprints and reproduction files** (research panel — a record format, not part of the arithmetic contract): token fingerprint
   = SHA-256(`geulpu-fp/1\nmodel <model file SHA-256>\nprompt <ids,…>\ntokens <ids,…>\n`), logit fingerprint = SHA-256(`<token
-  fingerprint>\n<per-step logit hashes,…>\n`) — the device and backend are not included. A capsule (`geulpu-reproduction file/1`) holds the request
+  fingerprint>\n<per-step logit hashes,…>\n`) — the device and backend are not included. A capsule (`geulpu-capsule/1`) holds the request
   (prompt tokens, temperature, top-k, top-p, min-p, seed as the raw integer, `step_offset`, `max_tokens`), the result (tokens,
-  log-probabilities, entropy, top k, logit hashes), the model (name, file, size, SHA-256) and where it was made (device, backend — a
-  record written by the maker, not used in checking). [`도구/repro_check.py`](../도구/repro_check.py) checks it without a GPU, with this
+  log-probabilities, entropy, top k, logit hashes), the model (name, file, size, SHA-256) and where it was made (`made_on` — the device and
+  backend are a record written by the maker; the computation mode `precision` · `kv8` · `fast_attention` and the YaRN factor `yarn` (#23 —
+  section 4.8, 0 = none) choose the contract the check uses). [`도구/repro_check.py`](../도구/repro_check.py) checks it without a GPU, with this
   contract's CPU reference (sections 1–5): the same tokens, logit hashes, log-probabilities and fingerprints.
 
 ## 6. What the tests check ([`시험/`](../시험))

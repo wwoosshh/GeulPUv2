@@ -71,6 +71,13 @@ def 지문(sha, prompt, tokens, hashes):
 
 
 서버기본 = {"temperature": 0.8, "top_k": 40, "top_p": 0.95, "min_p": 0.05}     # 서버(엔진/서버몸.gl 의 일감받기)의 기본값
+얀원래 = 32768      # YaRN 의 원래 길이(계약 4.8 — 엔진은 늘 32,768). 배는 재현 파일 · 실행 로그의 yarn(서버가 적은 값 — #23)
+
+
+def 얀(배):
+    """서버가 적은 YaRN 배 → CPU 참조의 얀 인자((배, 원래 길이) — 없거나 0 이면 늘이지 않음)."""
+    배 = int(배 or 0)
+    return (배, 얀원래) if 배 > 0 else None
 
 
 def 헤더인가(x):
@@ -143,13 +150,16 @@ def 실행확인(a, 줄들):
         점수 = next((s for s in 점수들 if x.get("type") != "branch" and s.get("of") == x.get("i") and (s.get("server") or {}).get("sha256") == sha
                      and (s.get("server") or {}).get("precision") == sv.get("precision")
                      and bool((s.get("server") or {}).get("kv8")) == bool(sv.get("kv8"))
-                     and bool((s.get("server") or {}).get("fast_attention")) == bool(sv.get("fast_attention"))), None)
+                     and bool((s.get("server") or {}).get("fast_attention")) == bool(sv.get("fast_attention"))
+                     and int((s.get("server") or {}).get("yarn") or 0) == int(sv.get("yarn") or 0)), None)
         n, k = len(toks), (len(점수["top_ids"][0]) if 점수 and 점수.get("top_ids") and 점수["top_ids"][0] else 0)
         S = np.array(P + toks[:-1], np.int64)
         계약이름 = (("빠른 · 8비트 KV · 빠른 어텐션" if REF.C.F2 else "빠른 · 8비트 KV") if REF.C.KV8 else "빠른") if REF.선형자리수 == 1 else "정밀"
+        if 얀(sv.get("yarn")):
+            계약이름 += f" · YaRN 배 {int(sv['yarn'])}"
         print(f"{이름}: CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 답 {n} 토큰 · {계약이름} 계약) …", flush=True)
         t0 = time.time()
-        로짓, _ = REF.앞으로(g, [S], 말=False)
+        로짓, _ = REF.앞으로(g, [S], 말=False, 얀=얀(sv.get("yarn")))
         초 = round(time.time() - t0, 1)
         다름 = {"logit_hash": [], "sampled_token": []}
         if 점수:
@@ -224,6 +234,9 @@ def main():
         계약 = "F1 (one digit in linear layers) + F1A′ (8-bit KV cache)" if REF.C.KV8 else "F1 (one digit in linear layers)"
         if REF.C.F2:
             계약 += " + F2 (fast attention)"
+    얀배 = (cap.get("made_on") or {}).get("yarn")              # #23 — 서버가 그 답을 셈할 때 쓴 YaRN 배(계약 4.8)
+    if 얀(얀배):
+        계약 += f" + YaRN factor {int(얀배)}"
     결과 = {"file": os.path.basename(a.repro_file), "model": cap["model"], "made_on": cap.get("made_on"), "steps": len(rs["tokens"]),
             "contract": 계약}
     if not a.skip_hash:
@@ -236,13 +249,13 @@ def main():
     P, toks = list(rq["prompt_tokens"]), list(rs["tokens"])
     n, k = len(toks), len(rs["top_ids"][0]) if rs["top_ids"] and rs["top_ids"][0] else 0
     T = float(rq["temperature"])
-    K, Pp, Q = int(rq.get("top_k", 40)), float(rq.get("top_p", 1.0)), float(rq.get("min_p", 0.0))
+    K, Pp, Q = int(rq.get("top_k", 서버기본["top_k"])), float(rq.get("top_p", 서버기본["top_p"])), float(rq.get("min_p", 서버기본["min_p"]))   # #23 — 실행 로그와 같은 기본값(서버의 것)
     seed, off = int(rq.get("seed", 0)), int(rq.get("step_offset", 0))
     g = GR.GGUF(a.model)
     S = np.array(P + toks[:-1], np.int64)                   # 행 P−1 … P+n−2 가 결과 토큰마다의 분포
     print(f"CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 결과 {n} 토큰) …", flush=True)
     t0 = time.time()
-    로짓, _ = REF.앞으로(g, [S], 말=False)
+    로짓, _ = REF.앞으로(g, [S], 말=False, 얀=얀(얀배))
     결과["cpu_seconds"] = round(time.time() - t0, 1)
     다름 = {"logit_hash": [], "logprob": [], "entropy": [], "top_k": [], "sampled_token": []}
     보일이름 = {"logit_hash": "로짓 해시", "logprob": "로그확률", "entropy": "엔트로피", "top_k": "상위 k", "sampled_token": "샘플링한 토큰"}
