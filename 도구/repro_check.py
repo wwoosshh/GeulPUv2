@@ -130,6 +130,7 @@ def 실행확인(a, 줄들):
         REF.선형자리수 = 1 if sv.get("precision") == "fast" else 2           # GeulPUv2 빠른 계약 F1(계약.md 1.2) — 선형층의 활성값 자리 하나
         REF.C.KV8 = REF.선형자리수 == 1 and bool(sv.get("kv8"))               # GeulPUv2 ③b-2 — 8비트 KV(계약 F1A′, 계약.md 2.1)
         REF.C.F2 = REF.C.KV8 and bool(sv.get("fast_attention"))               # GeulPUv2 빠른 어텐션(계약 F2, 계약.md 2.2 — 8비트 KV 위에서)
+        REF.C.F2B = REF.C.F2 and g.meta.get("general.architecture") == "qwen3"   # 1.0.0 1-4 — qwen3 구조는 F2B(q 의 지수를 블록마다)
         rq = x.get("request") or {}
         gp = ((x.get("response") or {}).get("geulpu")) or {}
         if x.get("type") == "branch" and x.get("kind") == "token":
@@ -154,7 +155,8 @@ def 실행확인(a, 줄들):
                      and int((s.get("server") or {}).get("yarn") or 0) == int(sv.get("yarn") or 0)), None)
         n, k = len(toks), (len(점수["top_ids"][0]) if 점수 and 점수.get("top_ids") and 점수["top_ids"][0] else 0)
         S = np.array(P + toks[:-1], np.int64)
-        계약이름 = (("빠른 · 8비트 KV · 빠른 어텐션" if REF.C.F2 else "빠른 · 8비트 KV") if REF.C.KV8 else "빠른") if REF.선형자리수 == 1 else "정밀"
+        빠른어텐션이름 = "빠른 · 8비트 KV · 빠른 어텐션 F2B" if REF.C.F2B else "빠른 · 8비트 KV · 빠른 어텐션"
+        계약이름 = ((빠른어텐션이름 if REF.C.F2 else "빠른 · 8비트 KV") if REF.C.KV8 else "빠른") if REF.선형자리수 == 1 else "정밀"
         if 얀(sv.get("yarn")):
             계약이름 += f" · YaRN 배 {int(sv['yarn'])}"
         print(f"{이름}: CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 답 {n} 토큰 · {계약이름} 계약) …", flush=True)
@@ -252,6 +254,9 @@ def main():
     K, Pp, Q = int(rq.get("top_k", 서버기본["top_k"])), float(rq.get("top_p", 서버기본["top_p"])), float(rq.get("min_p", 서버기본["min_p"]))   # #23 — 실행 로그와 같은 기본값(서버의 것)
     seed, off = int(rq.get("seed", 0)), int(rq.get("step_offset", 0))
     g = GR.GGUF(a.model)
+    REF.C.F2B = REF.C.F2 and g.meta.get("general.architecture") == "qwen3"   # 1.0.0 1-4 — qwen3 구조는 F2B(q 의 지수를 블록마다)
+    if REF.C.F2B:
+        결과["contract"] = 결과.get("contract", 계약).replace("F2 (fast attention)", "F2B (fast attention, per-block q exponent)")
     S = np.array(P + toks[:-1], np.int64)                   # 행 P−1 … P+n−2 가 결과 토큰마다의 분포
     print(f"CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 결과 {n} 토큰) …", flush=True)
     t0 = time.time()
