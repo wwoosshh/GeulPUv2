@@ -27,6 +27,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   written by 0.10.1 and earlier have no time stamp: they are shown as before and counted once more before the prompt cache uses them (the
   verified mark stays when the bytes are unchanged). Like other quick checks (rsync, make), a replacement that keeps both the size and
   the modification time is not noticed — use **Verify file integrity again** then.
+- **A malformed message after a tool result no longer stops the server** ([#21](https://github.com/wwoosshh/GeulPUv2/issues/21)).
+  With Qwen2.5 and Qwen3, the chat template looked at the message after a `tool` message before checking it, so an element that was
+  not an object, or whose `role` was not a string, made the server read a null pointer and exit — one local request dropped every
+  request in progress. The template now checks every message first, as the Llama 3 and Mistral templates already did, and answers 400
+  (`/v1/chat/completions` and `/tokenize`). Valid requests render the same prompt as before.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 
