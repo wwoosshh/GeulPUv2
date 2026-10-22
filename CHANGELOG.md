@@ -53,6 +53,10 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   though they were right. The run log's server `yarn` and the reproduction file's new `made_on.yarn` now go to the CPU reference, score
   lines are matched on the factor too, and the reproduction file check tells you when the factor differs from the current server. With
   no `top_p` · `min_p` in a reproduction file the check now uses the server's defaults (0.95 · 0.05), as for run logs.
+- **The hardware diagnosis stays inside the vocabulary** ([#24](https://github.com/wwoosshh/GeulPUv2/issues/24)). The diagnosis made
+  its own token ids from 1,000 to 100,999, so with a small vocabulary (Mistral-7B-Instruct-v0.3 has 32,768) most of them were out of
+  range and the embedding read past its table — a CUDA error or meaningless timings. The ids are now taken modulo the vocabulary size;
+  for vocabularies of 101,000 or more (Qwen, Llama 3) they are unchanged, and so are the measurements.
 
 ## 0.10.1 — Security fixes (2026-10-22)
 
