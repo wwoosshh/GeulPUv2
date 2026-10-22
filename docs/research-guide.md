@@ -53,7 +53,9 @@ real difference. That makes questions like these cleanly answerable:
 1. Install **GeulPU 0.5.0 or later** ([Install in the README](user-guide.md#install)).
 2. **Model**: this guide uses **Qwen2.5-7B-Instruct Q8_0** (Models → Find models). Experiment 4 also needs the same model's **Q4_K_M**.
    Any other model works the same way; only the numbers change.
-3. In **Settings → Computation mode**, choose **Exact** (research precision; it applies the next time a model is loaded). This guide's
+3. Click the **computation mode** chip above the chat (**Fast** · **Exact**) and choose **Exact**; the loaded model reloads in exact mode
+   (**Settings → Computation mode** does the same). Every answer carries a tag with the mode it was computed in, and when the research
+   panel's values come from a server in another mode than the answer's, it says so and offers to recompute them in the answer's mode. This guide's
    numbers are exact-mode numbers. The default fast mode feeds 8-bit activations into the matrix multiplications, so its probabilities
    differ slightly — with this guide's first question it even answers `Vincent van Gogh` instead of `Leonardo da Vinci`. Both modes are
    deterministic; exact mode also gives the same bits on NVIDIA and AMD, CUDA and Vulkan.

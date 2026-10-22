@@ -570,6 +570,31 @@ const DICT = {
   "재현 파일과 YaRN 배가 다릅니다(재현 파일 {} · 지금 {}) — 설정의 문맥 길이를 재현 파일을 만들 때와 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different YaRN factor (file {} · now {}) — set the context length in Settings to what it was and load the model again",
   "YaRN 없음": "no YaRN",
   "빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
+  "빠름 — 활성값 8비트(llama.cpp와 같은 급). 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다": "Fast — 8-bit activations (llama.cpp class). Reproducible bit for bit with the same settings, but answers can differ from Exact",
+  "정밀 — 정밀도 계약 그대로(연구 · 검증용). 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다": "Exact — the precision contract as written (for research and verification). With the same model file, bit-identical on any PC or GPU (NVIDIA · AMD)",
+  "다음에 모델을 불러올 때 {}": "From the next model load: {}",
+  "계산 방식: {}": "Computation mode: {}",
+  "답이 끝나면 바꿀 수 있습니다": "You can change it when the answer is done",
+  "벤치마크가 끝나면 바꿀 수 있습니다": "You can change it when the benchmark is done",
+  "연구 패널의 계산이 끝나면 바꿀 수 있습니다": "You can change it when the research panel's computation is done",
+  "디버거의 일이 끝나면 바꿀 수 있습니다": "You can change it when the debugger's work is done",
+  "모델을 불러오는 중에는 바꿀 수 없습니다": "Can't change it while a model is loading",
+  "바꾸는 중": "Switching",
+  "다시 불러오는 중": "Reloading",
+  "정밀도 계약 그대로 — 연구 · 검증용. 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다": "The precision contract as written — for research and verification. With the same model file, bit-identical on any PC or GPU (NVIDIA · AMD)",
+  "Vulkan 장치는 늘 정밀로 셉니다": "Vulkan devices always compute in Exact",
+  "활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다": "8-bit activations (llama.cpp class) — faster prompts. Reproducible bit for bit with the same settings, but answers can differ from Exact",
+  "바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다": "Switching reloads the loaded model in that mode",
+  "다음에 모델을 불러올 때 적용합니다": "Applies the next time a model is loaded",
+  "KV 캐시 8비트 · 빠른 어텐션": "8-bit KV cache · fast attention",
+  "KV 캐시 8비트 {} · 빠른 어텐션 {} — 빠름에서만 · 설정에서 바꿉니다": "8-bit KV cache: {} · fast attention: {} — Fast mode only · change in Settings",
+  "정밀 모드로 셈한 답 — 같은 모델 파일 · 같은 요청이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다.": "Computed in Exact mode — with the same model file and request, bit-identical on any PC or GPU (NVIDIA · AMD).",
+  "빠른 모드({})로 셈한 답 — 같은 설정이면 비트까지 재현되지만, 연구 안내서의 수치와 NVIDIA ↔ AMD 비교는 정밀 모드가 기준입니다.": "Computed in Fast mode ({}) — reproducible bit for bit with the same settings, but the research guide's numbers and NVIDIA ↔ AMD comparisons use Exact mode.",
+  "빠른 모드로 셈한 답 — 같은 설정이면 비트까지 재현되지만, 연구 안내서의 수치와 NVIDIA ↔ AMD 비교는 정밀 모드가 기준입니다.": "Computed in Fast mode — reproducible bit for bit with the same settings, but the research guide's numbers and NVIDIA ↔ AMD comparisons use Exact mode.",
+  "설정은 이미 정밀입니다 — 답을 다시 생성하면 정밀 모드로 셉니다.": "Settings are already Exact — regenerate the answer to compute it in Exact mode.",
+  "정밀로 바꾸기": "Switch to Exact",
+  "이 답을 만든 계산 방식({})과 아래 값을 셈한 서버({})가 다릅니다 — 아래 값은 지금 서버의 계약으로 셈한 값입니다.": "This answer was computed in {} but the values below come from the server in {} — they follow the current server's contract.",
+  "답을 만든 방식으로 다시 셈하기": "Recompute in the answer's mode",
   "추측 디코딩": "Speculative decoding",
   "프롬프트 캐시": "Prompt cache",
   "기본 — SSD면 켬, HDD면 끔": "Default — on for an SSD, off for an HDD",
@@ -727,7 +752,7 @@ const DICT = {
   "마진이 δ보다 작은 스텝 — 계산이나 설정이 조금만 달라도 다른 토큰이 될 수 있는 위치": "Steps where the top-two gap is below δ — where a slightly different computation or setting could pick another token",
   "1위가 아닌 토큰": "Non-top tokens",
   "샘플링(온도 > 0)이 1위가 아닌 토큰을 고른 스텝": "Steps where sampling (temperature > 0) picked a token that wasn't ranked first",
-  "확률은 모델의 분포(온도 1)입니다 — 샘플링에 쓴 온도 · top-k · top-p로 거른 분포가 아닙니다. 값은 정밀도 계약 5.2로 정해져 어느 PC · GPU에서 계산해도 같습니다.": "Probabilities are the model's distribution (temperature 1), not the distribution filtered by the sampling temperature, top-k or top-p. Contract 5.2 defines the values, so they are the same on any PC or GPU.",
+  "확률은 모델의 분포(온도 1)입니다 — 샘플링에 쓴 온도 · top-k · top-p로 거른 분포가 아닙니다. 값은 정밀도 계약 5.2로 정해져, 같은 계산 방식이면 어느 PC · GPU에서 계산해도 같습니다.": "Probabilities are the model's distribution (temperature 1), not the distribution filtered by the sampling temperature, top-k or top-p. Contract 5.2 defines the values, so with the same computation mode they are the same on any PC or GPU.",
   "작은 마진의 기준 δ(nat)": "Low-margin threshold δ (nats)",
   "토큰을 누르면 그 스텝의 대안과 수치가 보입니다. 토큰 줄에서 화살표 키로 스텝을 옮깁니다.": "Click a token to see that step's alternatives and numbers. In the strip, the arrow keys move between steps.",
   "답의 토큰": "Answer tokens",
@@ -1713,6 +1738,15 @@ function rebuild(page, ...kids) {
 
 // ---------- 이름 ----------
 const LAYER = { cuda: 'CUDA', vulkan: 'Vulkan' };
+// 계산 방식 — 정밀(정밀도 계약 그대로) · 빠름(활성값 8비트, 계약 F1), 빠름이면 KV 캐시 8비트(F1A′) · 빠른 어텐션(F2)까지. 답마다 그 답을
+// 셈한 서버의 것을 적어 두고(m.mode — 그 앞의 답은 연구 기록의 것), 위 막대 · 답 · 연구 패널에 보인다 — 연구 · 검증의 수치는 정밀 모드의 값
+const modeNow = () => { const sv = S.st && S.st.server; return sv && sv.state === 'ready' ? { p: sv.precision || 'exact', kv8: !!sv.kv8, f2: !!sv.fast_attention } : null; };
+const modeOfTrace = tr => tr ? { p: tr.precision || 'exact', kv8: !!tr.kv8, f2: !!tr.fast_attention } : null;
+const modeOfMsg = m => m.mode || (m.tid && TRACES[m.tid] ? modeOfTrace(TRACES[m.tid]) : null);
+const modeName = p => p === 'fast' ? T('빠름') : T('정밀');
+const modeLabel = md => [modeName(md.p), md.kv8 ? T('KV 8비트') : null, md.f2 ? T('빠른 어텐션') : null].filter(Boolean).join(' · ');
+const modeTip = p => p === 'fast' ? T('빠름 — 활성값 8비트(llama.cpp와 같은 급). 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')
+  : T('정밀 — 정밀도 계약 그대로(연구 · 검증용). 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다');
 // GGUF 의 이름(띄어 씀)을 목록의 꼴(하이픈)로 — 한 모델은 어디서나 한 이름
 function prettyName(n) { return String(n || '').trim().replace(/\s+/g, '-'); }
 function catalogOf(m) { return m && m.catalog && S.st ? S.st.catalog.find(c => c.id === m.catalog) : null; }
@@ -2045,6 +2079,7 @@ function renderChatTop(force) {
   const room = curRoom();
   const st = S.st;
   if (!st) return;
+  renderModeChip();
   if (room && (!room.model || !st.models.some(m => m.id === room.model)) && st.models.length) { room.model = defaultModel(); saveRooms(); }
   const m = room && modelOf(room.model);
   const sv = st.server, d = st.device;
@@ -2065,6 +2100,100 @@ function renderChatTop(force) {
   else put(ms, h('i', { class: 'dot' }), h('span', null, T('보내면 불러옵니다')));
   updateComposer();
 }
+// 계산 방식 칩 — 불러온 서버의 계산 방식(없으면 다음에 불러올 때의 설정). 설정만 바뀌고 아직 다시 불러오지 않았으면 '지금 → 다음'.
+// 누르면 정밀 · 빠름을 고르고, 모델이 올라 있으면 그 방식으로 다시 불러온다(채팅 · 연구 패널 · 디버거가 같은 설정을 쓴다)
+let MODEBUSY = '';
+function modeSpot() {
+  const st = S.st, sv = st.server, set = st.settings || {}, vk = st.device.layer === 'vulkan';
+  const next = vk ? 'exact' : (set.precision || 'fast');
+  const cur = sv.state === 'ready' ? modeNow() : { p: next, kv8: false, f2: false };
+  return { cur, next, vk, pend: sv.state === 'ready' && next !== cur.p };
+}
+function renderModeChip() {
+  const b = $('#mode-chip'), st = S.st;
+  if (!b || !st) return;
+  const d = st.device, { cur, next, pend } = modeSpot();
+  if (!changed('modechip', [S.conn, d.checked, d.layer, cur, next, pend, MODEBUSY])) return;
+  b.hidden = !S.conn || !d.checked || !d.layer;
+  b.className = 'mode-chip needs-conn ' + cur.p;
+  b.disabled = MODEBUSY ? true : false;
+  put(b, h('span', null, MODEBUSY || (pend ? `${modeLabel(cur)} → ${modeName(next)}` : modeLabel(cur))), I('chevD', 's'));
+  b.dataset.tip = pend ? T`다음에 모델을 불러올 때 ${modeName(next)}` : modeTip(cur.p);
+  b.dataset.tipPos = 'bottom';
+  b.setAttribute('aria-label', T`계산 방식: ${modeLabel(cur)}`);
+}
+// 바꿀 수 없는 까닭(없으면 '')
+function modeBlock() {
+  if (S.streaming) return T('답이 끝나면 바꿀 수 있습니다');
+  if (benchBusy()) return T('벤치마크가 끝나면 바꿀 수 있습니다');
+  if (LAB.busy) return T('연구 패널의 계산이 끝나면 바꿀 수 있습니다');
+  if (DBG.busy) return T('디버거의 일이 끝나면 바꿀 수 있습니다');
+  if (S.st.server.state === 'starting') return T('모델을 불러오는 중에는 바꿀 수 없습니다');
+  return '';
+}
+// ex — KV 캐시 8비트 · 빠른 어텐션까지 맞출 때(연구 패널: 답을 만든 방식 그대로). 성공하면 참
+async function setMode(p, ex) {
+  closePop();
+  if (!S.st || MODEBUSY || modeBlock()) return false;
+  MODEBUSY = T('바꾸는 중');
+  renderModeChip();
+  let ok = false;
+  try {
+    const set = S.st.settings || {}, body = {};
+    if ((set.precision || 'fast') !== p) body.precision = p;
+    if (ex && !!set.kv8_cache !== !!ex.kv8) body.kv8_cache = !!ex.kv8;
+    if (ex && !!set.fast_attention !== !!ex.f2) body.fast_attention = !!ex.f2;
+    if (Object.keys(body).length) await api('/api/settings', body);
+    await refresh();
+    const sv = S.st.server, now = modeNow();
+    const off = now && (ex ? modeLabel(now) !== modeLabel({ p, kv8: !!ex.kv8, f2: !!ex.f2 }) : now.p !== p);
+    if (off && (S.st.device.layer === 'cuda' || p === 'exact')) {   // 올라 있는 모델을 그 방식으로 다시
+      const id = sv.model;
+      MODEBUSY = T('다시 불러오는 중');
+      renderModeChip();
+      await api('/api/server/stop', {});
+      for (let k = 0; k < 120; k++) { await new Promise(r => setTimeout(r, 500)); await refresh(); if (S.st.server.state !== 'ready') break; }
+      await ensureServer(id, null);
+    }
+    ok = true;
+    announce(T`계산 방식: ${modeName(p)}`);
+  } catch (e) { toast(e.message, 'err'); }
+  finally {
+    MODEBUSY = '';
+    await refresh();
+    renderChatTop(true); labRender();
+  }
+  return ok;
+}
+// 연구 패널 — 답을 만든 계산 방식으로 서버를 맞추고 값을 다시 셈한다
+async function labRecalc(tid, mo) {
+  if (!(await setMode(mo.p, mo))) return;
+  delete LAB.an[tid];
+  delete LAB.fpc[tid];
+  labRun(() => labAnalyze(tid));
+}
+$('#mode-chip').addEventListener('click', e => {
+  const st = S.st;
+  if (!st) return;
+  if (POP) { closePop(); return; }
+  const { cur, next, vk } = modeSpot();
+  const why = modeBlock(), loaded = st.server.state === 'ready';
+  const opt = (p, title, sub) => h('button', {
+    class: 'opt mode' + (next === p ? ' sel' : ''), role: 'menuitemradio', 'aria-checked': next === p ? 'true' : 'false',
+    disabled: (why || (vk && p === 'fast')) ? true : null, onclick: () => { if (next === p && cur.p === p) closePop(); else setMode(p); },
+  }, h('span', { class: 'main' }, h('div', { class: 't' }, title), h('div', { class: 's' }, sub)), next === p ? I('check', 's') : null);
+  const set = st.settings || {};
+  const body = [
+    h('div', { class: 'pop-title' }, T('계산 방식')),
+    opt('exact', T('정밀'), T('정밀도 계약 그대로 — 연구 · 검증용. 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다')),
+    opt('fast', T('빠름'), vk ? T('Vulkan 장치는 늘 정밀로 셉니다') : T('활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')),
+    h('div', { class: 'pop-note' }, why || (loaded ? T('바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다') : T('다음에 모델을 불러올 때 적용합니다'))),
+  ];
+  if (!vk) body.push(h('div', { class: 'sep', role: 'separator' }), h('button', { class: 'opt wrap', role: 'menuitem', onclick: () => { closePop(); show('settings'); } }, I('gear', 's'),
+    h('span', { class: 'main' }, h('div', { class: 't' }, T('KV 캐시 8비트 · 빠른 어텐션')),
+      h('div', { class: 's' }, T`KV 캐시 8비트 ${set.kv8_cache ? T('켬') : T('끔')} · 빠른 어텐션 ${set.kv8_cache && set.fast_attention ? T('켬') : T('끔')} — 빠름에서만 · 설정에서 바꿉니다`))));
+  openPop(e.currentTarget, h('div', { role: 'menu', 'aria-label': T('계산 방식'), class: 'w360' }, body));
+});
 $('#model-pill').addEventListener('click', e => {
   const st = S.st;
   if (!st) return;
@@ -2530,6 +2659,7 @@ function fillMsg(e, m, room, done) {
           r1 ? h('button', { class: 'btn sm needs-conn', onclick: continueLast }, I('forward', 's'), T('이어서 생성')) : null, again) : null)));
   }
   const tools = e.querySelector('.tools');
+  const mo = modeOfMsg(m);
   put(tools,
     e._vk !== undefined ? verSwitch(room, e._vk) : null,
     done && m.content ? h('button', {
@@ -2542,7 +2672,9 @@ function fillMsg(e, m, room, done) {
     done && m.tid && TRACES[m.tid] ? h('button', { class: 'icon-btn', 'data-tip': T('연구 패널에서 보기 — 토큰마다 확률 · 개입 · 비교 · 재현'), 'data-tip-pos': 'top', 'aria-label': T('이 답을 연구 패널에서 보기'), onclick: () => labOpen(m.tid) }, I('flask', 's')) : null,
     m.stats ? h('span', { class: 'stats' }, statsText(m.stats)) : null,
     done && m.np > 0 && m.L > 0 ? h('span', { class: 'stats', 'data-tip': T('이 답까지 쓴 문맥 — 차면 앞의 대화를 요약해 이어 갑니다'), 'data-tip-pos': 'top' },
-      T`문맥 ${fmtNum(m.np + (m.nc || 0))} / ${fmtNum(m.L)}`) : null);
+      T`문맥 ${fmtNum(m.np + (m.nc || 0))} / ${fmtNum(m.L)}`) : null,
+    mo ? h('span', { class: 'tag mtag ' + (mo.p === 'fast' ? 'dim' : 'ok'), 'data-tip': modeTip(mo.p), 'data-tip-pos': 'top' },
+      m.mode2 ? `${modeLabel(mo)} → ${modeLabel(m.mode2)}` : modeLabel(mo)) : null);
 }
 // 지난 기록의 통계 글도 지금 꼴로(“412 토큰” → “412토큰”)
 // 숫자와 '토큰'은 붙여 쓴다(“412토큰 · 59.8토큰/초”) — 지난 기록의 띄어 쓴 꼴도 이렇게 보인다
@@ -3287,7 +3419,7 @@ async function replyTo(room, maxOverride, ov) {
     const auto = !ov.lab && (OPT.compact !== false || !!ov.compact);
     let fit = auto ? await fitContext(room, rp, max, !!ov.compact, false) : { L: (S.st.server.context) || 0, done: false };
     phase = 'send';
-    const asst = { role: 'assistant', content: '', template: tpl, model: mid, max, partial: true };
+    const asst = { role: 'assistant', content: '', template: tpl, model: mid, max, partial: true, mode: modeNow() };
     if (rp.sum) asst.sum = rp.sum;
     let { url, body } = replyBody(room, room.messages.length, rp);
     room.messages.push(asst);
@@ -3356,6 +3488,8 @@ async function continueLast() {
   const before = m.content.length;
   try {
     if (!(S.st.server.state === 'ready' && S.st.server.model === mm.id)) await ensureServer(mm.id, null);
+    const mdNow = modeNow();                 // 앞부분과 다른 계산 방식으로 이으면 답에 둘 다 남긴다(앞 → 뒤)
+    if (!m.mode) m.mode = mdNow; else if (mdNow && modeLabel(mdNow) !== modeLabel(m.mode)) m.mode2 = mdNow;
     const rp = { tpl: 'deepseek-r1', max: OPT.max, temp: OPT.temp, system: OPT.system || '', think: true, model: mm.id, sum: m.sum || null };
     const mk = () => r1Prompt(convView(room, room.messages.indexOf(m), rp.sum), rp.system) + '<think>' + m.content;
     let prompt = mk(), np = 0, L = (S.st.server.context) || 0;
@@ -5004,7 +5138,7 @@ async function labAnalyze(tid, quiet) {
   const prompt = await labPrompt(tid);
   if (!quiet) { LAB.busy = T`토큰 ${fmtNum(tr.tokens.length)}개를 다시 계산하는 중(점수 매기기)`; labRender(); }
   const sc = await labScore(tr.model, prompt, tr.tokens, LAB_K);
-  LAB.an[tid] = Object.assign({ prompt }, sc);
+  LAB.an[tid] = Object.assign({ prompt, mode: modeNow() }, sc);   // 이 값을 셈한 서버의 계산 방식(답을 만든 방식과 다를 수 있다 — labModeNote)
   return LAB.an[tid];
 }
 // 갈래의 답은 '프롬프트 + 앞 토큰'을 프롬프트로, 이어 생성한 토큰을 결과로 적는다(그 요청 하나로 다시 만들어지는 꼴)
@@ -5143,7 +5277,35 @@ function labAnswerHead(tr) {
       tr.branch ? T`분기 — 스텝 ${tr.branch.k + 1}부터` : null,
       `${tr.device || ''}${tr.layer ? ' · ' + (LAYER[tr.layer] || tr.layer) : ''}`,
     ].filter(Boolean).join(NB)),
-    labStoreLines(tr));
+    labStoreLines(tr), labModeNote(tr));
+}
+// 이 답을 셈한 계산 방식 — 정밀이면 어디서나 같은 비트, 빠름이면 같은 설정에서만 같고 연구 안내서 · NVIDIA ↔ AMD 비교는 정밀이 기준.
+// 패널의 값은 그때 올라 있던 서버로 다시 셈한다 — 답을 만든 방식과 다르면 먼저 그것을 알리고, 그 방식으로 다시 셈하게 한다
+function labModeNote(tr) {
+  const mo = modeOfTrace(tr);
+  const tid = TRACES[LAB.tid] === tr ? LAB.tid : null, an = tid ? LAB.an[tid] : null;
+  if (an && an.mode && modeLabel(an.mode) !== modeLabel(mo)) {
+    const why = S.st ? modeBlock() : '', can = S.st && (S.st.device.layer === 'cuda' || mo.p === 'exact');
+    return h('div', { class: 'note-line lab-mode fast' }, I('alert', 's'),
+      h('div', { class: 'col g8' },
+        h('span', null, T`이 답을 만든 계산 방식(${modeLabel(mo)})과 아래 값을 셈한 서버(${modeLabel(an.mode)})가 다릅니다 — 아래 값은 지금 서버의 계약으로 셈한 값입니다.`),
+        can ? h('div', { class: 'row g8' },
+          h('button', { class: 'btn sm needs-conn', disabled: (why || MODEBUSY) ? true : null, onclick: () => labRecalc(tid, mo) }, T('답을 만든 방식으로 다시 셈하기')),
+          why ? h('span', { class: 'small muted' }, why) : null) : null));
+  }
+  if (mo.p !== 'fast') return h('div', { class: 'note-line lab-mode exact' }, I('check', 's'),
+    h('span', null, T('정밀 모드로 셈한 답 — 같은 모델 파일 · 같은 요청이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다.')));
+  const st = S.st, ex = [mo.kv8 ? T('KV 8비트') : null, mo.f2 ? T('빠른 어텐션') : null].filter(Boolean).join(' · ');
+  const setExact = st && (st.settings.precision || 'fast') === 'exact';
+  const why = st ? modeBlock() : '';
+  return h('div', { class: 'note-line lab-mode fast' }, I('alert', 's'),
+    h('div', { class: 'col g8' },
+      h('span', null, ex ? T`빠른 모드(${ex})로 셈한 답 — 같은 설정이면 비트까지 재현되지만, 연구 안내서의 수치와 NVIDIA ↔ AMD 비교는 정밀 모드가 기준입니다.`
+        : T('빠른 모드로 셈한 답 — 같은 설정이면 비트까지 재현되지만, 연구 안내서의 수치와 NVIDIA ↔ AMD 비교는 정밀 모드가 기준입니다.')),
+      setExact ? h('span', { class: 'small muted' }, T('설정은 이미 정밀입니다 — 답을 다시 생성하면 정밀 모드로 셉니다.'))
+        : st && st.device.layer === 'cuda' ? h('div', { class: 'row g8' },
+          h('button', { class: 'btn sm needs-conn', disabled: (why || MODEBUSY) ? true : null, onclick: () => setMode('exact') }, T('정밀로 바꾸기')),
+          why ? h('span', { class: 'small muted' }, why) : null) : null));
 }
 // GeulPUv2 문맥 저장소 — 이 답의 프롬프트를 어디서 다시 썼나(이 슬롯 · 다른 슬롯 · 저장소)와 캐시가 깨진 자리(그 앞 글 · 이전 토큰 → 이번 토큰)
 function labStoreLines(tr) {
@@ -5264,7 +5426,7 @@ function labObs() {
     labKpi(nat(sm.minM), T`가장 작은 마진 (스텝 ${sm.minAt + 1})`, T('1위와 2위의 로그확률 차(마진)가 가장 작은 스텝')),
     labKpi(fmtNum(sm.frag), T`마진이 작은 스텝 (마진 < ${LAB.delta})`, T('마진이 δ보다 작은 스텝 — 계산이나 설정이 조금만 달라도 다른 토큰이 될 수 있는 위치')),
     labKpi(fmtNum(sm.notTop), T('1위가 아닌 토큰'), T('샘플링(온도 > 0)이 1위가 아닌 토큰을 고른 스텝'))));
-  out.push(labNote(T('확률은 모델의 분포(온도 1)입니다 — 샘플링에 쓴 온도 · top-k · top-p로 거른 분포가 아닙니다. 값은 정밀도 계약 5.2로 정해져 어느 PC · GPU에서 계산해도 같습니다.')));
+  out.push(labNote(T('확률은 모델의 분포(온도 1)입니다 — 샘플링에 쓴 온도 · top-k · top-p로 거른 분포가 아닙니다. 값은 정밀도 계약 5.2로 정해져, 같은 계산 방식이면 어느 PC · GPU에서 계산해도 같습니다.')));
   const dIn = h('input', { type: 'number', min: '0.001', max: '5', step: '0.01', value: LAB.delta, class: 'lab-num', 'aria-label': T('작은 마진의 기준 δ(nat)'), 'data-fk': 'lab:delta' });
   dIn.addEventListener('change', () => { const v = parseFloat(dIn.value); if (v > 0 && v <= 5) { LAB.delta = v; store('geulpu.lab.delta', v); labRender(); } });
   const fragAt = [];
@@ -5344,7 +5506,7 @@ async function labBranch(i, alt) {
   LAB.err = '';
   if (S.roomId !== room.id) pickRoom(room.id);
   branch(room, uk, room.messages[uk].content);
-  const asst = { role: 'assistant', content: preText, template: tr.tpl, model: tr.model, max: tr.req.max, partial: true };
+  const asst = { role: 'assistant', content: preText, template: tr.tpl, model: tr.model, max: tr.req.max, partial: true, mode: modeNow() };
   if (tr.req.sum) asst.sum = tr.req.sum;   // 대화 압축 — 원래 답이 쓴 요약(이어서 생성이 같은 앞부분을 짓게)
   room.messages.push(asst);
   room.updated = Date.now();
