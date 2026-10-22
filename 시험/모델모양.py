@@ -3,6 +3,7 @@
 (텐서 없음)를 임시 자료 폴더의 모델 폴더에 두고 앱을 띄워 /api/state 의 models[].shape(ok · reason)를 본다:
   - qwen2 의 RMSNorm eps 가 10⁻⁶ · 10⁻⁵ 이 아니면 그 까닭(#16 — 모듈의 상수와 다른 eps 로 셈하지 않게)
   - eps 10⁻⁶ · 10⁻⁵ · 열쇠 없음은 eps 규칙을 지나 다음 검사(모델 크기)에서 멈춘다
+  - qwen2 에 RoPE 늘이기 정보(rope.scaling.type — none 이 아님)가 있으면 그 까닭(#17 — 늘이지 않은 RoPE 로 셈하지 않게)
 
   python -I 시험/모델모양.py <GeulPU.exe> <빈 자료 폴더>
 
@@ -19,6 +20,7 @@ import urllib.request
 
 EPS_까닭 = "RMSNorm eps가 10⁻⁶ · 10⁻⁵이 아닌 Qwen2 파일은 지원하지 않습니다"
 크기_까닭 = "지원하지 않는 모델 크기입니다"
+ROPE_까닭 = "RoPE 늘이기(yarn)가 들어간 Qwen2 파일은 지원하지 않습니다"
 
 
 def 글(x):
@@ -46,6 +48,8 @@ def 경우들():
         ("eps 10⁻⁶ 은 eps 규칙을 지난다", [구조, (eps, 1e-6)], 크기_까닭),
         ("eps 10⁻⁵ 은 eps 규칙을 지난다(qwen2e5 모듈)", [구조, (eps, 1e-5)], 크기_까닭),
         ("eps 열쇠가 없으면 10⁻⁶ 으로 지난다", [구조], 크기_까닭),
+        ("RoPE 늘이기 yarn 은 받지 않는다", [구조, (eps, 1e-6), ("qwen2.rope.scaling.type", "yarn")], ROPE_까닭),
+        ("RoPE 늘이기 none 은 지난다", [구조, (eps, 1e-6), ("qwen2.rope.scaling.type", "none")], 크기_까닭),
     ]
 
 

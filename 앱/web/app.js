@@ -1258,6 +1258,7 @@ const TMX = [
   [/RMSNorm eps가 10⁻⁶이 아닌 Qwen3 파일은 지원하지 않습니다/g, 'Qwen3 files whose RMSNorm eps is not 10⁻⁶ are not supported'],
   [/RMSNorm eps가 10⁻⁵이 아닌 llama 구조 파일은 지원하지 않습니다/g, 'llama-architecture files whose RMSNorm eps is not 10⁻⁵ are not supported'],
   [/RMSNorm eps가 10⁻⁶ · 10⁻⁵이 아닌 Qwen2 파일은 지원하지 않습니다/g, 'Qwen2 files whose RMSNorm eps is neither 10⁻⁶ nor 10⁻⁵ are not supported'],
+  [/RoPE 늘이기\(([^)]+)\)가 들어간 Qwen2 파일은 지원하지 않습니다 — 늘이기 정보가 없는 같은 모델의 파일이면 7B 이상은 YaRN으로 131,072까지 늘입니다/g, "Qwen2 files with RoPE scaling ($1) are not supported — with the same model's file without scaling information, models of 7B and up reach 131,072 through YaRN"],
   [/질의 폭\(헤드 (\d+) × 128 = (\d+)\)이 너비 (\d+)와 다른 파일은 지원하지 않습니다/g, 'Files whose query width (heads $1 × 128 = $2) differs from the hidden size $3 are not supported'],
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다\(늘이기 인자는 rope_freqs 텐서로만\)/g, 'Files with RoPE scaling ($1) are not supported (scaling factors only through the rope_freqs tensor)'],
   [/전문가 섞기\(MoE — 전문가 (\d+)개\) 모델은 아직 지원하지 않습니다/g, 'Mixture-of-experts models (MoE — $1 experts) are not supported yet'],

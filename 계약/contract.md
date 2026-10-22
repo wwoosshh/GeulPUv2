@@ -224,7 +224,7 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
 8. **YaRN position scaling** (GeulPUv2 ③a — Qwen2.5 7B and larger · Qwen3, [문서/긴문맥.md](../문서/긴문맥.md), Korean): on only
    when the context (max length) exceeds the GGUF's position count (`context_length` — Qwen2.5 32,768 · Qwen3 40,960); the factor s
    is the smallest of 2 · 4 that covers the context (original length L = 32,768, context limit 131,072). Only for architecture qwen2
-   (width 3,584 or more) · qwen3 and only when the GGUF has no `rope.scaling.type` (or none). When on, only the RoPE table changes
+   (width 3,584 or more) · qwen3 (a GGUF whose `rope.scaling.type` is present and not none is refused for every architecture — #17). When on, only the RoPE table changes
    (kernels unchanged):
    1. **Bounds**: c(β) = hd · ln(L / (β · 2π)) / (2 · ln θ), computed in double-double and correctly rounded to fp64 — low = ⌊c(32)⌋,
       high = ⌈c(1)⌉, clamped to [0, hd − 1] (if equal, high += 0.001). Within 10⁻⁶ of an integer it stops. (θ = 10⁶ · hd = 128 ·
