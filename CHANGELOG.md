@@ -23,7 +23,21 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 - **MiniCPM5** (OpenBMB, Llama architecture). Its `minicpm5` pre-tokenizer splits digit runs into groups of three first and then applies
   the Llama 3 split to each piece on its own, as llama.cpp does; its RMSNorm eps of 10⁻⁶ gets a module family of its own (`llamae6…` —
   the qwen2 kernels with a marker kernel the engine checks against the file); and the server renders its chat template (BOS, every answer
-  with its thinking block, `enable_thinking` true · false · not given). Its XML tool-call form is not accepted yet (400).
+  with its thinking block, `enable_thinking` true · false · not given).
+- **MiniCPM5 tool calls**, and the XML tool-call form of Qwen3.5 and Qwen3-Coder (`<function=…><parameter=…>` inside `<tool_call>`).
+  The server reads MiniCPM's `<function name="…"><param name="…">` calls, and converts XML argument values to the types in the tool's
+  JSON schema as vLLM's qwen3coder parser does (string, integer, number, boolean, object, array, null).
+
+### Changed
+
+- **The server runs each model file's own chat template.** `/v1/chat/completions` and `/tokenize` render the GGUF's
+  `tokenizer.chat_template` with a jinja interpreter written in geul that produces the same text as transformers' jinja2 environment,
+  byte for byte — on 10,944 conversations over the 228 distinct templates of the 1,000 most-downloaded GGUF repositories on Hugging
+  Face. The hand-written templates (ChatML, Qwen3, Llama 3, Mistral, DeepSeek-R1, basic ChatML, MiniCPM5) are gone; for the models
+  already supported the prompts are the same as before (the chat and tool conversations of twelve models all match jinja2). Fine-tunes
+  with other chat templates now load — the app refuses only templates the interpreter cannot parse. Files without a chat template get
+  the basic ChatML template, as in llama.cpp. Other values in `chat_template_kwargs` are passed to the template, and requests with
+  tools now split the thinking of any template that uses `<think>` into `reasoning_content` (before, only Qwen3's).
 
 ### Fixed
 

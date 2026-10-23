@@ -6,6 +6,7 @@
   - qwen2 에 RoPE 늘이기 정보(rope.scaling.type — none 이 아님)가 있으면 그 까닭(#17 — 늘이지 않은 RoPE 로 셈하지 않게)
   - GeulPUv2 1.0.0 1-6a — 질의 폭(머리 × 128)이 너비와 다른 qwen3(0.6B 의 모양)은 모양 규칙을 지나 다음 검사(토크나이저)에서 멈추고,
     key_length 가 없어 머리 크기(너비 / 머리 수)가 128 이 아니면 그 까닭
+  - 0.12.0 12-G1b — 채팅 템플릿은 서버의 jinja 해석기가 풀지 못할 때만 그 까닭(풀리거나 없으면 — 기본 ChatML — 다음 검사에서 멈춘다)
 
   python -I 시험/모델모양.py <GeulPU.exe> <빈 자료 폴더>
 
@@ -25,6 +26,8 @@ EPS_까닭 = "RMSNorm eps가 10⁻⁶ · 10⁻⁵이 아닌 Qwen2 파일은 지�
 ROPE_까닭 = "RoPE 늘이기(yarn)가 들어간 Qwen2 파일은 지원하지 않습니다"
 토큰_까닭 = "지원하지 않는 토크나이저입니다"
 머리_까닭 = "지원하지 않는 헤드 크기입니다"
+틀_까닭 = "이 파일의 채팅 템플릿(tokenizer.chat_template)을 GeulPU의 jinja 해석기가 아직 풀지 못합니다"
+낱말_까닭 = "token_embd.weight 텐서가 없습니다"
 
 
 def 글(x):
@@ -56,7 +59,7 @@ def 경우들():
         ("eps 열쇠가 없으면 10⁻⁶ 으로 지난다", [구조], 크기_까닭),
         ("RoPE 늘이기 yarn 은 받지 않는다", [구조, (eps, 1e-6), ("qwen2.rope.scaling.type", "yarn")], ROPE_까닭),
         ("RoPE 늘이기 none 은 지난다", [구조, (eps, 1e-6), ("qwen2.rope.scaling.type", "none")], 크기_까닭),
-    ] + 질의폭경우들()
+    ] + 질의폭경우들() + 틀경우들()
 
 
 def 질의폭경우들():
@@ -69,6 +72,19 @@ def 질의폭경우들():
         ("qwen3 질의 폭 2048 ≠ 너비 1024 는 모양 규칙을 지난다", q3 + 머리 + 길이, 토큰_까닭),
         ("qwen3 key_length 가 없으면 머리 크기 너비 / 머리 = 64 — 받지 않는다", q3 + 머리, 머리_까닭),
         ("qwen3 머리 수가 없으면 모델 크기에서 멈춘다", q3 + 길이, 크기_까닭),
+    ]
+
+
+def 틀경우들():
+    """0.12.0 12-G1b — 서버가 GGUF 의 채팅 템플릿을 jinja 해석기로 그대로 실행한다(Qwen2.5-1.5B 의 모양 · 토크나이저 — 텐서는 없다)."""
+    q2 = [("general.architecture", "qwen2"), ("qwen2.attention.layer_norm_rms_epsilon", 1e-6), ("qwen2.embedding_length", 1536),
+          ("qwen2.feed_forward_length", 8960), ("qwen2.attention.head_count", 12), ("qwen2.attention.head_count_kv", 2),
+          ("tokenizer.ggml.model", "gpt2"), ("tokenizer.ggml.pre", "qwen2")]
+    return [
+        ("풀리지 않는 채팅 템플릿(endfor 없음)은 받지 않는다", q2 + [("tokenizer.chat_template", "{% for m in messages %}{{ m.content }}")], 틀_까닭),
+        ("풀리는 채팅 템플릿은 템플릿 검사를 지난다", q2 + [("tokenizer.chat_template", "{% for m in messages %}{{ m.content }}{% endfor %}")],
+         낱말_까닭),
+        ("채팅 템플릿이 없으면(기본 ChatML) 템플릿 검사를 지난다", q2, 낱말_까닭),
     ]
 
 

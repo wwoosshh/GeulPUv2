@@ -1288,8 +1288,7 @@ const TMX = [
   [/RoPE 늘이기\(([^)]+)\)가 들어간 Qwen2 파일은 지원하지 않습니다 — 늘이기 정보가 없는 같은 모델의 파일이면 7B 이상은 YaRN으로 131,072까지 늘입니다/g, "Qwen2 files with RoPE scaling ($1) are not supported — with the same model's file without scaling information, models of 7B and up reach 131,072 through YaRN"],
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다\(늘이기 인자는 rope_freqs 텐서로만\)/g, 'Files with RoPE scaling ($1) are not supported (scaling factors only through the rope_freqs tensor)'],
   [/전문가 섞기\(MoE — 전문가 (\d+)개\) 모델은 아직 지원하지 않습니다/g, 'Mixture-of-experts models (MoE — $1 experts) are not supported yet'],
-  [/채팅 틀이 GeulPU가 그리는 틀\(ChatML · Llama 3 · Mistral · DeepSeek-R1 · MiniCPM5\)과 다른 파일입니다 — 아직 지원하지 않습니다/g, 'The chat template differs from the ones GeulPU renders (ChatML · Llama 3 · Mistral · DeepSeek-R1 · MiniCPM5) — not supported yet'],
-  [/채팅 틀이 Llama 3 · Mistral의 것과 다른 파일입니다\(ChatML 등을 쓰는 미세조정\) — 아직 지원하지 않습니다/g, 'The chat template differs from the Llama 3 · Mistral ones (a fine-tune using ChatML or similar) — not supported yet'],
+  [/이 파일의 채팅 템플릿\(tokenizer\.chat_template\)을 GeulPU의 jinja 해석기가 아직 풀지 못합니다\((.*)\)/g, "GeulPU's jinja interpreter cannot parse this file's chat template (tokenizer.chat_template) yet ($1)"],
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다/g, 'Files with RoPE scaling ($1) are not supported'],
   [/지원하지 않는 모델 크기입니다\(너비 (\d+) · 헤드 (\d+) · KV 헤드 (\d+) · FFN (\d+)\) — 헤드 크기 128인 모델\(Qwen2 1\.5B 이상 · Qwen3 · Llama 3\.x · Mistral 등\)만 지원합니다/g, 'Unsupported model size (hidden $1 · heads $2 · KV heads $3 · FFN $4) — only models with head size 128 (Qwen2 1.5B and up · Qwen3 · Llama 3.x · Mistral and the like) are supported'],
   [/지원하지 않는 토크나이저입니다\((.*?)\) — gpt2\(바이트 BPE\)와 llama\(SentencePiece\)만 지원합니다/g, 'Unsupported tokenizer ($1) — only gpt2 (byte-level BPE) and llama (SentencePiece) are supported'],
@@ -3900,7 +3899,7 @@ const archOk = a => a === 'qwen2' || a === 'qwen3' || a === 'llama';      // 39�
 // Qwen2: 헤드 크기 64 인 작은 것(0.5B 등)은 아직 아님
 const Q3OK = [[0.55e9, 0.8e9], [1.6e9, 2.1e9], [3.9e9, 4.5e9], [7.9e9, 8.4e9], [14.5e9, 15.0e9], [32e9, 33.5e9]];
 // 39단계 — llama 구조: Llama 3.2 3B · Mistral 7B · Llama 3.1 8B · 70B 는 실행(머리 128 · 질의 폭 = 너비), 헤드 64 인 작은 것(1B 등)은 아직 아님,
-// 그 밖의 크기(Mistral NeMo 12B 등)는 받기 전 확인(채팅 틀도 그때 본다 — ChatML 미세조정 등은 거른다)
+// 그 밖의 크기(Mistral NeMo 12B 등)는 받기 전 확인(채팅 템플릿도 그때 본다 — 0.12.0 12-G1b 부터 서버의 jinja 해석기가 풀지 못하는 것만 거른다)
 const L3OK = [[3.1e9, 3.3e9], [7.1e9, 7.4e9], [7.9e9, 8.1e9], [70.4e9, 70.7e9]];
 const inRange = (p, rs) => rs.some(([lo, hi]) => p >= lo && p <= hi);
 // 대화용이 아닌 모델(이미지 생성의 텍스트 인코더 · 임베딩 · 순위 매기기 · 음성) — 같은 구조라도 채팅에 쓰지 못한다(꼬리표 · 용도 · 이름으로)

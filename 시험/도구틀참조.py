@@ -4,9 +4,13 @@ trim_blocks · lstrip_blocks · loopcontrols, tojson = json.dumps(ensure_ascii=F
 
   python3 시험/도구틀참조.py <모델.gguf> 시험/도구틀경우.json <출력.json> [--생각끔]
 
-메시지는 서버가 받는 OpenAI 꼴을 서버와 같은 규칙으로 고쳐 넘긴다(문서/도구.md): 호출의 arguments 글은 JSON 으로 풀어서(vLLM · llama.cpp
-처럼 — Qwen3 틀은 글을 그대로 넣으므로 Qwen3 만 글 그대로), content 조각은 이어 붙인 글로, Qwen3 의 null content 는 빈 글로. Llama 3 의
-날짜는 틀의 기본(26 Jul 2024 — 서버도 같다). 출력: {경우 id: 그린 글 | {"error": 까닭}}. 대조는 시험/도구틀.py 가 서버로 한다.
+0.12.0 12-G1b — 서버가 이 틀을 jinja 해석기(엔진/채팅틀.gl)로 그대로 실행하므로, 메시지 다듬기도 서버와 같은 일반 규칙이다(모델마다의
+갈래 없이): role 의 developer → system · ipython → tool, content 조각은 이어 붙인 글 · null · 없음은 빈 글, 호출의 arguments 글은 JSON 으로
+풀어서(틀이 'arguments is string' 으로 글을 그대로 쓰면 글 그대로 — Qwen3), 틀이 system 말을 그리지 않으면(그려 보아 정한다 — Mistral
+v0.3) 맨 앞 system 말을 첫 user 말 앞에 '<system>\n\n' 으로. 맥락: bos_token · eos_token(GGUF 의 번호의 글), date_string '26 Jul 2024',
+--생각끔 이면 enable_thinking 거짓. tools 는 서버가 그 호출 꼴을 읽는 틀만(Qwen <tool_call> JSON · Llama 3 JSON · Qwen3.5 · Coder XML ·
+MiniCPM XML — 아니면 서버는 400 이라 참조도 오류). 출력: {경우 id: 그린 글 | {"error": 까닭}}. 대조는 시험/채팅틀대조.py(GPU 없이 —
+엔진/시험_채팅틀.gl) · 시험/도구틀.py(서버로).
 """
 import json
 import mmap
@@ -65,23 +69,45 @@ def raise_exception(msg):
     raise jinja2.exceptions.TemplateError(msg)
 
 
-def 고치기(msgs, qwen3):
+# GGUF 에 tokenizer.chat_template 이 없을 때 — 서버(엔진/채팅틀.gl 의 기본챗ML틀)와 llama.cpp 처럼 기본 ChatML 틀
+기본챗ML틀 = ("{% for message in messages %}{{ '<|im_start|>' + message.role + '\\n' + message.content + '<|im_end|>\\n' }}{% endfor %}"
+          "{% if add_generation_prompt %}{{ '<|im_start|>assistant\\n' }}{% endif %}")
+
+
+def 내용글(m):
+    c = m.get("content")
+    if isinstance(c, list):
+        return "".join(p["text"] for p in c)
+    if c is None:
+        return ""
+    return c
+
+
+def 고치기(msgs, 인자글, 시스템받음):
+    """서버(엔진/채팅틀.gl 의 맥락메시지쓰기)와 같은 다듬기"""
     out = []
-    for m in msgs:
+    ms = list(msgs)
+    시스템 = None
+    역 = {"developer": "system", "ipython": "tool"}
+    if not 시스템받음 and ms and 역.get(ms[0].get("role"), ms[0].get("role")) == "system":
+        시스템 = 내용글(ms[0])
+        ms = ms[1:]
+    for m in ms:
         m = dict(m)
-        c = m.get("content")
-        if isinstance(c, list):
-            m["content"] = "".join(p["text"] for p in c)
-        if qwen3 and m.get("content") is None:
-            m["content"] = ""
-        if m.get("tool_calls"):
+        m["role"] = 역.get(m.get("role"), m.get("role"))
+        c = 내용글(m)
+        if 시스템 is not None and m["role"] == "user":
+            c = 시스템 + "\n\n" + c
+            시스템 = None
+        m["content"] = c
+        if isinstance(m.get("tool_calls"), list):
             tcs = []
             for tc in m["tool_calls"]:
                 tc = json.loads(json.dumps(tc))
-                a = tc["function"].get("arguments")
-                if isinstance(a, str) and not qwen3:
+                f = tc.get("function") if isinstance(tc, dict) else None
+                if isinstance(f, dict) and isinstance(f.get("arguments"), str) and not 인자글:
                     try:
-                        tc["function"]["arguments"] = json.loads(a)
+                        f["arguments"] = json.loads(f["arguments"])
                     except ValueError:
                         pass
                 tcs.append(tc)
@@ -90,54 +116,79 @@ def 고치기(msgs, qwen3):
     return out
 
 
-def main():
-    gguf, 경우파일, 출력 = sys.argv[1:4]
-    생각끔 = "--생각끔" in sys.argv[4:]
-    meta = gguf_meta(gguf, {"tokenizer.chat_template", "tokenizer.ggml.tokens", "tokenizer.ggml.bos_token_id", "tokenizer.ggml.eos_token_id"})
-    틀글 = meta["tokenizer.chat_template"]
-    라마 = "<|start_header_id|>" in 틀글
+def 도구꼴(틀글, 앞꼴, 낱말):
+    """서버의 틀도구꼴 — 1 Qwen <tool_call> JSON · 2 Llama 3 JSON · 3 Qwen3.5 · Coder XML · 4 MiniCPM XML · 0 받지 않음"""
+    낱 = set(낱말 or [])
+    꼴 = 0
+    if "<function=" in 틀글 and "<parameter=" in 틀글:
+        꼴 = 3
+    elif "<function name=" in 틀글 and "<param name=" in 틀글:
+        꼴 = 4
+    elif "<tool_call>" in 틀글 and "tojson" in 틀글:
+        꼴 = 1
+    elif 앞꼴 in ("llama-bpe", "llama3", "llama-v3") and "<|start_header_id|>" in 틀글 and "tojson" in 틀글:
+        꼴 = 2
+    if 꼴 in (1, 3) and not {"<tool_call>", "</tool_call>"} <= 낱:
+        꼴 = 0
+    if 꼴 == 4 and not {"<function", "</function>", "<param", "</param>"} <= 낱:
+        꼴 = 0
+    if "tools" not in 틀글:
+        꼴 = 0
+    return 꼴
+
+
+def 참조들(gguf, 경우, 생각끔):
+    """경우 파일(dict) 의 경우마다 참조 글 — {id: 글 | {"error": 까닭}}"""
+    meta = gguf_meta(gguf, {"tokenizer.chat_template", "tokenizer.ggml.tokens", "tokenizer.ggml.bos_token_id", "tokenizer.ggml.eos_token_id",
+                            "tokenizer.ggml.pre"})
+    틀글 = meta.get("tokenizer.chat_template") or 기본챗ML틀
+    낱말 = meta.get("tokenizer.ggml.tokens")
+    bos = 낱말[meta["tokenizer.ggml.bos_token_id"]] if 낱말 and meta.get("tokenizer.ggml.bos_token_id") is not None else ""
+    eos = 낱말[meta["tokenizer.ggml.eos_token_id"]] if 낱말 and meta.get("tokenizer.ggml.eos_token_id") is not None else ""
     qwen3 = "enable_thinking" in 틀글
-    r1 = "<｜User｜>" in 틀글 and "<｜Assistant｜>" in 틀글          # 0.12.0 12-1 — DeepSeek-R1(R1-Distill-Qwen · Llama)
-    미니 = "<tool_sep>" in 틀글                                     # 0.12.0 12-1b — MiniCPM5(XML 꼴 도구 — 서버는 아직 받지 않는다)
-    틀도구 = "tools" in 틀글
-    bos = "<|begin_of_text|>" if 라마 else "<|endoftext|>"
-    eos = "<|eot_id|>" if 라마 else "<|im_end|>"
-    낱말 = meta.get("tokenizer.ggml.tokens")                         # 0.12.0 12-1 — 틀의 bos_token · eos_token 은 GGUF 의 번호로(Qwen · Llama 3 은 위와 같다)
-    if 낱말 and meta.get("tokenizer.ggml.bos_token_id") is not None:
-        bos = 낱말[meta["tokenizer.ggml.bos_token_id"]]
-    if 낱말 and meta.get("tokenizer.ggml.eos_token_id") is not None and not 라마:
-        eos = 낱말[meta["tokenizer.ggml.eos_token_id"]]
+    꼴 = 도구꼴(틀글, meta.get("tokenizer.ggml.pre", ""), 낱말)
+    인자글 = "arguments is string" in 틀글
     env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[loopcontrols])
     env.filters["tojson"] = tojson
     env.globals["raise_exception"] = raise_exception
     틀 = env.from_string(틀글)
-    경우 = json.load(open(경우파일, encoding="utf-8"))
+    기본 = dict(add_generation_prompt=True, bos_token=bos, eos_token=eos, date_string="26 Jul 2024")
+    try:
+        시스템받음 = "GEULPU_SYSTEM_PROBE" in 틀.render(messages=[{"role": "system", "content": "GEULPU_SYSTEM_PROBE"}, {"role": "user", "content": "hi"}],
+                                                   **dict(기본, bos_token="", eos_token=""))
+    except Exception:                               # noqa: BLE001 — system 을 받지 않는 틀(Mistral v0.3)
+        시스템받음 = False
     도구표 = 경우["도구"]
     out = {}
     for c in 경우["경우"]:
         if c.get("think_only") and not qwen3:
             continue
-        kw = dict(messages=고치기(c["messages"], qwen3), add_generation_prompt=True, bos_token=bos, eos_token=eos)
-        도구말 = any(m.get("role") == "tool" or m.get("tool_calls") for m in c["messages"])
-        if r1 and (c.get("tools") or 도구말):        # 0.12.0 12-1 — 서버는 R1 의 도구 꼴(tool▁calls)을 받지 않는다(설계 — 400)
-            out[c["id"]] = {"error": "R1 틀의 도구 꼴은 서버가 받지 않는다"}
+        kw = dict(기본, messages=고치기(c["messages"], 인자글, 시스템받음))
+        도구씀 = bool(c.get("tools")) and c.get("tool_choice") != "none"
+        if 도구씀 and 꼴 == 0:                    # 서버는 그 호출 꼴을 읽지 못하는 틀의 tools 를 400 으로
+            out[c["id"]] = {"error": "이 틀의 도구 호출 꼴은 서버가 받지 않는다"}
             continue
-        if 미니 and (c.get("tools") or 도구말):      # 0.12.0 12-1b — MiniCPM5 의 XML 도구 꼴은 아직(400)
-            out[c["id"]] = {"error": "MiniCPM5 틀의 도구 꼴은 서버가 아직 받지 않는다"}
-            continue
-        if c.get("tools") and c.get("tool_choice") != "none" and not 틀도구:     # 틀에 도구가 없으면 서버는 tools 를 400 으로
-            out[c["id"]] = {"error": "이 틀은 도구를 그리지 않는다"}
-            continue
-        if c.get("tools") and c.get("tool_choice") != "none":
+        if 도구씀:
             kw["tools"] = [도구표[t] for t in c["tools"]]
-        if qwen3 and 생각끔:
+        if 생각끔:
             kw["enable_thinking"] = False
+        for k, v in (c.get("chat_template_kwargs") or {}).items():
+            if k not in ("enable_thinking", "date_string"):
+                kw[k] = v
         try:
             out[c["id"]] = 틀.render(**kw)
-        except Exception as e:                      # Llama 의 호출 둘 등 — 서버도 400 이어야 한다
+        except Exception as e:                      # noqa: BLE001 — Llama 의 호출 둘 등 — 서버도 400 이어야 한다
             out[c["id"]] = {"error": f"{type(e).__name__}: {e}"}
+    return out, 꼴, 시스템받음
+
+
+def main():
+    gguf, 경우파일, 출력 = sys.argv[1:4]
+    생각끔 = "--생각끔" in sys.argv[4:]
+    경우 = json.load(open(경우파일, encoding="utf-8"))
+    out, 꼴, 시스템받음 = 참조들(gguf, 경우, 생각끔)
     json.dump(out, open(출력, "w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
-    print(f"{len(out)} 경우 · {'llama' if 라마 else ('minicpm5' if 미니 else ('qwen3' if qwen3 else ('r1' if r1 else 'chatml')))} · 생각끔 {생각끔} → {출력}")
+    print(f"{len(out)} 경우 · 도구 꼴 {꼴} · system {'그림' if 시스템받음 else '첫 user 말에 붙임'} · 생각끔 {생각끔} → {출력}")
 
 
 if __name__ == "__main__":
