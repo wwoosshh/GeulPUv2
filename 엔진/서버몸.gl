@@ -2418,6 +2418,83 @@
     반환 없음.
 }
 
+(* 0.12.0 12-1 — DeepSeek-R1(R1-Distill-Qwen · R1-Distill-Llama) — GGUF 의 chat_template 을 jinja2 로 그린 글과 같다: bos_token, 시스템 말
+   (system 말이 여럿이면 마지막 것 — 틀의 ns.system_prompt), 메시지마다 user 는 '<｜User｜>' + content, assistant 는 '<｜Assistant｜>' +
+   (content 의 마지막 '</think>' 뒤) + '<｜end▁of▁sentence｜>'(content 가 null 이면 그리지 않는다). 끝에 '<｜Assistant｜>' — R1-Distill-Llama
+   의 틀은 '<think>\n' 까지(틀R1생각). 틀이 그리는 도구 호출 · 결과(R1 의 tool▁calls 꼴)는 받지 않는다 *)
+[제이슨 참조 메시지들을 바이트열 참조 b에 R1틀]는 -> 문자열 {
+    정수 n = 제개수(메시지들).
+    정수 시스템 = -1.
+    반복 (정수 k0는 0부터 n 전까지) {
+        제이슨 참조 m0 = 제자식(메시지들, k0).
+        m0→종류 != 6이면 { 반환 "messages 의 원소는 객체여야 한다". }
+        문자열 역할0 = 역할글(m0).
+        아닌 알려진역할(역할0)이면 { 반환 "role 은 system · developer · user · assistant 만 받는다". }
+        문자열_같은가(역할0, "tool")이면 { 반환 "DeepSeek-R1 의 채팅 틀은 도구 결과(role tool)를 받지 않는다". }
+        호출목록(m0) != 없음이면 { 반환 "DeepSeek-R1 의 채팅 틀은 도구 호출(tool_calls)을 받지 않는다". }
+        바이트열 참조 글칸0 = 바이트열_만들기().
+        문자열 틀림0 = 내용모으기(m0, 역할0, 글칸0).
+        바이트열_해제(글칸0).
+        틀림0 != 없음이면 { 반환 틀림0. }
+        문자열_같은가(역할0, "system")이면 { 시스템 = k0. }
+    }
+    시작글번호 >= 0이면 { 날글넣기(b, 토큰글[시작글번호]). }
+    시스템 >= 0이면 { 내용모으기(제자식(메시지들, 시스템), "system", b). }
+    반복 (정수 k는 0부터 n 전까지) {
+        제이슨 참조 m = 제자식(메시지들, k).
+        문자열 역할 = 역할글(m).
+        문자열_같은가(역할, "user")이면 {
+            날글넣기(b, "<｜User｜>").
+            내용모으기(m, 역할, b).
+        }
+        아니면 (문자열_같은가(역할, "assistant") 그리고 아닌 없는값인가(제찾기(m, "content")))이면 {
+            바이트열 참조 글칸 = 바이트열_만들기().
+            내용모으기(m, 역할, 글칸).
+            문자열 s = 바이트열_자료(글칸).
+            정수 길이 = 바이트열_길이(글칸).
+            정수 답a = 0.
+            정수 끝 = 마지막자리(s, 길이, "</think>").
+            끝 >= 0이면 { 답a = 끝 + 8. }                         (* content.split('</think>')[-1] *)
+            날글넣기(b, "<｜Assistant｜>").
+            바이트열_붙이기(b, s + 답a, 길이 - 답a).
+            날글넣기(b, "<｜end▁of▁sentence｜>").
+            바이트열_해제(글칸).
+        }
+    }
+    날글넣기(b, "<｜Assistant｜>").
+    틀R1생각이면 { 날글넣기(b, "<think>\n"). }
+    반환 없음.
+}
+
+(* 0.12.0 12-1 — 기본 ChatML(llama 구조 · SentencePiece 어휘 — HyperCLOVAX-SEED) — GGUF 의 chat_template 과 같은 글: 메시지마다
+   '<|im_start|>' + 역할 + '\n' + content + '<|im_end|>\n', 끝에 '<|im_start|>assistant\n'. 기본 시스템 말 · 도구 · 생각은 없다
+   (토크나이저.gl 의 기본챗ML인가). 틀이 content 만 그리므로 null content 는 받지 않는다 *)
+[제이슨 참조 메시지들을 바이트열 참조 b에 챗ML틀]는 -> 문자열 {
+    정수 n = 제개수(메시지들).
+    반복 (정수 k0는 0부터 n 전까지) {
+        제이슨 참조 m0 = 제자식(메시지들, k0).
+        m0→종류 != 6이면 { 반환 "messages 의 원소는 객체여야 한다". }
+        문자열 역할0 = 역할글(m0).
+        아닌 알려진역할(역할0)이면 { 반환 "role 은 system · developer · user · assistant · tool 만 받는다". }
+        없는값인가(제찾기(m0, "content"))이면 { 반환 "이 모델의 채팅 틀은 content 가 없는 말(null)을 받지 않는다". }
+        바이트열 참조 글칸0 = 바이트열_만들기().
+        문자열 틀림0 = 내용모으기(m0, 역할0, 글칸0).
+        바이트열_해제(글칸0).
+        틀림0 != 없음이면 { 반환 틀림0. }
+    }
+    반복 (정수 k는 0부터 n 전까지) {
+        제이슨 참조 m = 제자식(메시지들, k).
+        문자열 역할 = 역할글(m).
+        날글넣기(b, "<|im_start|>").
+        날글넣기(b, 역할).
+        날글넣기(b, "\n").
+        내용모으기(m, 역할, b).
+        날글넣기(b, "<|im_end|>\n").
+    }
+    날글넣기(b, "<|im_start|>assistant\n").
+    반환 없음.
+}
+
 (* 채팅 틀(ChatML — Qwen2.5): system 이 맨 앞에 없으면 기본 시스템 말. 37단계 — Qwen3(qwen3모델)는 GGUF 의 chat_template 과 같은 글:
    기본 시스템 말이 없고, assistant 말은 qwen3답넣기, 끝에 생각 끔(생각 = 거짓 — 요청의 chat_template_kwargs.enable_thinking)이면
    '<think>\n\n</think>\n\n'. 시험 쪽의 같은 틀은 엔진/토크나이저.py 의 채팅틀qwen3. 39단계 — Llama 3 · Mistral 은 위의 틀(날짜는 Llama 3 만) *)
@@ -2425,8 +2502,10 @@
     (메시지들 == 없음 또는 메시지들→종류 != 5)이면 { 반환 "messages 는 배열이어야 한다". }
     정수 n = 제개수(메시지들).
     n == 0이면 { 반환 "messages 가 비었다". }
-    틀모름이면 { 반환 "이 모델의 채팅 틀(GGUF 의 tokenizer.chat_template)이 GeulPU 의 Llama 3 · Mistral 틀과 달라 채팅은 아직 받지 않는다 — /v1/completions 는 된다". }
+    틀모름이면 { 반환 "이 모델의 채팅 틀(GGUF 의 tokenizer.chat_template)이 GeulPU 가 그리는 틀(ChatML · Qwen3 · Llama 3 · Mistral · DeepSeek-R1)과 달라 채팅은 아직 받지 않는다 — /v1/completions 는 된다". }
     (도구 != 없음 그리고 아닌 도구받음)이면 { 반환 "이 모델의 채팅 틀은 도구를 받지 않는다(tools — Qwen2.5 · Qwen3 · Llama 3.1 · 3.2 만)". }
+    틀R1이면 { 반환 R1틀(메시지들, b). }                          (* 0.12.0 12-1 *)
+    틀챗ML이면 { 반환 챗ML틀(메시지들, b). }                      (* 0.12.0 12-1 *)
     라마BPE이면 { 반환 라마3틀(메시지들, b, 날짜, 도구). }
     문장조각이면 { 반환 미스트랄틀(메시지들, b). }
     (* #21 — 앞뒤 말을 미리 보기 전에 모두 검사한다(Llama 3 · Mistral 틀처럼). 도구 결과 뒤의 말이 객체가 아니거나 role 이 글이 아니면

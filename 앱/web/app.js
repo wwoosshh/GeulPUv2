@@ -1287,11 +1287,12 @@ const TMX = [
   [/RoPE 늘이기\(([^)]+)\)가 들어간 Qwen2 파일은 지원하지 않습니다 — 늘이기 정보가 없는 같은 모델의 파일이면 7B 이상은 YaRN으로 131,072까지 늘입니다/g, "Qwen2 files with RoPE scaling ($1) are not supported — with the same model's file without scaling information, models of 7B and up reach 131,072 through YaRN"],
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다\(늘이기 인자는 rope_freqs 텐서로만\)/g, 'Files with RoPE scaling ($1) are not supported (scaling factors only through the rope_freqs tensor)'],
   [/전문가 섞기\(MoE — 전문가 (\d+)개\) 모델은 아직 지원하지 않습니다/g, 'Mixture-of-experts models (MoE — $1 experts) are not supported yet'],
+  [/채팅 틀이 GeulPU가 그리는 틀\(ChatML · Llama 3 · Mistral · DeepSeek-R1\)과 다른 파일입니다 — 아직 지원하지 않습니다/g, 'The chat template differs from the ones GeulPU renders (ChatML · Llama 3 · Mistral · DeepSeek-R1) — not supported yet'],
   [/채팅 틀이 Llama 3 · Mistral의 것과 다른 파일입니다\(ChatML 등을 쓰는 미세조정\) — 아직 지원하지 않습니다/g, 'The chat template differs from the Llama 3 · Mistral ones (a fine-tune using ChatML or similar) — not supported yet'],
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다/g, 'Files with RoPE scaling ($1) are not supported'],
   [/지원하지 않는 모델 크기입니다\(너비 (\d+) · 헤드 (\d+) · KV 헤드 (\d+) · FFN (\d+)\) — 헤드 크기 128인 모델\(Qwen2 1\.5B 이상 · Qwen3 · Llama 3\.x · Mistral 등\)만 지원합니다/g, 'Unsupported model size (hidden $1 · heads $2 · KV heads $3 · FFN $4) — only models with head size 128 (Qwen2 1.5B and up · Qwen3 · Llama 3.x · Mistral and the like) are supported'],
   [/지원하지 않는 토크나이저입니다\((.*?)\) — gpt2\(바이트 BPE\)와 llama\(SentencePiece\)만 지원합니다/g, 'Unsupported tokenizer ($1) — only gpt2 (byte-level BPE) and llama (SentencePiece) are supported'],
-  [/지원하지 않는 토크나이저 사전 처리입니다\((.*?)\) — qwen2 · deepseek-r1-qwen · llama-bpe만 지원합니다/g, 'Unsupported tokenizer pre-processing ($1) — only qwen2 · deepseek-r1-qwen · llama-bpe are supported'],
+  [/지원하지 않는 토크나이저 사전 처리입니다\((.*?)\) — qwen2 · deepseek-r1-qwen · llama-bpe · dbrx만 지원합니다/g, 'Unsupported tokenizer pre-processing ($1) — only qwen2 · deepseek-r1-qwen · llama-bpe · dbrx are supported'],
   [/지원하지 않는 GGUF 버전입니다\((\d+)\) — 버전 3만 지원합니다/g, 'Unsupported GGUF version ($1) — only version 3 is supported'],
   [/GGUF 헤더를 끝까지 읽지 못했습니다\(파일이 잘렸거나 손상됨\)/g, 'Could not read the whole GGUF header (the file is truncated or damaged)'],
   [/GGUF 헤더가 손상되었습니다/g, 'The GGUF header is damaged'],
@@ -1949,6 +1950,8 @@ async function checkUpdate() {
 // ---------- 채팅 ----------
 const R1_BOS = '<｜begin▁of▁sentence｜>', R1_USER = '<｜User｜>', R1_ASSIST = '<｜Assistant｜>', R1_EOS = '<｜end▁of▁sentence｜>';
 const THINK_END_ID = 151649;   // R1-Distill-Qwen 의 </think> — GGUF 토큰 종류 4(사용자 정의). 서버는 글로 내지 않는다.
+// 0.12.0 12-1 — 모델의 </think> 번호(모델 확인이 어휘에서 찾는다 — R1-Distill-Llama 는 128014). 없으면 R1-Distill-Qwen 의 번호
+const thinkEndId = id => { const s = (modelOf(id) || {}).shape; return s && s.think_end_id >= 0 ? s.think_end_id : THINK_END_ID; };
 const OPT = Object.assign({ temp: 0, max: 4096, system: '', think: true, compact: true }, load('geulpu.opt', {}));
 function saveRooms() { store('geulpu.rooms', S.rooms); store('geulpu.room', S.roomId); }
 function curRoom() { return S.rooms.find(r => r.id === S.roomId) || null; }
@@ -3343,7 +3346,7 @@ async function streamReply(asst, room, url, body, opt) {
   if (opt.onPaint) opt.onPaint(pieces);
   delete asst.partial;
   asst.finish = finish;
-  if (tpl === 'deepseek-r1' && gp && Array.isArray(gp.tokens) && gp.tokens.includes(THINK_END_ID)) asst.thinkEnded = true;
+  if (tpl === 'deepseek-r1' && gp && Array.isArray(gp.tokens) && gp.tokens.includes(thinkEndId(asst.model || room.model))) asst.thinkEnded = true;
   const n = (usage && usage.completion_tokens) || (gp && gp.tokens && gp.tokens.length) || 0;
   // 서버의 generate_us 는 첫 토큰 뒤의 모든 걸음 — 멈춘 EOS 를 뽑은 걸음까지(gp.tokens 에는 있고 completion_tokens 에는 없다). 연구 패널과 같은 셈
   const steps = (gp && Array.isArray(gp.tokens) ? gp.tokens.length : n) - 1;
