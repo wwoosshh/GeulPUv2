@@ -164,8 +164,8 @@ fastest speculative setting — with bit-identical output. Every measurement, wi
 
 Head sizes 64 · 96 · 128 are accepted, including models that apply RoPE to only part of each head. Fine-tunes of these models run too — the server runs each model file's own chat template with a jinja interpreter that matches
 transformers byte for byte. Qwen2.5 (7B and larger) and Qwen3 take up to 131,072 tokens of context
-with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT — on AMD's
-Windows driver only Q8_0 and Q4_0 files run for now). Releases are built for Windows x64; on Linux GeulPU builds from source (tested
+with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT — on GPUs
+with 32 KB of shared memory, such as AMD's Windows driver, F16 · BF16 · F32 files don't run yet). Releases are built for Windows x64; on Linux GeulPU builds from source (tested
 under WSL2). Not yet: other architectures (Gemma, Phi, …), mixture-of-experts models, image input, Q2_K · Q3_K · IQ formats other
 than IQ4_XS (which runs on CUDA), macOS ([details](docs/user-guide.md#supported-models)).
 
