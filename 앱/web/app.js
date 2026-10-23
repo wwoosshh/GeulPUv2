@@ -186,7 +186,6 @@ const DICT = {
   "모델 보기": "View models",
   "먼저 모델이 필요합니다": "First, you need a model",
   "이 PC에는 {} {}({}) 모델을 추천합니다.": "For this PC we recommend {} {} ({}).",
-  "이 GPU(공유 메모리 32 KB)는 가중치가 모두 Q8_0이거나 모두 Q4_0인 파일만 실행합니다. 목록의 Q8_0 7B는 그래픽 메모리가 10 GB 이상 필요하고(이 PC {}), 흔한 Q4_0 파일은 출력 가중치가 Q6_K라 아직 받지 않습니다. 지금은 이 PC에서 실행할 수 있는 파일이 없습니다.": "This GPU (32 KB of shared memory) only runs files whose weights are all Q8_0 or all Q4_0. The Q8_0 7B files in the list need 10 GB of graphics memory or more (this PC: {}), and common Q4_0 files keep the output weights in Q6_K, which is not supported yet. No file in the list runs on this PC right now.",
   "목록의 모델 가운데 이 PC의 그래픽 메모리({})에 맞는 것이 없습니다. Hugging Face에서 더 작은 파일을 찾아볼 수 있습니다 — 받기 전에 실행되는지 확인합니다.": "None of the listed models fit this PC's graphics memory ({}). You can look for smaller files on Hugging Face — GeulPU checks that a file runs before downloading it.",
   "추천 모델 다운로드": "Download the recommended model",
   "모델 찾기": "Find models",
@@ -691,19 +690,19 @@ const DICT = {
   "자동 — 브라우저 언어": "Auto — browser language",
   "재현성 검증의 기준 모델입니다. 수학 문제 32개의 출력이 기준 PC(NVIDIA · CUDA)와 비트 단위로 같은지 확인할 수 있습니다. 답하기 전에 생각 과정(<think>)을 길게 쓰는 추론 모델입니다.": "The reference model of the reproducibility check. You can check that its outputs on 32 math problems are bit-identical to the reference PC (NVIDIA · CUDA). A reasoning model that writes a long thought process (<think>) before answering.",
   "한국어 · 영어 일반 대화 모델입니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A general chat model for Korean and English. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD etc.). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "4비트 k-양자화 파일이라 VRAM 8 GB급 GPU에서도 실행됩니다. k-양자화 모델은 CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다(AMD는 아직 지원하지 않음). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file, so it also runs on GPUs with about 8 GB of VRAM. k-quant models run on CUDA or on Vulkan GPUs with 48 KB or more of shared memory (AMD is not supported yet). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "추론 모델의 4비트 k-양자화 파일입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file of the reasoning model. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "4비트 k-양자화 파일이라 VRAM 8 GB급 GPU에서도 실행됩니다. k-양자화 모델은 CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file, so it also runs on GPUs with about 8 GB of VRAM. k-quant models run on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "추론 모델의 4비트 k-양자화 파일입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file of the reasoning model. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
   "코드 작성 · 설명에 맞춘 모델입니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A model tuned for writing and explaining code. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "14B 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "14B 추론 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B reasoning model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "14B 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "14B 추론 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B reasoning model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
   "Qwen3 대화 모델입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정의 '생각 과정 쓰기'를 끄면 바로 답합니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행되지만 그래픽 메모리가 16 GB 이상이어야 합니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A Qwen3 chat model. It writes a thought process before answering; turn off 'Thinking' in the generation settings to get the answer directly. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD etc.), but it needs 16 GB or more of graphics memory. This file was run and checked on CUDA (RTX 4070 Ti) and Vulkan (2026-10-15).",
-  "Qwen3-8B의 작은 파일입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A smaller file of Qwen3-8B. It writes a thought process before answering, which you can turn off in the generation settings. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) and Vulkan (2026-10-15).",
+  "Qwen3-8B의 작은 파일입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A smaller file of Qwen3-8B. It writes a thought process before answering, which you can turn off in the generation settings. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) and Vulkan (2026-10-15).",
   "작은 Qwen3 모델입니다(1.8 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 에뮬레이션한 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A small Qwen3 model (1.8 GB). It runs even on PCs with little graphics memory. It writes a thought process, which you can turn off in the generation settings. This file was run and checked on CUDA (RTX 4070 Ti), Vulkan, and Vulkan emulating the limits of a 32 KB shared-memory device (2026-10-15).",
   "14B Qwen3 모델입니다. 이 모양(너비 5120 · 헤드 40/8 · FFN 17408)은 같은 모양의 합성 모델로 출력이 비트 단위로 맞는지 확인했지만, 이 파일로는 아직 실행해 보지 않았습니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다.": "A 14B Qwen3 model. This shape (hidden 5120 · heads 40/8 · FFN 17408) was checked for bit-exact output with a synthetic model of the same shape, but this file has not been run yet. The engine reduces the context length automatically to fit the graphics memory.",
-  "Meta의 Llama 3.1 대화 모델(4비트 k-양자화)입니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.1 커뮤니티 라이선스를 따릅니다 — 사용 조건과 이용 정책(Acceptable Use Policy)이 있고, 월 사용자 7억 명이 넘는 서비스는 Meta의 허가가 필요합니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Meta's Llama 3.1 chat model (4-bit k-quant). Korean is not among its officially supported languages (English and seven others). It follows the Llama 3.1 Community License — there are usage conditions and an Acceptable Use Policy, and services with more than 700 million monthly users need permission from Meta. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
+  "Meta의 Llama 3.1 대화 모델(4비트 k-양자화)입니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.1 커뮤니티 라이선스를 따릅니다 — 사용 조건과 이용 정책(Acceptable Use Policy)이 있고, 월 사용자 7억 명이 넘는 서비스는 Meta의 허가가 필요합니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Meta's Llama 3.1 chat model (4-bit k-quant). Korean is not among its officially supported languages (English and seven others). It follows the Llama 3.1 Community License — there are usage conditions and an Acceptable Use Policy, and services with more than 700 million monthly users need permission from Meta. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
   "Llama 3.1 대화 모델의 Q8_0 파일입니다. Llama 3.1 커뮤니티 라이선스(사용 조건 · 이용 정책)를 따릅니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했고, 같은 글의 모든 토큰에서 다음 토큰 확률이 llama.cpp와 거의 같음(평균 KL 0.0004 이하)을 확인했습니다(2026-10-16).": "The Q8_0 file of the Llama 3.1 chat model. It follows the Llama 3.1 Community License (usage conditions · Acceptable Use Policy). As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD and others). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan, and its next-token probabilities on every token of the same text were checked to be nearly the same as llama.cpp's (mean KL 0.0004 or less) (2026-10-16).",
   "작은 Llama 3.2 대화 모델입니다(3.4 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.2 커뮤니티 라이선스(사용 조건 · 이용 정책)를 따릅니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 에뮬레이션한 Vulkan에서 실행을 확인했습니다(2026-10-16).": "A small Llama 3.2 chat model (3.4 GB). It runs on PCs with little graphics memory too. Korean is not among its officially supported languages (English and seven others). It follows the Llama 3.2 Community License (usage conditions · Acceptable Use Policy). This file was checked to run on CUDA (RTX 4070 Ti) · Vulkan · Vulkan emulating the limits of a device with 32 KB of shared memory (2026-10-16).",
-  "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 템플릿에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Mistral AI's Mistral 7B Instruct v0.3 (4-bit k-quant). Its chat template has no system role, so the system prompt is put in front of the first question. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
+  "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 템플릿에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Mistral AI's Mistral 7B Instruct v0.3 (4-bit k-quant). Its chat template has no system role, so the system prompt is put in front of the first question. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
   "Mistral 7B Instruct v0.3의 Q8_0 파일입니다. 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했고, 같은 글의 모든 토큰에서 다음 토큰 확률이 llama.cpp와 거의 같음을 확인했습니다(2026-10-16).": "The Q8_0 file of Mistral 7B Instruct v0.3. The system prompt is put in front of the first question. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD and others). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan, and its next-token probabilities on every token of the same text were checked to be nearly the same as llama.cpp's (2026-10-16).",
   "Hugging Face에서 고른 파일 — 받기 전에 GGUF 헤더로 GeulPU가 지원하는 구조인지 확인했습니다.": "A file picked from Hugging Face — its GGUF header was checked before downloading to confirm GeulPU accepts its shape.",
   "Hugging Face에서 고른 파일 — 받기 전에 GGUF 머리로 GeulPU가 받는 모양인지 확인했습니다.": "A file picked from Hugging Face — its GGUF header was checked before downloading to confirm GeulPU accepts its shape.",   // 0.6.0 까지 모델 목록에 적힌 옛 글
@@ -1309,7 +1308,7 @@ const TMX = [
   [/지원하지 않는 가중치 형식입니다\((.+?)\) — Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS만 지원합니다/g, 'Unsupported weight format ($1) — only Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS are supported'],
   [/IQ4_XS 파일은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\. 같은 모델의 Q4_K_M · Q8_0 파일은 Vulkan에서도 실행됩니다\./g, "IQ4_XS files run only on CUDA (NVIDIA GPUs) for now. The same model's Q4_K_M · Q8_0 files also run on Vulkan."],
   [/GeulPU가 지원하지 않는 파일입니다/g, "GeulPU doesn't support this file"],
-  [/이 GPU에서는 Q4_K_M 같은 k-양자화 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_0 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run k-quant files such as Q4_K_M yet. The same model's Q8_0 · Q4_0 files run (a limit of GPUs with 32 KB of shared memory)."],
+  [/이 GPU에서는 이 파일을 아직 실행할 수 없습니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run this file yet (a limit of GPUs with 32 KB of shared memory)."],
   // 받기
   [/ — 다시 누르면 이어서 받습니다/g, ' — click again to resume'],
   [/요청을 열지 못했습니다\(오류 (\d+)\)/g, 'Could not open the request (error $1)'],
@@ -1799,12 +1798,14 @@ function pathLabel(l) {
 }
 // 10B 이상이면 문맥 · 작업 메모리를 더 크게 어림한다(목록의 "14B" · Hugging Face 에서 더한 "14.8B" 모두)
 const isBig = c => { const p = parseFloat(String(c.params || '').replace(/[^\d.]/g, '')); return p >= 10 || (!(p > 0) && /\b(1[0-9]|[2-9]\d)b\b/i.test(c.id || '')); };
+// 파일 이름의 형식 → 도는 장치(목록의 devices 와 같은 값): IQ4_XS 는 CUDA 만, F16 · BF16 · F32 는 공유 메모리 32 KB GPU 밖, 나머지는 어디서나
+const devicesOfQuant = q => q === 'IQ4_XS' ? 'cuda' : /F16|F32/.test(q) ? 'w16' : /K/.test(q) ? 'k' : 'all';
 // 이 PC 의 그래픽 메모리에 맞는가(목록의 크기 + 문맥 · 작업 메모리 어림)
 function fitOf(c) {
   const d = S.st && S.st.device;
   if (!d || !d.checked) return null;
   if (!d.layer) return { k: 'nogpu', t: T('쓸 수 있는 GPU 없음') };
-  if (c.devices === 'k' && d.layer === 'vulkan' && d.variant === '공유32') return { k: 'unsup', t: T('이 GPU 미지원') };
+  if (c.devices === 'w16' && d.layer === 'vulkan' && d.variant === '공유32') return { k: 'unsup', t: T('이 GPU 미지원') };    // 0.12.0 12-4 — k-양자화는 공유 32 KB 에서도, F16 · BF16 · F32 는 아직
   if (c.devices === 'cuda' && d.layer === 'vulkan') return { k: 'unsup', t: T('이 GPU 미지원') };      // 1.0.0 1-6c — IQ4_XS 는 CUDA 먼저
   const big = isBig(c);
   const mem = d.memory / GIB, size = c.size / GIB;
@@ -2798,17 +2799,15 @@ function renderMsgs() {
       actions = h('div', { class: 'row mt24' }, h('button', { class: 'btn', onclick: () => show('models') }, I('box', 's'), T('모델 보기')));
     } else {
       title = T('먼저 모델이 필요합니다');
-      // 맞는 것이 없을 때 — 공유 메모리 32 KB GPU(AMD 등)는 형식 제약까지 그대로 밝힌다(흔한 Q4_0 파일도 출력이 Q6_K 라 아직 받지 않음)
+      // 맞는 것이 없을 때(0.12.0 12-4 — 공유 메모리 32 KB GPU 도 k-양자화를 돌려 형식 제약을 따로 밝히지 않는다)
       lede = recC ? T`이 PC에는 ${recC.name} ${recC.quant}(${fmtBytes(recC.size)}) 모델을 추천합니다.`
-        : st.device.variant === '공유32' ? T`이 GPU(공유 메모리 32 KB)는 가중치가 모두 Q8_0이거나 모두 Q4_0인 파일만 실행합니다. 목록의 Q8_0 7B는 그래픽 메모리가 10 GB 이상 필요하고(이 PC ${fmtBytes(st.device.memory)}), 흔한 Q4_0 파일은 출력 가중치가 Q6_K라 아직 받지 않습니다. 지금은 이 PC에서 실행할 수 있는 파일이 없습니다.`
-          : T`목록의 모델 가운데 이 PC의 그래픽 메모리(${fmtBytes(st.device.memory)})에 맞는 것이 없습니다. Hugging Face에서 더 작은 파일을 찾아볼 수 있습니다 — 받기 전에 실행되는지 확인합니다.`;
+        : T`목록의 모델 가운데 이 PC의 그래픽 메모리(${fmtBytes(st.device.memory)})에 맞는 것이 없습니다. Hugging Face에서 더 작은 파일을 찾아볼 수 있습니다 — 받기 전에 실행되는지 확인합니다.`;
       actions = h('div', { class: 'col g0' },
         recDl ? dlBox(recC) : null,
         h('div', { class: 'row mt24' },
           recC && !recC.installed && !recDl ? h('button', { class: 'btn primary needs-conn', onclick: () => startDownload(recC) }, I('download', 's'), T('추천 모델 다운로드')) : null,
-          !recC && st.device.variant !== '공유32' ? h('button', { class: 'btn primary needs-conn', onclick: openHfSearch }, I('search', 's'), T('모델 찾기')) : null,
+          !recC ? h('button', { class: 'btn primary needs-conn', onclick: openHfSearch }, I('search', 's'), T('모델 찾기')) : null,
           !recC ? h('button', { class: 'btn needs-conn', onclick: () => browse('') }, I('plus', 's'), T('GGUF 파일 추가')) : null,
-          !recC && st.device.variant === '공유32' ? h('button', { class: 'btn ghost', onclick: () => show('device') }, I('cpu', 's'), T('하드웨어 보기')) : null,
           recC ? h('button', { class: 'btn' + (!recDl ? ' ghost' : ''), onclick: () => show('models') }, recDl ? T('다운로드 진행 보기') : T('모델 둘러보기')) : null));
     }
     put(box, h('div', { class: 'hello' }, head, h('h1', null, title), lede ? h('p', null, lede) : null, actions));
@@ -4301,7 +4300,7 @@ function fdDetail(repo) {
 function fdBest(rows, sup) {
   if (sup.k === 'arch' || sup.k === 'size' || sup.k === 'task') return null;
   const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOk(q) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
-  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: q === 'IQ4_XS' ? 'cuda' : /K/.test(q) ? 'k' : 'all' }); };
+  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: devicesOfQuant(q) }); };
   const good = ok.filter(f => { const t = fit(f); return t && t.k === 'ok'; });
   if (good.length) return good.find(f => quantFromName(f.path) === 'Q4_K_M') || good.sort((a, b) => b.size - a.size)[0];
   const tight = ok.filter(f => { const t = fit(f); return t && t.k === 'tight'; }).sort((a, b) => a.size - b.size);
@@ -4323,7 +4322,7 @@ function fdFileRow(repo, f, sup, best, m) {
   const c = fdCat(repo).find(x => (x.url || '') === `${HFHOST}/${repo}/resolve/main/${f.path}` || (x.file || '').toLowerCase() === name.toLowerCase());
   const mdl = c && c.installed ? modelOf(c.installed) : st.models.find(x => x.path && x.path.toLowerCase().endsWith('\\' + name.toLowerCase()));
   const ds = c ? dlStateOf(c) : null;
-  const fit = fitOf({ size: f.size, params: '', id: repo, devices: c && c.devices ? c.devices : (/K/.test(q) ? 'k' : 'all') });
+  const fit = fitOf({ size: f.size, params: '', id: repo, devices: c && c.devices ? c.devices : devicesOfQuant(q) });
   let why = '';
   if (sup.k === 'arch') why = T('지원하지 않는 구조');
   else if (sup.k === 'size') why = T('아직 미지원 크기');

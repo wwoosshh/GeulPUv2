@@ -381,8 +381,9 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 - **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (their tekken tokenizer), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …), llama-architecture
   fine-tunes with other chat templates (ChatML, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0 · F16 · BF16. Find models hides such files by
   default.
-- **Depending on the GPU**: k-quants (Q4_K_M, …) run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. With AMD's
-  Windows driver (32 KB of shared memory) only Q8_0 (and Q4_0) files run for now. IQ4_XS runs only on CUDA (NVIDIA GPUs) for now.
+- **Depending on the GPU**: k-quants (Q4_K_M, …) run on CUDA and on Vulkan GPUs, since 0.11.1 also on GPUs with 32 KB of shared
+  memory such as AMD's Windows driver (there the 256-column tile kernels don't fit, so long prompts are slower). IQ4_XS runs only on
+  CUDA (NVIDIA GPUs) for now.
 
 ### Which model fits your PC
 

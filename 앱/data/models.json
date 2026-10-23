@@ -45,7 +45,7 @@
       "license": "Apache-2.0",
       "check": "tested",
       "devices": "k",
-      "note": "4비트 k-양자화 파일이라 VRAM 8 GB급 GPU에서도 실행됩니다. k-양자화 모델은 CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다(AMD는 아직 지원하지 않음). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
+      "note": "4비트 k-양자화 파일이라 VRAM 8 GB급 GPU에서도 실행됩니다. k-양자화 모델은 CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
     },
     {
       "id": "deepseek-r1-distill-qwen-7b-q4_k_m",
@@ -60,7 +60,7 @@
       "license": "MIT",
       "check": "tested",
       "devices": "k",
-      "note": "추론 모델의 4비트 k-양자화 파일입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
+      "note": "추론 모델의 4비트 k-양자화 파일입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
     },
     {
       "id": "qwen2.5-coder-7b-instruct-q8_0",
@@ -90,7 +90,7 @@
       "license": "Apache-2.0",
       "check": "tested",
       "devices": "k",
-      "note": "14B 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
+      "note": "14B 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
     },
     {
       "id": "deepseek-r1-distill-qwen-14b-q4_k_m",
@@ -105,7 +105,7 @@
       "license": "MIT",
       "check": "tested",
       "devices": "k",
-      "note": "14B 추론 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
+      "note": "14B 추론 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15)."
     },
     {
       "id": "qwen3-8b-q8_0",
@@ -135,7 +135,7 @@
       "license": "Apache-2.0",
       "check": "tested",
       "devices": "k",
-      "note": "Qwen3-8B의 작은 파일입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15)."
+      "note": "Qwen3-8B의 작은 파일입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15)."
     },
     {
       "id": "qwen3-1.7b-q8_0",
@@ -180,7 +180,7 @@
       "license": "Llama 3.1 Community License",
       "check": "tested",
       "devices": "k",
-      "note": "Meta의 Llama 3.1 대화 모델(4비트 k-양자화)입니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.1 커뮤니티 라이선스를 따릅니다 — 사용 조건과 이용 정책(Acceptable Use Policy)이 있고, 월 사용자 7억 명이 넘는 서비스는 Meta의 허가가 필요합니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16)."
+      "note": "Meta의 Llama 3.1 대화 모델(4비트 k-양자화)입니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.1 커뮤니티 라이선스를 따릅니다 — 사용 조건과 이용 정책(Acceptable Use Policy)이 있고, 월 사용자 7억 명이 넘는 서비스는 Meta의 허가가 필요합니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16)."
     },
     {
       "id": "llama-3.1-8b-instruct-q8_0",
@@ -225,7 +225,7 @@
       "license": "Apache-2.0",
       "check": "tested",
       "devices": "k",
-      "note": "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 템플릿에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16)."
+      "note": "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 템플릿에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16)."
     },
     {
       "id": "mistral-7b-instruct-v0.3-q8_0",

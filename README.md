@@ -162,8 +162,8 @@ fastest speculative setting — with bit-identical output. Every measurement, wi
 | `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 | same |
 
 Fine-tunes of these models with the same chat template run too. Qwen2.5 (7B and larger) and Qwen3 take up to 131,072 tokens of context
-with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT — on AMD's
-Windows driver only Q8_0 and Q4_0 files run for now). Releases are built for Windows x64; on Linux GeulPU builds from source (tested
+with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT; since 0.11.1
+k-quant files also run on GPUs with 32 KB of shared memory, such as AMD's Windows driver). Releases are built for Windows x64; on Linux GeulPU builds from source (tested
 under WSL2). Not yet: other architectures (Gemma, Phi, …), mixture-of-experts models, image input, F16 / BF16 and Q2_K · Q3_K · IQ
 formats other than IQ4_XS (which runs on CUDA), macOS ([details](docs/user-guide.md#supported-models)).
 
