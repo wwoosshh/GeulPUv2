@@ -583,6 +583,7 @@ const DICT = {
   "다시 불러오는 중": "Reloading",
   "정밀도 계약 그대로 — 연구 · 검증용. 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다": "The precision contract as written — for research and verification. With the same model file, bit-identical on any PC or GPU (NVIDIA · AMD)",
   "Vulkan 장치는 늘 정밀로 셉니다": "Vulkan devices always compute in Exact",
+  "Qwen3.5는 아직 정밀로만 셉니다": "Qwen3.5 computes in Exact only for now",
   "활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다": "8-bit activations (llama.cpp class) — faster prompts. Reproducible bit for bit with the same settings, but answers can differ from Exact",
   "바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다": "Switching reloads the loaded model in that mode",
   "다음에 모델을 불러올 때 적용합니다": "Applies the next time a model is loaded",
@@ -1760,8 +1761,10 @@ const modeOfTrace = tr => tr ? { p: tr.precision || 'exact', kv8: !!tr.kv8, f2: 
 const modeOfMsg = m => m.mode || (m.tid && TRACES[m.tid] ? modeOfTrace(TRACES[m.tid]) : null);
 // 0.12.0 12-3d-1 — 계산 방식 설정은 둘: 양자화 파일(precision — 기본 빠름)과 F16 · BF16 · F32 파일(precision_unquantized — 기본 정밀)
 const unquant = m => !!(m && m.shape && m.shape.quant === 'W16');
+// 0.12.0 12-3f-2 — Qwen3.5(qwen35)는 아직 정밀만(빠른 모드의 모듈 · 검증은 뒤에)
+const exactOnly = m => !!(m && m.shape && m.shape.arch === 'qwen35');
 const precKey = m => unquant(m) ? 'precision_unquantized' : 'precision';
-const precSet = (m, set) => unquant(m) ? (set.precision_unquantized || 'exact') : (set.precision || 'fast');
+const precSet = (m, set) => exactOnly(m) ? 'exact' : unquant(m) ? (set.precision_unquantized || 'exact') : (set.precision || 'fast');
 // 계산 방식 칩이 가리키는 모델 — 올라 있거나 올리는 중인 모델, 없으면 지금 채팅의 모델
 function modeModel() {
   const sv = S.st.server;
@@ -2210,13 +2213,13 @@ $('#mode-chip').addEventListener('click', e => {
   const why = modeBlock(), loaded = st.server.state === 'ready';
   const opt = (p, title, sub) => h('button', {
     class: 'opt mode' + (next === p ? ' sel' : ''), role: 'menuitemradio', 'aria-checked': next === p ? 'true' : 'false',
-    disabled: (why || (vk && p === 'fast')) ? true : null, onclick: () => { if (next === p && cur.p === p) closePop(); else setMode(p); },
+    disabled: (why || ((vk || exactOnly(mm)) && p === 'fast')) ? true : null, onclick: () => { if (next === p && cur.p === p) closePop(); else setMode(p); },
   }, h('span', { class: 'main' }, h('div', { class: 't' }, title), h('div', { class: 's' }, sub)), next === p ? I('check', 's') : null);
   const set = st.settings || {};
   const body = [
     h('div', { class: 'pop-title' }, T('계산 방식')),
     opt('exact', T('정밀'), T('정밀도 계약 그대로 — 연구 · 검증용. 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다')),
-    opt('fast', T('빠름'), vk ? T('Vulkan 장치는 늘 정밀로 셉니다') : T('활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')),
+    opt('fast', T('빠름'), vk ? T('Vulkan 장치는 늘 정밀로 셉니다') : exactOnly(mm) ? T('Qwen3.5는 아직 정밀로만 셉니다') : T('활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')),
     h('div', { class: 'pop-note' }, why || (loaded ? T('바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다') : T('다음에 모델을 불러올 때 적용합니다'))),
     !vk && unquant(mm) ? h('div', { class: 'pop-note' }, T('F16 · BF16 · F32 파일의 계산 방식은 따로 기억합니다 — 기본은 정밀')) : null,
   ];

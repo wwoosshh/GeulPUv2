@@ -10,6 +10,14 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ### Added
 
+- **Qwen3.5** (architecture `qwen35` — checked with the 0.8B Q8_0 and 4B Q4_K_M files). Every fourth layer is full attention with head
+  size 256 (RoPE on the first 64 dimensions, q · k RMSNorm and a sigmoid output gate); the others are linear attention — a gated delta
+  net: a short causal convolution, L2-normalized q and k, and a 128 × 128 state per head updated token by token. Both are written into
+  the precision contract (sections 4.9 · 4.10 — the recurrence is a fixed chain of fp32 fused multiply-adds, so a prompt in one piece,
+  in chunks or one token at a time gives the same bits). The engine's logits equal the CPU reference bit for bit on both files, and the
+  contract's loss against the fp64 model is 1/5,400 of llama.cpp's (0.8B). The KV cache holds only the attention layers (a quarter of
+  them); each slot keeps its own linear-attention state. For now: CUDA and Exact mode only, no speculative decoding or context store for
+  this model, and a slot reuses its cache only when the new prompt continues everything the slot holds.
 - **DeepSeek-R1-Distill-Llama.** Llama-architecture models with DeepSeek-R1's chat template now load and chat. The server renders the
   DeepSeek-R1 template exactly as the GGUF's `chat_template` does under jinja2 (the BOS text, the last system message, `<｜User｜>` and
   `<｜Assistant｜>` turns with earlier answers cut after their last `</think>`, and the `<think>\n` generation prompt of the Llama-based
