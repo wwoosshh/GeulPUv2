@@ -376,7 +376,6 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 
 | Architecture | Models | Sizes |
 |---|---|---|
-<<<<<<< HEAD
 | qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 1.5B and up (head size 128) — 1.5B · 3B · 7B · 14B run on this project's PC |
 | qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 4B · 8B run on this project's PC (14B on a synthetic model) |
 | llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | 1.5B · 2B · 3B · 7B · 8B — 70B checked as a shape with a synthetic model |
