@@ -1053,3 +1053,133 @@ def 임베딩K(w, ids):
     if 형식 == "IQ4_XS":
         return 곱(qq, np.repeat(a[ids], 32, axis=1))
     return 빼기(곱(qq, np.repeat(a[ids], 32, axis=1)), np.repeat(b[ids], 32, axis=1))
+
+
+# ── 0.12.0 12-3e — Qwen3.5(구조 qwen35)의 새 연산: 출력 게이트(계약 4.9) · 선형 어텐션 GDN(계약 4.10 — 문서/블록조합.md) ─────────────
+로그상수 = {"ln2_hi": "0.69313812255859375", "ln2_lo": "0.0000090580006144591607153415679931640625",
+          "Lp1": "0.666666686534881591796875", "Lp2": "0.4000000059604644775390625", "Lp3": "0.2857142984867095947265625",
+          "Lp4": "0.22222198545932769775390625", "Lp5": "0.18183572590351104736328125", "Lp6": "0.15313838422298431396484375",
+          "Lp7": "0.14798198640346527099609375", "루트2": "1.41421353816986083984375"}
+_L = {n: f32(float(v)) for n, v in 로그상수.items()}
+눈금128 = f32(0.088388346135616302490234375)                  # fp32(1/√128) — 0x3DB504F3
+
+
+def 시그모이드(x):
+    """계약 4.9 — σ(x): e = 적힌지수(0 − |x|), x ≥ 0 이면 1 / (1 + e), 아니면 e / (1 + e)(연산마다 IEEE 반올림 — 규칙 R)."""
+    x = np.asarray(x, f32)
+    e = 적힌지수(빼기(f32(0), np.abs(x)))
+    d = 더(f32(1), e)
+    return np.where(버림(x) >= 0, 나눔(f32(1), d), 나눔(e, d)).astype(f32)
+
+
+def 실루(x):
+    """SiLU(x) — swiglu 의 s 와 같은 식(계약 4.3): e = 적힌지수(0 − |x|), x ≥ 0 이면 x / (1 + e), 아니면 (x · e) / (1 + e)."""
+    x = np.asarray(x, f32)
+    e = 적힌지수(빼기(f32(0), np.abs(x)))
+    d = 더(f32(1), e)
+    return np.where(버림(x) >= 0, 나눔(x, d), 나눔(곱(x, e), d)).astype(f32)
+
+
+def 로그1p(x):
+    """계약 4.10 — log(1 + x), 0 ≤ x ≤ 1(fdlibm s_log1pf.c 의 식을 이 구간으로 줄인 것): u = 1 + x, c = x − (u − 1)(u 의 반올림 오차 — 정확),
+    u ≥ fp32(√2) 이면 k = 1 · m = u · 0.5, 아니면 k = 0 · m = u(정확), f = m − 1(정확), s = f / (2 + f), z = s · s, hfsq = (0.5 · f) · f,
+    t = 곱해더하기(Lp7, z, Lp6) → … → 곱해더하기(t, z, Lp1), R = z · t, 보정 = (k ? ln2_lo : 0) + c / u,
+    결과 = (k ? ln2_hi : 0) − ((hfsq − (s · (hfsq + R) + 보정)) − f) — 연산마다 IEEE 반올림(규칙 R)."""
+    x = np.asarray(x, f32)
+    u = 더(f32(1), x)
+    c = 빼기(x, 빼기(u, f32(1)))
+    k1 = 버림(u) >= _L["루트2"]
+    m = np.where(k1, 곱(u, f32(0.5)), u).astype(f32)
+    f = 빼기(m, f32(1))
+    s = 나눔(f, 더(f32(2), f))
+    z = 곱(s, s)
+    hfsq = 곱(곱(f32(0.5), f), f)
+    t = fma32(_L["Lp7"], z, _L["Lp6"])
+    for n in ("Lp5", "Lp4", "Lp3", "Lp2", "Lp1"):
+        t = fma32(t, z, _L[n])
+    R = 곱(z, t)
+    보정 = 더(np.where(k1, _L["ln2_lo"], f32(0)).astype(f32), 나눔(c, u))
+    안 = 빼기(hfsq, 더(곱(s, 더(hfsq, R)), 보정))
+    return 빼기(np.where(k1, _L["ln2_hi"], f32(0)).astype(f32), 빼기(안, f))
+
+
+def 소프트플러스(u):
+    """계약 4.10 — softplus(u) = max(u, 0) + log1p(e^(−|u|)): e = 적힌지수(0 − |u|), L = 로그1p(e), u > 0 이면 u + L, 아니면 L."""
+    u = np.asarray(u, f32)
+    L = 로그1p(적힌지수(빼기(f32(0), np.abs(u))))
+    return np.where(버림(u) > 0, 더(u, L), L).astype(f32)
+
+
+def _가닥합(x):
+    """rms정규화 의 합 S — 가닥 t(0 … 255)의 부분합 p_t = Σ_{c ≡ t (mod 256), c 오름차순} x_c · x_c, 128 부터 반씩 접기. x [행][D] → [행]."""
+    R, D = x.shape
+    p = np.zeros((R, 256), f32)
+    with np.errstate(over="ignore"):
+        for c0 in range(0, D, 256):
+            b = x[:, c0:c0 + 256]
+            n = b.shape[1]
+            p[:, :n] = 더(p[:, :n], 곱(b, b))
+    접기 = 128
+    while 접기 > 0:
+        p[:, :접기] = 더(p[:, :접기], p[:, 접기:2 * 접기])
+        접기 //= 2
+    return p[:, 0]
+
+
+def L2정규화(x, eps, hd=128):
+    """계약 4.10 3 — 헤드(hd 칸)마다 x / max(‖x‖, eps): S = 가닥합(rms정규화 와 같은 가닥 · 접기 — 간격 hd/2 부터), n = 제곱근(S),
+    r = 1 / max(n, eps), y = x · r(반올림 하나씩). x [n][헤드 · hd]."""
+    x = np.asarray(x, f32)
+    n_, A = x.shape
+    y = x.reshape(n_ * (A // hd), hd)
+    r = 나눔(f32(1), np.maximum(제곱근(_가닥합(y)), f32(eps)))
+    return 곱(y, r[:, None]).reshape(n_, A)
+
+
+def 합성곱4(x, w, 상태=None):
+    """계약 4.10 2 — 채널마다 커널 4 의 인과 합성곱: y_t = w₀ · x_(t−3)(곱), y ← 곱해더하기(w₁, x_(t−2), y), y ← 곱해더하기(w₂, x_(t−1), y),
+    y ← 곱해더하기(w₃, x_t, y) — t 앞의 행은 상태(그 시퀀스의 앞 세 행 — 없으면 0). x [T][채널], w [채널][4](칸 0 이 가장 오래된 토큰)
+    → (y [T][채널], 새 상태 [3][채널] — 끝의 세 행)."""
+    x = np.asarray(x, f32)
+    T, Cn = x.shape
+    xp = np.concatenate([np.zeros((3, Cn), f32) if 상태 is None else np.asarray(상태, f32), x], 0)
+    w = np.asarray(w, f32)
+    y = 곱(w[None, :, 0], xp[0:T])
+    for j in (1, 2, 3):
+        y = fma32(np.broadcast_to(w[None, :, j], (T, Cn)), xp[j:j + T], y)
+    return y, xp[T:T + 3].copy()
+
+
+def _열합(S, x):
+    """Σ_i S[h][i][j] · x[h][i] — 행 블록 넷(i ∈ [32b, 32b + 32))마다 P_b = S_(32b)j · x_(32b), i 오름차순으로 P_b ← 곱해더하기(S_ij, x_i, P_b),
+    합 = (P₀ + P₁) + (P₂ + P₃). S [H][128][128], x [H][128] → [H][128]. 블록 넷의 사슬은 서로 따로라 함께 한 걸음씩 민다(차례는 블록마다 그대로)."""
+    H, d, _ = S.shape
+    Sb = S.reshape(H, 4, 32, d)
+    xb = np.asarray(x, f32).reshape(H, 4, 32)
+    P = 곱(Sb[:, :, 0, :], xb[:, :, 0][:, :, None])                # [H][블록][j]
+    for i in range(1, 32):
+        P = fma32(Sb[:, :, i, :], np.broadcast_to(xb[:, :, i][:, :, None], P.shape), P)
+    return 더(더(P[:, 0], P[:, 1]), 더(P[:, 2], P[:, 3]))
+
+
+def GDN(q, k, v, 베타, 감마, S=None):
+    """계약 4.10 5 — 선형 어텐션(gated delta net)의 순환 계산, 토큰 차례로. q · k · v [T][H][128](v 헤드 h 에 k 헤드 h mod H_k 를 짝지은 차례),
+    베타 · 감마 [T][H], S [H][128(i — k 칸)][128(j — v 칸)] fp32(없으면 0). 토큰마다: S ← 감마 · S(곱), kv = _열합(S, k),
+    δ_j = (v_j − kv_j) · 베타(빼기 · 곱), S_ij ← 곱해더하기(k_i, δ_j, S_ij), o = _열합(S, q). 돌려줌: (o [T][H][128], 끝의 S)."""
+    q, k, v = (np.asarray(a, f32) for a in (q, k, v))
+    T, H, d = q.shape
+    assert d == 128, d
+    S = np.zeros((H, d, d), f32) if S is None else np.asarray(S, f32).copy()
+    o = np.empty((T, H, d), f32)
+    for t in range(T):
+        S = 곱(S, np.asarray(감마[t], f32)[:, None, None])
+        kv = _열합(S, k[t])
+        δ = 곱(빼기(v[t], kv), np.asarray(베타[t], f32)[:, None])
+        S = fma32(np.broadcast_to(k[t][:, :, None], S.shape), np.broadcast_to(δ[:, None, :], S.shape), S)
+        o[t] = _열합(S, q[t])
+    return o, S
+
+
+def 게이트(o, g):
+    """계약 4.9 2 — 어텐션 출력 o(= O / L)에 σ(게이트) 를 원소마다 곱한다(곱 하나)."""
+    return 곱(o, 시그모이드(g))

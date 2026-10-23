@@ -275,6 +275,38 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
       original_max_position_embeddings}`) and llama.cpp's rope_yarn, pinned down in fp64.
    4. A server with YaRN on puts `YaRN s×L` into the prompt cache's chunk names (the KV bytes differ). Within the position count the
       table and the KV are byte-for-byte unchanged.
+9. **Output gate** (0.12.0 12-3e — the full-attention layers of Qwen3.5, [문서/블록조합.md](../문서/블록조합.md), Korean): in the output
+   of the q linear (section 1), the first h entries of each head are q and the next h are the gate. q and k get the per-head norm of
+   item 6 (D = h — one element per strand, so halving starts at a stride of h/2), RoPE is item 2 of "Head size and RoPE dimensions"
+   below (Qwen3.5: the first 64 dimensions, θ = 10⁷), and the score scale is c = fp32(1/√h) (1/16 for h = 256 — exact). The attention
+   output o_d = O_d / L (one division) is multiplied by σ(gate_d) (one product) — σ(x) = 1 / (1 + e) if x ≥ 0, else e / (1 + e), with
+   e = written-exp(0 − |x|) (IEEE rounding per operation). Then the o linear's input (two digits — one digit in the fast contract F1,
+   1.2). The 8-bit KV (2.1) and fast attention F2 (2.2) are not used in these layers.
+10. **Linear attention GDN** (0.12.0 12-3e — the other layers of Qwen3.5 — gated delta net):
+   1. **Projections**: `attn_qkv` → [q (H_k · 128) | k (H_k · 128) | v (H_v · 128)], `attn_gate` → z (H_v · 128), `ssm_beta` → b (H_v),
+      `ssm_alpha` → a (H_v) — the integer block contract of section 1 (each matrix in its own format).
+   2. **Convolution** (per channel, kernel 4 — weight entry 0 is the oldest token): y = w₀ · x_(t−3) (product),
+      y ← fma(w₁, x_(t−2), y), y ← fma(w₂, x_(t−1), y), y ← fma(w₃, x_t, y). Rows before t are the sequence's convolution state (its last
+      three rows — zero at the start). Then SiLU — the s of item 3 (e = written-exp(0 − |y|), y / (1 + e) if y ≥ 0, else (y · e) / (1 + e)).
+   3. **L2 normalisation** (per 128-wide head of q and k): S by the strands and halving of item 1 (p_t = x_t · x_t, from a stride of 64),
+      r = 1 / max(sqrt(S), eps), y = x · r (one rounding each — eps is the model's RMSNorm eps). q is then multiplied by
+      c_k = fp32(1/√128) = 0x3DB504F3 (one product).
+   4. **Gate values** (per v head): β = σ(b) (the σ of item 9), u = a + dt (`ssm_dt.bias` — one addition), sp = u + L if u > 0, else L
+      (L = log1p(written-exp(0 − |u|)) — softplus), g = sp · A (`ssm_a` — one product), γ = written-exp(g). log1p(x) for 0 ≤ x ≤ 1 is fdlibm's
+      `s_log1pf.c` reduced to that range: u = 1 + x, c = x − (u − 1), k = 1 and m = u · 0.5 if u ≥ fp32(√2), else k = 0 and m = u,
+      f = m − 1, s = f / (2 + f), z = s · s, hfsq = (0.5 · f) · f, t = fma(Lp₇, z, Lp₆) → … → fma(t, z, Lp₁), R = z · t,
+      corr = (k ? ln2_lo : 0) + c / u, log1p = (k ? ln2_hi : 0) − ((hfsq − (s · (hfsq + R) + corr)) − f) — IEEE rounding per operation.
+      Constants (fp32): Lp₁ … Lp₇ = 0x3F2AAAAB · 0x3ECCCCCD · 0x3E924925 · 0x3E638E29 · 0x3E3A3325 · 0x3E1CD04F · 0x3E178897,
+      ln2_hi = 0x3F317180, ln2_lo = 0x3717F7D1, fp32(√2) = 0x3FB504F3 (largest error 0.85 ulp over 2.5 million points of [0, 1]).
+   5. **Recurrence** (v head j uses the q and k of k head j mod H_k — the whole head list repeated; tokens in order; state S[i][j] in
+      fp32, 128 × 128, zero at the start): S_ij ← γ · S_ij (product); kv_j = for each of four row blocks (i ∈ [32b, 32b + 32))
+      P_b = S_(32b)j · k_(32b) (product), then P_b ← fma(S_ij, k_i, P_b) for ascending i, kv_j = (P₀ + P₁) + (P₂ + P₃);
+      δ_j = (v_j − kv_j) · β (one subtraction, one product); S_ij ← fma(k_i, δ_j, S_ij); o_j = Σ_i S_ij · q_i in the same order as kv_j.
+      Every execution path (prompt, generation, table step) uses this order for every token.
+   6. **Output**: o gets the RMSNorm of item 6 per head (D = 128, `ssm_norm` — the same weights for every head), times SiLU(z) (one
+      product — SiLU as in step 2), then the input of `ssm_out` (two digits — one in F1).
+   A layer is x ← x + mix(RMSNorm(x; `attn_norm`)), x ← x + SwiGLU(RMSNorm(x; `post_attention_norm`)) — mix is item 9 in the layers with
+   (l + 1) % `full_attention_interval` = 0 and item 10 in the others.
 
 ### Head size 128 (stage 22 — Qwen2.5-7B and larger)
 
