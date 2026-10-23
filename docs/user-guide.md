@@ -308,7 +308,9 @@ commands) through an OpenAI-compatible API can connect.
 - Models that take tools: those whose chat template renders tools and whose call format is one of the four GeulPU reads (Qwen's
   `<tool_call>` JSON, Llama 3's JSON, the XML of Qwen3.5 and Qwen3-Coder, MiniCPM's XML) — Qwen2.5, Qwen3, Llama 3.1 · 3.2 and MiniCPM5.
   Prompts with tools are also the model file's own chat template. Mistral, DeepSeek-R1 and HyperCLOVAX-SEED have no tools in their
-  templates, so they refuse them (400).
+  templates, so they refuse them (400). In tests Qwen2.5 1.5B and 3B often wrote the call's JSON wrongly (`{{…}}`), and
+  Qwen2.5-Coder-14B wrapped its calls in `<tools>` instead of `<tool_call>`, so they were not read as calls (the prompts match the
+  official template — this is the models' own behaviour).
 - In tests Qwen2.5-7B and Qwen3-8B finished the tasks; Llama 3.x sometimes repeated the same call after getting the tool result — Qwen is
   recommended for agents. `tool_choice` accepts only `auto` (default) and `none`.
 - **The bigger the context, the better.** An agent's base instructions alone are 10,000–15,000 tokens (Qwen Code: 14,501), and they
@@ -374,8 +376,8 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 
 | Architecture | Models | Sizes |
 |---|---|---|
-| qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 1.5B and up (head size 128) — 7B and 14B run on this project's PC |
-| qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 8B · 14B run on this project's PC |
+| qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 1.5B and up (head size 128) — 1.5B · 3B · 7B · 14B run on this project's PC |
+| qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 4B · 8B run on this project's PC (14B on a synthetic model) |
 | llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | 1.5B · 2B · 3B · 7B · 8B — 70B checked as a shape with a synthetic model |
 
 The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
@@ -383,8 +385,9 @@ parse are refused — it parsed all 228 templates of the 1,000 most-downloaded G
 
 - **Formats**: Q8_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS, and Q4_0 files whose tensors are all Q4_0.
 - **Licenses** differ by model. In the app's list, Llama 3.1 · 3.2 use Meta's community licenses (usage conditions and an Acceptable
-  Use Policy — services with more than 700 million monthly users need permission from Meta), the Mistral 7B v0.3, Qwen2.5 and Qwen3 files
-  are Apache 2.0, DeepSeek-R1-Distill-Qwen is MIT (R1-Distill-Llama also follows Llama 3.1's license), and HyperCLOVAX-SEED has NAVER's own
+  Use Policy — services with more than 700 million monthly users need permission from Meta), the Mistral 7B v0.3, Qwen2.5 (except 3B),
+  Qwen3 and MiniCPM5 files are Apache 2.0, Qwen2.5-3B has the Qwen Research License (research and evaluation only — commercial use needs a
+  license from Alibaba Cloud), DeepSeek-R1-Distill-Qwen is MIT (R1-Distill-Llama also follows Llama 3.1's license), and HyperCLOVAX-SEED has NAVER's own
   HyperCLOVA X SEED license (also shown in the app's model descriptions).
 - **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (their tekken tokenizer), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …),
   image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0 · F16 · BF16. Find models hides such files by default.
@@ -397,10 +400,11 @@ Files GeulPU has run itself (**Verified by GeulPU** in the app). Sizes use 1024-
 
 | Graphics memory | Suggested files |
 |---|---|
-| 6 GB | Qwen3-1.7B Q8_0 (1.7 GB) · Llama-3.2-3B-Instruct Q8_0 (3.2 GB) |
-| 8 GB | Qwen3-8B Q4_K_M (4.7 GB) · Qwen2.5-7B-Instruct Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Qwen-7B Q4_K_M (4.4 GB) · Llama-3.1-8B-Instruct Q4_K_M (4.6 GB) · Mistral-7B-Instruct-v0.3 Q4_K_M (4.1 GB) |
+| 4 GB | Qwen3-0.6B Q8_0 (0.6 GB) · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M (1.1 GB) · MiniCPM5-2B Q4_K_M (1.5 GB) |
+| 6 GB | Qwen3-1.7B Q8_0 (1.7 GB) · Qwen2.5-1.5B-Instruct Q8_0 (1.8 GB) · Qwen3-4B Q4_K_M (2.3 GB) · Llama-3.2-3B-Instruct Q8_0 (3.2 GB) · Qwen2.5-3B-Instruct Q8_0 (3.4 GB) |
+| 8 GB | Qwen3-8B Q4_K_M (4.7 GB) · Qwen2.5-7B-Instruct Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Qwen-7B Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Llama-8B Q4_K_M (4.6 GB) · Llama-3.1-8B-Instruct Q4_K_M (4.6 GB) · Mistral-7B-Instruct-v0.3 Q4_K_M (4.1 GB) · Qwen3-4B Q8_0 (4.0 GB) |
 | 12 GB | Qwen3-8B Q8_0 (8.1 GB) · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 (7.5 GB) · Llama-3.1-8B-Instruct Q8_0 (8.0 GB) · Mistral-7B-Instruct-v0.3 Q8_0 (7.2 GB) — 14B Q4_K_M also runs with a reduced context |
-| 16 GB or more | Qwen2.5-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M (8.4 GB) |
+| 16 GB or more | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M (8.4 GB) |
 
 Qwen3-14B Q4_K_M has only been checked bit for bit on a synthetic model of the same shape and has not been run yet. The app tells you
 for every file whether it fits your graphics memory.

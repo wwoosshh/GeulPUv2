@@ -27,6 +27,14 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 - **MiniCPM5 tool calls**, and the XML tool-call form of Qwen3.5 and Qwen3-Coder (`<function=…><parameter=…>` inside `<tool_call>`).
   The server reads MiniCPM's `<function name="…"><param name="…">` calls, and converts XML argument values to the types in the tool's
   JSON schema as vLLM's qwen3coder parser does (string, integer, number, boolean, object, array, null).
+- **Nine more models in the app's model list**: Qwen3-0.6B Q8_0, Qwen3-4B Q4_K_M · Q8_0, Qwen2.5-1.5B · 3B Instruct Q8_0,
+  Qwen2.5-Coder-14B Instruct Q4_K_M, DeepSeek-R1-Distill-Llama-8B, HyperCLOVAX-SEED 1.5B and MiniCPM5-2B (Q4_K_M). Each was run on this
+  project's PC — five execution paths bit-identical, all-row logits equal to the CPU reference, CUDA and Vulkan chat, and tool calls
+  where the model writes them correctly. Quality against llama.cpp (f16 KV): the four small Q8_0 files fall short of the fast-mode bar
+  (top-1 agreement 0.8–1.1 points below llama.cpp, KL ratio within 2.5) and are listed with that recorded; exact mode is unaffected.
+  Qwen2.5-3B uses the Qwen Research License (non-commercial), noted in its description.
+- The model finder no longer calls head-size-128 llama models of 1.4–2.5B (HyperCLOVAX-SEED 1.5B, MiniCPM5 2B) unsupported, and the
+  suggested model skips the new 0.6B.
 
 ### Changed
 

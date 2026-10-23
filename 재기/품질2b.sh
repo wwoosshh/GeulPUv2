@@ -29,6 +29,15 @@ MODELS=(
   "r1llama8b-q4km|$M/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf|llama큰 K 4096 32 8 14336 128256|F1 KV8 F2_KV8"
   "hcx1.5b-q4km|$M/hyperclovax-seed-text-instruct-1.5b-q4_k_m.gguf|llama큰 K 2048 16 8 7168 110592|F1 KV8 F2_KV8"
   "minicpm5-2b-q4km|$M/MiniCPM5-2B-Q4_K_M.gguf|llamae6큰 K 2048 16 2 6144 130560|F1 KV8 F2_KV8"     # 12-1b — eps 10⁻⁶(모듈 llamae6)
+  # 0.12.0 12-2 — 모델 목록에 넣는 모델(qwen3 구조의 빠른 어텐션은 F2B — 1.0.0 1-4)
+  "qwen3-0.6b-q8|$M/Qwen3-0.6B-Q8_0.gguf|qwen3큰 Q8_0 1024 16 8 3072 151936|F1 KV8 F2B_KV8"
+  "qwen3-4b-q4km|$M/Qwen3-4B-Q4_K_M.gguf|qwen3큰 K 2560 32 8 9728 151936|F1 KV8 F2B_KV8"
+  "qwen3-4b-q8|$M/Qwen3-4B-Q8_0.gguf|qwen3큰 Q8_0 2560 32 8 9728 151936|F1 KV8 F2B_KV8"
+  "qwen2.5-1.5b-q8|$M/qwen2.5-1.5b-instruct-q8_0.gguf|qwen2큰 Q8_0 1536 12 2 8960 151936|F1 KV8 F2_KV8"
+  "qwen2.5-3b-q8|$M/qwen2.5-3b-instruct-q8_0.gguf|qwen2큰 Q8_0 2048 16 2 11008 151936|F1 KV8 F2_KV8"
+  # 14B 는 덩이 1024 행이면 12 GB 에 문맥 8,192 가 들지 않는다(2,688 로 줄어 긴 창이 넘친다 — 256 행도 16비트 KV 는 7,936) — 덩이 128 행
+  # (다섯째 칸 — 비트는 덩이와 상관없다)
+  "qwen2.5-coder14b-q4km|$M/qwen2.5-coder-14b-instruct-q4_k_m.gguf|qwen2큰 K 5120 40 8 13824 152064|F1 KV8 F2_KV8|128"
 )
 mod() {  # 이름 모양인자 변형 → 모듈 경로(표준 출력)
   local p=$MD/$1_$3.ptx g=$MD/$1_$3.gl
@@ -45,7 +54,7 @@ mod() {  # 이름 모양인자 변형 → 모듈 경로(표준 출력)
   echo "$p"
 }
 for row in "${MODELS[@]}"; do
-  IFS='|' read -r NAME GG ARGS VARS <<< "$row"
+  IFS='|' read -r NAME GG ARGS VARS ROWS <<< "$row"
   VARS=${VARIANTS:-$VARS}
   if [ $# -gt 0 ] && ! printf '%s\n' "$@" | grep -qx "$NAME"; then continue; fi
   D=$W/$NAME; mkdir -p "$D/라마"
@@ -64,7 +73,7 @@ for row in "${MODELS[@]}"; do
     P=$(mod "$NAME" "$ARGS" "$V")
     echo "[$(date +%H:%M:%S)] $NAME · 글 $V"
     mkdir -p "$D/$V"
-    "$B/시험_7B.exe" "$GG" "$P" "$D/라마/입력.bin" "$D/$V" --한길 > "$OUT/글${V}_$NAME.log" 2>&1 || echo "  글 실패 — $OUT/글${V}_$NAME.log"
+    "$B/시험_7B.exe" "$GG" "$P" "$D/라마/입력.bin" "$D/$V" --한길 ${ROWS:+--최대행 "$ROWS"} > "$OUT/글${V}_$NAME.log" 2>&1 || echo "  글 실패 — $OUT/글${V}_$NAME.log"
     if [ "$V" != 정밀 ]; then PAIRS+=("$V=$D/$V"); fi
   done
   echo "[$(date +%H:%M:%S)] $NAME · 견주기"
