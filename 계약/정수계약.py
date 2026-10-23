@@ -245,10 +245,11 @@ def 점수눈금(hd):
     return f32(0.125) if hd == 64 else f32(1.0 / np.sqrt(np.float64(hd)))
 
 
-def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n):
+def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None):
     """행 Rr(위치 — 모두 시작 이상)의 키 조각 [시작, 시작 + 64) 몫 (m, l, o) — 9단계 계약의 1~4(점수 · 최댓값 · 적힌지수 · 합 · e′ 자리 ·
     가중합). 헤드 크기 hd = nq 의 열 수(64 · 128 — 블록 hd/32 개를 b 오름차순으로, 22단계). 8비트 KV(③b-2 — 계약 F1A′)면 nk · nv 가 8비트
-    정수이고 Pk · Pv 가 fp32 스케일이라, 그 곱(점수의 곱 · FMA, e′)마다 반올림 하나 — 식과 차례는 같다."""
+    정수이고 Pk · Pv 가 fp32 스케일이라, 그 곱(점수의 곱 · FMA, e′)마다 반올림 하나 — 식과 차례는 같다.
+    0.12.0 12-3b — 눈금: 점수 스케일(없으면 점수눈금(hd)). 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 스케일을 준다."""
     hd = nq.shape[1]
     keys = np.arange(시작, min(시작 + 64, n))
     valid = keys[None, :] <= Rr[:, None]                         # [R][keys]
@@ -259,7 +260,7 @@ def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n):
         u = (nq[Rr][:, sl] @ nk[keys][:, sl].T).astype(f32)        # 정확한 정수 합 → 반올림 하나
         부분 = 곱(u, Pq[Rr, b][:, None])                            # 정확
         s = 곱(부분, Pk[keys, b][None, :]) if b == 0 else fma32(부분, np.broadcast_to(Pk[keys, b][None, :], 부분.shape), s)
-    s = 곱(s, 점수눈금(hd))
+    s = 곱(s, 점수눈금(hd) if 눈금 is None else f32(눈금))
     s = np.where(valid, s, f32(-3.0e38)).astype(f32)
     # 2. 최댓값 · 지수
     m = s.max(1)
@@ -293,14 +294,15 @@ def _접기(M, L, O, m, l, o):
     return M2, fma32(l, 나, 곱(L, 가)), fma32(o, 나[:, None], 곱(O, 가[:, None]))
 
 
-def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0):
+def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None):
     """머리 하나의 어텐션(원인 가림, × 점수눈금(hd) — 머리 64 는 0.125) — 정수 KV 계약의 참조. q · k · v [n][hd] 짧은실수(hd 64 · 128) →
     출력 [n − 첫행][hd] 짧은실수(O / L).
     프롬프트 판(mma)과 생성 판(dp4a) 모두와 비트까지 같아야 한다(9a).
     접기(13단계 계약): 키 조각(위치 64)을 묶음(조각 `묶음` 개 = 위치 1024 — 묶음 g 는 위치 [1024g, 1024g + 1024))으로 나눠, 묶음 안에서
     조각을 차례로 접어 묶음의 (M_g, L_g, O_g) 를 만들고(묶음의 첫 조각이 처음 값), 묶음들을 차례로 같은 식으로 접는다(첫 묶음이 처음 값).
     위치 1024 까지는 묶음이 하나라 9~12단계의 한 층 접기와 같다. 묶음=None 이면 한 층(9~12단계 계약 — 견주기용).
-    첫행: 이 행부터만 계산한다(긴 문맥의 짧은 덩이 대조 — 앞 행은 건너뛴다; 값은 모든 행을 계산할 때의 그 행과 같다)."""
+    첫행: 이 행부터만 계산한다(긴 문맥의 짧은 덩이 대조 — 앞 행은 건너뛴다; 값은 모든 행을 계산할 때의 그 행과 같다).
+    눈금: 0.12.0 12-3b — 점수 스케일(없으면 점수눈금(hd)) — 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 fp32(1/√h)."""
     if F2:                                                          # GeulPUv2 빠른 어텐션 F2(시험용)
         return 어텐션F2(q, k, v, 조각, 묶음, 첫행)
     q, k, v = (np.asarray(x, f32) for x in (q, k, v))
@@ -323,7 +325,7 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0):
         Og = np.zeros((int(selg.sum()), hd), f32)
         for 시작 in range(g0, min(g0 + 폭, n), 조각):
             sel = R_ >= 시작
-            m, l, o = _조각몫(nq, nk, nv, Pq, Pk, Pv, R_[sel], 시작, n)
+            m, l, o = _조각몫(nq, nk, nv, Pq, Pk, Pv, R_[sel], 시작, n, 눈금)
             idx = np.nonzero(sel[selg])[0]
             if 시작 == g0:                                          # 묶음의 첫 조각 — 처음 값
                 Mg[idx], Lg[idx], Og[idx] = m, l, o
@@ -799,6 +801,57 @@ def 행렬곱블라스(x, qNK, dNK, 치우침, 일꾼=8, 칸한도=1 << 25, 자�
         y[:, n0:n1] = yy
     with ThreadPoolExecutor(일꾼) as ex:
         list(ex.map(열, range(0, N, 덩이)))
+    return 더(y, np.asarray(치우침, f32)[None, :])
+
+
+# ── 0.12.0 12-3b — 일반 경로: 16비트 블록 가중치(계약 1.3 — F16 · BF16 · F32) ─────────────────────────────────────────────────────
+# 양자화하지 않은 가중치를 불러올 때 1 절의 활성값과 같은 16비트 형식(8비트 자리 둘)으로 바꾼다 — 손실은 이 바꿈 하나(블록 최댓값의 2⁻¹⁴
+# 이하). 행렬곱은 블록마다 두 16비트 정수의 정확한 곱의 합 T 를 fp32 로 한 번 반올림하고(2 절의 점수와 같은 꼴), 블록 차례로 FMA 체인.
+
+def 가중치16(w):
+    """F16 · BF16 · F32 가중치 [N][K](fp32 값 — 파일의 값 그대로) → (n [N][K′] int64 — |n| ≤ 2¹⁴, E [N][K′/32] int64). 출력 행마다 깊이 32 칸
+    블록으로 자리로(…, 2)와 같은 식: E = ⌊log₂ max|w|⌋ 를 [−98, 100] 로(최댓값 0 이면 −98), n = 가까운정수(w · 2^(13 − E))(같으면 짝수).
+    K 가 32 의 배수가 아니면 0 을 채운다(K′ = ⌈K/32⌉ · 32 — 0 은 블록의 최댓값 · 합을 바꾸지 않는다)."""
+    w = np.asarray(w, f32)
+    N, K = w.shape
+    if K % 32:
+        w = np.concatenate([w, np.zeros((N, 32 - K % 32), f32)], 1)
+    D, E = 자리로(w, 2)
+    return D[1] * 256 + D[0], E
+
+
+def 행렬곱16(x, wn, wE, 치우침, 자리수=2, 일꾼=8, 칸한도=1 << 24):
+    """계약 1.3 의 출력 [행][열]. x [M][K] fp32(활성값), (wn, wE) = 가중치16(w), 치우침 [N]. 블록 b(깊이 32 칸)마다 T = Σ n_x · n_w(정확한
+    정수 — 자리수 2 는 |T| ≤ 2³³, 1 은 < 2²⁶), u = fp32(T)(반올림 하나), 부분 = u · 2^(E_x − P)(2 의 거듭제곱 곱 — 정확, 규칙 R), y ← FMA(부분,
+    2^(E_w − 13), y) 를 b 오름차순으로, 출력 = y + 치우침. P = 8 · 자리수 − 3(정밀 13 · 빠른 5). 정수 합은 fp64 행렬곱으로(정확 — < 2⁵³).
+    열을 청크로 나눠 워커 스레드에(행렬곱블라스 와 같은 꼴 — 값은 같다)."""
+    from concurrent.futures import ThreadPoolExecutor
+    x = np.asarray(x, f32)
+    M, K = x.shape
+    Kp = wn.shape[1]
+    if Kp != K:
+        x = np.concatenate([x, np.zeros((M, Kp - K), f32)], 1)
+    D, E = 자리로(x, 자리수)
+    P = 8 * 자리수 - 3
+    nx = (D[1] * 256 + D[0]) if 자리수 == 2 else D[0]
+    KB = Kp // 32
+    N = wn.shape[0]
+    nxf = np.ascontiguousarray(nx.astype(np.float64).reshape(M, KB, 32).transpose(1, 0, 2))      # [KB][M][32]
+    배x = np.ldexp(f32(1), E - P).astype(f32).T[:, :, None]                                       # [KB][M][1]
+    청크 = max(32, min(4096, 칸한도 // max(1, KB * M)) // 32 * 32)
+    y = np.zeros((M, N), f32)
+
+    def 열(n0):
+        n1 = min(N, n0 + 청크)
+        wb = np.ascontiguousarray(np.asarray(wn[n0:n1], np.float64).reshape(n1 - n0, KB, 32).transpose(1, 2, 0))  # [KB][32][n]
+        부분 = 곱(np.matmul(nxf, wb).astype(f32), 배x)                                           # [KB][M][n] — 정확한 정수 → 반올림 하나 → 2 의 거듭제곱
+        배w = np.ldexp(f32(1), np.asarray(wE[n0:n1]) - 13).astype(f32).T                          # [KB][n]
+        yy = np.zeros((M, n1 - n0), f32)
+        for b in range(KB):
+            yy = fma32(부분[b], np.broadcast_to(배w[b][None, :], yy.shape), yy)
+        y[:, n0:n1] = yy
+    with ThreadPoolExecutor(일꾼) as ex:
+        list(ex.map(열, range(0, N, 청크)))
     return 더(y, np.asarray(치우침, f32)[None, :])
 
 

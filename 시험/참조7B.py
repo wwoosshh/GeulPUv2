@@ -51,20 +51,31 @@ def q8(g, name):
 
 def 가중(g, name):
     """26단계 — 텐서마다 형식: (형식, q [N][K], a, b). Q8_0 · Q4_0 은 (형식, q, d, None) — 계약 1절 4 (y ← 곱해더하기(u, d, y)),
-    k-양자화(Q4_K · Q5_K · Q6_K)는 정수계약.풀기K."""
+    k-양자화(Q4_K · Q5_K · Q6_K)는 정수계약.풀기K. 0.12.0 12-3b — F16 · BF16 · F32 는 ("W16", n [N][K′], E [N][K′/32], None)(계약 1.3 —
+    16비트 블록 가중치)."""
     t, dims, raw = g.원(name)
     if t in (GR.Q8_0, GR.Q4_0):
         q, d = q8(g, name)
         return ("Q8_0" if t == GR.Q8_0 else "Q4_0"), q, d, None
+    if t in (GR.F16, GR.BF16, GR.F32):
+        n, E = C.가중치16(g.풀기(name))
+        return "W16", n, E, None
     K, N = dims
     return C.풀기K(t, raw, N, K)
 
 
 def 곱(h, w, bias):
-    """가중치의 형식에 맞는 CPU 참조 행렬곱(행렬곱블라스 · 행렬곱K블라스)."""
+    """가중치의 형식에 맞는 CPU 참조 행렬곱(행렬곱블라스 · 행렬곱K블라스 · 행렬곱16)."""
     if w[0] in ("Q8_0", "Q4_0"):
         return C.행렬곱블라스(h, w[1], w[2], bias, 자리수=선형자리수)
+    if w[0] == "W16":
+        return C.행렬곱16(h, w[1], w[2], bias, 자리수=선형자리수)
     return C.행렬곱K블라스(h, w, bias, 자리수=선형자리수)
+
+
+def 헤드채움(x, hd, hdp):
+    """0.12.0 12-3b — 헤드 [n][hd] 를 32 의 배수 hdp 로 0 을 채운다(어텐션의 블록 — 0 은 최댓값 · 합을 바꾸지 않는다)."""
+    return x if hdp == hd else np.concatenate([x, np.zeros((x.shape[0], hdp - hd), f32)], 1)
 
 
 def 다른칸(a, b):
@@ -127,7 +138,7 @@ def 설정(g):
     assert m.get(k + "rope.scaling.type", "none") == "none", "RoPE 늘이기 열쇠(rope.scaling.*)는 받지 않는다 — llama 의 늘이기는 rope_freqs 텐서로"
     return {"구조": 구조, "층": m[k + "block_count"], "머리": m[k + "attention.head_count"], "KV머리": m[k + "attention.head_count_kv"],
             "eps": float(m[k + "attention.layer_norm_rms_epsilon"]), "θ": float(m[k + "rope.freq_base"]),
-            "머리크기": m.get(k + "attention.key_length")}
+            "머리크기": m.get(k + "attention.key_length"), "돌림": m.get(k + "rope.dimension_count")}
 
 
 def 줄되돌리기(w, 머리수, hd):
@@ -154,22 +165,34 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
     NL, NH, NKV, eps, θ = s_["층"], s_["머리"], s_["KV머리"], s_["eps"], s_["θ"]
     qwen3 = s_["구조"] == "qwen3"
     llama = s_["구조"] == "llama"
-    we = 가중(g, "token_embd.weight")
-    D = we[1].shape[1]
+    if g.tensors["token_embd.weight"][0] in (GR.F16, GR.BF16, GR.F32):            # 0.12.0 12-3b — 임베딩은 파일의 값 그대로(fp32 로 정확)
+        D = g.tensors["token_embd.weight"][1][0]
+        ew = g.풀기("token_embd.weight")
+        x = np.concatenate([ew[S] for S in 경우], 0).astype(f32)
+        del ew
+    else:
+        we = 가중(g, "token_embd.weight")
+        D = we[1].shape[1]
+        if we[0] in ("Q8_0", "Q4_0"):
+            eq, ed = we[1], we[2]
+            x = np.concatenate([(eq[S].astype(f32) * np.repeat(ed[S], 32, axis=1)).astype(f32) for S in 경우], 0)
+            del eq, ed
+        else:
+            x = np.concatenate([C.임베딩K(we, S) for S in 경우], 0)              # 26단계
+        del we
     HD = int(s_["머리크기"] or D // NH)
+    HDp = (HD + 31) // 32 * 32                                         # 0.12.0 12-3b — 어텐션은 32 의 배수로 0 을 채운 헤드로
+    돌림 = int(s_["돌림"] or HD)                                       # 0.12.0 12-3b — RoPE 는 앞 돌림 차원만(짝 (i, i + 돌림/2))
+    눈금 = f32(1.0 / np.sqrt(np.float64(HD)))                          # 실제 헤드 크기의 점수 스케일(계약 — 헤드 크기 128 의 c 와 같은 자리)
     A = NH * HD                                                       # 질의 폭(1.0.0 1-6a — 너비와 다를 수 있다: Qwen3-0.6B · 4B)
     KVW = NKV * HD
     G_ = NH // NKV
-    if we[0] in ("Q8_0", "Q4_0"):
-        eq, ed = we[1], we[2]
-        x = np.concatenate([(eq[S].astype(f32) * np.repeat(ed[S], 32, axis=1)).astype(f32) for S in 경우], 0)
-        del eq, ed
-    else:
-        x = np.concatenate([C.임베딩K(we, S) for S in 경우], 0)              # 26단계
-    del we
     시작 = np.cumsum([0] + [len(S) for S in 경우])
     인자 = g.풀기("rope_freqs.weight") if llama and "rope_freqs.weight" in g.tensors else None      # 39단계 — 계약 4.7 (2)
-    cos, sin = C.rope표(max(64, int(max(len(S) for S in 경우))), θ, hd=HD, 인자=인자, 얀=얀)
+    cos, sin = C.rope표(max(64, int(max(len(S) for S in 경우))), θ, hd=돌림, 인자=인자, 얀=얀)
+
+    def 돌리기(r, 위치):
+        return C.rope(r, cos, sin, 위치) if 돌림 == HD else np.concatenate([C.rope(r[:, :돌림], cos, sin, 위치), r[:, 돌림:]], 1)
     for l in range(NL):
         tl = time.time()
         p = f"blk.{l}."
@@ -193,10 +216,10 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
             n = len(S)
             r = qkv[시작[s]:시작[s + 1]]
             위치 = np.arange(n)
-            qh = [C.rope(r[:, HD * a:HD * a + HD], cos, sin, 위치) for a in range(NH)]
-            kh = [C.rope(r[:, A + HD * a:A + HD * a + HD], cos, sin, 위치) for a in range(NKV)]
-            vh = [np.ascontiguousarray(r[:, A + KVW + HD * a:A + KVW + HD * a + HD]) for a in range(NKV)]
-            ys.append(np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_]) for a in range(NH)], 1))
+            qh = [헤드채움(돌리기(r[:, HD * a:HD * a + HD], 위치), HD, HDp) for a in range(NH)]
+            kh = [헤드채움(돌리기(r[:, A + HD * a:A + HD * a + HD], 위치), HD, HDp) for a in range(NKV)]
+            vh = [헤드채움(np.ascontiguousarray(r[:, A + KVW + HD * a:A + KVW + HD * a + HD]), HD, HDp) for a in range(NKV)]
+            ys.append(np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=눈금)[:, :HD] for a in range(NH)], 1))
         y = np.concatenate(ys, 0)
         x = (x + 곱(y, 가중(g, p + "attn_output.weight"), np.zeros(D, f32))).astype(f32)
         h = C.rms정규화(x, g.풀기(p + "ffn_norm.weight"), eps)

@@ -106,6 +106,24 @@ KV cache and the e inside attention) keeps the two digits of section 2.
   Q5_K (centred by 8 like Q4_K — |S − 8T| ≤ 32·127·23) and Q6_K (per half — |4S| ≤ 16·127·128). The output bits are the same (the
   kernel tests compare them with the CPU reference).
 
+### 1.3 16-bit block weights — F16 · BF16 · F32 (0.12.0 12-3b, [`문서/블록조합.md`](../문서/블록조합.md))
+
+Unquantized weights (F16, BF16, F32) are converted at load time into the 16-bit format of the activations in section 1 (two 8-bit
+digits). **This conversion is the only loss.**
+
+1. Each weight row (one output) is split along the depth into 32-value blocks: E_w = ⌊log₂ max|w|⌋ (clamped to [−98, 100]; −98 when the
+   maximum is 0), n_w = round-to-nearest-even(w · 2^(13 − E_w)), |n_w| ≤ 2¹⁴. A depth that is not a multiple of 32 is padded with zeros
+   (zeros change neither the block maximum nor the sums). F16 values of at least 1/8 of the block maximum and BF16 values of at least
+   1/64 of it are unchanged; only smaller values are rounded to the step 2^(E_w − 13).
+2. Exact mode: for each block b, T = Σ_k n_x,k · n_w,k (activations n_x = 256·D₁ + D₀ — an exact integer sum, |T| ≤ 2³³),
+   u = float32(T) (one rounding), part = u · 2^(E_x,b − 13) (a power-of-two product — exact, rule R), y ← fma(part, 2^(E_w,b − 13), y) in
+   ascending b, output = y + bias.
+3. Fast mode (section 1.2 — one-digit activations n_x = D₀): |T| < 2²⁶, part = u · 2^(E_x,b − 5); everything else is the same.
+4. Embeddings (token → activation) use the file's values as they are (F16 and BF16 → float32 is exact). When the output weights are
+   tied to the embeddings, the logit matmul uses the format of item 1.
+5. Integer sums do not depend on order, so tensor-core matmuls (four digit pairs — the exact sum 2¹⁶ S₁₁ + 2⁸(S₁₀ + S₀₁) + S₀₀) and dp4a
+   give the same bits. The CPU reference is `정수계약.가중치16 · 행렬곱16`.
+
 ## 2. The integer KV contract — attention
 
 The q · k · v of the attention projection are converted with the same rule as section 1 (32-value blocks along the head dimension,
@@ -271,6 +289,17 @@ The head-64 contract is unchanged. Three things differ at head size 128:
 3. **Output o_d** uses the formula of section 2.4 for each of the four 32-value blocks of values (d = 0 … 127). Written exp, the sum l
    and the two-level merge are unchanged. A group or tile state is (M, L, two spare, O[128]) = 132 values.
 
+### Head size and RoPE dimensions (0.12.0 12-3b — the general path, [`문서/블록조합.md`](../문서/블록조합.md))
+
+1. **Head size h** (32 ≤ h ≤ 256): sections 2 and 3 run on the head padded with zeros to h′ = ⌈h/32⌉ · 32, and the padded outputs are
+   dropped — zeros change neither the block maxima nor the integer sums, so the bits are the same. The score scale is c = float32(1/√h)
+   of the real head size (the same place as item 1 of head size 128; exact when h is a power of 4).
+2. **RoPE dimensions** n_rot (GGUF `rope.dimension_count` — h when absent): only the first n_rot dimensions rotate — table cos · sin
+   [position][n_rot/2], θ_i = θ^(−2i/n_rot) (correctly rounded), pairs (i, i + n_rot/2), the fma forms of item 2 of head size 128. The
+   other dimensions pass through.
+3. **Width, query width and FFN** that are not multiples of 32 pad the activation blocks with zeros (the same values). RMSNorm divides
+   by the real width (section 4.1).
+
 ## 5. Sampling (stage 28 — the server)
 
 Non-greedy generation picks the next token from one row of logits z (the V float32 values the engine produced) by this contract. All
@@ -367,5 +396,6 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | Qwen3 (stage 37 — [`시험/머리정규화37.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/머리정규화37.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`시험/참조생성.py`](https://github.com/wwoosshh/GeulPU/blob/main/시험/참조생성.py)) | the head-norm kernel (rows 1 · 4 · 64 · 2048 × the weights of every layer of 8B, random and extreme values) against the CPU reference — v untouched; every row's logits of three chat prompts + 16 generated tokens for 1.7B · 8B (Q8_0 · Q4_K_M) · two synthetic 14B-shape models against the CPU reference's full forward pass; five-path, Vulkan and shared32-emulation summaries equal to CUDA; greedy generation with the CPU reference (not a criterion — compared with llama.cpp) |
 | Query width ≠ hidden size (GeulPUv2 0.11.0, step 1-6a — [`시험/머리128.py`](../시험/머리128.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`엔진/시험_7B.gl`](../엔진/시험_7B.gl) · [`엔진/시험_추측.gl`](../엔진/시험_추측.gl) · [`엔진/시험_긴문맥.gl`](../엔진/시험_긴문맥.gl)) | Qwen3-0.6B (hidden 1,024, query width 2,048 — q, the attention output and the input of the output projection are wider than the hidden size), its Q8_0 file and a local Q4_K_M requantization: the RoPEKV, group, merge and generation kernel variants (2,100 random rows, 600 extreme rows, three sets of real layer-0 values, long contexts up to 32,768 — exact, 8-bit KV and F2) against the CPU reference; every row's logits of three chat prompts + 16 generated tokens for the exact, fast, 8-bit KV and F2 modules (Q8_0) and the exact and 8-bit KV modules (k-quant) against the CPU reference's full forward pass, and the five paths; table steps of 2–8 rows of one slot against one row at a time; the four long-context paths up to position 32,760 |
 | IQ4_XS (GeulPUv2 0.11.0, step 1-6c — [`시험/계약자체.py`](../시험/계약자체.py) · [`시험/판26.py`](../시험/판26.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`엔진/시험_7B.gl`](../엔진/시험_7B.gl)) | the CPU reference itself (values unpacked one by one from raw blocks — the formula of llama.cpp's dequantize_row_iq4_xs — and slow against BLAS); every IQ4_XS kernel variant of the KI module (row kernel, 11 tile variants, 3 row-tile variants, three epilogues, two embeddings, logits) with the real weights of two IQ4_XS files (Qwen3-0.6B requantized — one mixing in Q5_K · Q6_K, one with an IQ4_XS token table and output) and random and extreme activations, exact and fast modules, against the CPU reference; every row's logits of a whole model (three chat prompts + 16 generated tokens) against the CPU reference and the five paths, table steps of 2–8 rows, long context |
+| General path — 0.12.0 12-3b ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조7B.py`](../시험/참조7B.py)) | the 16-bit block weight conversion against exact rational arithmetic, `행렬곱16` against the contract's sentences transcribed in rational arithmetic (exact and fast, depth padded with zeros), bit equality of attention with a zero-padded head; the CPU reference (F16 · BF16 · F32, head 64, width 896) against llama.cpp's next-token distribution |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
 | Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS; the RoPE table (item 8 — unscaled and YaRN factors 2 · 4 up to position 131,072 — [`엔진/시험_로프표.gl`](../엔진/시험_로프표.gl) against the CPU reference in [`시험/로프표.py`](../시험/로프표.py), byte for byte) — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |

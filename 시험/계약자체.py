@@ -587,6 +587,75 @@ def 시험_상수():
     확인("상수 — 계약.md 가 두 비트를 적는다", "0x358637BD" in 계약글 and "0x3727C5AC" in 계약글)
 
 
+def 시험_가중치16(r):
+    """0.12.0 12-3b — 계약 1.3(16비트 블록 가중치 — F16 · BF16 · F32): 바꿈 대 정확한 유리수 계산, 행렬곱16 대 계약 문장을 그대로 옮긴
+    유리수 계산(정밀 · 빠른 모드, 깊이가 32 의 배수가 아닌 경우의 0 채우기), 헤드에 0 을 채워도 어텐션의 비트가 같은가."""
+    N, K = 7, 100                                                    # K 100 — 0 을 채워 128
+    w = 반실수(r, (N, K), 1e-6, 4.0) * (2.0 ** r.integers(-12, 4, (N, 1))).astype(f32)
+    w[0, :32] = 0.0                                                  # 0 인 블록
+    w[1, 32:64] = 0.0
+    w[1, 40] = 2.0 ** -5                                             # 최댓값이 2 의 거듭제곱
+    w[2] = (w[2].astype(np.float32).view(np.uint32) & 0xFFFF0000).view(f32)   # BF16 값
+    n, E = C.가중치16(w)
+    다름 = 0
+    정확 = 0
+    for i in range(N):
+        for b in range(n.shape[1] // 32):
+            칸 = [Fraction(float(v)) for v in w[i, 32 * b:32 * b + 32]] + [Fraction(0)] * max(0, 32 * b + 32 - K)
+            m = max(abs(v) for v in 칸)
+            if m == 0:
+                e = -98
+            else:
+                e = m.numerator.bit_length() - m.denominator.bit_length()
+                if Fraction(2) ** e > m:
+                    e -= 1
+                e = min(max(e, -98), 100)
+            다름 += int(E[i, b] != e)
+            for j, v in enumerate(칸):
+                q = v * Fraction(2) ** (13 - e)
+                f = q.numerator // q.denominator
+                나머지 = q - f
+                if 나머지 > Fraction(1, 2) or (나머지 == Fraction(1, 2) and f % 2 == 1):
+                    f += 1
+                다름 += int(n[i, 32 * b + j] != f)
+                if m and abs(v) * 8 >= m and abs(v) >= Fraction(2) ** -14 and 32 * b + j < K and i != 2:    # F16 값: 최댓값의 1/8 이상은 그대로
+                    정확 += int(Fraction(int(n[i, 32 * b + j])) * Fraction(2) ** (e - 13) != v)
+    확인("가중치16 — 정확한 유리수 계산(블록 지수 · 가까운 정수, 0 채우기)", 다름 == 0, f"다른 값 {다름}")
+    확인("가중치16 — F16 값 가운데 블록 최댓값의 1/8 이상은 바뀌지 않는다", 정확 == 0, f"바뀐 값 {정확}")
+    M = 5
+    x = 활성값(r, M, 128)[:, :K].copy()
+    치 = r.standard_normal(N).astype(f32)
+    for 자리수 in (2, 1):
+        got = C.행렬곱16(x, n, E, 치, 자리수=자리수)
+        xp = np.concatenate([x, np.zeros((M, 28), f32)], 1)
+        D, Ex = C.자리로(xp, 자리수)
+        nx = (D[1] * 256 + D[0]) if 자리수 == 2 else D[0]
+        P = 8 * 자리수 - 3
+        want = np.zeros((M, N), f32)
+        for a in range(M):
+            for c in range(N):
+                y = Fraction(0)
+                for b in range(4):
+                    T = int(sum(int(nx[a, 32 * b + k]) * int(n[c, 32 * b + k]) for k in range(32)))
+                    u = Fraction(float(반올림R(Fraction(T))))
+                    부분 = Fraction(float(반올림R(u * Fraction(2) ** (int(Ex[a, b]) - P))))
+                    y = Fraction(float(반올림R(부분 * Fraction(2) ** (int(E[c, b]) - 13) + y)))
+                want[a, c] = 반올림R(y + Fraction(float(치[c])))
+        d = 다른칸(got, want)
+        확인(f"행렬곱16(자리 {'둘' if 자리수 == 2 else '하나'}) — 계약 문장을 그대로 옮긴 유리수 계산", d == 0, f"불일치 {d} / {M * N}")
+    w2 = 반실수(r, (300, K), 1e-6, 4.0)
+    n2, E2 = C.가중치16(w2)
+    치2 = r.standard_normal(300).astype(f32)
+    한청크 = C.행렬곱16(x, n2, E2, 치2, 칸한도=1 << 30)
+    여러청크 = C.행렬곱16(x, n2, E2, 치2, 칸한도=1 << 12, 일꾼=3)
+    확인("행렬곱16 — 열을 청크로 나눠도 비트가 같다", 다른칸(한청크, 여러청크) == 0, f"불일치 {다른칸(한청크, 여러청크)} / {M * 300}")
+    q, k, v = (활성값(r, 70, 64) * f32(0.01) for _ in range(3))
+    채움 = lambda a: np.concatenate([a, np.zeros((a.shape[0], 32), f32)], 1)          # noqa: E731
+    a = C.어텐션(q, k, v)
+    b = C.어텐션(채움(q), 채움(k), 채움(v), 눈금=f32(0.125))[:, :64]
+    확인("어텐션 — 헤드에 0 을 채워도(64 → 96, 같은 스케일) 비트가 같다", 다른칸(a, b) == 0, f"불일치 {다른칸(a, b)}")
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -599,6 +668,7 @@ def main():
     시험_로그확률(r)
     시험_KV8(r)
     시험_F2(r)
+    시험_가중치16(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
     return 0 if not 실패 else 1
 
