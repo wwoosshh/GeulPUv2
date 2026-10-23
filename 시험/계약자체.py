@@ -11,6 +11,7 @@
      ③b-1 의 에뮬레이션, 어텐션(numpy) 대 계약 문장을 행 하나씩 옮긴 계산
   7. 빠른 어텐션 계약 F2(계약.md 2.2): 지수2 · q 의 자리 둘(지수를 헤드마다) · 값의 저장(스케일을 헤드마다) 대 정확한 유리수 계산,
      어텐션F2(numpy) 대 계약 문장을 행 하나씩 옮긴 계산(그룹 둘)
+  8. Qwen3.5 의 계약 4.9 · 4.10(0.12.0 12-3e): 로그1p · σ · softplus 의 오차, 열 합의 차례, GDN · 합성곱을 덩이로 나눠도 같은 비트
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
@@ -656,6 +657,49 @@ def 시험_가중치16(r):
     확인("어텐션 — 헤드에 0 을 채워도(64 → 96, 같은 스케일) 비트가 같다", 다른칸(a, b) == 0, f"불일치 {다른칸(a, b)}")
 
 
+def 시험_GDN(r):
+    """0.12.0 12-3e — 계약 4.9 · 4.10(Qwen3.5): 로그1p 의 오차(정확한 log1p 대비 1 ulp 미만), σ · softplus 의 상대오차, _열합 대 계약 문장을
+    그대로 옮긴 차례(스칼라 곱해더하기), GDN 순환 · 합성곱4 를 토큰 덩이로 나눠도(상태를 넘겨) 한 번에 한 것과 비트가 같은가(실행 경로의 약속)."""
+    x = np.concatenate([r.uniform(0, 1, 200000), 10.0 ** r.uniform(-30, 0, 50000),
+                        [0.0, 1.0, 0.4142135, 0.41421354, 0.41421357, 2.0 ** -24, 2.0 ** -25]]).astype(f32)
+    ref = np.log1p(x.astype(np.float64))
+    ulp = np.abs(C.로그1p(x).astype(np.float64) - ref) / np.spacing(ref.astype(f32)).astype(np.float64)
+    확인("계약 4.10 — 로그1p 의 오차 < 1 ulp([0, 1] 의 25 만 점)", ulp.max() < 1.0, f"최대 {ulp.max():.3f} ulp")
+    u = (r.standard_normal(100000) * 8).astype(f32)
+    ud = u.astype(np.float64)
+    오차σ = np.abs(C.시그모이드(u) - 1 / (1 + np.exp(-ud))) * (1 + np.exp(-ud))
+    오차sp = np.abs(C.소프트플러스(u) - np.logaddexp(0, ud)) / np.logaddexp(0, ud)
+    확인("계약 4.9 · 4.10 — σ · softplus 의 상대오차 < 4 · 2⁻²⁴", 오차σ.max() < 4 * 2.0 ** -24 and 오차sp.max() < 4 * 2.0 ** -24,
+         f"σ {오차σ.max():.2e} · softplus {오차sp.max():.2e}")
+    H, T = 2, 29
+    S = (r.standard_normal((H, 128, 128)) * 0.1).astype(f32)
+    xk = r.standard_normal((H, 128)).astype(f32)
+    문장 = np.empty((H, 128), f32)
+    for h in range(H):
+        for j in range(128):
+            P = []
+            for b in range(4):
+                p = C.곱(S[h, 32 * b, j], xk[h, 32 * b])
+                for i in range(32 * b + 1, 32 * b + 32):
+                    p = C.fma32(S[h, i, j], xk[h, i], p)
+                P.append(p)
+            문장[h, j] = C.더(C.더(P[0], P[1]), C.더(P[2], P[3]))
+    확인("계약 4.10 — 열 합(kv · o) 대 계약 문장의 차례(스칼라)", 다른칸(C._열합(S, xk), 문장) == 0)
+    q, k, v = ((r.standard_normal((T, H, 128)) * 0.3).astype(f32) for _ in range(3))
+    베타 = C.시그모이드(r.standard_normal((T, H)).astype(f32))
+    감마 = C.적힌지수(C.곱(C.소프트플러스(r.standard_normal((T, H)).astype(f32)), f32(-0.7)))
+    o1, S1 = C.GDN(q, k, v, 베타, 감마)
+    oa, Sa = C.GDN(q[:11], k[:11], v[:11], 베타[:11], 감마[:11])
+    ob, Sb = C.GDN(q[11:], k[11:], v[11:], 베타[11:], 감마[11:], Sa)
+    확인("계약 4.10 — GDN 을 토큰 덩이로 나눠도(상태를 넘겨) 비트가 같다", 다른칸(o1, np.concatenate([oa, ob])) == 0 and 다른칸(S1, Sb) == 0)
+    xc = r.standard_normal((T, 96)).astype(f32)
+    wc = r.standard_normal((96, 4)).astype(f32)
+    y1, c1 = C.합성곱4(xc, wc)
+    ya, ca = C.합성곱4(xc[:7], wc)
+    yb, cb = C.합성곱4(xc[7:], wc, ca)
+    확인("계약 4.10 — 합성곱을 토큰 덩이로 나눠도(상태를 넘겨) 비트가 같다", 다른칸(y1, np.concatenate([ya, yb])) == 0 and 다른칸(c1, cb) == 0)
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -669,6 +713,7 @@ def main():
     시험_KV8(r)
     시험_F2(r)
     시험_가중치16(r)
+    시험_GDN(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
     return 0 if not 실패 else 1
 
