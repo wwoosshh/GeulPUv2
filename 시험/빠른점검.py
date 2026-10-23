@@ -19,6 +19,8 @@
          함께 받지 않는가(시험/모델모양.py — 윈도만)
      4j. 앱의 메모리 누수(#22) — /api/state · 올바른 본문 · 잘린 본문을 되풀이해도 앱의 private 메모리가 늘지 않는가(시험/앱누수.py — 윈도만)
      4k. 뽑기 · 로그확률의 글 판이 계약의 파이썬 참조와 같은가(시험/뽑기.py 대조 · 시험/로그확률38.py 대조 — #27)
+     4l. jinja 템플릿 해석기(0.12.0 12-G1 — 엔진/진해석.gl · 엔진/시험_틀해석.gl)가 jinja2(transformers 의 채팅 템플릿 환경)와 같은 글을
+         내는가 — 기능 사례(시험/틀해석.py — jinja2 가 없으면 건너뜀)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
@@ -416,6 +418,21 @@ def 디버거제이슨(출력):
     알림("기록기 JSON 훑기(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
 
 
+def 틀해석(출력):
+    """0.12.0 12-G1 — 서버가 GGUF 의 채팅 템플릿을 그대로 실행하는 jinja 해석기(엔진/진해석.gl)가 jinja2 와 바이트까지 같은 글을 내는가(GPU 없이)"""
+    exe = os.path.join(출력, "시험_틀해석" + EXE)
+    if not os.path.exists(exe):
+        알림("jinja 템플릿 해석기(GPU 없이)", False, "시험_틀해석 이 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "틀해석.py"), exe], os.path.join(출력, "틀해석.txt"))
+    if rc == 3:
+        print("jinja 템플릿 해석기: 건너뜀(jinja2 없음 — pip install -r requirements.txt)", flush=True)
+        요약.append("건너뜀  [jinja 템플릿 해석기] jinja2 없음")
+        return
+    알림("jinja 템플릿 해석기(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
 def 요청지킴(출력):
     """추론 서버의 브라우저 지킴(엔진/요청지킴.gl) — DNS 리바인딩 Host · 웹페이지의 Origin 을 막고 프로그램 · 앱 프록시는 받는가(GPU 없이)"""
     exe = os.path.join(출력, "시험_요청지킴" + EXE)
@@ -562,6 +579,7 @@ def main():
             저장소CPU(출력)
             로프표(출력)
             디버거제이슨(출력)
+            틀해석(출력)
             요청지킴(출력)
             망가진입력(출력)
             모델해시(출력)
