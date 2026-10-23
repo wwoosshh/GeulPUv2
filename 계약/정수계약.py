@@ -1183,3 +1183,64 @@ def GDN(q, k, v, 베타, 감마, S=None):
 def 게이트(o, g):
     """계약 4.9 2 — 어텐션 출력 o(= O / L)에 σ(게이트) 를 원소마다 곱한다(곱 하나)."""
     return 곱(o, 시그모이드(g))
+
+
+# ── 0.12.0 12-3g — 계약 4.11: MoE FFN(라우터 · softmax · 상위 k · 무게 · 합) ─────────────────────────────────────────────────
+무게하한 = f32(2.0 ** -14)                      # 4.11 4 — llama.cpp 의 하한 6.103515625e-5 와 같은 값
+
+
+def 활성값16(x, 자리수=2):
+    """활성값을 행렬곱의 입력 형식(블록 32 칸 · 자리 둘 — 빠른 모드는 하나)으로 바꾼 값을 fp32 로: x_q = n · 2^(E − P)(n 은 자리로 의 정수,
+    P = 8 · 자리수 − 3). |n| ≤ 2¹⁴ 라 fp32 에 정확하고, 2 의 거듭제곱 곱은 규칙 R 밖에서 정확하다(곱 으로 — 비정규수는 0)."""
+    x = np.asarray(x, f32)
+    M, K = x.shape
+    D, E = 자리로(x, 자리수)
+    P = 8 * 자리수 - 3
+    n = (D[1] * 256 + D[0]) if 자리수 == 2 else D[0]
+    배 = np.repeat(np.ldexp(f32(1), E - P).astype(f32), 32, axis=1)
+    return 곱(n.astype(f32), 배)
+
+
+def 라우터FMA(h, W, 자리수=2):
+    """계약 4.11 1 의 다른 길 — 라우터 로짓 l_e 를 fp32 FMA 체인으로: x = 활성값16(h), l_e = x_0 · W_e,0(곱 하나), 그다음 k 오름차순으로
+    l_e ← FMA(x_k, W_e,k, l_e). W [전문가][K] 는 파일의 F32 값 그대로(16비트 블록으로 바꾸지 않는다)."""
+    x = 활성값16(h, 자리수)
+    W = np.asarray(W, f32)
+    l = 곱(x[:, 0:1], W[None, :, 0])
+    for k in range(1, x.shape[1]):
+        l = fma32(x[:, k:k + 1], W[None, :, k], l)
+    return l
+
+
+def 소프트맥스전문가(l):
+    """계약 4.11 2 — m = max l, e_i = 적힌지수(l_i − m), S = 전문가 번호 차례의 더하기, p_i = e_i / S."""
+    l = np.asarray(l, f32)
+    m = l.max(-1, keepdims=True)
+    e = 적힌지수(빼기(l, m))
+    S = e[:, 0]
+    for i in range(1, e.shape[1]):
+        S = 더(S, e[:, i])
+    return 나눔(e, S[:, None])
+
+
+def 상위k(l, k):
+    """계약 4.11 3 — l 의 내림차순(같으면 작은 번호 먼저) 앞 k 개의 전문가 번호 [행][k](순위 차례)."""
+    return np.argsort(-np.asarray(l, f32), axis=-1, kind="stable")[:, :k]
+
+
+def 전문가무게(p, 고른):
+    """계약 4.11 4 — s = Σ_r p_(e_r)(순위 차례의 더하기), w_r = p_(e_r) / max(s, 2⁻¹⁴)."""
+    pr = np.take_along_axis(np.asarray(p, f32), 고른, -1)
+    s = pr[:, 0]
+    for r in range(1, pr.shape[1]):
+        s = 더(s, pr[:, r])
+    return 나눔(pr, np.maximum(s, 무게하한)[:, None])
+
+
+def 전문가합(w, ys):
+    """계약 4.11 6 — o = w_0 · y_0(곱 하나), 그다음 r = 1 … k − 1 차례로 o ← FMA(w_r, y_r, o). w [행][k], ys [k][행][D]."""
+    w = np.asarray(w, f32)
+    o = 곱(w[:, 0:1], ys[0])
+    for r in range(1, w.shape[1]):
+        o = fma32(np.broadcast_to(w[:, r:r + 1], o.shape), ys[r], o)
+    return o

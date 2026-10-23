@@ -6,6 +6,7 @@
 풀기는 짧은실수로 — d 를 f16 → f32 로(정확) 넓히고 정수와 곱한다(Q8_0 은 가수 19 비트, Q4_0 은 15 비트 이하라 곱이 정확하다).
 ggml 의 dequantize_row_* 와 같은 값이다(5단계의 시험이 대조한다). 텐서의 모양은 ggml 의 차례 [ne0, ne1] — 배열은 (ne1, ne0).
 """
+import mmap
 import struct
 
 import numpy as np
@@ -43,7 +44,10 @@ def _값(b, o, t):
 
 class GGUF:
     def __init__(self, path):
-        b = self.b = open(path, "rb").read()
+        # 0.12.0 12-3g — 파일을 통째로 읽지 않고 메모리 맵으로(운영체제가 언제든 내놓을 수 있는 파일 페이지 — 20 GB 의 MoE 파일을 읽으면
+        # 사적 메모리 20 GB 를 잡아 다른 프로그램을 페이지 아웃시켰다)
+        self._f = open(path, "rb")
+        b = self.b = mmap.mmap(self._f.fileno(), 0, access=mmap.ACCESS_READ)
         assert b[:4] == b"GGUF", "GGUF 파일이 아니다"
         ver, nt, nkv = struct.unpack_from("<IQQ", b, 4)
         assert ver == 3, f"GGUF 판 {ver}"

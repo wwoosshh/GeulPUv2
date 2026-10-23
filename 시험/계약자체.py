@@ -700,6 +700,59 @@ def 시험_GDN(r):
     확인("계약 4.10 — 합성곱을 토큰 덩이로 나눠도(상태를 넘겨) 비트가 같다", 다른칸(y1, np.concatenate([ya, yb])) == 0 and 다른칸(c1, cb) == 0)
 
 
+def 시험_MoE(r):
+    """0.12.0 12-3g — 계약 4.11(MoE FFN): 상위 k 는 같은 값이면 작은 번호 먼저(−0 과 +0 도 같은 값), 무게 · 합 · softmax 대 계약 문장을 그대로
+    옮긴 차례(스칼라), 라우터 FMA 체인 대 스칼라 체인, 한 행의 셈이 다른 행과 상관없다(행을 묶는 길과 상관없이 같은 비트)."""
+    l = np.array([[1.0, 2.0, 2.0, 0.5, 2.0], [0.0, -0.0, 0.0, -1.0, 3.0]], f32)
+    확인("계약 4.11 — 상위 k: 같은 값이면 작은 번호 먼저", C.상위k(l, 3).tolist() == [[1, 2, 4], [4, 0, 1]], str(C.상위k(l, 3).tolist()))
+    T, E, k, D = 7, 64, 8, 48
+    lg = (r.standard_normal((T, E)) * 3).astype(f32)
+    lg[2, 5] = lg[2, 9]                                            # 같은 값 하나
+    p = C.소프트맥스전문가(lg)
+    문장p = np.empty_like(p)
+    for t in range(T):
+        m = lg[t].max()
+        e = [C.적힌지수(C.빼기(lg[t, i], m)) for i in range(E)]
+        S = e[0]
+        for i in range(1, E):
+            S = C.더(S, e[i])
+        문장p[t] = [C.나눔(e[i], S) for i in range(E)]
+    고른 = C.상위k(lg, k)
+    w = C.전문가무게(p, 고른)
+    문장w = np.empty_like(w)
+    for t in range(T):
+        pr = [p[t, 고른[t, j]] for j in range(k)]
+        s_ = pr[0]
+        for j in range(1, k):
+            s_ = C.더(s_, pr[j])
+        문장w[t] = [C.나눔(pr[j], max(s_, f32(2.0 ** -14))) for j in range(k)]
+    ys = (r.standard_normal((k, T, D))).astype(f32)
+    o = C.전문가합(w, ys)
+    문장o = np.empty_like(o)
+    for t in range(T):
+        for d in range(D):
+            a = C.곱(w[t, 0], ys[0, t, d])
+            for j in range(1, k):
+                a = C.fma32(w[t, j], ys[j, t, d], a)
+            문장o[t, d] = a
+    확인("계약 4.11 — softmax · 무게 · 합 대 계약 문장의 차례(스칼라)", 다른칸(p, 문장p) == 0 and 다른칸(w, 문장w) == 0 and 다른칸(o, 문장o) == 0)
+    h = r.standard_normal((T, 96)).astype(f32)
+    W = (r.standard_normal((E, 96)) * 0.05).astype(f32)
+    lf = C.라우터FMA(h, W)
+    xq = C.활성값16(h)
+    문장l = np.empty_like(lf)
+    for t in range(T):
+        for e_ in range(E):
+            a = C.곱(xq[t, 0], W[e_, 0])
+            for kk in range(1, 96):
+                a = C.fma32(xq[t, kk], W[e_, kk], a)
+            문장l[t, e_] = a
+    확인("계약 4.11 — 라우터 FMA 체인 대 계약 문장의 차례(스칼라)", 다른칸(lf, 문장l) == 0)
+    둘 = C.전문가합(w[[4, 1]], ys[:, [4, 1]])
+    확인("계약 4.11 — 한 행의 셈은 다른 행과 상관없다(행을 고르고 묶어도 같은 비트)", 다른칸(둘, o[[4, 1]]) == 0 and
+         다른칸(C.라우터FMA(h[[6, 0]], W), lf[[6, 0]]) == 0)
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -714,6 +767,7 @@ def main():
     시험_F2(r)
     시험_가중치16(r)
     시험_GDN(r)
+    시험_MoE(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
     return 0 if not 실패 else 1
 

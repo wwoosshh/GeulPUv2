@@ -20,6 +20,9 @@
     v 헤드 j 는 k 헤드 j mod H_k(llama.cpp 의 ggml_repeat — 헤드 목록을 통째로 되풀이한 차례), 토큰마다 상태 S(d × d): S ← e^g · S,
     δ = (v − Sᵀk) · β, S ← S + k δᵀ, o = Sᵀq. 출력 RMSNorm(o; ssm_norm — 헤드마다) × SiLU(attn_gate·x), ssm_out
   끝: RMSNorm(x; output_norm), 로짓 = output(없으면 token_embd — 임베딩과 공유한 출력)
+0.12.0 12-3g — 구조 qwen35moe(Qwen3.5 · 3.6-35B-A3B): FFN 이 MoE — 라우터(ffn_gate_inp) softmax 의 상위 expert_used_count 개를 합으로 나눈
+  무게로 전문가 SwiGLU(ffn_gate_exps · ffn_up_exps · ffn_down_exps — [전문가][…] 3 차원)를 더하고, 공유 전문가(ffn_*_shexp)에
+  sigmoid(ffn_gate_inp_shexp · x) 를 곱해 더한다(llama.cpp 의 build_moe_ffn — softmax · norm_w). 고른 전문가를 라우팅{i}.npy([층][행][k])로 남긴다.
 """
 import json
 import math
@@ -53,6 +56,23 @@ def 풀어(g, name, 행=None):
         N = len(행)
     else:
         r = raw
+    return 풀기바이트(t, r, N, K)
+
+
+def 풀어전문가(g, name, e):
+    """0.12.0 12-3g — 3 차원 전문가 텐서 [전문가][N][K] 의 전문가 e 하나 → fp32 (N, K)."""
+    t, dims, raw = g.원(name)
+    K, N = dims[0], dims[1]
+    if t == GR.F32:
+        return np.asarray(raw).view(np.float32).reshape(-1, N, K)[e].copy()
+    vb, bb = GR.블록[t]
+    한 = N * (K // vb * bb)
+    return 풀기바이트(t, np.asarray(raw)[e * 한:(e + 1) * 한], N, K)
+
+
+def 풀기바이트(t, r, N, K):
+    """양자화 블록 바이트 r(행 N · 깊이 K) → fp32 (N, K)."""
+    vb, bb = GR.블록[t]
     if t in (GR.Q8_0, GR.Q4_0):
         bl = r.reshape(-1, bb)
         d = bl[:, :2].copy().view(np.float16).astype(np.float32)
@@ -96,8 +116,13 @@ class 모델:
     def __init__(self, path):
         self.g = g = GR.GGUF(path)
         m = g.meta
-        assert m["general.architecture"] == "qwen35", m["general.architecture"]
-        k = lambda x: m["qwen35." + x]                          # noqa: E731
+        구조 = m["general.architecture"]
+        assert 구조 in ("qwen35", "qwen35moe"), 구조
+        k = lambda x: m[구조 + "." + x]                          # noqa: E731
+        self.moe = 구조 == "qwen35moe"                              # 0.12.0 12-3g
+        if self.moe:
+            self.전문가수, self.고름수 = k("expert_count"), k("expert_used_count")
+        self.라우팅 = []                                            # MoE 층마다 고른 전문가 [행][k]
         self.L, self.D = k("block_count"), k("embedding_length")
         self.H, self.Hkv, self.hd = k("attention.head_count"), k("attention.head_count_kv"), k("attention.key_length")
         assert k("attention.value_length") == self.hd
@@ -173,6 +198,28 @@ class 모델:
         o = rms(o, g.풀기(f"blk.{l}.ssm_norm.weight"), self.eps) * silu(z.reshape(T, Hv, d))
         return 선형(o.reshape(T, Hv * d), g, f"blk.{l}.ssm_out.weight")
 
+    def MoE(self, l, h):
+        """0.12.0 12-3g — 라우터 softmax 의 상위 k(같으면 작은 번호 — 계약 4.11 과 같은 규칙) · 합으로 나눈 무게 · 전문가 SwiGLU · 공유 전문가 × sigmoid."""
+        g, T = self.g, h.shape[0]
+        로짓 = 선형(h, g, f"blk.{l}.ffn_gate_inp.weight")              # (T, 전문가)
+        p = np.exp(로짓 - 로짓.max(-1, keepdims=True))
+        p /= p.sum(-1, keepdims=True)
+        고른 = np.argsort(-로짓, axis=-1, kind="stable")[:, :self.고름수]
+        self.라우팅.append(고른.astype(np.int16))
+        w = np.take_along_axis(p, 고른, -1)
+        w = w / np.maximum(w.sum(-1, keepdims=True), 2.0 ** -14)
+        o = np.zeros((T, self.D))
+        for e in np.unique(고른):
+            행, 순위 = np.nonzero(고른 == e)
+            he = h[행]
+            gg = he @ 풀어전문가(g, f"blk.{l}.ffn_gate_exps.weight", e).astype(f64).T
+            uu = he @ 풀어전문가(g, f"blk.{l}.ffn_up_exps.weight", e).astype(f64).T
+            y = (silu(gg) * uu) @ 풀어전문가(g, f"blk.{l}.ffn_down_exps.weight", e).astype(f64).T
+            o[행] += w[행, 순위][:, None] * y
+        ys = 선형(silu(선형(h, g, f"blk.{l}.ffn_gate_shexp.weight")) * 선형(h, g, f"blk.{l}.ffn_up_shexp.weight"), g, f"blk.{l}.ffn_down_shexp.weight")
+        gs = sigmoid(h @ 풀어(g, f"blk.{l}.ffn_gate_inp_shexp.weight").astype(f64))
+        return o + gs[:, None] * ys
+
     def 앞으로(self, ids):
         g, T = self.g, len(ids)
         x = 풀어(g, "token_embd.weight", ids).astype(f64)
@@ -180,7 +227,10 @@ class 모델:
             h = rms(x, g.풀기(f"blk.{l}.attn_norm.weight"), self.eps)
             x = x + (self.선형어텐션(l, h, T) if self.선형층인가(l) else self.어텐션(l, h, T))
             h = rms(x, g.풀기(f"blk.{l}.post_attention_norm.weight"), self.eps)
-            x = x + 선형(silu(선형(h, g, f"blk.{l}.ffn_gate.weight")) * 선형(h, g, f"blk.{l}.ffn_up.weight"), g, f"blk.{l}.ffn_down.weight")
+            if self.moe:
+                x = x + self.MoE(l, h)
+            else:
+                x = x + 선형(silu(선형(h, g, f"blk.{l}.ffn_gate.weight")) * 선형(h, g, f"blk.{l}.ffn_up.weight"), g, f"blk.{l}.ffn_down.weight")
         x = rms(x, g.풀기("output_norm.weight"), self.eps)
         이름 = "token_embd.weight" if self.묶인출력 else "output.weight"
         V = g.tensors[이름][1][1]
@@ -223,8 +273,11 @@ def main():
     kls, 같음, 행수 = [], 0, 0
     for i, ids in enumerate(토큰들):
         t0 = time.time()
+        m.라우팅 = []
         p = 로그소프트맥스(m.앞으로(ids))
         np.save(os.path.join(작업, f"수학{i}.npy"), p.astype(np.float32))
+        if m.moe:
+            np.save(os.path.join(작업, f"라우팅{i}.npy"), np.stack(m.라우팅))      # [MoE 층][행][k]
         if "--no-llama" in sys.argv:
             print(f"텍스트 {i}: {len(ids)} 토큰 · {time.time() - t0:.0f} 초 — 1위(앞 8 행) {p[:8].argmax(1).tolist()}", flush=True)
             continue

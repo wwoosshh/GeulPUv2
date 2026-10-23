@@ -3,13 +3,15 @@
 게이트) · 4.10(선형 어텐션 GDN — 계약/정수계약.py)을 더한 순전파. 층의 뜻은 시험/qwen35수학.py(12-3a — llama.cpp 의 src/models/qwen35.cpp 와 같음)
 그대로이고, 연산마다 계약의 차례 · 반올림이다.
 
-  python -I 시험/참조35.py <qwen35 gguf> --수학 <폴더> <출력.json> [--빠른]
+  python -I 시험/참조35.py <qwen35 gguf> --수학 <폴더> <출력.json> [--빠른] [--라우터fma]
   python -I 시험/참조35.py <qwen35 gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--빠른]
 
 --수학 <폴더>: 12-3a 의 시험/qwen35수학.py 가 남긴 토큰.json · 수학{i}.npy(fp64 의 이상적인 모델 — 로그 확률) · 라마{i}.npy(llama.cpp 로짓)와
 견준다 — 계약의 손실 KL(수학 ‖ 계약) · 1위 일치, 그리고 같은 자리의 KL(수학 ‖ llama.cpp). --빠른: 빠른 계약 F1(선형층의 활성값 자리 하나 —
 어텐션 · GDN 은 그대로).
 --엔진 <폴더>(12-3e-4): 시험_7B 가 남긴 경우{i}_토큰.bin · 경우{i}_로짓.bin(잡기시작 0 의 경우 — 모든 행)과 계약의 순전파를 비트까지(참조7B.py 의 꼴).
+0.12.0 12-3g — 구조 qwen35moe(Qwen3.5 · 3.6-35B-A3B): FFN 이 MoE(계약 4.11). --라우터fma 는 라우터 로짓을 fp32 FMA 체인으로(기본은 1 절의 정수
+블록 계약 — F32 가중치는 계약 1.3), --수학 의 라우팅{i}.npy 가 있으면 고른 전문가 집합이 수학 참조와 같은 비율을 낸다.
 """
 import json
 import os
@@ -31,15 +33,79 @@ f32 = np.float32
 
 def 설정35(g):
     m = g.meta
-    k = "qwen35."
-    assert m["general.architecture"] == "qwen35", m["general.architecture"]
+    구조 = m["general.architecture"]
+    assert 구조 in ("qwen35", "qwen35moe"), 구조
+    k = 구조 + "."
     s = {"층": m[k + "block_count"], "너비": m[k + "embedding_length"], "머리": m[k + "attention.head_count"],
          "KV머리": m[k + "attention.head_count_kv"], "헤드": m[k + "attention.key_length"], "eps": float(m[k + "attention.layer_norm_rms_epsilon"]),
          "돌림": m[k + "rope.dimension_count"], "θ": float(m[k + "rope.freq_base"]), "간격": m[k + "full_attention_interval"],
          "d": m[k + "ssm.state_size"], "Hk": m[k + "ssm.group_count"], "Hv": m[k + "ssm.time_step_rank"], "합성곱": m[k + "ssm.conv_kernel"]}
     assert m[k + "attention.value_length"] == s["헤드"] and s["합성곱"] == 4 and s["d"] == 128 and s["Hv"] % s["Hk"] == 0, s
     assert m.get(k + "rope.scaling.type", "none") == "none", "RoPE 늘이기는 받지 않는다"
+    s["moe"] = 구조 == "qwen35moe"                                  # 0.12.0 12-3g — FFN 이 MoE(계약 4.11)
+    if s["moe"]:
+        s["전문가"], s["고름"] = m[k + "expert_count"], m[k + "expert_used_count"]
     return s
+
+
+라우터길 = "블록"          # 계약 4.11 1 — "블록"(1 절의 정수 블록 계약 · F32 가중치는 계약 1.3) 또는 "fma"(fp32 FMA 체인 — --라우터 fma)
+라우팅기록 = []           # MoE 층마다 고른 전문가 [행][k] — 수학 참조의 라우팅과 비교
+
+
+def 가중전문가(g, name, e):
+    """0.12.0 12-3g — 3 차원 전문가 텐서 [전문가][N][K] 의 전문가 e 하나를 참조7B.가중 의 꼴로(Q8_0 은 (형식, q, d, None), k-양자화는 풀기K)."""
+    t, dims, raw = g.원(name)
+    K, N = dims[0], dims[1]
+    vb, bb = GR.블록[t]
+    한 = N * (K // vb * bb)
+    r = np.asarray(raw)[e * 한:(e + 1) * 한]
+    if t == GR.Q8_0:
+        bl = r.reshape(N, K // 32, 34)
+        d = np.ascontiguousarray(bl[:, :, :2]).view(np.float16).reshape(N, K // 32).astype(f32)
+        return "Q8_0", np.ascontiguousarray(bl[:, :, 2:]).view(np.int8).reshape(N, K), d, None
+    return C.풀기K(t, r, N, K)
+
+
+def 벡터가중(g, name):
+    """1 차원 F32 가중치(공유 전문가의 게이트 ffn_gate_inp_shexp — 열 하나의 행렬)를 참조7B.가중 의 W16 꼴로(계약 1.3)."""
+    n, E = C.가중치16(g.풀기(name).reshape(1, -1))
+    return "W16", n, E, None
+
+
+def 라우터로짓(h, g, name, 열):
+    """계약 4.11 1 — 라우터길 이 "블록" 이면 1 절의 정수 블록 계약(F32 는 계약 1.3), "fma" 면 fp32 FMA 체인(활성값은 16비트 블록 형식)."""
+    if 라우터길 == "fma":
+        W = g.풀기(name).reshape(열, -1)
+        return C.라우터FMA(h, W, R7.선형자리수)
+    w = 벡터가중(g, name) if 열 == 1 else R7.가중(g, name)
+    return R7.곱(h, w, np.zeros(열, f32))
+
+
+def MoE(g, p, h, s):
+    """계약 4.11 — 라우터 → softmax → 상위 k → 무게 → 전문가 SwiGLU(행을 전문가마다 묶어 — 행마다 같은 셈) → 순위 차례의 합 → 공유 전문가 × σ."""
+    T, D = h.shape
+    l = 라우터로짓(h, g, p + "ffn_gate_inp.weight", s["전문가"])
+    pr = C.소프트맥스전문가(l)
+    고른 = C.상위k(l, s["고름"])
+    라우팅기록.append(고른.astype(np.int16))
+    w = C.전문가무게(pr, 고른)
+    ys = np.zeros((s["고름"], T, D), f32)
+    for e in np.unique(고른):
+        행, 순위 = np.nonzero(고른 == e)
+        he = np.ascontiguousarray(h[행])
+        wg = 가중전문가(g, p + "ffn_gate_exps.weight", e)
+        Fe = wg[1].shape[0]
+        gg = R7.곱(he, wg, np.zeros(Fe, f32))
+        uu = R7.곱(he, 가중전문가(g, p + "ffn_up_exps.weight", e), np.zeros(Fe, f32))
+        ys[순위, 행] = R7.곱(C.swiglu(gg, uu), 가중전문가(g, p + "ffn_down_exps.weight", e), np.zeros(D, f32))
+    o = C.전문가합(w, ys)
+    wg = R7.가중(g, p + "ffn_gate_shexp.weight")
+    Fs = wg[1].shape[0]
+    gs = R7.곱(h, wg, np.zeros(Fs, f32))
+    us = R7.곱(h, R7.가중(g, p + "ffn_up_shexp.weight"), np.zeros(Fs, f32))
+    ysh = R7.곱(C.swiglu(gs, us), R7.가중(g, p + "ffn_down_shexp.weight"), np.zeros(D, f32))
+    게 = C.시그모이드(라우터로짓(h, g, p + "ffn_gate_inp_shexp.weight", 1)[:, 0])
+    return C.fma32(np.broadcast_to(게[:, None], o.shape), ysh, o)
 
 
 def 임베딩(g, 경우):
@@ -127,6 +193,11 @@ def 앞으로(g, 경우, 말=True):
                 os_.append(C.곱(o, C.실루(zg[a0:a1])))
             x = (x + R7.곱(np.concatenate(os_, 0), R7.가중(g, p + "ssm_out.weight"), z0(D))).astype(f32)
         h = C.rms정규화(x, g.풀기(p + "post_attention_norm.weight"), eps)
+        if s["moe"]:                                                # 0.12.0 12-3g — 계약 4.11
+            x = C.더(x, MoE(g, p, h, s))
+            if 말:
+                print(f"층 {l}({'어텐션' if (l + 1) % s['간격'] == 0 else 'GDN'} · MoE): {time.time() - tl:.1f} 초", flush=True)
+            continue
         wg = R7.가중(g, p + "ffn_gate.weight")
         F = wg[1].shape[0]
         gg = R7.곱(h, wg, z0(F))
@@ -170,9 +241,12 @@ def 엔진대조(gguf, 폴더, 출력):
 
 
 def main():
+    global 라우터길
     sys.stdout.reconfigure(encoding="utf-8")
     if "--빠른" in sys.argv:
         R7.선형자리수 = 1
+    if "--라우터fma" in sys.argv:                 # 0.12.0 12-3g — 계약 4.11 1 의 다른 길(fp32 FMA 체인)
+        라우터길 = "fma"
     인자 = [a for a in sys.argv[1:] if not a.startswith("--")]
     gguf = 인자[0]
     if "--엔진" in sys.argv:
@@ -185,6 +259,22 @@ def main():
     t0 = time.time()
     로짓, 시작 = 앞으로(g, [np.asarray(t, np.int64) for t in 토큰들])
     결과 = {"gguf": os.path.basename(gguf), "모드": "F1" if R7.선형자리수 == 1 else "정밀", "초": round(time.time() - t0), "글": []}
+    if 라우팅기록:                                                   # 0.12.0 12-3g — 고른 전문가(집합)가 수학 참조와 같은가
+        결과["라우터"] = 라우터길
+        우리 = np.stack(라우팅기록)                                     # [MoE 층][Σ 행][k]
+        같은집합, 겹침, 칸 = 0, 0, 0
+        for i in range(len(토큰들)):
+            경로 = os.path.join(폴더, f"라우팅{i}.npy")
+            if not os.path.exists(경로):
+                continue
+            수 = np.sort(np.load(경로).astype(np.int64), -1)
+            우 = np.sort(우리[:, 시작[i]:시작[i + 1]].astype(np.int64), -1)
+            같은집합 += int((수 == 우).all(-1).sum())
+            겹침 += int(sum((np.isin(우[a, b], 수[a, b])).sum() for a in range(수.shape[0]) for b in range(수.shape[1])))
+            칸 += 수.shape[0] * 수.shape[1]
+        if 칸:
+            결과["라우팅"] = {"같은 집합 %": 100 * 같은집합 / 칸, "겹침 %": 100 * 겹침 / (칸 * 우리.shape[2]), "(층, 행)": 칸}
+            print("라우팅:", 결과["라우팅"], flush=True)
     모든 = {"계약": [], "라마": [], "같음계약": 0, "같음라마": 0, "행": 0}
     for i in range(len(토큰들)):
         pc = 로그소프트맥스(로짓[시작[i]:시작[i + 1]])
