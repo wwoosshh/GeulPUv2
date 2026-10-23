@@ -34,14 +34,19 @@ import 정수계약 as C        # noqa: E402
 f32 = np.float32
 u64, i64 = G.c_u64, G.c_i64
 D, NH, NKV, HD = 3584, 28, 4, 128         # 7B — 24단계부터는 main 이 GGUF 의 설정으로 다시 둔다(모양두기)
+HP = 128                                   # 0.12.0 12-3c-2 — 어텐션 안의 헤드(0 을 채운 128). HD 는 실제 헤드 크기(64 · 96 · 128)
+R = HD                                     # 0.12.0 12-3c-2 — RoPE 차원 n_rot(앞 n_rot 차원만 돌린다)
 A = NH * HD                                # GeulPUv2 1.0.0 1-6a — 질의 폭(q · 어텐션 출력 · o 의 입력). 너비 D 와 다를 수 있다(Qwen3-0.6B · 4B)
 QKV = A + 2 * NKV * HD                     # 4608
+AP = NH * HP                               # 12-3c-2 — q 자리의 폭(0 을 채운 헤드)
+QKVP = AP + 2 * NKV * HP                   # 12-3c-2 — RoPEKV 의 블록(0 을 채운 헤드)
+KBP = AP // 32
 O자리수 = 2                                # 33단계 — 접기의 출력(o 의 입력) 자리 수: --자리하나 면 1 (어텐션 안의 q · k · v · e 는 늘 둘)
 KV8 = False                                # GeulPUv2 ③b-2 — 8비트 KV 모듈(커널생성 --KV8): 키 · 값 int8 + 스케일 fp32 (계약 F1A′)
 F2 = False                                 # GeulPUv2 빠른 어텐션 계약 F2(커널생성 --F2 — KV8 위에서)
 F2B = False                                # 1.0.0 1-4 — F2B(커널생성 --F2B): F2 에서 q 의 지수만 블록마다
 KB = A // 32                               # 112 — q · o 의 블록 수
-SH = HD + 4                            # 묶음 상태 하나의 칸 (M, L, 빈 둘, O 128)
+SH = HP + 4                            # 묶음 상태 하나의 칸 (M, L, 빈 둘, O 128)
 
 
 def 모양두기(경로):
@@ -59,15 +64,20 @@ def 모양두기(경로):
         t = struct.unpack_from("<I", b, o + 8 + n)[0]
         v, o = GR._값(b, o + 12 + n, t)
         메타[키] = v
-    global D, NH, NKV, QKV, KB, A
+    global D, NH, NKV, QKV, KB, A, HD, R, AP, QKVP, KBP
     k = 메타.get("general.architecture", "qwen2") + "."
     D = 메타[k + "embedding_length"]
     NH = 메타[k + "attention.head_count"]
     NKV = 메타[k + "attention.head_count_kv"]
-    assert 메타.get(k + "attention.key_length", D // NH) == HD, (D, NH)
+    HD = 메타.get(k + "attention.key_length", D // NH)          # 0.12.0 12-3c-2 — 64 · 96 · 128 (어텐션은 128 로 0 을 채운다)
+    assert HD in (64, 96, 128), (D, NH, HD)
+    R = 메타.get(k + "rope.dimension_count", HD)
     A = NH * HD
     QKV = A + 2 * NKV * HD
     KB = A // 32
+    AP = NH * HP
+    QKVP = AP + 2 * NKV * HP
+    KBP = AP // 32
     return 메타
 질문들 = ["What is the capital of France? Answer in one word.", "대한민국의 수도는 어디야? 한 단어로 답해.",
          "Write a short poem about the sea."]
@@ -125,23 +135,23 @@ class 글커널:
         폭max = (Mmax + 63) // 64 * 64
         묶음수 = (최대길이 + 1023) // 1024
         p입력 = dr.할당(Mmax * QKV * 4)
-        p자q, p정q = dr.할당(2 * Mmax * A), dr.할당(KB * 폭max * 4)
+        p자q, p정q = dr.할당(2 * Mmax * AP), dr.할당(KBP * 폭max * 4)      # 12-3c-2 — q 자리는 0 을 채운 헤드
         자 = 1 if KV8 else 2                      # ③b-2 — 키 · 값의 자리 수, 지수 바이트 대신 fp32 스케일
-        p키, p값 = dr.할당(NKV * 자 * 최대길이 * HD), dr.할당(NKV * 최대길이 * 자 * HD)
+        p키, p값 = dr.할당(NKV * 자 * 최대길이 * HP), dr.할당(NKV * 최대길이 * 자 * HP)
         p키지, p값지 = dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1)), dr.할당(NKV * 최대길이 * 4 * (4 if KV8 else 1))
         p묶 = dr.할당(Mmax * NH * 묶음수 * SH * 4)
         p자, p정 = dr.할당(2 * Mmax * A), dr.할당(2 * KB * 폭max * 4)      # 1.0.0 1-1 — 행 합 판의 모듈은 접기가 정보 뒤에 T 도 쓴다
         p출 = dr.할당(Mmax * A * 4)
-        p코, p사 = dr.할당(최대길이 * 64 * 4), dr.할당(최대길이 * 64 * 4)
+        p코, p사 = dr.할당(최대길이 * (R // 2) * 4), dr.할당(최대길이 * (R // 2) * 4)       # 12-3c-2 — 표 [위치][n_rot/2]
         dr.올리기(p코, np.ascontiguousarray(cos, f32))
         dr.올리기(p사, np.ascontiguousarray(sin, f32))
-        out = {"q자리": np.zeros((2, n, A), np.int8), "q정보": np.zeros((n, KB), np.int32), "o자리": np.zeros((O자리수, n, A), np.int8),
+        out = {"q자리": np.zeros((2, n, AP), np.int8), "q정보": np.zeros((n, KBP), np.int32), "o자리": np.zeros((O자리수, n, A), np.int8),
                "o정보": np.zeros((n, KB), np.int32), "o짧은": np.zeros((n, A), f32)}
         KV = [(1, p키), (1, p값), (1, p키지), (1, p값지)]
         for s, m, 판 in 덩이들:
             폭 = (m + 63) // 64 * 64
             dr.올리기(p입력, np.ascontiguousarray(X[s:s + m], f32))
-            self.띄우기("RoPEKV정수로", ((QKV // 32 + 31) // 32, m), 256,
+            self.띄우기("RoPEKV정수로", ((QKVP // 32 + 31) // 32, m), 256,
                      [(1, p입력), (1, p자q), (1, p정q)] + KV + [(1, p코), (1, p사), (0, m), (0, m), (0, s), (0, 최대길이)])
             if RoPE만:
                 pass
@@ -164,21 +174,21 @@ class 글커널:
                 self.띄우기("정수묶음접기", (NH, m), 128, [(1, p묶), (1, p정), (1, p자), (0, m), (0, m), (0, s), (0, 최대길이)])
                 self.띄우기("정수묶음접기짧은", (NH, m), 128, [(1, p묶), (1, p출), (0, m), (0, m), (0, s), (0, 최대길이)])
             dr.맞추기()
-            out["q자리"][:, s:s + m] = dr.내리기(p자q, np.empty((2, m, A), np.int8))
-            out["q정보"][s:s + m] = dr.내리기(p정q, np.empty((KB, 폭), np.int32))[:, :m].T
+            out["q자리"][:, s:s + m] = dr.내리기(p자q, np.empty((2, m, AP), np.int8))
+            out["q정보"][s:s + m] = dr.내리기(p정q, np.empty((KBP, 폭), np.int32))[:, :m].T
             if RoPE만:
                 continue
             out["o자리"][:, s:s + m] = dr.내리기(p자, np.empty((O자리수, m, A), np.int8))
             out["o정보"][s:s + m] = dr.내리기(p정, np.empty((KB, 폭), np.int32))[:, :m].T
             out["o짧은"][s:s + m] = dr.내리기(p출, np.empty((m, A), f32))
         if KV8:
-            out["키"] = dr.내리기(p키, np.empty((NKV, 최대길이, HD), np.int8))
-            out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, HD, 32), np.int8))
+            out["키"] = dr.내리기(p키, np.empty((NKV, 최대길이, HP), np.int8))
+            out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, HP, 32), np.int8))
             out["키스케일"] = dr.내리기(p키지, np.empty((NKV, 최대길이, 4), f32))
             out["값스케일"] = dr.내리기(p값지, np.empty((NKV, 최대길이, 4), f32))
         else:
-            out["키"] = dr.내리기(p키, np.empty((NKV, 2, 최대길이, HD), np.int8))
-            out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, 2, HD, 32), np.int8))
+            out["키"] = dr.내리기(p키, np.empty((NKV, 2, 최대길이, HP), np.int8))
+            out["값"] = dr.내리기(p값, np.empty((NKV, 최대길이 // 32, 2, HP, 32), np.int8))
             out["키지수"] = dr.내리기(p키지, np.empty((NKV, 최대길이, 4), np.uint8))
             out["값지수"] = dr.내리기(p값지, np.empty((NKV, 최대길이, 4), np.uint8))
         if RoPE만:
@@ -221,17 +231,31 @@ def q자리바이트(qr):
     return 바이트, M0
 
 
+def 채움(x):
+    """0.12.0 12-3c-2 — 헤드 [n][HD] → [n][128] (뒤를 0 으로 — 어텐션 커널의 배치)."""
+    x = np.asarray(x, f32)
+    return x if x.shape[1] == HP else np.concatenate([x, np.zeros((x.shape[0], HP - x.shape[1]), f32)], 1)
+
+
+def 돌리기(x, cos, sin, 위치):
+    """0.12.0 12-3c-2 — 앞 n_rot(R) 차원만 RoPE(짝 i, i + R/2 — 표의 폭 R/2), 나머지는 그대로."""
+    x = np.asarray(x, f32)
+    if R == x.shape[1]:
+        return C.rope(x, cos, sin, 위치)
+    return np.concatenate([C.rope(x[:, :R], cos, sin, 위치), x[:, R:]], 1).astype(f32)
+
+
 def 참조(X, 최대길이, cos, sin, 첫행=0):
     """첫행: 어텐션 출력(o)은 이 행부터만 셈한다(GeulPUv2 4b단계 — 긴 문맥의 끝 행 대조. 계약/정수계약.어텐션 의 첫행 — 값은 모든 행을
     셈할 때와 같다). q 자리 · KV 캐시는 모든 행."""
     n = X.shape[0]
     위치 = np.arange(n)
     q, k, v = X[:, :A], X[:, A:A + NKV * HD], X[:, A + NKV * HD:]
-    qr = np.concatenate([C.rope(q[:, HD * a:HD * a + HD], cos, sin, 위치) for a in range(NH)], 1)
-    kr = [C.rope(k[:, HD * g:HD * g + HD], cos, sin, 위치) for g in range(NKV)]
+    qr = np.concatenate([돌리기(q[:, HD * a:HD * a + HD], cos, sin, 위치) for a in range(NH)], 1)
+    kr = [돌리기(k[:, HD * g:HD * g + HD], cos, sin, 위치) for g in range(NKV)]
     vv = [np.ascontiguousarray(v[:, HD * g:HD * g + HD]) for g in range(NKV)]
     out = {}
-    out["q자리"], out["q정보"] = q자리바이트(qr)
+    out["q자리"], out["q정보"] = q자리바이트(np.concatenate([채움(qr[:, HD * a:HD * a + HD]) for a in range(NH)], 1))
     if KV8:                                         # ③b-2 — 계약 F1A′ 의 캐시(정수계약.키캐시KV8 · 값캐시KV8)
         키들 = [C.키캐시KV8(kr[g], 최대길이) for g in range(NKV)]
         값들 = [(C.값캐시F2 if F2 else C.값캐시KV8)(vv[g], 최대길이) for g in range(NKV)]
@@ -240,8 +264,8 @@ def 참조(X, 최대길이, cos, sin, 첫행=0):
         out["값"] = np.stack([a for a, _ in 값들])
         out["값스케일"] = np.stack([b for _, b in 값들])
     else:
-        키들 = [C.키캐시(kr[g], 최대길이) for g in range(NKV)]
-        값들 = [C.값캐시(vv[g], 최대길이) for g in range(NKV)]
+        키들 = [C.키캐시(채움(kr[g]), 최대길이) for g in range(NKV)]          # 12-3c-2 — 캐시는 0 을 채운 헤드
+        값들 = [C.값캐시(채움(vv[g]), 최대길이) for g in range(NKV)]
         out["키"] = np.stack([a for a, _ in 키들])
         out["키지수"] = np.stack([b for _, b in 키들])
         out["값"] = np.stack([a for a, _ in 값들])
@@ -360,7 +384,7 @@ def main():
         C.어텐션한자리 = 변형.lower()
         print("8비트 KV 에뮬레이션:" if "8" in 변형 else "F1A 에뮬레이션:", 변형, flush=True)
     모양두기(gguf)
-    print(f"모양: 너비 {D} · 질의 폭 {A} · 머리 {NH} · KV 머리 {NKV} (GQA {NH // NKV})", flush=True)
+    print(f"모양: 너비 {D} · 질의 폭 {A} · 머리 {NH} · KV 머리 {NKV} (GQA {NH // NKV}) · 헤드 크기 {HD} · RoPE {R}", flush=True)
     k = 글커널(ptx)
     결과 = {"커널 속성": k.속성(), "경우": []}
     print(json.dumps(결과["커널 속성"], ensure_ascii=False), flush=True)
@@ -398,7 +422,7 @@ def main():
                 경우들[-1][3]["생성 판 넷"] = [(s, 1, "넷") for s in range(m)]
     for 이름, X, 최대길이, 길들 in 경우들:
         t0 = time.time()
-        cos, sin = C.rope표(최대길이, 1e6, hd=HD)
+        cos, sin = C.rope표(최대길이, 1e6, hd=R)
         참 = 참조(X, 최대길이, cos, sin)
         t1 = time.time()
         한 = {"경우": 이름, "행": int(X.shape[0]), "최대길이": 최대길이, "참조 초": round(t1 - t0, 1), "길": {}}
@@ -424,7 +448,7 @@ def main():
         # CPU 참조의 어텐션(n²)이 길어 GPU 둘을 견준다. 프롬프트 8296 행(묶음 판) 뒤 행 넷을 행 하나씩.
         n2 = 8300
         X2 = 무작위(n2, 23)
-        cos, sin = C.rope표(8448, 1e6, hd=HD)
+        cos, sin = C.rope표(8448, 1e6, hd=R)
         앞 = [(a, min(1024, 8296 - a)) for a in range(0, 8296, 1024)]
         못 = k.못돌림(앞 + [(8296, 1, "조각"), (8296, 1, "넷")])
         if 못:                                      # 31단계 — 장치 한도
@@ -445,7 +469,7 @@ def main():
             최대길이3 = 32768
             끝 = 4
             X3 = 무작위(n3, 씨)
-            cos, sin = C.rope표(최대길이3, 1e6, hd=HD)
+            cos, sin = C.rope표(최대길이3, 1e6, hd=R)
             t0 = time.time()
             참 = 참조(X3, 최대길이3, cos, sin, 첫행=n3 - 끝)
             t1 = time.time()

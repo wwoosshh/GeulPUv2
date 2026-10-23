@@ -293,7 +293,9 @@ The head-64 contract is unchanged. Three things differ at head size 128:
 
 1. **Head size h** (32 ≤ h ≤ 256): sections 2 and 3 run on the head padded with zeros to h′ = ⌈h/32⌉ · 32, and the padded outputs are
    dropped — zeros change neither the block maxima nor the integer sums, so the bits are the same. The score scale is c = float32(1/√h)
-   of the real head size (the same place as item 1 of head size 128; exact when h is a power of 4).
+   of the real head size (the same place as item 1 of head size 128; exact when h is a power of 4). The engine (0.12.0 12-3c-2) pads
+   heads of h ≤ 128 with zeros all the way to 128 and runs the head-128 kernels — the blocks beyond h′ add zero to the score chain and the
+   weighted sum (a zero of either sign is the same input to the exponential), so the bits are the same.
 2. **RoPE dimensions** n_rot (GGUF `rope.dimension_count` — h when absent): only the first n_rot dimensions rotate — table cos · sin
    [position][n_rot/2], θ_i = θ^(−2i/n_rot) (correctly rounded), pairs (i, i + n_rot/2), the fma forms of item 2 of head size 128. The
    other dimensions pass through.
