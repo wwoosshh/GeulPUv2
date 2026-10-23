@@ -4883,9 +4883,9 @@ function renderSettings(force) {
   const precSel = h('select', { class: 'input', id: 'set-prec', 'aria-label': T('계산 방식'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-prec') },
     [['fast', T('빠름 — 8비트 활성값(llama.cpp와 같은 급)')], ['exact', T('정밀 — 활성값 두 자리(정밀도 계약 그대로 · 연구용)')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.precision || 'fast') ? true : null }, tx)));
   const kv8Sel = h('select', { class: 'input', id: 'set-kv8', 'aria-label': T('KV 캐시 8비트'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-kv8') },
-    [['off', T('끔 — 16비트 KV 캐시')], ['on', T('켬 — KV 캐시가 0.55배라 긴 문맥이 더 들어갑니다')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.kv8_cache ? 'on' : 'off') ? true : null }, tx)));
+    [['on', T('켬 — KV 캐시가 0.55배라 긴 문맥이 더 들어갑니다')], ['off', T('끔 — 16비트 KV 캐시')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.kv8_cache ? 'on' : 'off') ? true : null }, tx)));
   const f2Sel = h('select', { class: 'input', id: 'set-f2', 'aria-label': T('빠른 어텐션'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-f2') },
-    [['off', T('끔')], ['on', T('켬 — 긴 프롬프트가 빨라집니다')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.fast_attention ? 'on' : 'off') ? true : null }, tx)));
+    [['on', T('켬 — 긴 프롬프트가 빨라집니다')], ['off', T('끔')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.fast_attention ? 'on' : 'off') ? true : null }, tx)));
   const specSel = h('select', { class: 'input', id: 'set-spec', 'aria-label': T('추측 디코딩'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-spec') },
     [['on', T('켬 — 답은 같고, 되풀이가 많은 답이 빨라집니다')], ['off', T('끔')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.speculative === false ? 'off' : 'on') ? true : null }, tx)));
   const defDir = (a.data_dir || '') + '모델\\';

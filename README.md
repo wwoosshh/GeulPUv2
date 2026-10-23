@@ -43,8 +43,9 @@ a token, a tool result, the quantization — and see the effect of that one chan
   and compare two runs request by request — from the app or from scripts.
 - **Research panel.** For any answer in the chat: each token's probability, rank, top-10 alternatives, entropy and margin; branch,
   compare, score text, export, and check reproduction files.
-- **Fast where it matters.** Decoding at parity with llama.cpp; prompts faster up to 4k tokens in fast mode; speculative decoding that
-  is 3.5–4× faster on editing tasks *and* bit-identical; a prompt cache on the SSD that restores a coding agent's 15k-token prompt in
+- **Fast where it matters.** With the default settings, prompts and generation are faster than llama.cpp at every length measured
+  (0.76–0.97× its time on Qwen2.5-7B, down to 0.48× deep into a Llama-3.1-8B session); speculative decoding that is 3.5–4× faster on
+  editing tasks *and* bit-identical; a prompt cache on the SSD that restores a coding agent's 15k-token prompt in
   0.3 s after a restart.
 - **Works with your tools.** An OpenAI-compatible API with tool calling for coding agents (tested with Qwen Code), log-probabilities,
   echo scoring and tokenization endpoints, and lm-evaluation-harness support.
@@ -137,25 +138,27 @@ set through every step.
 
 llama.cpp does not aim for batch-invariant output; the comparison shows what changes when there is no such contract.
 
-**Speed** — GeulPU's time divided by llama.cpp's (latest official release at the time of measurement, same GGUF, its fastest setting;
-lower is better). RTX 4070 Ti (12 GB), Qwen2.5-7B-Instruct Q4_K_M, fast mode:
+**Speed** — GeulPU's time divided by llama.cpp's (latest official release at the time of measurement — b11827 —, same GGUF, the faster
+of its f16 and q8_0 KV caches; lower is better). RTX 4070 Ti (12 GB), Qwen2.5-7B-Instruct Q4_K_M, default settings (fast mode with the
+8-bit KV cache and fast attention):
 
 | Workload | GeulPU ÷ llama.cpp |
 |---|---|
-| Decoding (generation) | 0.97–1.06× |
-| Prompt of 512 / 2,048 / 4,096 / 8,192 tokens | 0.89 / 0.90 / 0.95 / 1.04× |
-| 1,024 new tokens into a session 8k / 16k / 31k tokens deep | 1.18 / 1.40 / 1.57× |
+| Decoding (generation) at a depth of 8k / 32k / 64k tokens | 0.97 / 0.89 / 0.82× |
+| Prompt of 512 / 2,048 / 8,192 / 32,768 / 65,536 tokens | 0.83 / 0.87 / 0.90 / 0.95 / 0.92× |
+| 1,024 new tokens into a session 8k / 32k / 64k tokens deep | 0.90 / 0.92 / 0.76× |
+| A recorded coding-agent session (54 requests, Qwen Code) | 0.59× of llama.cpp's fastest setting (a 0.5B draft model) |
 
-Long sessions are still slower: the attention keeps two-digit activations for precision. Exact mode costs 1.16–1.47× llama.cpp's
-prompt time. With speculative decoding (on by default), editing code generates 329–356 tokens/s — 3.5× the speed without it and
-1.2–1.5× llama.cpp's fastest speculative setting — with bit-identical output. Every measurement, with the method and the raw numbers, is in the [user guide](docs/user-guide.md#what-is-different).
+Exact mode keeps the contract's two-digit activations and costs 1.19–1.40× llama.cpp's time on prompts up to 8k tokens (1.74× at 32k).
+With speculative decoding (on by default), editing code generates 329–356 tokens/s — 3.5× the speed without it and 1.2–1.5× llama.cpp's
+fastest speculative setting — with bit-identical output. Every measurement, with the method and the raw numbers, is in the [user guide](docs/user-guide.md#what-is-different).
 
 ## Supported models and hardware
 
 | Architecture | Models | Weight formats |
 |---|---|---|
-| `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen (1.5B and larger) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K |
-| `qwen3` | Qwen3 1.7B · 8B (14B checked on a synthetic model) | same |
+| `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen (1.5B and larger) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS (CUDA) |
+| `qwen3` | Qwen3 0.6B · 1.7B · 8B (14B checked on a synthetic model; 4B · 32B load the same way as 0.6B) | same |
 | `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 | same |
 
 Fine-tunes of these models with the same chat template run too. Qwen2.5 (7B and larger) and Qwen3 take up to 131,072 tokens of context
