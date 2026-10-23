@@ -155,7 +155,7 @@ llama.cpp는 배치와 상관없이 같은 출력을 목표로 하지 않습니�
 |---|---|---|
 | `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(1.5B 이상) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS(CUDA) |
 | `qwen3` | Qwen3 0.6B · 1.7B · 8B(14B는 합성 모델로 모양 확인, 4B · 32B는 0.6B와 같은 길로 불러옴) | 같음 |
-| `llama` | Llama 3.1 · 3.2 Instruct(3B · 8B) · Mistral 7B Instruct v0.3 | 같음 |
+| `llama` | Llama 3.1 · 3.2 Instruct(3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED | 같음 |
 
 같은 채팅 템플릿을 쓰는 미세조정 모델도 돕니다. Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다. GPU: NVIDIA RTX
 30 시리즈 이상은 CUDA, 그 밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버에서는 아직 Q8_0 · Q4_0만).

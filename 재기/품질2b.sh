@@ -25,6 +25,9 @@ MODELS=(
   "qwen3-8b-q4km|$M/Qwen3-8B-Q4_K_M.gguf|qwen3큰 K 4096 32 8 12288 151936|F1 KV"
   "qwen7b-q8|$M/Qwen2.5-7B-Instruct-Q8_0.gguf|qwen2Q8_7b|F1 KV"
   "llama8b-q8|$M/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf|llama큰 Q8_0 4096 32 8 14336 128256|F1 KV"
+  # 0.12.0 12-1 — 채팅 템플릿으로 열린 모델(앱의 기본 — 8비트 KV · 빠른 어텐션)
+  "r1llama8b-q4km|$M/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf|llama큰 K 4096 32 8 14336 128256|F1 KV8 F2_KV8"
+  "hcx1.5b-q4km|$M/hyperclovax-seed-text-instruct-1.5b-q4_k_m.gguf|llama큰 K 2048 16 8 7168 110592|F1 KV8 F2_KV8"
 )
 mod() {  # 이름 모양인자 변형 → 모듈 경로(표준 출력)
   local p=$MD/$1_$3.ptx g=$MD/$1_$3.gl

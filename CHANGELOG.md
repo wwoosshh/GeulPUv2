@@ -6,6 +6,28 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+### Added
+
+- **DeepSeek-R1-Distill-Llama.** Llama-architecture models with DeepSeek-R1's chat template now load and chat. The server renders the
+  DeepSeek-R1 template exactly as the GGUF's `chat_template` does under jinja2 (the BOS text, the last system message, `<｜User｜>` and
+  `<｜Assistant｜>` turns with earlier answers cut after their last `</think>`, and the `<think>\n` generation prompt of the Llama-based
+  GGUF); its tool-call form is not accepted. In the app these models behave like R1-Distill-Qwen — the thinking is folded, and the app
+  now reads each model's `</think>` token id from its vocabulary instead of assuming R1-Distill-Qwen's.
+- **HyperCLOVAX-SEED and other Llama-architecture fine-tunes with a plain ChatML template.** The server renders the basic ChatML template
+  (`<|im_start|>role\ncontent<|im_end|>\n` per message, then `<|im_start|>assistant\n` — no default system message, tools or thinking)
+  when the vocabulary has `<|im_start|>` and `<|im_end|>` as special tokens, and the tokenizer accepts the `dbrx` pre-tokenizer (the
+  Llama 3 split without the whole-word shortcut, as in llama.cpp): on twelve texts, including the whole user guide (14,424 tokens),
+  the token ids equal llama.cpp b11827's.
+
+### Fixed
+
+- **R1-Distill-Qwen's `/v1/chat/completions` used the wrong chat template.** The server rendered Qwen's ChatML, whose `<|im_start|>`
+  is not in this model's vocabulary, so the markers were split into ordinary text; it now renders the DeepSeek-R1 template (the chat
+  in the app was not affected — it builds the R1 prompt itself and uses `/v1/completions`). **Output change** for R1-Distill-Qwen
+  requests to `/v1/chat/completions`.
+
 ## 0.11.0 — Faster by default: agent replay 22 % shorter (2026-10-23)
 
 ### Changed

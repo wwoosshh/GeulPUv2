@@ -1,0 +1,13 @@
+{
+ "_설명": "0.12.0 12-1 — 도구 없는 채팅 틀 대조의 경우들(시험/도구틀참조.py · 시험/도구틀.py 에 시험/도구틀경우.json 대신 준다): 여러 차례 · 시스템 둘 · 앞 답의 생각 · 조각 content · 빈 답. DeepSeek-R1 · 기본 ChatML · Qwen · Llama 3 틀 모두",
+ "도구": {},
+ "경우": [
+  {"id": "T1 user 하나", "messages": [{"role": "user", "content": "안녕하세요. 오늘 날씨 어때요?"}]},
+  {"id": "T2 시스템 · user", "messages": [{"role": "system", "content": "너는 짧게 답하는 도우미다."}, {"role": "user", "content": "1 + 1 은?"}]},
+  {"id": "T3 여러 차례", "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What is the capital of France?"}, {"role": "assistant", "content": "The capital of France is Paris."}, {"role": "user", "content": "And of Korea?"}]},
+  {"id": "T4 앞 답의 생각", "messages": [{"role": "user", "content": "3 × 7 은?"}, {"role": "assistant", "content": "<think>\n3 을 일곱 번 더하면 21.\n</think>\n\n21 입니다."}, {"role": "user", "content": "그럼 3 × 8 은?"}]},
+  {"id": "T5 시스템 둘", "messages": [{"role": "system", "content": "첫 시스템 말."}, {"role": "user", "content": "질문 하나."}, {"role": "assistant", "content": "답 하나."}, {"role": "system", "content": "둘째 시스템 말."}, {"role": "user", "content": "질문 둘."}]},
+  {"id": "T6 조각 content", "messages": [{"role": "user", "content": [{"type": "text", "text": "앞 조각 — "}, {"type": "text", "text": "뒤 조각."}]}]},
+  {"id": "T7 빈 답 · 줄바꿈", "messages": [{"role": "user", "content": "  앞뒤 공백 \n줄바꿈\n"}, {"role": "assistant", "content": ""}, {"role": "user", "content": "다시."}]}
+ ]
+}

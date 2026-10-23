@@ -159,7 +159,7 @@ fastest speculative setting — with bit-identical output. Every measurement, wi
 |---|---|---|
 | `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen (1.5B and larger) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS (CUDA) |
 | `qwen3` | Qwen3 0.6B · 1.7B · 8B (14B checked on a synthetic model; 4B · 32B load the same way as 0.6B) | same |
-| `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 | same |
+| `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED | same |
 
 Fine-tunes of these models with the same chat template run too. Qwen2.5 (7B and larger) and Qwen3 take up to 131,072 tokens of context
 with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT — on AMD's
