@@ -285,16 +285,18 @@ r = client.chat.completions.create(model="geulpu", messages=[{"role": "user", "c
 print(r.choices[0].message.content)
 ```
 
-- To turn Qwen3's thinking off, add `"chat_template_kwargs": {"enable_thinking": false}` to the request (`extra_body=` in Python).
-- By default the thinking of Qwen3 and DeepSeek-R1 comes in front of the answer without tags. Add `"geulpu": {"special": true}` to
-  receive `<think>` and `</think>` as text, so you can separate the thinking from the answer. In requests that send `tools`, Qwen3's
+- To turn thinking off on models that switch it (Qwen3, MiniCPM5), add `"chat_template_kwargs": {"enable_thinking": false}` to the
+  request (`extra_body=` in Python). Other values in `chat_template_kwargs` are passed to the chat template as they are.
+- By default the thinking (Qwen3, DeepSeek-R1, MiniCPM5) comes in front of the answer without tags. Add `"geulpu": {"special": true}` to
+  receive `<think>` and `</think>` as text, so you can separate the thinking from the answer. In requests that send `tools`, the
   thinking comes separately as `reasoning_content`.
 - Only this PC can connect, and there is no authentication. Requests that other websites send through your browser are refused.
-- `/v1/chat/completions` uses the Qwen2.5, Qwen3, Llama 3 (3.1 · 3.2) and Mistral (v0.3) chat templates. For DeepSeek-R1, put R1's
-  template into `/v1/completions` yourself for now.
-- The Llama 3 template puts a date in the system header. So that the same question does not become a different prompt every day, it is
-  fixed to `26 Jul 2024`; change it with `"chat_template_kwargs": {"date_string": "16 Oct 2026"}` in the request. Mistral's template has
-  no system role, so a system message is put in front of the first question as `{system}\n\n` (the same form as llama.cpp).
+- `/v1/chat/completions` runs the model file's own chat template (the GGUF's `tokenizer.chat_template`) with a jinja interpreter that
+  produces the same text as transformers, byte for byte. Files without a template get the basic ChatML template, as in llama.cpp.
+- If the template uses a date (the Llama 3 system header, for example), it is fixed to `26 Jul 2024` so that the same question does not
+  become a different prompt every day; change it with `"chat_template_kwargs": {"date_string": "16 Oct 2026"}` in the request. If the
+  template does not render a system role (Mistral v0.3), a system message is put in front of the first question as `{system}\n\n` (the
+  same form as llama.cpp).
 - For Llama 3 and Mistral a BOS token is prepended to text prompts (the text of `/v1/completions` and the `prompt` of `/tokenize`), as
   llama.cpp and vLLM do — `/tokenize` leaves it out with `"add_special_tokens": false`. Prompts given as token ids are used as they are.
 
@@ -303,8 +305,10 @@ commands) through an OpenAI-compatible API can connect.
 
 - The address is `http://127.0.0.1:44544/v1`; any API key and any model name work (the model loaded in the app answers — load a model
   in the app before using the agent).
-- Models that take tools: Qwen2.5 (7B · 14B · Coder), Qwen3, Llama 3.1 · 3.2. Prompts with tools match the official chat template in the
-  model file token for token. Mistral and DeepSeek-R1 have no tools in their model files' templates, so they refuse them (400).
+- Models that take tools: those whose chat template renders tools and whose call format is one of the four GeulPU reads (Qwen's
+  `<tool_call>` JSON, Llama 3's JSON, the XML of Qwen3.5 and Qwen3-Coder, MiniCPM's XML) — Qwen2.5, Qwen3, Llama 3.1 · 3.2 and MiniCPM5.
+  Prompts with tools are also the model file's own chat template. Mistral, DeepSeek-R1 and HyperCLOVAX-SEED have no tools in their
+  templates, so they refuse them (400).
 - In tests Qwen2.5-7B and Qwen3-8B finished the tasks; Llama 3.x sometimes repeated the same call after getting the tool result — Qwen is
   recommended for agents. `tool_choice` accepts only `auto` (default) and `none`.
 - **The bigger the context, the better.** An agent's base instructions alone are 10,000–15,000 tokens (Qwen Code: 14,501), and they
@@ -372,16 +376,18 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 |---|---|---|
 | qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 1.5B and up (head size 128) — 7B and 14B run on this project's PC |
 | qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 8B · 14B run on this project's PC |
-| llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and fine-tunes that use these chat templates or the basic ChatML template | 1.5B · 2B · 3B · 7B · 8B — 70B checked as a shape with a synthetic model |
+| llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | 1.5B · 2B · 3B · 7B · 8B — 70B checked as a shape with a synthetic model |
+
+The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
+parse are refused — it parsed all 228 templates of the 1,000 most-downloaded GGUF repositories on Hugging Face).
 
 - **Formats**: Q8_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS, and Q4_0 files whose tensors are all Q4_0.
 - **Licenses** differ by model. In the app's list, Llama 3.1 · 3.2 use Meta's community licenses (usage conditions and an Acceptable
   Use Policy — services with more than 700 million monthly users need permission from Meta), the Mistral 7B v0.3, Qwen2.5 and Qwen3 files
   are Apache 2.0, DeepSeek-R1-Distill-Qwen is MIT (R1-Distill-Llama also follows Llama 3.1's license), and HyperCLOVAX-SEED has NAVER's own
   HyperCLOVA X SEED license (also shown in the app's model descriptions).
-- **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (their tekken tokenizer), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …), llama-architecture
-  fine-tunes with other chat templates (ChatML variants with a default system message or tools, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0 · F16 · BF16. Find models hides such files by
-  default.
+- **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (their tekken tokenizer), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …),
+  image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0 · F16 · BF16. Find models hides such files by default.
 - **Depending on the GPU**: k-quants (Q4_K_M, …) run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. With AMD's
   Windows driver (32 KB of shared memory) only Q8_0 (and Q4_0) files run for now. IQ4_XS runs only on CUDA (NVIDIA GPUs) for now.
 
