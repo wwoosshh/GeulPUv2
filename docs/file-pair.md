@@ -70,7 +70,35 @@ One request of the 1.5B file takes about ten minutes on a desktop CPU, so pick a
 
 ## Reference results
 
-@@결과@@
+Reference PC: NVIDIA GeForce RTX 4070 Ti · driver 616.56 · Windows 11 · Intel Core i7-14700K. GeulPU 0.11.1 built from commit
+`bbb6cb3` (the release's code); contract document SHA-256 `faf48d77…`, CPU reference SHA-256 `abf2fcd5…`. The files of the CUDA run
+checked against the reference are in [교차검증/쌍/기준결과/](../교차검증/쌍/기준결과/) — `summary.json`, `environment.json`, a run log per
+file and the per-token differences.
+
+| Path (same PC, exact mode) | default | ffpoff | imatrix | 7b-q4km | 7b-q8_0 |
+|---|---|---|---|---|---|
+| CUDA — recorded reference (steps) | 14,720 | 14,673 | 14,783 | 15,083 | 14,658 |
+| CUDA — second run against the reference | 32/32 | 32/32 | 32/32 | 32/32 | 32/32 |
+| Vulkan with a 32 KB shared-memory limit (the path of AMD's Windows driver) | 32/32 | 32/32 | 32/32 | 32/32 | 32/32 |
+| GeulPU main (b944da6) through the app's debugger — chat API, context 4,096, 2 slots | 32/32 | 32/32 | 32/32 | 32/32 | 32/32 |
+
+"32/32" means every problem gave the same prompt tokens, the same output tokens and the same logit hash at every step (73,917 steps
+per path). The last row was recorded separately with a development build and a different request path, context size and batch, and
+gives the same bits.
+
+**Between files** (CUDA, A = `default`; the same numbers come out of every path above):
+
+| A ↔ B | Same answer | First diverging step (median · min–max) | Log-prob difference per token (B − A) | Steps where B's top-1 differs from A's token |
+|---|---|---|---|---|
+| default ↔ ffpoff | 19 / 32 | 219 (52–491) | +0.0000917 (sum +1.3505 over 14,720 tokens) | 17 of 14,720 |
+| default ↔ imatrix | 0 / 32 | 29 (1–169) | −0.0113 (sum −166.88) | 253 of 14,720 |
+
+- The byte difference that perplexity does not see (`default` ↔ `ffpoff`) changes the greedy text of 13 of the 32 problems. On
+  average the per-token difference is about 10⁻⁴, but once a step where the top two tokens are close picks a different token, the
+  continuation differs. "Same answer" compares the generated tokens, not the final number of each math answer.
+- Steps count from 0 (the first generated token is step 0).
+- CPU check: request 1 of `default` (47 prompt + 217 answer tokens) re-computed from `default.run.jsonl` with `도구/repro_check.py`: the
+  logit hash and the greedy token are the same at all 217 steps (Intel Core i7-14700K, 13 min — `기준결과/cpu_check_default_r1.json`).
 
 ## Citing
 
