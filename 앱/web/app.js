@@ -1323,6 +1323,7 @@ const TMX = [
   [/F16 · BF16 · F32 파일의 출력 가중치 형식\((.+?)\)은 지원하지 않습니다 — F16 · BF16 · F32여야 합니다/g, 'The output weight format ($1) of this F16 · BF16 · F32 file is not supported — it must be F16 · BF16 · F32'],
   [/F16 · BF16 · F32 파일의 층 가중치 (\d+)개가 그 세 형식이 아닙니다/g, '$1 layer weights of this F16 · BF16 · F32 file are not in those three formats'],
   [/이 GPU에서는 F16 · BF16 · F32 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_0 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run F16 · BF16 · F32 files yet. The same model's Q8_0 · Q4_0 files run (a limit of GPUs with 32 KB of shared memory)."],
+  [/이 GPU에서는 헤드 크기가 128이 아니거나 RoPE를 헤드의 일부에만 거는 모델을 아직 실행할 수 없습니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run models whose head size isn't 128, or that apply RoPE to only part of each head, yet (a limit of GPUs with 32 KB of shared memory)."],
   [/IQ4_XS 파일은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\. 같은 모델의 Q4_K_M · Q8_0 파일은 Vulkan에서도 실행됩니다\./g, "IQ4_XS files run only on CUDA (NVIDIA GPUs) for now. The same model's Q4_K_M · Q8_0 files also run on Vulkan."],
   [/GeulPU가 지원하지 않는 파일입니다/g, "GeulPU doesn't support this file"],
   [/이 GPU에서는 Q4_K_M 같은 k-양자화 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_0 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run k-quant files such as Q4_K_M yet. The same model's Q8_0 · Q4_0 files run (a limit of GPUs with 32 KB of shared memory)."],

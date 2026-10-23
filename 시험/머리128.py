@@ -8,7 +8,9 @@
   (KV 머리 × 키 조각, 질의 머리 일곱을 가상 행으로) → 정수조각접기 · 정수조각접기짧은(두 층 접기)). 덩이마다 RoPEKV정수로 → 어텐션 →
   접기(o 의 자리 둘 · 정보, 짧은실수 O/L)를 띄우고, 끝에 KV 캐시(바이트 · 지수)를 내린다.
 
-  python -I 시험/머리128.py <qwen2Q8_7b.ptx> <7B gguf> <출력.json> [--빠르게] [--KV8]
+  python -I 시험/머리128.py <qwen2Q8_7b.ptx> <7B gguf> <출력.json> [--빠르게] [--KV8] [--모양 너비,머리,KV머리,헤드[,RoPE]]
+  --모양: 0.12.0 12-3c-2 — GGUF 의 모양 대신(받을 실제 모델이 없는 헤드 96 · 일부 차원의 RoPE — 그 모양의 모듈로). 층 0 의 실제 q · k · v
+  경우는 건너뛴다.
   --KV8: 8비트 KV 모듈(GeulPUv2 ③b-2 — 커널생성 --빠른 --KV8). 캐시는 키 · 값 int8 과 스케일 fp32(키스케일 · 값스케일)로 견준다.
   --F2: 빠른 어텐션 계약 F2 의 모듈(커널생성 --빠른 --F2 — 8비트 KV 위에서, 계약.md 2.2). q 의 지수 · 값 스케일은 헤드마다 하나.
   --F2B: 1.0.0 1-4 — F2B 의 모듈(커널생성 --빠른 --F2B — qwen3 구조): F2 에서 q 의 지수만 블록마다.
@@ -79,7 +81,25 @@ def 모양두기(경로):
     QKVP = AP + 2 * NKV * HP
     KBP = AP // 32
     return 메타
-질문들 = ["What is the capital of France? Answer in one word.", "대한민국의 수도는 어디야? 한 단어로 답해.",
+
+
+def 모양주기(글):
+    """0.12.0 12-3c-2 — --모양 너비,머리,KV머리,헤드[,RoPE]: 모양두기 와 같은 전역을 GGUF 없이(받을 실제 모델이 없는 헤드 96 · 일부 차원의
+    RoPE — 층 0 의 실제 q · k · v 경우는 건너뛴다)"""
+    global D, NH, NKV, QKV, KB, A, HD, R, AP, QKVP, KBP
+    v = [int(x) for x in 글.split(",")]
+    D, NH, NKV, HD = v[:4]
+    R = v[4] if len(v) > 4 else HD
+    assert HD in (64, 96, 128) and R % 8 == 0 and 8 <= R <= HD and NH % NKV == 0, v
+    A = NH * HD
+    QKV = A + 2 * NKV * HD
+    KB = A // 32
+    AP = NH * HP
+    QKVP = AP + 2 * NKV * HP
+    KBP = AP // 32
+
+
+질문들 =["What is the capital of France? Answer in one word.", "대한민국의 수도는 어디야? 한 단어로 답해.",
          "Write a short poem about the sea."]
 
 
@@ -383,7 +403,11 @@ def main():
         assert 변형 in ("KV", "QKV", "KV8", "V8"), 변형
         C.어텐션한자리 = 변형.lower()
         print("8비트 KV 에뮬레이션:" if "8" in 변형 else "F1A 에뮬레이션:", 변형, flush=True)
-    모양두기(gguf)
+    합성 = "--모양" in sys.argv
+    if 합성:
+        모양주기(sys.argv[sys.argv.index("--모양") + 1])
+    else:
+        모양두기(gguf)
     print(f"모양: 너비 {D} · 질의 폭 {A} · 머리 {NH} · KV 머리 {NKV} (GQA {NH // NKV}) · 헤드 크기 {HD} · RoPE {R}", flush=True)
     k = 글커널(ptx)
     결과 = {"커널 속성": k.속성(), "경우": []}
@@ -410,7 +434,7 @@ def main():
                                          "생성 판 행 1": [(0, 560)] + [(s, 1, "조각") for s in range(560, 600)]}))
         if k.넷:
             경우들[-1][3]["생성 판 넷"] = [(0, 560)] + [(s, 1, "넷") for s in range(560, 600)]
-        for qi, 질문 in enumerate(질문들):
+        for qi, 질문 in enumerate([] if 합성 else 질문들):
             ids = 채팅토큰(질문, gguf)
             Xr = 층0qkv(gguf, ids)
             m = len(ids)
