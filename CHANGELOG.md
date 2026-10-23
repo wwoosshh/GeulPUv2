@@ -10,6 +10,11 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ### Added
 
+- **k-quant files on GPUs with 32 KB of shared memory** (such as AMD's Windows driver). Q4_K · Q5_K · Q6_K files like Q4_K_M now run there
+  in Exact mode. The kernels prefetch fewer stages to fit in 32 KB and keep their order of operations, so the output equals CUDA's bit for
+  bit — checked with Qwen2.5-1.5B Q4_K_M and Qwen3-0.6B Q6_K on an RTX 4070 Ti with the 32 KB limit emulated under Vulkan and on an Intel
+  UHD Graphics 770; not yet on AMD hardware. On these GPUs the 256-column tile kernels are left out, and the first load spends time
+  timing kernel variants (10 minutes on the UHD 770; later loads read the stored choice). F16 · BF16 · F32 and IQ4_XS still don't run there.
 - **Qwen3.5** (architecture `qwen35` — checked with the 0.8B Q8_0 and 4B Q4_K_M files). Every fourth layer is full attention with head
   size 256 (RoPE on the first 64 dimensions, q · k RMSNorm and a sigmoid output gate); the others are linear attention — a gated delta
   net: a short causal convolution, L2-normalized q and k, and a 128 × 128 state per head updated token by token. Both are written into
