@@ -568,7 +568,10 @@ const DICT = {
   "재현 파일과 KV 캐시 설정이 다릅니다 — 설정의 KV 캐시 8비트를 재현 파일과 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different KV cache setting — set 8-bit KV cache in Settings to match it and load the model again",
   "재현 파일과 YaRN 배가 다릅니다(재현 파일 {} · 지금 {}) — 설정의 문맥 길이를 재현 파일을 만들 때와 같게 하고 모델을 다시 불러오세요": "The reproduction file was made with a different YaRN factor (file {} · now {}) — set the context length in Settings to what it was and load the model again",
   "YaRN 없음": "no YaRN",
-  "빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
+  "Q8_0 · Q4_K_M 같은 양자화 파일에 씁니다. 빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용": "Used for quantized files such as Q8_0 and Q4_K_M. Fast processes prompts faster (CUDA). Exact keeps the contract's precision — the cross-check always uses Exact, and Vulkan devices always use Exact. Applies the next time a model is loaded",
+  "계산 방식 — F16 · BF16 · F32 파일": "Computation mode — F16 · BF16 · F32 files",
+  "양자화하지 않은 파일에 씁니다. 학습 직후의 파일을 시험하는 연구 용도라 기본은 정밀입니다 — 빠름은 활성값을 8비트로 줄여 프롬프트 처리가 빠르지만(CUDA), 이 파일들에서는 정밀과의 차이가 llama.cpp보다 큽니다. 다음에 모델을 불러올 때 적용": "Used for unquantized files. Exact by default, since these files are mostly tested for research right after training — Fast cuts activations to 8 bits and processes prompts faster (CUDA), but on these files it drifts further from Exact than llama.cpp does. Applies the next time a model is loaded",
+  "F16 · BF16 · F32 파일의 계산 방식은 따로 기억합니다 — 기본은 정밀": "F16 · BF16 · F32 files keep their own computation mode — Exact by default",
   "빠름 — 활성값 8비트(llama.cpp와 같은 급). 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다": "Fast — 8-bit activations (llama.cpp class). Reproducible bit for bit with the same settings, but answers can differ from Exact",
   "정밀 — 정밀도 계약 그대로(연구 · 검증용). 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다": "Exact — the precision contract as written (for research and verification). With the same model file, bit-identical on any PC or GPU (NVIDIA · AMD)",
   "다음에 모델을 불러올 때 {}": "From the next model load: {}",
@@ -1316,7 +1319,11 @@ const TMX = [
   [/임베딩 형식\((.+?)\)이 다른 가중치\((.+?)\)와 다릅니다 — 모든 가중치가 같은 형식인 파일만 지원합니다/g, 'The embedding format ($1) differs from the other weights ($2) — only files whose weights all share one format are supported'],
   [/출력 가중치 형식\((.+?)\)이 다른 가중치\((.+?)\)와 다릅니다 — 모든 가중치가 같은 형식인 파일만 지원합니다\(공식 q4_0 파일은 출력이 Q6_K\)/g, 'The output weight format ($1) differs from the other weights ($2) — only files whose weights all share one format are supported (official q4_0 files keep the output in Q6_K)'],
   [/층 가중치 (\d+)개가 다른 형식입니다\(기준 (.+?)\)/g, '$1 layer weights use a different format (expected $2)'],
-  [/지원하지 않는 가중치 형식입니다\((.+?)\) — Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS만 지원합니다/g, 'Unsupported weight format ($1) — only Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS are supported'],
+  [/지원하지 않는 가중치 형식입니다\((.+?)\) — Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS · F16 · BF16 · F32만 지원합니다/g, 'Unsupported weight format ($1) — only Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS · F16 · BF16 · F32 are supported'],
+  [/F16 · BF16 · F32 파일의 임베딩 형식\((.+?)\)은 지원하지 않습니다 — F16 · BF16 · F32여야 합니다/g, 'The embedding format ($1) of this F16 · BF16 · F32 file is not supported — it must be F16 · BF16 · F32'],
+  [/F16 · BF16 · F32 파일의 출력 가중치 형식\((.+?)\)은 지원하지 않습니다 — F16 · BF16 · F32여야 합니다/g, 'The output weight format ($1) of this F16 · BF16 · F32 file is not supported — it must be F16 · BF16 · F32'],
+  [/F16 · BF16 · F32 파일의 층 가중치 (\d+)개가 그 세 형식이 아닙니다/g, '$1 layer weights of this F16 · BF16 · F32 file are not in those three formats'],
+  [/이 GPU에서는 F16 · BF16 · F32 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_0 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run F16 · BF16 · F32 files yet. The same model's Q8_0 · Q4_0 files run (a limit of GPUs with 32 KB of shared memory)."],
   [/IQ4_XS 파일은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\. 같은 모델의 Q4_K_M · Q8_0 파일은 Vulkan에서도 실행됩니다\./g, "IQ4_XS files run only on CUDA (NVIDIA GPUs) for now. The same model's Q4_K_M · Q8_0 files also run on Vulkan."],
   [/GeulPU가 지원하지 않는 파일입니다/g, "GeulPU doesn't support this file"],
   [/이 GPU에서는 Q4_K_M 같은 k-양자화 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_0 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run k-quant files such as Q4_K_M yet. The same model's Q8_0 · Q4_0 files run (a limit of GPUs with 32 KB of shared memory)."],
@@ -1751,6 +1758,17 @@ const LAYER = { cuda: 'CUDA', vulkan: 'Vulkan' };
 const modeNow = () => { const sv = S.st && S.st.server; return sv && sv.state === 'ready' ? { p: sv.precision || 'exact', kv8: !!sv.kv8, f2: !!sv.fast_attention } : null; };
 const modeOfTrace = tr => tr ? { p: tr.precision || 'exact', kv8: !!tr.kv8, f2: !!tr.fast_attention } : null;
 const modeOfMsg = m => m.mode || (m.tid && TRACES[m.tid] ? modeOfTrace(TRACES[m.tid]) : null);
+// 0.12.0 12-3d-1 — 계산 방식 설정은 둘: 양자화 파일(precision — 기본 빠름)과 F16 · BF16 · F32 파일(precision_unquantized — 기본 정밀)
+const unquant = m => !!(m && m.shape && m.shape.quant === 'W16');
+const precKey = m => unquant(m) ? 'precision_unquantized' : 'precision';
+const precSet = (m, set) => unquant(m) ? (set.precision_unquantized || 'exact') : (set.precision || 'fast');
+// 계산 방식 칩이 가리키는 모델 — 올라 있거나 올리는 중인 모델, 없으면 지금 채팅의 모델
+function modeModel() {
+  const sv = S.st.server;
+  if ((sv.state === 'ready' || sv.state === 'starting') && sv.model) return modelOf(sv.model);
+  const room = curRoom();
+  return room ? modelOf(room.model) : null;
+}
 const modeName = p => p === 'fast' ? T('빠름') : T('정밀');
 const modeLabel = md => [modeName(md.p), md.kv8 ? T('KV 8비트') : null, md.f2 ? T('빠른 어텐션') : null].filter(Boolean).join(' · ');
 const modeTip = p => p === 'fast' ? T('빠름 — 활성값 8비트(llama.cpp와 같은 급). 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')
@@ -1770,10 +1788,11 @@ function labelById(id) {
   const c = S.st && S.st.catalog.find(x => x.id === id);
   return c ? `${c.name} · ${c.quant}` : (id || '');
 }
-// 양자화 이름 — k-양자화 파일은 관리자가 "K" 로만 알려 주므로 목록의 이름(Q4_K_M 등)이나 가중치 형식으로 채운다
+// 양자화 이름 — 관리자는 모듈 종류(k-양자화 "K" · IQ4_XS 가 섞인 "KI" · F16 · BF16 · F32 의 "W16")로만 알려 주므로 목록의 이름(Q4_K_M 등)이나
+// 가중치 형식으로 채운다
 function quantOf(m) {
   const s = (m && m.shape) || {};
-  if (s.quant && s.quant !== 'K') return s.quant;
+  if (s.quant && !['K', 'KI', 'W16'].includes(s.quant)) return s.quant;
   const c = catalogOf(m);
   if (c && c.quant) return c.quant;
   return s.weight_type || s.quant || '';
@@ -2115,10 +2134,10 @@ function renderChatTop(force) {
 // 누르면 정밀 · 빠름을 고르고, 모델이 올라 있으면 그 방식으로 다시 불러온다(채팅 · 연구 패널 · 디버거가 같은 설정을 쓴다)
 let MODEBUSY = '';
 function modeSpot() {
-  const st = S.st, sv = st.server, set = st.settings || {}, vk = st.device.layer === 'vulkan';
-  const next = vk ? 'exact' : (set.precision || 'fast');
+  const st = S.st, sv = st.server, set = st.settings || {}, vk = st.device.layer === 'vulkan', mm = modeModel();
+  const next = vk ? 'exact' : precSet(mm, set);
   const cur = sv.state === 'ready' ? modeNow() : { p: next, kv8: false, f2: false };
-  return { cur, next, vk, pend: sv.state === 'ready' && next !== cur.p };
+  return { cur, next, vk, mm, pend: sv.state === 'ready' && next !== cur.p };
 }
 function renderModeChip() {
   const b = $('#mode-chip'), st = S.st;
@@ -2150,8 +2169,8 @@ async function setMode(p, ex) {
   renderModeChip();
   let ok = false;
   try {
-    const set = S.st.settings || {}, body = {};
-    if ((set.precision || 'fast') !== p) body.precision = p;
+    const set = S.st.settings || {}, body = {}, mm = modeModel();
+    if (precSet(mm, set) !== p) body[precKey(mm)] = p;
     if (ex && !!set.kv8_cache !== !!ex.kv8) body.kv8_cache = !!ex.kv8;
     if (ex && !!set.fast_attention !== !!ex.f2) body.fast_attention = !!ex.f2;
     if (Object.keys(body).length) await api('/api/settings', body);
@@ -2187,7 +2206,7 @@ $('#mode-chip').addEventListener('click', e => {
   const st = S.st;
   if (!st) return;
   if (POP) { closePop(); return; }
-  const { cur, next, vk } = modeSpot();
+  const { cur, next, vk, mm } = modeSpot();
   const why = modeBlock(), loaded = st.server.state === 'ready';
   const opt = (p, title, sub) => h('button', {
     class: 'opt mode' + (next === p ? ' sel' : ''), role: 'menuitemradio', 'aria-checked': next === p ? 'true' : 'false',
@@ -2199,6 +2218,7 @@ $('#mode-chip').addEventListener('click', e => {
     opt('exact', T('정밀'), T('정밀도 계약 그대로 — 연구 · 검증용. 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다')),
     opt('fast', T('빠름'), vk ? T('Vulkan 장치는 늘 정밀로 셉니다') : T('활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')),
     h('div', { class: 'pop-note' }, why || (loaded ? T('바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다') : T('다음에 모델을 불러올 때 적용합니다'))),
+    !vk && unquant(mm) ? h('div', { class: 'pop-note' }, T('F16 · BF16 · F32 파일의 계산 방식은 따로 기억합니다 — 기본은 정밀')) : null,
   ];
   if (!vk) body.push(h('div', { class: 'sep', role: 'separator' }), h('button', { class: 'opt wrap', role: 'menuitem', onclick: () => { closePop(); show('settings'); } }, I('gear', 's'),
     h('span', { class: 'main' }, h('div', { class: 't' }, T('KV 캐시 8비트 · 빠른 어텐션')),
@@ -3899,9 +3919,9 @@ async function browse(path, pick) {
 // 목록 · 자세히 · 파일 목록 · 모델 설명(README)은 브라우저가 Hugging Face API 에 바로 묻는다(정렬 · 거르기 · 검색어가 Hugging Face 로 간다).
 // 받기 전 확인(파일 앞 몇 MB 의 GGUF 머리)과 받기는 관리자가 — 주소는 관리자가 저장소 · 파일 이름으로 짓는다.
 const HFHOST = 'https://huggingface.co';
-// GeulPU 가 받는 형식(엔진: Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS) — 파일 이름으로 먼저 어림한다(확인은 GGUF 머리로)
+// GeulPU 가 받는 형식(엔진: Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS · F16 · BF16 · F32) — 파일 이름으로 먼저 어림한다(확인은 GGUF 머리로)
 const quantFromName = n => { const m = /(IQ\d_[A-Z]+|Q\d_K(?:_[SML])?|Q\d_\d|BF16|F16|F32)/i.exec(n || ''); return m ? m[1].toUpperCase() : ''; };
-const quantOk = q => /^(Q8_0|Q4_0|Q4_K(_[SM])?|Q5_K(_[SM])?|Q6_K|IQ4_XS)$/.test(q);      // 1.0.0 1-6c — IQ4_XS(CUDA 먼저)
+const quantOk = q => /^(Q8_0|Q4_0|Q4_K(_[SM])?|Q5_K(_[SM])?|Q6_K|IQ4_XS|F16|BF16|F32)$/.test(q);      // 1.0.0 1-6c — IQ4_XS(CUDA 먼저). 0.12.0 12-3d-1 — F16 · BF16 · F32
 const hfName = id => String(id).split('/').pop().replace(/[-_.]?GGUF$/i, '');
 const archOk = a => a === 'qwen2' || a === 'qwen3' || a === 'llama';      // 39단계 — llama(Llama 3.1 · 3.2 · Mistral)
 // 크기로 어림하는 지원 여부(확인은 받기 전에 GGUF 머리로) — 매개변수 수(미세조정도 바탕과 같고, 출력을 따로 둔 변환은 낱말표만큼 크다).
@@ -4315,7 +4335,7 @@ function fdDetail(repo) {
 function fdBest(rows, sup) {
   if (sup.k === 'arch' || sup.k === 'size' || sup.k === 'task') return null;
   const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOk(q) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
-  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: q === 'IQ4_XS' ? 'cuda' : /K/.test(q) ? 'k' : 'all' }); };
+  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: q === 'IQ4_XS' ? 'cuda' : /K|F16|F32/.test(q) ? 'k' : 'all' }); };
   const good = ok.filter(f => { const t = fit(f); return t && t.k === 'ok'; });
   if (good.length) return good.find(f => quantFromName(f.path) === 'Q4_K_M') || good.sort((a, b) => b.size - a.size)[0];
   const tight = ok.filter(f => { const t = fit(f); return t && t.k === 'tight'; }).sort((a, b) => a.size - b.size);
@@ -4819,6 +4839,7 @@ function saveSettings(note, recheck, delay, withDir, row) {
       gpu_layer: on ? on.dataset.v : 'auto', vulkan_device: vkSel ? vkSel.value : S.st.settings.vulkan_device || '', slots: num('#set-slots', 1, 8, 2), context: num('#set-ctx', 1024, 131072, 8192),
       update_check: page.querySelector('#set-upd').checked,
       precision: (page.querySelector('#set-prec') || {}).value || S.st.settings.precision || 'fast',   // GeulPUv2 2단계 — 계산 방식
+      precision_unquantized: (page.querySelector('#set-prec16') || {}).value || S.st.settings.precision_unquantized || 'exact',   // 0.12.0 — F16 · BF16 · F32 파일
       kv8_cache: ((page.querySelector('#set-kv8') || {}).value || (S.st.settings.kv8_cache ? 'on' : 'off')) === 'on',   // GeulPUv2 ③b-2 — KV 캐시 8비트
       fast_attention: ((page.querySelector('#set-f2') || {}).value || (S.st.settings.fast_attention ? 'on' : 'off')) === 'on',   // GeulPUv2 빠른 어텐션(계약 F2)
       speculative: ((page.querySelector('#set-spec') || {}).value || (S.st.settings.speculative === false ? 'off' : 'on')) !== 'off',   // GeulPUv2 3단계 — 추측 디코딩
@@ -4896,6 +4917,8 @@ function renderSettings(force) {
   const ctx = numIn('set-ctx', 1024, 131072, 1024, s.context, T('채팅마다 문맥 길이'));
   const precSel = h('select', { class: 'input', id: 'set-prec', 'aria-label': T('계산 방식'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-prec') },
     [['fast', T('빠름 — 8비트 활성값(llama.cpp와 같은 급)')], ['exact', T('정밀 — 활성값 두 자리(정밀도 계약 그대로 · 연구용)')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.precision || 'fast') ? true : null }, tx)));
+  const prec16Sel = h('select', { class: 'input', id: 'set-prec16', 'aria-label': T('계산 방식 — F16 · BF16 · F32 파일'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-prec16') },
+    [['exact', T('정밀 — 활성값 두 자리(정밀도 계약 그대로 · 연구용)')], ['fast', T('빠름 — 8비트 활성값(llama.cpp와 같은 급)')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.precision_unquantized || 'exact') ? true : null }, tx)));
   const kv8Sel = h('select', { class: 'input', id: 'set-kv8', 'aria-label': T('KV 캐시 8비트'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-kv8') },
     [['on', T('켬 — KV 캐시가 0.55배라 긴 문맥이 더 들어갑니다')], ['off', T('끔 — 16비트 KV 캐시')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.kv8_cache ? 'on' : 'off') ? true : null }, tx)));
   const f2Sel = h('select', { class: 'input', id: 'set-f2', 'aria-label': T('빠른 어텐션'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-f2') },
@@ -4940,7 +4963,8 @@ function renderSettings(force) {
         showVk ? row(T('Vulkan 장치', 'one'), T('GPU가 여러 개일 때 Vulkan으로 쓸 장치'), vkSel, null, 'vk') : null,
         row(T('동시 처리 수'), T('동시에 답할 수 있는 채팅 수(1~8) · 다음에 모델을 불러올 때 적용'), slots, null, 'set-slots'),
         row(T('채팅마다 문맥 길이'), T('토큰 · 그래픽 메모리에 맞지 않으면 엔진이 자동으로 줄입니다. 다음에 모델을 불러올 때 적용'), ctx, null, 'set-ctx'),
-        row(T('계산 방식'), T('빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용'), precSel, null, 'set-prec'),
+        row(T('계산 방식'), T('Q8_0 · Q4_K_M 같은 양자화 파일에 씁니다. 빠름은 프롬프트 처리가 빠릅니다(CUDA). 정밀은 정밀도 계약 그대로입니다 — 교차검증은 늘 정밀, Vulkan 장치는 늘 정밀. 다음에 모델을 불러올 때 적용'), precSel, null, 'set-prec'),
+        row(T('계산 방식 — F16 · BF16 · F32 파일'), T('양자화하지 않은 파일에 씁니다. 학습 직후의 파일을 시험하는 연구 용도라 기본은 정밀입니다 — 빠름은 활성값을 8비트로 줄여 프롬프트 처리가 빠르지만(CUDA), 이 파일들에서는 정밀과의 차이가 llama.cpp보다 큽니다. 다음에 모델을 불러올 때 적용'), prec16Sel, null, 'set-prec16'),
         row(T('KV 캐시 8비트'), T('빠름 · CUDA · k-양자화 모델(Q4_K_M 같은 파일)에서만 씁니다 — 그 밖에는 끔과 같습니다. 답의 비트는 16비트 KV 캐시와 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용'), kv8Sel, null, 'set-kv8'),
         row(T('빠른 어텐션'), T('KV 캐시 8비트를 켰을 때만 씁니다 — 그 밖에는 끔과 같습니다. Qwen3 계열 모델은 q 의 지수를 블록마다 두는 판(F2B)으로 씁니다. 긴 프롬프트(수만 토큰)의 어텐션이 빨라집니다. 답의 비트는 끔과 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용'), f2Sel, null, 'set-f2'),
         row(T('추측 디코딩'), T('프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 스텝에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용'), specSel, null, 'set-spec')),
@@ -5307,7 +5331,7 @@ function labModeNote(tr) {
   if (mo.p !== 'fast') return h('div', { class: 'note-line lab-mode exact' }, I('check', 's'),
     h('span', null, T('정밀 모드로 셈한 답 — 같은 모델 파일 · 같은 요청이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다.')));
   const st = S.st, ex = [mo.kv8 ? T('KV 8비트') : null, mo.f2 ? T('빠른 어텐션') : null].filter(Boolean).join(' · ');
-  const setExact = st && (st.settings.precision || 'fast') === 'exact';
+  const setExact = st && precSet(modeModel(), st.settings || {}) === 'exact';
   const why = st ? modeBlock() : '';
   return h('div', { class: 'note-line lab-mode fast' }, I('alert', 's'),
     h('div', { class: 'col g8' },
@@ -6174,7 +6198,7 @@ async function dbgEnsure(sv) {
   const m = dbgModelBySha(sv.sha256);
   if (!m) throw new Error(T`이 실행의 모델 파일이 설치되어 있지 않습니다(sha256 ${String(sv.sha256 || '?').slice(0, 12)})`);
   const set = (S.st && S.st.settings) || {};
-  const prec = now.ready ? now.precision : set.precision;
+  const prec = now.ready && now.model === m.id ? now.precision : precSet(m, set);   // 0.12.0 — 다른 모델을 불러오면 그 모델의 설정으로
   const kv8 = now.ready ? now.kv8 : !!set.kv8_cache;
   const f2 = now.ready ? now.fast_attention : !!set.kv8_cache && !!set.fast_attention;   // GeulPUv2 빠른 어텐션 — 8비트 KV 위에서만
   if (sv.precision !== prec || !!sv.kv8 !== kv8 || !!sv.fast_attention !== f2 || (sv.precision === 'fast' && now.ready && sv.layer !== now.layer)) throw new Error(T('이 실행과 계산 방식 · KV 캐시 · 빠른 어텐션 · 백엔드가 다릅니다 — \'이 실행의 설정으로 불러오기\'를 누르세요'));
@@ -6194,7 +6218,7 @@ async function dbgMatch(sv) {
   if (!runnable(m)) throw new Error(T('이 모델은 이 PC에서 실행할 수 없습니다 — ') + TM(m.device_reason || (m.shape && m.shape.reason) || ''));
   dbgGuardSwitch();
   const set = (S.st && S.st.settings) || {}, body = {};
-  if (sv.precision && set.precision !== sv.precision) body.precision = sv.precision;
+  if (sv.precision && precSet(m, set) !== sv.precision) body[precKey(m)] = sv.precision;
   if (!!set.kv8_cache !== !!sv.kv8) body.kv8_cache = !!sv.kv8;   // GeulPUv2 ③b-2
   if (!!set.fast_attention !== !!sv.fast_attention) body.fast_attention = !!sv.fast_attention;   // GeulPUv2 빠른 어텐션(계약 F2)
   if (sv.precision === 'fast' && sv.layer && S.st.device.layer !== sv.layer) body.gpu_layer = sv.layer;

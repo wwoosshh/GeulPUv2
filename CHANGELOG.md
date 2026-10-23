@@ -35,6 +35,15 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   Qwen2.5-3B uses the Qwen Research License (non-commercial), noted in its description.
 - The model finder no longer calls head-size-128 llama models of 1.4–2.5B (HyperCLOVAX-SEED 1.5B, MiniCPM5 2B) unsupported, and the
   suggested model skips the new 0.6B.
+- **Unquantized GGUF files: F16, BF16 and F32.** Files written straight from training (`convert_hf_to_gguf.py --outtype f16 | bf16 |
+  f32`) now load for the supported architectures and shapes (qwen2 · qwen3 · llama, head size 128). On load each weight matrix is
+  converted to the same 16-bit block format as the activations — two 8-bit digits per value and one exponent per 32 values (precision
+  contract 1.3) — the only rounding is that conversion (F16 values of at least 1/8 of their block's maximum, BF16 values of at least
+  1/64, are kept exactly), and each matrix product is an exact integer sum per block rounded once. The token embeddings are read as the
+  file stores them. New kernels for this format (`--W16` and the module type `W16`, about 3 MB); all execution paths are bit-identical
+  to the CPU reference. These files load in **Exact mode by default**, with their own setting (Settings → "Computation mode — F16 · BF16
+  · F32 files", or the mode chip while such a file is loaded): Fast stays available, but on these files it drifts further from Exact
+  than llama.cpp does (Qwen2.5-1.5B F16: next-token KL 5.9× llama.cpp's, top-1 agreement 97.4 %), short of the B′ bar.
 - **Automatic model verification: one command tests a GGUF file before it joins the model list** (`재기/모델검증.py`,
   [문서/모델검증.md](문서/모델검증.md)). It reads the file and the packaged app's own model check, then runs what the app will run
   for that file: five-path bit tests for every CUDA module the app would build (exact and fast, plus the 8-bit KV and fast-attention
@@ -62,6 +71,8 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 ### Fixed
 
 - GGUF files without tensors (vocabulary-only files) were refused as damaged.
+- The app showed the module family "KI" next to the name of files mixing IQ4_XS with k-quants (model picker, chat header, status
+  line); it now shows the file's quantization name, as for other k-quant files.
 
 - **R1-Distill-Qwen's `/v1/chat/completions` used the wrong chat template.** The server rendered Qwen's ChatML, whose `<|im_start|>`
   is not in this model's vocabulary, so the markers were split into ordinary text; it now renders the DeepSeek-R1 template (the chat

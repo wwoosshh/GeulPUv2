@@ -138,15 +138,15 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, **computation mode**, **8-bit KV cache**, **fast attention**, **speculative decoding**, **prompt cache**, model folder, language,
+chat, **computation mode** (one for quantized files, one for F16 · BF16 · F32 files), **8-bit KV cache**, **fast attention**, **speculative decoding**, **prompt cache**, model folder, language,
 new-version notice.
 Changes are saved immediately.
 
 Since 0.11.0 the **8-bit KV cache** and **fast attention** are on by default. Settings saved by an earlier version are moved to these
 defaults once, the first time 0.11.0 starts; to go back, set either one to **Off** here (the choice is kept from then on).
 
-**Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded. The computation mode chip above the chat
-switches it too and reloads the loaded model in that mode. Every answer carries a tag with the mode it was computed in (Fast · Exact,
+**Computation mode** — **Fast** (default — Exact for F16 · BF16 · F32 files) or **Exact**. Applies the next time a model is loaded.
+The computation mode chip above the chat switches it too and reloads the loaded model in that mode. Every answer carries a tag with the mode it was computed in (Fast · Exact,
 8-bit KV · fast attention).
 - **Fast**: the activations entering the matrix multiplications are 8-bit (the same class as llama.cpp). Prompt processing is 1.3–1.6×
   faster than Exact (CUDA · 7B · 8B), and the change in next-token probabilities is of the same order as llama.cpp's
@@ -154,6 +154,10 @@ switches it too and reloads the loaded model in that mode. Every answer carries 
 - **Exact**: the contract as it was up to 0.5.0 (16-bit activations — research precision).
 - Both modes match the contract's CPU reference bit for bit, and within one mode every path gives the same bits. The
   reproducibility check and Vulkan devices always use Exact.
+- **F16 · BF16 · F32 files** (unquantized files) have their own computation mode setting, **Exact** by default (since 0.12.0). They
+  are mostly tested for research right after training, so accuracy comes first, and on these files Fast drifts further from Exact
+  than llama.cpp does (Qwen2.5-1.5B F16: next-token KL 5.9× llama.cpp's). Fast can still be chosen — switching the chip while such
+  a file is loaded changes the setting for these files.
 
 **8-bit KV cache** — **On** (default since 0.11.0) or Off. When on, the keys and values of the earlier tokens (the KV cache) are kept as 8-bit
 integers with one scale per 32 values and multiplied in that form (contract F1A′ — [contract.md](../계약/contract.md) section 2.1). The
@@ -383,15 +387,17 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
 parse are refused — it parsed all 228 templates of the 1,000 most-downloaded GGUF repositories on Hugging Face).
 
-- **Formats**: Q8_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS, and Q4_0 files whose tensors are all Q4_0.
+- **Formats**: Q8_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS, Q4_0 files whose tensors are all Q4_0, and unquantized F16 · BF16 · F32 files
+  (each matrix is converted on load to the 16-bit block format of the precision contract — F16 values of at least 1/8 of their block's
+  maximum stay exact; in fast mode the activations are 8-bit, which loses more against llama.cpp on these files than on quantized ones).
 - **Licenses** differ by model. In the app's list, Llama 3.1 · 3.2 use Meta's community licenses (usage conditions and an Acceptable
   Use Policy — services with more than 700 million monthly users need permission from Meta), the Mistral 7B v0.3, Qwen2.5 (except 3B),
   Qwen3 and MiniCPM5 files are Apache 2.0, Qwen2.5-3B has the Qwen Research License (research and evaluation only — commercial use needs a
   license from Alibaba Cloud), DeepSeek-R1-Distill-Qwen is MIT (R1-Distill-Llama also follows Llama 3.1's license), and HyperCLOVAX-SEED has NAVER's own
   HyperCLOVA X SEED license (also shown in the app's model descriptions).
 - **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (not run yet — their tekken tokenizer is accepted from 0.12.0), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …),
-  image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0 · F16 · BF16. Find models hides such files by default.
-- **Depending on the GPU**: k-quants (Q4_K_M, …) run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. With AMD's
+  image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0. Find models hides such files by default.
+- **Depending on the GPU**: k-quants (Q4_K_M, …) and F16 · BF16 · F32 run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. With AMD's
   Windows driver (32 KB of shared memory) only Q8_0 (and Q4_0) files run for now. IQ4_XS runs only on CUDA (NVIDIA GPUs) for now.
 
 ### Which model fits your PC
