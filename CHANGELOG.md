@@ -9,8 +9,8 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 ## 0.11.1 — File-pair reproducibility benchmark · k-quants on 32 KB GPUs (2026-10-24)
 
 0.11.1 adds a benchmark item and brings k-quant files to GPUs with 32 KB of shared memory. Under the [versioning rules](docs/versioning.md)
-these would make a MINOR release; they are shipped on the 0.11 line as 0.11.1 so that 0.12.0 stays the model-expansion release
-(Qwen3.5, F16 · BF16 · F32, chat templates — still in progress). Outputs of 0.11.0 are unchanged.
+  these would make a MINOR release; they are shipped on the 0.11 line as 0.11.1 so that 0.12.0 stays the model-expansion release
+  (Qwen3.5, F16 · BF16 · F32, chat templates — still in progress). Outputs of 0.11.0 are unchanged.
 
 ### Added
 
@@ -32,8 +32,8 @@ these would make a MINOR release; they are shipped on the 0.11 line as 0.11.1 so
 - **k-quant files (Q4_K · Q5_K · Q6_K) run on GPUs with 32 KB of shared memory** — AMD's Windows driver, Intel integrated graphics.
   Their kernels prefetch fewer stages to fit in 32 KB; the order of every sum is unchanged, so the output bits are the same as on CUDA.
   Checked with the 32 KB limit emulated on an RTX 4070 Ti's Vulkan driver and on an Intel UHD Graphics 770; not yet on AMD hardware.
-  The four 256-column tile kernels don't fit and are skipped there, so long prompts are slower on those GPUs. (From the 0.12.0 work,
-  #81.)
+  The four 256-column tile kernels don't fit and are skipped there, so long prompts are slower on those GPUs.
+  (From the 0.12.0 work, #81.)
 
 ### Fixed
 
