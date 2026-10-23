@@ -142,6 +142,9 @@ chat, **computation mode**, **8-bit KV cache**, **fast attention**, **speculativ
 new-version notice.
 Changes are saved immediately.
 
+Since 0.11.0 the **8-bit KV cache** and **fast attention** are on by default. Settings saved by an earlier version are moved to these
+defaults once, the first time 0.11.0 starts; to go back, set either one to **Off** here (the choice is kept from then on).
+
 **Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded. The computation mode chip above the chat
 switches it too and reloads the loaded model in that mode. Every answer carries a tag with the mode it was computed in (Fast · Exact,
 8-bit KV · fast attention).
@@ -152,7 +155,7 @@ switches it too and reloads the loaded model in that mode. Every answer carries 
 - Both modes match the contract's CPU reference bit for bit, and within one mode every path gives the same bits. The
   reproducibility check and Vulkan devices always use Exact.
 
-**8-bit KV cache** — **Off** (default) or On. When on, the keys and values of the earlier tokens (the KV cache) are kept as 8-bit
+**8-bit KV cache** — **On** (default since 0.11.0) or Off. When on, the keys and values of the earlier tokens (the KV cache) are kept as 8-bit
 integers with one scale per 32 values and multiplied in that form (contract F1A′ — [contract.md](../계약/contract.md) section 2.1). The
 KV cache is 0.55× the size, so longer contexts fit on the same GPU, and long contexts get faster — on an RTX 4070 Ti (12 GB),
 Qwen2.5-7B Q4_K_M goes from 87,488 to 131,072 tokens for one chat (47,808 to 80,320 for two), Qwen3-8B from 35,328 to 59,392 and
@@ -163,7 +166,7 @@ The answer bits differ from the 16-bit KV cache but are always the same under th
 reference bit for bit, and the debugger and reproduction files record this setting and warn when it differs. Applies the next time a
 model is loaded ([문서/긴문맥.md](../문서/긴문맥.md) ③b, Korean).
 
-**Fast attention** — **Off** (default) or On. Used only with the **8-bit KV cache** on; otherwise the same as Off. When on, attention is
+**Fast attention** — **On** (default since 0.11.0) or Off. Used only with the **8-bit KV cache** on; otherwise the same as Off. When on, attention is
 computed in a lighter form (contract F2 — [contract.md](../계약/contract.md) section 2.2: one value scale per head instead of one per 32
 values, a base-2 exponential, and probabilities as 16-bit integers with one exponent per 64 keys). Long prompts get faster — on an RTX
 4070 Ti, 1,024 new tokens at depth 32k and 64k are 22.6 % and 27.6 % faster for Qwen2.5-7B Q4_K_M and empty-cache prompts of 32k and
@@ -521,7 +524,16 @@ backends are packaged only after their bytes are checked against the build hashe
   itself (0.24%). How this was measured: [docs/hidden-loss.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/hidden-loss.md). 7B and 14B were not measured with the real engine
   (see the simulation below). The fast mode keeps the hidden loss at llama.cpp's level — measured against the exact mode, its
   next-token KL is 0.65–0.98× llama.cpp's on k-quant 7B · 8B models and 2.2–2.4× on Q8_0 ([stage 2](../문서/2단계.md)).
-- **Speed — fast-mode prompts beat llama.cpp up to 4096 tokens; decoding at parity.** On one RTX 4070 Ti:
+- **Speed — with the default settings faster than llama.cpp at every length measured.** On one RTX 4070 Ti:
+  - Default settings since 0.11.0 (fast mode with the 8-bit KV cache and fast attention — [문서/0.11.0.md](../문서/0.11.0.md) step 1-5,
+    Korean; latest official llama.cpp b11827, same GGUF, the faster of its f16 and q8_0 KV caches): for Qwen2.5-7B Q4_K_M, empty-cache
+    prompts of 512 / 2,048 / 8,192 / 32,768 / 65,536 tokens take 0.83 / 0.87 / 0.90 / 0.95 / 0.92× llama.cpp's time, 1,024 new tokens
+    at session depth 8k / 32k / 64k 0.90 / 0.92 / 0.76×, and decoding at those depths 0.97 / 0.89 / 0.82×; for Llama-3.1-8B Q4_K_M the
+    prompts take 0.85 / 0.88 / 0.92 / 0.92× (512–32,768), new input at depth 32k / 64k 0.63 / 0.48× and decoding there 0.90 / 0.80×. A
+    recorded Qwen Code session (54 requests, Qwen2.5-7B Q4_K_M) takes 102.3 s adjusted total against 131.6 s for 0.10.2's defaults and
+    173.3 s for llama.cpp's fastest setting (a Qwen2.5-0.5B draft model); its prompt processing takes 24.0 s (llama.cpp: 28.4 s with
+    f16, 28.1 s with q8_0). The exact mode took 1.19–1.40× llama.cpp's time on prompts up to 8k tokens in the same run (1.74× at 32k). The
+    items below are earlier measurements, kept for the record.
   - Fast mode (stage 4 — latest official llama.cpp b11721, same GGUF, median of three alternating rounds, llama.cpp at its fastest
     setting per length): prompt time is 0.89 / 0.90 / 0.95 / 1.04× llama.cpp's for Qwen2.5-7B Q4_K_M, 0.74 / 0.76 / 0.81 / 0.92× for Q8_0
     and 0.92 / 0.93 / 0.99 / 1.11× for Llama-3.1-8B Q4_K_M (512 / 2048 / 4096 / 8192 tokens — [stage 4](../문서/4단계.md)). The slowdown at

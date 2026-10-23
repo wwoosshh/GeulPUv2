@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""1.0.0 측정 E — 에이전트 재생(문서/1.0.0.md): 기록한 코딩 에이전트의 요청(재기/MoE/세션.py 의 jsonl — 줄마다 "request")을 기록의
+"""1.0.0 측정 E — 에이전트 재생(문서/0.11.0.md): 기록한 코딩 에이전트의 요청(재기/MoE/세션.py 의 jsonl — 줄마다 "request")을 기록의
 차례대로 OpenAI 호환 서버(GeulPU 서버 · llama-server)에 보내고 요청마다 시간을 적는다.
 
   python -I -X utf8 재기/에이전트재생.py <서버 url> <출력.json> <기록.jsonl> [<기록.jsonl> ...] [--최대 1024] [--이름 모델] [--geulpu] [--토큰]

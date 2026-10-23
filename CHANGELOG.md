@@ -6,31 +6,23 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
-## Unreleased
-
-### Added
-
-- **Fast attention for Qwen3 models.** The fast-attention setting now applies to Qwen3 models through F2B, a variant of the contract
-  that keeps one exponent of q per block of 32 values instead of one per head: Qwen3 normalizes q per head before RoPE, which leaves the
-  blocks of a head at different sizes, and with one exponent per head Qwen3-8B fell short of the quality bar's top-1 agreement (−0.65
-  points against llama.cpp with an f16 KV cache). F2B passes it (KL ratio 1.50, top-1 −0.42 points; the 8-bit KV cache alone is 1.48 ·
-  −0.37). On Qwen3-8B Q4_K_M it makes a 32k-token prompt 19.3 % faster and 1,024 new tokens at a depth of 32k 24.9 % faster than the
-  8-bit KV cache, with generation unchanged. The modules are new (`_빠른_F2B_KV8`); F2 and every other module are byte-identical, and
-  F2B's prompt-cache chunks are kept apart from F2's. Every path matches the CPU reference bit for bit.
-- **Models whose query width differs from the hidden size.** The query width (heads × 128 — the width of q, of the attention output
-  and of the input to the output projection) is now its own size instead of being taken from the hidden size, so Qwen3-0.6B · 4B · 32B
-  load (before, the engine and the app refused them). The kernel generator, the engine (weights, buffers and the output projection in the
-  prompt path, the generation graph and the table step), the app's model check and the CPU reference all follow it. On Qwen3-0.6B
-  (hidden 1,024, query width 2,048) every path matches the CPU reference bit for bit in the exact and fast modes, with Q8_0 and k-quant
-  weights. Modules for models that ran before are byte-identical, so their outputs do not change. Mistral NeMo · Small still need their
-  tekken tokenizer.
-- **IQ4_XS files** (CUDA for now). IQ4_XS (4.25 bits per weight — smaller than Q4_K_M at close quality, common in community repositories)
-  joins the k-quant family: its codebook values are integers within ±127, so the contract computes it like Q8_0 with a per-32 scale
-  d · (ls − 32). Files that mix IQ4_XS with Q5_K · Q6_K tensors (as llama.cpp writes them) load with a new module family (KI — the k-quant
-  kernels plus IQ4_XS kernels); every IQ4_XS kernel variant matches the CPU reference bit for bit with real weights, extreme values and
-  both modes, and so does every path of a whole model. On Vulkan the app says IQ4_XS is not supported yet.
+## 0.11.0 — Faster by default: agent replay 22 % shorter (2026-10-23)
 
 ### Changed
+
+- **The 8-bit KV cache and fast attention are on by default.** Both fast-mode settings now default to on. Where they apply is
+  unchanged — CUDA and k-quant models (Qwen3 uses F2B); Q8_0 and Q4_0 files, exact mode and Vulkan keep the 16-bit KV cache. Together
+  with this release's kernel work, the recorded Qwen Code agent replay (54 requests, Qwen2.5-7B Q4_K_M, RTX 4070 Ti) takes 22 % less
+  time than with 0.10.2's defaults — 131.6 → 102.3 s adjusted total (prompt processing 34.0 → 24.0 s, generation 6.06 → 4.87 ms per
+  token). On the same replay, llama.cpp b11827's fastest setting (draft model Qwen2.5-0.5B) takes 173.3 s, and its prompt processing
+  takes 28.4 s and 28.1 s with f16 and q8_0 KV caches. In the engine benchmarks, empty-cache prompts of 32k and 64k tokens take 0.68×
+  and 0.60× of 0.10.2's default, 1,024 new tokens at depths of 32k and 64k 0.60× and 0.55×, and generation at a depth of 64k 0.79×; every
+  length measured is now faster than llama.cpp (0.76–0.97× on Qwen2.5-7B, 0.48–0.99× on Llama-3.1-8B). Settings saved by an earlier
+  version are moved to the new defaults once, the first time 0.11.0 starts (the settings file gains `settings_version` 2); to go back,
+  turn either setting off — the choice is kept from then on. **Default output change**: if you never changed these settings, answers
+  differ from 0.10.2 because the computation mode changed. Under the same computation mode the output bits are unchanged — with the
+  16-bit KV cache you get 0.10.2's answers, log-probabilities and hashes. Before/after tables and the release criteria:
+  [문서/0.11.0.md](문서/0.11.0.md) (Korean), step 1-5.
 
 - **Faster generation and speculative verification in long conversations** (CUDA fast modules and exact `--먼` modules). The
   table-step kernels for the full KV groups in front of the rows load the next 64-key tile while computing the current one (8-bit KV),
@@ -62,6 +54,28 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   loaded; when that server's mode differs from the answer's, it now says so and offers to recompute them in the answer's mode (before, it
   silently showed values from whatever mode was loaded — a greedy fast-mode answer could show tokens that were not the top choice).
   The pictures in the user guide and the research panel guide are retaken with the chip, the tags and the panel's mode line.
+
+### Added
+
+- **Fast attention for Qwen3 models.** The fast-attention setting now applies to Qwen3 models through F2B, a variant of the contract
+  that keeps one exponent of q per block of 32 values instead of one per head: Qwen3 normalizes q per head before RoPE, which leaves the
+  blocks of a head at different sizes, and with one exponent per head Qwen3-8B fell short of the quality bar's top-1 agreement (−0.65
+  points against llama.cpp with an f16 KV cache). F2B passes it (KL ratio 1.50, top-1 −0.42 points; the 8-bit KV cache alone is 1.48 ·
+  −0.37). On Qwen3-8B Q4_K_M it makes a 32k-token prompt 19.3 % faster and 1,024 new tokens at a depth of 32k 24.9 % faster than the
+  8-bit KV cache, with generation unchanged. The modules are new (`_빠른_F2B_KV8`); F2 and every other module are byte-identical, and
+  F2B's prompt-cache chunks are kept apart from F2's. Every path matches the CPU reference bit for bit.
+- **Models whose query width differs from the hidden size.** The query width (heads × 128 — the width of q, of the attention output
+  and of the input to the output projection) is now its own size instead of being taken from the hidden size, so Qwen3-0.6B · 4B · 32B
+  load (before, the engine and the app refused them). The kernel generator, the engine (weights, buffers and the output projection in the
+  prompt path, the generation graph and the table step), the app's model check and the CPU reference all follow it. On Qwen3-0.6B
+  (hidden 1,024, query width 2,048) every path matches the CPU reference bit for bit in the exact and fast modes, with Q8_0 and k-quant
+  weights. Modules for models that ran before are byte-identical, so their outputs do not change. Mistral NeMo · Small still need their
+  tekken tokenizer.
+- **IQ4_XS files** (CUDA for now). IQ4_XS (4.25 bits per weight — smaller than Q4_K_M at close quality, common in community repositories)
+  joins the k-quant family: its codebook values are integers within ±127, so the contract computes it like Q8_0 with a per-32 scale
+  d · (ls − 32). Files that mix IQ4_XS with Q5_K · Q6_K tensors (as llama.cpp writes them) load with a new module family (KI — the k-quant
+  kernels plus IQ4_XS kernels); every IQ4_XS kernel variant matches the CPU reference bit for bit with real weights, extreme values and
+  both modes, and so does every path of a whole model. On Vulkan the app says IQ4_XS is not supported yet.
 
 ## 0.10.2 — Fixes: correctness, reproducibility, stability (2026-10-22)
 
