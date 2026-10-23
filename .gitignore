@@ -4,6 +4,7 @@
 도구/*
 !도구/repro_check.py
 !도구/debugger.py
+!도구/쌍기준.py
 !도구/pypi/
 __pycache__/
 *.pyc
