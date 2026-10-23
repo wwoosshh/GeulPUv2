@@ -16,6 +16,7 @@
 외부 "libcuda.so.1" "cuMemsetD8_v2" [정수 주소를 중간정수 값을 정수 바이트수를 cuMemsetD8_v2]는 -> 중간정수.
 외부 "libcuda.so.1" "cuMemcpyHtoD_v2" [정수 대상을 공허 참조 원본을 정수 바이트수를 cuMemcpyHtoD_v2]는 -> 중간정수.
 외부 "libcuda.so.1" "cuMemcpyDtoH_v2" [공허 참조 대상을 정수 원본을 정수 바이트수를 cuMemcpyDtoH_v2]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemcpyDtoD_v2" [정수 대상을 정수 원본을 정수 바이트수를 cuMemcpyDtoD_v2]는 -> 중간정수.     (* 0.12.0 12-3f-2 — 장치복사 *)
 외부 "libcuda.so.1" "cuLaunchKernel" [공허 참조 함수를 중간정수 gx를 중간정수 gy를 중간정수 gz를 중간정수 bx를 중간정수 by를 중간정수 bz를 중간정수 공유를 공허 참조 흐름을 공허 참조 인자들을 공허 참조 덤을 cuLaunchKernel]는 -> 중간정수.
 외부 "libcuda.so.1" "cuLaunchCooperativeKernel" [공허 참조 함수를 중간정수 gx를 중간정수 gy를 중간정수 gz를 중간정수 bx를 중간정수 by를 중간정수 bz를 중간정수 공유를 공허 참조 흐름을 공허 참조 인자들을 cuLaunchCooperativeKernel]는 -> 중간정수.
 외부 "libcuda.so.1" "cuOccupancyMaxActiveBlocksPerMultiprocessor" [공허 참조 블록수를 공허 참조 함수를 중간정수 스레드수를 정수 동적공유를 cuOccupancyMaxActiveBlocksPerMultiprocessor]는 -> 중간정수.
