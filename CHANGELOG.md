@@ -77,6 +77,12 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   kernels plus IQ4_XS kernels); every IQ4_XS kernel variant matches the CPU reference bit for bit with real weights, extreme values and
   both modes, and so does every path of a whole model. On Vulkan the app says IQ4_XS is not supported yet.
 
+### Project
+
+- **The cross-check's pinned build hashes follow the new generator and servers.** On the reference PC the 32 problems give the same
+  output as the reference with the CUDA modules, and the Vulkan quick check (cooperative-matrix 16x16x32 and base modules) matches;
+  every pinned module source, PTX and SPIR-V variant is byte-identical.
+
 ## 0.10.2 — Fixes: correctness, reproducibility, stability (2026-10-22)
 
 ### Fixed
