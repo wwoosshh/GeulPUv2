@@ -133,6 +133,11 @@ memory right away; **Browse models** opens Find models, described below.
 - **Speed test**: prompt processing (512 and 2048 tokens) and generation speed in tokens per second.
 - **Reproducibility check**: solves 32 math problems with DeepSeek-R1-Distill-Qwen-7B Q8_0 and compares the output with the reference
   PC bit for bit (the quick check uses 2 problems and 64 tokens).
+- **File-pair reproducibility** (0.11.1): runs GGUF files that quantize the same model in different ways — the files of Liu and Tsai's
+  paper on GGUF supply chains (arXiv:2610.19498) — in exact mode. It checks that every step of 32 problems gives the same logit hash
+  as the reference PC, and measures how the files differ (the first step where the greedy answers diverge, the log-probability
+  difference per token). The card downloads the files and checks their SHA-256. Details and reference results:
+  [file-pair.md](file-pair.md).
 - Results can be exported as a zip (user paths are removed). The raw tool output and the result files themselves stay in Korean.
 
 ### 4. Settings

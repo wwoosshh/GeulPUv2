@@ -37,6 +37,28 @@ const DICT = {
   "하드웨어 확인": "Hardware check",
   "재현성 검증 · 빠른 확인(문제 2개)": "Reproducibility check · quick (2 problems)",
   "재현성 검증 · 문제 32개": "Reproducibility check · 32 problems",
+  // 0.11.1 — 파일 쌍 재현성
+  "파일 쌍 재현성": "File-pair reproducibility",
+  "파일 쌍 재현성 · 빠른 확인(문제 4개)": "File-pair reproducibility · quick (4 problems)",
+  "파일 쌍 재현성 · 문제 32개": "File-pair reproducibility · 32 problems",
+  "파일마다 1~20분": "1–20 min per file",
+  "같은 모델을 다르게 양자화한 GGUF 파일들(Liu · Tsai, arXiv:2610.19498)을 정밀 모드로 돌려, 문제 32개의 스텝마다 로짓 해시가 기준 PC와 같은지 보고 파일끼리의 차이(답이 처음 갈리는 스텝 · 토큰마다의 로그확률 차)를 잽니다.": "Runs GGUF files that quantize the same model in different ways (Liu · Tsai, arXiv:2610.19498) in exact mode, checks that the logit hash of every step of 32 problems matches the reference PC, and measures how the files differ (the first step where the answers diverge · the log-probability difference per token).",
+  "받는 중 {}%": "Downloading {0}%",
+  "받기": "Download",
+  "이어서 받기": "Resume download",
+  "빠른 확인 — 문제 4개(전체 검증 아님)": "Quick check — 4 problems (not a full check)",
+  "파일은 Hugging Face에서 받고, 받은 뒤 SHA-256을 확인합니다. 그래픽 메모리가 파일 크기보다 1 GB 이상 커야 그 파일을 돌립니다(7B Q8_0은 약 9 GB).": "Files are downloaded from Hugging Face and checked with SHA-256 afterwards. A file runs only if the graphics memory is at least 1 GB larger than the file (about 9 GB for 7B Q8_0).",
+  "위의 파일 가운데 하나 이상을 받으세요.": "Download at least one of the files above.",
+  "돌릴 파일을 하나 이상 고르세요": "Pick at least one file to run",
+  "Qwen2.5 GGUF 파일들": "Qwen2.5 GGUF files",
+  " · 빠른 확인(문제 4개)": " · quick check (4 problems)",
+  "다름 · 스텝 {}부터": "Different · from step {0}",
+  "파일끼리": "Between files",
+  "A의 답을 A · B로 점수 매긴 값 · 스텝은 0부터": "A's answers scored by A and by B · steps count from 0",
+  "A ↔ B": "A ↔ B",
+  "처음 갈리는 스텝(가운데값 · 최소~최대)": "First diverging step (median · min–max)",
+  "B의 1위가 A의 토큰과 다른 스텝": "Steps where B's top-1 differs from A's token",
+  "토큰마다의 차는 결과 폴더의 pair-A-B.json에 있습니다.": "The per-token differences are in pair-A-B.json in the result folder.",
   "텐서 코어 경로": "Tensor-core path",
   "기본 경로": "Basic path",
   "CUDA 경로": "CUDA path",
@@ -1168,6 +1190,12 @@ const TMX = [
   [/속도 측정 — /g, 'Speed test — '],
   [/재현성 검증\(빠른 확인\) — 문제 2개 · 64토큰/g, 'Reproducibility check (quick) — 2 problems · 64 tokens'],
   [/재현성 검증 — 문제 32개/g, 'Reproducibility check — 32 problems'],
+  [/파일 쌍 재현성\(빠른 확인\) — 문제 4개/g, 'File-pair reproducibility (quick) — 4 problems'],
+  [/파일 쌍 재현성 — 문제 32개/g, 'File-pair reproducibility — 32 problems'],
+  [/결과\(빠른 확인 — 문제 4개\): 모든 문제가 기준 PC와 똑같은 출력입니다 — /g, 'Result (quick check — 4 problems): every problem gives exactly the same output as the reference PC — '],
+  [/결과\(기준 없이 기록만\): /g, 'Result (recorded without a reference): '],
+  [/결과: 고른 파일이 없습니다/g, 'Result: no files were selected'],
+  [/\b(default|ffpoff|imatrix|7b-q4km|7b-q8_0) 오류/g, '$1 error'],
   // 결과 요약(교차검증)
   [/결과: 기준 PC와 다른 출력이 있거나 끝나지 못한 실행이 있습니다 — /g, 'Result: some outputs differ from the reference PC, or some runs did not finish — '],
   [/결과: 모든 문제가 기준 PC\(NVIDIA · CUDA\)와 똑같은 출력입니다 — /g, 'Result: every problem gives exactly the same output as the reference PC (NVIDIA · CUDA) — '],
@@ -1257,6 +1285,17 @@ const TMX = [
   [/\[([^\]]+)\] 문제 (\d+)개를 보냅니다\(최대 답변 길이 (\d+)토큰\)\./g, '[$1] Sending $2 problems (max answer length $3 tokens).'],
   [/생성 도중 추론 서버가 종료되었습니다\(logs 폴더의 server-(\S+)-\*\.log 참고\)/g, 'The inference server exited during generation (see server-$1-*.log in the logs folder)'],
   [/생성 중 — (.+?)\(GPU에 따라 5~20분\)/g, 'Generating — $1 (5–20 min depending on the GPU)'],
+  // 0.11.1 — 파일 쌍 재현성의 단계 · 기록
+  [/생성 중 — (.+?)\(GPU에 따라 1~20분\)/g, 'Generating — $1 (1–20 min depending on the GPU)'],
+  [/(\S+) — 파일 확인 중/g, '$1 — checking the file'],
+  [/(\S+) — 커널 모듈 준비 중/g, '$1 — preparing kernel modules'],
+  [/(\S+) — 기준 파일의 답 점수 매기는 중/g, "$1 — scoring the reference file's answers"],
+  [/\[([^\]]+)\] 기준 파일\(([^)]+)\)의 답 (\d+)개를 이 파일로 점수 매깁니다\(echo\)\./g, "[$1] Scoring the $3 answers of the reference file ($2) with this file (echo)."],
+  [/\[([^\]]+)\] 기준 파일\(([^)]+)\)과 견줌 — /g, '[$1] Compared with the reference file ($2) — '],
+  [/\[정보\] 기준 데이터\(expected\.json\)가 없어 견주지 않고 기록만 합니다\./g, '[info] No reference data (expected.json) — recording without comparing.'],
+  [/파일이 없습니다 — 벤치마크 화면에서 받은 뒤 다시 실행하세요/g, 'The file is missing — download it on the Benchmark screen, then run again'],
+  [/그래픽 메모리가 모자랍니다\(파일 ([\d.]+) GB — 그래픽 메모리 ([\d.]+) GB 이상\)/g, 'Not enough graphics memory (file $1 GB — needs $2 GB or more of graphics memory)'],
+  [/파일 쌍 검증 데이터\(data\\crosscheck\\pair\)를 읽지 못했습니다/g, 'Could not read the file-pair data (data\\crosscheck\\pair)'],
   [/재현성 검증 기준 데이터\(data\\crosscheck\)를 읽지 못했습니다/g, 'Could not read the reproducibility reference data (data\\crosscheck)'],
   [/재현성 검증에 필요한 모델\(DeepSeek-R1-Distill-Qwen-7B Q8_0, 8\.1 GB\)이 없습니다 — 모델 화면에서 다운로드하거나 파일을 추가하세요/g, 'The model needed for the reproducibility check (DeepSeek-R1-Distill-Qwen-7B Q8_0, 8.1 GB) is missing — download it or add the file on the Models screen'],
   [/모델 파일 무결성 확인 중\(SHA-256\)/g, "Verifying the model file's integrity (SHA-256)"],
@@ -1817,11 +1856,12 @@ function kindKey(x) {
 }
 const qtag = m => (quantOf(m) ? h('span', { class: 'qlab' }, quantOf(m)) : null);
 const kindOf = m => ({ think: T('추론 모델'), code: T('코드 모델'), chat: T('일반 모델') })[kindKey(m)];
-function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), server: T('모델 불러오기'), device: T('하드웨어 확인') }[j.kind] || TM(j.title); }
+function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), pair: T('파일 쌍 재현성'), server: T('모델 불러오기'), device: T('하드웨어 확인') }[j.kind] || TM(j.title); }
 const jobModel = j => String(j.title || '').split(' — ')[1] || '';
 function jobTitle(j) {
   if (j.kind === 'diag' || j.kind === 'speed' || j.kind === 'server') return `${jobName(j)} · ${labelById(jobModel(j))}`;
   if (j.kind === 'crosscheck') return /줄인|빠른/.test(j.title) ? T('재현성 검증 · 빠른 확인(문제 2개)') : T('재현성 검증 · 문제 32개');
+  if (j.kind === 'pair') return /빠른/.test(j.title) ? T('파일 쌍 재현성 · 빠른 확인(문제 4개)') : T('파일 쌍 재현성 · 문제 32개');
   return TM(j.title);
 }
 // 재현성 검증의 경로 이름(관리자의 "협력 행렬 모듈 …" 등)을 쓰는 사람의 말로
@@ -4462,8 +4502,11 @@ const BENCH = [
     desc: T('프롬프트 처리(512 · 2048토큰)와 답 생성 속도를 토큰/초로 세 번씩 측정합니다.') },
   { kind: 'crosscheck', title: T('재현성 검증'), needModel: false, time: T('경로마다 5~20분'),
     desc: T('DeepSeek-R1-Distill-Qwen-7B Q8_0으로 수학 문제 32개를 풀어 기준 PC의 출력과 비트 단위로 비교합니다. 빌드와 커널의 해시도 함께 확인합니다.') },
+  { kind: 'pair', title: T('파일 쌍 재현성'), needModel: false, time: T('파일마다 1~20분'),
+    desc: T('같은 모델을 다르게 양자화한 GGUF 파일들(Liu · Tsai, arXiv:2610.19498)을 정밀 모드로 돌려, 문제 32개의 스텝마다 로짓 해시가 기준 PC와 같은지 보고 파일끼리의 차이(답이 처음 갈리는 스텝 · 토큰마다의 로그확률 차)를 잽니다.') },
 ];
-const KIND = { '진단': ['pulse', T('하드웨어 진단')], '속도': ['bolt', T('속도 측정')], '교차검증': ['shield', T('재현성 검증')] };
+const KIND = { '진단': ['pulse', T('하드웨어 진단')], '속도': ['bolt', T('속도 측정')], '교차검증': ['shield', T('재현성 검증')], '파일쌍': ['shield', T('파일 쌍 재현성')] };
+const pairTitle = c => (EN && c.title_en) || c.title || c.label;
 const R1_REF = 'deepseek-r1-distill-qwen-7b-q8_0';
 function benchModel(runnables) {
   if (!runnables.some(m => m.id === S.benchModel)) S.benchModel = runnables.length ? runnables[0].id : '';
@@ -4496,11 +4539,12 @@ function renderBench() {
   const st = S.st;
   const page = $('#page-bench');
   const j0 = st.job;
-  const j = j0 && (j0.state === 'running' || (['diag', 'speed', 'crosscheck'].includes(j0.kind) && jobKey(j0) !== S.jobHide)) ? j0 : null;
+  const j = j0 && (j0.state === 'running' || (['diag', 'speed', 'crosscheck', 'pair'].includes(j0.kind) && jobKey(j0) !== S.jobHide)) ? j0 : null;
   const runnables = sortedModels().filter(runnable);
   const hasR1 = st.models.some(m => m.catalog === R1_REF && runnable(m));
   const sel = benchModel(runnables);
-  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], runnables.map(m => m.id), hasR1, sel, S.results && S.results.length];
+  const pairs = (st.pair_catalog || []).map(c => [c.id, c.installed, dlStateOf(c), c.download && c.download.state, c.download && c.download.total ? Math.floor(20 * c.download.received / c.download.total) : 0]);
+  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], runnables.map(m => m.id), hasR1, sel, S.results && S.results.length, pairs];
   if (changed('bench', struct)) {
     const busy = !!(j && j.state === 'running');
     const r1c = st.catalog.find(c => c.id === R1_REF);
@@ -4569,14 +4613,36 @@ function jobCard(j) {
     h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T('실행 기록')), h('pre', { class: 'log', id: 'joblog' })),
     h('details', { class: 'fold', hidden: true }, h('summary', null, I('chevR', 's'), T('도구 출력')), h('pre', { class: 'log', id: 'job-tail' })));
 }
+// 0.11.1 — 파일 쌍 재현성의 파일: 고르기(설치된 것만) · 크기 · 받기(목록의 다운로드와 같은 길 — 받은 뒤 SHA-256)
+function pairFiles() {
+  const cat = (S.st && S.st.pair_catalog) || [];
+  const off = S.pairOff || (S.pairOff = new Set());
+  return h('div', { class: 'col g12' },
+    h('div', { class: 'col g8' }, cat.map(c => {
+      const ds = dlStateOf(c), d = c.download;
+      const pct = d && d.total ? Math.floor(100 * d.received / d.total) : 0;
+      return h('div', { class: 'row g8' },
+        h('label', { class: 'check grow' }, h('input', {
+          type: 'checkbox', class: 'pair-f', 'data-label': c.label, checked: c.installed && !off.has(c.label) ? true : null, disabled: c.installed ? null : true,
+          onchange: ev => { if (ev.target.checked) off.delete(c.label); else off.add(c.label); },
+        }), h('span', { class: 'col g4' }, h('span', { class: 'ink' }, c.label), h('span', { class: 'small muted' }, pairTitle(c)))),
+        h('span', { class: 'small muted num nw' }, fmtBytes(c.size)),
+        c.installed ? h('span', { class: 'tag ok' }, T('설치됨'))
+          : ds === 'run' ? h('span', { class: 'tag' }, T`받는 중 ${pct}%`)
+            : h('button', { class: 'btn sm needs-conn', onclick: () => startDownload(Object.assign({}, c, { note: pairTitle(c) })) }, I('download', 's'), ds === 'pause' ? T('이어서 받기') : T('받기')));
+    })),
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', class: 'pair-quick' }), T('빠른 확인 — 문제 4개(전체 검증 아님)')),
+    h('div', { class: 'small muted' }, T('파일은 Hugging Face에서 받고, 받은 뒤 SHA-256을 확인합니다. 그래픽 메모리가 파일 크기보다 1 GB 이상 커야 그 파일을 돌립니다(7B Q8_0은 약 9 GB).')));
+}
 function benchCard(b, runnables, hasR1, busy, r1c) {
   const extra = b.kind === 'crosscheck' ? h('div', { class: 'col g12' },
     h('label', { class: 'check' }, h('input', { type: 'checkbox', class: 'cc-quick' }), T('빠른 확인 — 문제 2개 · 64토큰(전체 검증 아님)')),
-    h('select', { class: 'input cc-mod', 'aria-label': T('검증할 경로') }, h('option', { value: 'both' }, T('모든 경로(권장)')), h('option', { value: 'coop' }, T('텐서 코어 경로만')), h('option', { value: 'base' }, T('기본 경로만')))) : null;
-  const can = b.needModel ? runnables.length > 0 : hasR1;
+    h('select', { class: 'input cc-mod', 'aria-label': T('검증할 경로') }, h('option', { value: 'both' }, T('모든 경로(권장)')), h('option', { value: 'coop' }, T('텐서 코어 경로만')), h('option', { value: 'base' }, T('기본 경로만')))) : b.kind === 'pair' ? pairFiles() : null;
+  const can = b.needModel ? runnables.length > 0 : b.kind === 'pair' ? ((S.st && S.st.pair_catalog) || []).some(c => c.installed) : hasR1;
   let need = null;
   if (!can && b.kind === 'crosscheck') need = h('div', { class: 'note-line' }, I('info', 's'), h('div', { class: 'col g8' }, h('span', null, T('DeepSeek-R1-Distill-Qwen-7B Q8_0 모델이 필요합니다.')),
     r1c && !r1c.installed ? h('div', null, h('button', { class: 'btn sm needs-conn', onclick: () => startDownload(r1c) }, I('download', 's'), T`다운로드(${fmtBytes(r1c.size)})`)) : null));
+  else if (!can && b.kind === 'pair') need = h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('위의 파일 가운데 하나 이상을 받으세요.')));
   else if (!can) need = h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('먼저 모델을 설치하세요.')));
   return h('div', { class: 'card bench-card', 'data-kind': b.kind },
     h('div', null, h('h2', null, b.title), h('div', { class: 'eyebrow' }, b.time)),
@@ -4587,6 +4653,11 @@ function benchCard(b, runnables, hasR1, busy, r1c) {
         const body = {};
         if (b.needModel) { body.model = S.benchModel; if (!body.model) return; }
         if (b.kind === 'crosscheck') { body.quick = card.querySelector('.cc-quick').checked; body.modules = card.querySelector('.cc-mod').value; }
+        if (b.kind === 'pair') {
+          body.quick = card.querySelector('.pair-quick').checked;
+          body.files = [...card.querySelectorAll('.pair-f')].filter(x => x.checked).map(x => x.dataset.label).join(',');
+          if (!body.files) { toast(T('돌릴 파일을 하나 이상 고르세요')); return; }
+        }
         if (S.streaming) { toast(T('채팅의 답이 끝난 뒤 실행할 수 있습니다')); return; }
         if (S.st.server.state === 'ready' && !(await confirmBox(T('채팅 모델을 내립니다'), h('p', { class: 'muted m0' }, T('측정하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?')), T('계속')))) return;
         try { await api('/api/bench/' + b.kind, body); resetSig(); refresh(); }
@@ -4630,11 +4701,11 @@ function resultVerdict(x) {
   if (/똑같은 출력|앞부분이 같습니다/.test(t)) return ['ok', T('일치')];
   return null;
 }
-const resultModel = x => (x.kind === '교차검증' ? labelById(R1_REF) : x.model ? labelById(x.model) : '-');
+const resultModel = x => (x.kind === '교차검증' ? labelById(R1_REF) : x.kind === '파일쌍' ? T('Qwen2.5 GGUF 파일들') : x.model ? labelById(x.model) : '-');
 function resultSummary(x) {
   const k = kpiFromText(x.kind, x.headline);
   if (k) return k.filter(Boolean).slice(0, 3).map(([v, l, s]) => `${s || l} ${v}`).join(NB);
-  if (x.kind === '교차검증') {
+  if (x.kind === '교차검증' || x.kind === '파일쌍') {
     const t = headText(x.headline);
     const tail = t.includes(' — ') ? t.split(' — ').pop() : t;
     return (isQuick(x) ? T('빠른 확인') + NB : '') + TM(pathLabel(tail));
@@ -4648,7 +4719,7 @@ function resultsTable(rs) {
     h('thead', null, h('tr', null, h('th', null, T('종류')), h('th', { class: 'c-model' }, T('모델', 'th')), h('th', { class: 'c-date' }, T('일시')), h('th', { class: 'c-res' }, T('결과')), h('th', { class: 'r' }, h('span', { class: 'sr' }, T('동작'))))),
     h('tbody', null, rs.map(x => {
       const k = KIND[x.kind] || ['terminal', x.kind];
-      const v = x.kind === '교차검증' ? resultVerdict(x) : null;
+      const v = x.kind === '교차검증' || x.kind === '파일쌍' ? resultVerdict(x) : null;
       const sum = resultSummary(x);
       const vt = v ? h('span', { class: 'tag ' + v[0] }, v[0] === 'err' ? I('alert') : null, v[1]) : null;
       return h('tr', { class: 'clk', onclick: e => { if (!e.target.closest('a, button')) openResult(x.name); } },
@@ -4680,6 +4751,26 @@ function diagLabel(k) {
   else if ((m = /^프롬프트 (\d+)$/.exec(s))) s = T`프롬프트 ${m[1]}토큰`;
   return alt ? s + T(' · 대체 커널') : s;
 }
+// 0.11.1 — 파일 쌍 재현성: 실행 이름(라벨 — 파일 설명), 파일끼리의 표(A 의 답을 A · B 로 점수 매긴 값 — 스텝은 0 부터)
+function pairRunName(run) {
+  const c = ((S.st && S.st.pair_catalog) || []).find(x => x.label === run.label);
+  return `${run.label} — ${c ? pairTitle(c) : run.title || ''}`;
+}
+const signed = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
+function pairTable(pairs) {
+  return h('div', null,
+    h('div', { class: 'section-head mt24' }, h('span', { class: 'sec' }, T('파일끼리')), h('span', { class: 'grow' }), h('span', { class: 'small muted' }, T('A의 답을 A · B로 점수 매긴 값 · 스텝은 0부터'))),
+    h('div', { class: 'list' }, h('table', { class: 'data' },
+      h('thead', null, h('tr', null, h('th', null, T('A ↔ B')), h('th', { class: 'r' }, T('같은 답')), h('th', { class: 'r' }, T('처음 갈리는 스텝(가운데값 · 최소~최대)')),
+        h('th', { class: 'r' }, T('토큰당 로그확률 차(B − A)')), h('th', { class: 'r' }, T('B의 1위가 A의 토큰과 다른 스텝')))),
+      h('tbody', null, pairs.map(p => h('tr', null,
+        h('td', { class: 'ink' }, `${p.a} ↔ ${p.b}`),
+        h('td', { class: 'r num' }, `${p.same}/${p.requests}`),
+        h('td', { class: 'r num' }, p.first_divergence ? `${p.first_divergence.median} (${p.first_divergence.min}~${p.first_divergence.max})` : '–'),
+        h('td', { class: 'r num' }, p.tokens ? signed(p.delta_mean_per_token, 5) : '–'),
+        h('td', { class: 'r num' }, `${fmtNum(p.b_top1_differs)} / ${fmtNum(p.tokens)}`)))))),
+    h('div', { class: 'small muted mt8' }, T('토큰마다의 차는 결과 폴더의 pair-A-B.json에 있습니다.')));
+}
 async function openResult(name) {
   modal(h('div', { class: 'muted' }, T('불러오는 중…')), null, true);
   const [txt, summary, speed, diag, env] = await Promise.all([getFile(name, '결과.txt'), getFile(name, 'summary.json'), getFile(name, 'speed.json'), getFile(name, 'diag.json'), getFile(name, 'environment.json')]);
@@ -4687,7 +4778,7 @@ async function openResult(name) {
   const k = KIND[kind] || ['terminal', kind];
   const stamp = (name.match(/(\d{8}-\d{6})$/) || [])[1];
   const quick = kind === '교차검증' && (/빠름/.test(name) || /빠른 확인|줄인 판/.test(txt || ''));
-  const modelTxt = kind === '교차검증' ? labelById(R1_REF) : (speed && speed.model) ? labelById(speed.model) : (env && env.model) ? labelById(env.model) : '';
+  const modelTxt = kind === '교차검증' ? labelById(R1_REF) : kind === '파일쌍' ? T('Qwen2.5 GGUF 파일들') + (/빠름/.test(name) ? T(' · 빠른 확인(문제 4개)') : '') : (speed && speed.model) ? labelById(speed.model) : (env && env.model) ? labelById(env.model) : '';
   const extra = speed ? T` · 동시 ${speed.slots}개 · 문맥 ${fmtCtx(speed.context)}` : '';
   const eyebrow = [k[1] + (quick ? T(' · 빠른 확인(문제 2개 · 64토큰)') : ''), modelTxt + extra, stamp ? stampText(stamp) : ''].filter(Boolean).join(' · ');
   let title = TM(headText(txt)) || name;
@@ -4710,17 +4801,18 @@ async function openResult(name) {
       const items = [...(run.items || [])].sort((a, b) => (a.result === 'same') - (b.result === 'same'));
       const bad = items.filter(it => it.result !== 'same');
       const okRun = run.same === run.total;
-      parts.push(h('div', { class: 'section-head mt24' }, h('span', { class: 'sec' }, TM(pathLabel(run.label))), h('span', { class: 'grow' }),
+      parts.push(h('div', { class: 'section-head mt24' }, h('span', { class: 'sec' }, kind === '파일쌍' ? pairRunName(run) : TM(pathLabel(run.label))), h('span', { class: 'grow' }),
         h('span', { class: 'tag ' + (okRun ? (quick ? '' : 'ok') : 'err') }, okRun ? null : I('alert'), `${run.same}/${run.total}`), h('span', { class: 'tag dim' }, T`동시 ${run.slots}개 · ${run.generate_minutes < 1 ? T('1분 미만') : run.generate_minutes + T('분')}`)));
       if (run.error) parts.push(h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(run.error))));
       const table = rows => h('div', { class: 'list' }, h('table', { class: 'data' },
         h('thead', null, h('tr', null, h('th', null, T('문제')), h('th', null, T('판정')), h('th', { class: 'r' }, T('토큰')), h('th', { class: 'r' }, T('기준')), h('th', { 'data-tip': T('토큰마다 로짓(점수)의 SHA-256'), 'data-tip-pos': 'top' }, T('단계별 해시')))),
         h('tbody', null, rows.map(it => h('tr', null, h('td', { class: 'num', 'data-tip': T`파일 ${String(it.id).padStart(2, '0')}.json`, 'data-tip-pos': 'right' }, Number(it.id) + 1),
-          h('td', null, h('span', { class: 'tag ' + (it.result === 'same' ? (quick ? '' : 'ok') : 'err') }, it.result === 'same' ? null : I('alert'), it.result === 'same' ? T('같음') : it.result === 'different' ? T`다름 · ${it.first_diff_char}번째 글자부터` : T('오류'))),
+          h('td', null, h('span', { class: 'tag ' + (it.result === 'same' ? (quick ? '' : 'ok') : 'err') }, it.result === 'same' ? null : I('alert'), it.result === 'same' ? T('같음') : it.result === 'different' ? (it.first_diff_step !== undefined ? T`다름 · 스텝 ${it.first_diff_step}부터` : T`다름 · ${it.first_diff_char}번째 글자부터`) : it.result === 'no_reference' ? T('기준 없음') : T('오류'))),
           h('td', { class: 'r num' }, fmtNum(it.n)), h('td', { class: 'r num muted' }, fmtNum(it.expected_n)), h('td', { class: 'mono small muted' }, (it.logit_hashes_sha256 || '').slice(0, 16)))))));
       if (bad.length) parts.push(table(bad));
       parts.push(h('details', { class: 'fold mt12' }, h('summary', null, I('chevR', 's'), bad.length ? T`모든 문제 ${items.length}개 보기` : T`문제 ${items.length}개 보기`), table(items)));
     }
+    if (kind === '파일쌍' && summary.pairs && summary.pairs.length) parts.push(pairTable(summary.pairs));
     if (summary.build) parts.push(h('details', { class: 'fold mt16' }, h('summary', null, I('chevR', 's'), T('빌드 · 커널 해시')),
       h('div', { class: 'kv' }, Object.entries(summary.build).flatMap(([kk, v]) => [h('div', { class: 'k' }, kk), h('div', { class: 'v mono small break' }, v)]))));
   } else parts.push(h('h2', { class: 'mt8' }, title));
