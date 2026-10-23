@@ -41,7 +41,9 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   contract 1.3) — the only rounding is that conversion (F16 values of at least 1/8 of their block's maximum, BF16 values of at least
   1/64, are kept exactly), and each matrix product is an exact integer sum per block rounded once. The token embeddings are read as the
   file stores them. New kernels for this format (`--W16` and the module type `W16`, about 3 MB); all execution paths are bit-identical
-  to the CPU reference.
+  to the CPU reference. These files load in **Exact mode by default**, with their own setting (Settings → "Computation mode — F16 · BF16
+  · F32 files", or the mode chip while such a file is loaded): Fast stays available, but on these files it drifts further from Exact
+  than llama.cpp does (Qwen2.5-1.5B F16: next-token KL 5.9× llama.cpp's, top-1 agreement 97.4 %), short of the B′ bar.
 - **Automatic model verification: one command tests a GGUF file before it joins the model list** (`재기/모델검증.py`,
   [문서/모델검증.md](문서/모델검증.md)). It reads the file and the packaged app's own model check, then runs what the app will run
   for that file: five-path bit tests for every CUDA module the app would build (exact and fast, plus the 8-bit KV and fast-attention

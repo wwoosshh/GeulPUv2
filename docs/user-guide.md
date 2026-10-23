@@ -138,15 +138,15 @@ memory right away; **Browse models** opens Find models, described below.
 ### 4. Settings
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
-chat, **computation mode**, **8-bit KV cache**, **fast attention**, **speculative decoding**, **prompt cache**, model folder, language,
+chat, **computation mode** (one for quantized files, one for F16 · BF16 · F32 files), **8-bit KV cache**, **fast attention**, **speculative decoding**, **prompt cache**, model folder, language,
 new-version notice.
 Changes are saved immediately.
 
 Since 0.11.0 the **8-bit KV cache** and **fast attention** are on by default. Settings saved by an earlier version are moved to these
 defaults once, the first time 0.11.0 starts; to go back, set either one to **Off** here (the choice is kept from then on).
 
-**Computation mode** — **Fast** (default) or **Exact**. Applies the next time a model is loaded. The computation mode chip above the chat
-switches it too and reloads the loaded model in that mode. Every answer carries a tag with the mode it was computed in (Fast · Exact,
+**Computation mode** — **Fast** (default — Exact for F16 · BF16 · F32 files) or **Exact**. Applies the next time a model is loaded.
+The computation mode chip above the chat switches it too and reloads the loaded model in that mode. Every answer carries a tag with the mode it was computed in (Fast · Exact,
 8-bit KV · fast attention).
 - **Fast**: the activations entering the matrix multiplications are 8-bit (the same class as llama.cpp). Prompt processing is 1.3–1.6×
   faster than Exact (CUDA · 7B · 8B), and the change in next-token probabilities is of the same order as llama.cpp's
@@ -154,6 +154,10 @@ switches it too and reloads the loaded model in that mode. Every answer carries 
 - **Exact**: the contract as it was up to 0.5.0 (16-bit activations — research precision).
 - Both modes match the contract's CPU reference bit for bit, and within one mode every path gives the same bits. The
   reproducibility check and Vulkan devices always use Exact.
+- **F16 · BF16 · F32 files** (unquantized files) have their own computation mode setting, **Exact** by default (since 0.12.0). They
+  are mostly tested for research right after training, so accuracy comes first, and on these files Fast drifts further from Exact
+  than llama.cpp does (Qwen2.5-1.5B F16: next-token KL 5.9× llama.cpp's). Fast can still be chosen — switching the chip while such
+  a file is loaded changes the setting for these files.
 
 **8-bit KV cache** — **On** (default since 0.11.0) or Off. When on, the keys and values of the earlier tokens (the KV cache) are kept as 8-bit
 integers with one scale per 32 values and multiplied in that form (contract F1A′ — [contract.md](../계약/contract.md) section 2.1). The
