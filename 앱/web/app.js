@@ -295,7 +295,7 @@ const DICT = {
   "폴더 경로": "Folder path",
   "모델 폴더 고르기": "Choose the model folder",
   "받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.": "Choose where downloaded models go. Applies from the next start.",
-  "GeulPU는 qwen2 구조(Qwen2.5 · DeepSeek-R1-Distill-Qwen, 7B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the qwen2 architecture (Qwen2.5 · DeepSeek-R1-Distill-Qwen, 7B and up), the qwen3 architecture (Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B) and the llama architecture (Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3). Support is checked as soon as you add a file.",
+  "GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the qwen2 architecture (Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B and up), the qwen3 architecture (Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B) and the llama architecture (Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5). Support is checked as soon as you add a file.",
   "이동": "Go",
   "이 폴더 선택": "Choose this folder",
   "구조 정보 없음": "No architecture info",
@@ -2711,11 +2711,12 @@ function fillComposer(text) {
   inp.focus();
   inp.setSelectionRange(text.length, text.length);
 }
-// 이 PC 에 맞는 추천: 맞는 것 가운데 7B 일반 모델 Q8_0 → Q4_K_M → 맞는 어떤 것이든(작은 것부터)
+// 이 PC 에 맞는 추천: 맞는 것 가운데 7B 일반 모델 Q8_0 → Q4_K_M → 작은 일반 모델(Qwen3-4B · 1.7B) → 맞는 어떤 것이든(작은 것부터).
+// 0.12.0 12-2 — 목록에 0.6B 가 들어 '작은 것부터' 만으로는 1.7B 대신 0.6B 를 권하게 되어 작은 일반 모델을 앞에 둔다
 function recommendId(st) {
   const d = st.device;
   if (!d || !d.layer) return null;
-  const pref = ['qwen2.5-7b-instruct-q8_0', 'qwen2.5-7b-instruct-q4_k_m'];
+  const pref = ['qwen2.5-7b-instruct-q8_0', 'qwen2.5-7b-instruct-q4_k_m', 'qwen3-4b-q4_k_m', 'qwen3-1.7b-q8_0'];
   for (const id of pref) { const c = st.catalog.find(x => x.id === id); if (c) { const f = fitOf(c); if (f && f.k === 'ok') return id; } }
   const ok = st.catalog.filter(c => { const f = fitOf(c); return f && (f.k === 'ok' || f.k === 'tight'); }).sort((a, b) => a.size - b.size);
   return ok.length ? ok[0].id : null;
@@ -3879,7 +3880,7 @@ async function browse(path, pick) {
   const go = () => browse(inp.value.trim(), pick);
   inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
   modal(h('div', null, h('h2', null, pick ? T('모델 폴더 고르기') : T('GGUF 파일 추가')),
-    h('p', { class: 'small muted m0 mb12' }, pick ? T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.') : T('GeulPU는 qwen2 구조(Qwen2.5 · DeepSeek-R1-Distill-Qwen, 7B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
+    h('p', { class: 'small muted m0 mb12' }, pick ? T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.') : T('GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
     h('div', { class: 'fs-path' }, inp, h('button', { class: 'btn', onclick: go }, T('이동'))), list),
     [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('닫기')),
       pick ? h('button', { class: 'btn primary', disabled: j.path ? null : true, onclick: () => { closeModal(); pick(j.path); } }, T('이 폴더 선택')) : null].filter(Boolean), false, '.fs-item');
@@ -3899,7 +3900,8 @@ const archOk = a => a === 'qwen2' || a === 'qwen3' || a === 'llama';      // 39�
 // Qwen2: 헤드 크기 64 인 작은 것(0.5B 등)은 아직 아님
 const Q3OK = [[0.55e9, 0.8e9], [1.6e9, 2.1e9], [3.9e9, 4.5e9], [7.9e9, 8.4e9], [14.5e9, 15.0e9], [32e9, 33.5e9]];
 // 39단계 — llama 구조: Llama 3.2 3B · Mistral 7B · Llama 3.1 8B · 70B 는 실행(머리 128 · 질의 폭 = 너비), 헤드 64 인 작은 것(1B 등)은 아직 아님,
-// 그 밖의 크기(Mistral NeMo 12B 등)는 받기 전 확인(채팅 템플릿도 그때 본다 — 0.12.0 12-G1b 부터 서버의 jinja 해석기가 풀지 못하는 것만 거른다)
+// 그 밖의 크기(Mistral NeMo 12B 등)는 받기 전 확인(채팅 템플릿도 그때 본다 — 0.12.0 12-G1b 부터 서버의 jinja 해석기가 풀지 못하는 것만 거른다).
+// 0.12.0 12-2 — 1.4B ~ 2.5B 에는 머리 128 인 것(HyperCLOVAX-SEED 1.5B · MiniCPM5 2B)도 있어 받기 전 확인, 앱 목록에서 돌려 본 저장소는 실행
 const L3OK = [[3.1e9, 3.3e9], [7.1e9, 7.4e9], [7.9e9, 8.1e9], [70.4e9, 70.7e9]];
 const inRange = (p, rs) => rs.some(([lo, hi]) => p >= lo && p <= hi);
 // 대화용이 아닌 모델(이미지 생성의 텍스트 인코더 · 임베딩 · 순위 매기기 · 음성) — 같은 구조라도 채팅에 쓰지 못한다(꼬리표 · 용도 · 이름으로)
@@ -3916,8 +3918,8 @@ function fdSupport(m) {
   if (!archOk(a)) return { k: 'arch', t: T`${a} · 미지원 구조` };
   if (fdNonChat(m)) return { k: 'task', t: T('대화용 모델 아님'), why: T('이미지 생성용 텍스트 인코더 · 임베딩 · 음성처럼 채팅에 쓰는 모델이 아닙니다.') };
   if (a === 'llama') {
-    if (inRange(p, L3OK)) return { k: 'ok', t: T('GeulPU에서 실행됨') };
-    if (p > 0 && p < 2.5e9) return { k: 'size', t: T('이 크기는 아직 미지원'), why: T('헤드 크기가 64인 작은 llama 구조(Llama 3.2 1B · TinyLlama 등)는 GeulPU가 아직 실행하지 않습니다.') };
+    if (inRange(p, L3OK) || fdChecked(m.id)) return { k: 'ok', t: T('GeulPU에서 실행됨') };
+    if (p > 0 && p < 1.4e9) return { k: 'size', t: T('이 크기는 아직 미지원'), why: T('헤드 크기가 64인 작은 llama 구조(Llama 3.2 1B · TinyLlama 등)는 GeulPU가 아직 실행하지 않습니다.') };
     return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Llama 3 · Mistral 크기(3B · 7~8B · 70B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   }
   if (a === 'qwen3') {

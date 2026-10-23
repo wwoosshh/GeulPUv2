@@ -154,7 +154,7 @@ llama.cpp는 배치와 상관없이 같은 출력을 목표로 하지 않습니�
 | 구조 | 모델 | 가중치 형식 |
 |---|---|---|
 | `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(1.5B 이상) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS(CUDA) |
-| `qwen3` | Qwen3 0.6B · 1.7B · 8B(14B는 합성 모델로 모양 확인, 4B · 32B는 0.6B와 같은 길로 불러옴) | 같음 |
+| `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B(14B는 합성 모델로 모양 확인, 32B는 0.6B · 4B와 같은 길로 불러옴) | 같음 |
 | `llama` | Llama 3.1 · 3.2 Instruct(3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | 같음 |
 
 미세조정 모델도 돕니다 — 서버가 모델 파일의 채팅 템플릿을 그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기).
