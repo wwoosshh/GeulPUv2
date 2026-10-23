@@ -80,15 +80,24 @@ jobs:
         run: |
           mkdir -p build
           GEUL_ROOT=. python ref/geulc.py self/컴파일러.gl -o build/self_컴파일러.exe
+      - name: llama.cpp 의 어휘 시험 파일 캐시
+        uses: actions/cache@v6
+        with:
+          path: llama-vocab
+          key: llama-vocab-${{ hashFiles('GeulPUv2/시험/어휘시험.txt') }}
+      - name: llama.cpp 의 어휘 시험 파일 받기(시험/어휘시험.txt — 판 · 바이트 · sha256 고정)
+        env:
+          PYTHONUTF8: "1"
+        run: python -I GeulPUv2/시험/어휘받기.py llama-vocab
       - name: 빠른 점검
         working-directory: GeulPUv2
         env:
           PYTHONUTF8: "1"
         run: |
           if [ "${{ steps.kernel.outputs.full }}" = "1" ]; then
-            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --ptxas "$(cat ../ptxas경로.txt)"
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --어휘 ../llama-vocab --ptxas "$(cat ../ptxas경로.txt)"
           else
-            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --모듈없이
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --어휘 ../llama-vocab --모듈없이
           fi
       - name: 점검 결과 올리기
         if: always()
@@ -156,15 +165,24 @@ jobs:
         run: |
           mkdir -p build
           GEUL_ROOT=. python ref/geulc.py self/컴파일러.gl -o build/self_컴파일러
+      - name: llama.cpp 의 어휘 시험 파일 캐시
+        uses: actions/cache@v6
+        with:
+          path: llama-vocab
+          key: llama-vocab-${{ hashFiles('GeulPUv2/시험/어휘시험.txt') }}
+      - name: llama.cpp 의 어휘 시험 파일 받기(시험/어휘시험.txt — 판 · 바이트 · sha256 고정)
+        env:
+          PYTHONUTF8: "1"
+        run: python -I GeulPUv2/시험/어휘받기.py llama-vocab
       - name: 빠른 점검(리눅스)
         working-directory: GeulPUv2
         env:
           PYTHONUTF8: "1"
         run: |
           if [ "${{ steps.kernel.outputs.full }}" = "1" ]; then
-            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --ptxas "$(cat ../ptxas경로.txt)"
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --어휘 ../llama-vocab --ptxas "$(cat ../ptxas경로.txt)"
           else
-            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --모듈없이
+            python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2 --출력 점검결과 --어휘 ../llama-vocab --모듈없이
           fi
       - name: 점검 결과 올리기
         if: always()

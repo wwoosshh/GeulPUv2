@@ -389,7 +389,7 @@ parse are refused — it parsed all 228 templates of the 1,000 most-downloaded G
   Qwen3 and MiniCPM5 files are Apache 2.0, Qwen2.5-3B has the Qwen Research License (research and evaluation only — commercial use needs a
   license from Alibaba Cloud), DeepSeek-R1-Distill-Qwen is MIT (R1-Distill-Llama also follows Llama 3.1's license), and HyperCLOVAX-SEED has NAVER's own
   HyperCLOVA X SEED license (also shown in the app's model descriptions).
-- **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (their tekken tokenizer), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …),
+- **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (not run yet — their tekken tokenizer is accepted from 0.12.0), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …),
   image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0 · F16 · BF16. Find models hides such files by default.
 - **Depending on the GPU**: k-quants (Q4_K_M, …) run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. With AMD's
   Windows driver (32 KB of shared memory) only Q8_0 (and Q4_0) files run for now. IQ4_XS runs only on CUDA (NVIDIA GPUs) for now.
