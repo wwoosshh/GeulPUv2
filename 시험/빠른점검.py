@@ -21,12 +21,14 @@
      4k. 뽑기 · 로그확률의 글 판이 계약의 파이썬 참조와 같은가(시험/뽑기.py 대조 · 시험/로그확률38.py 대조 — #27)
      4l. jinja 템플릿 해석기(0.12.0 12-G1 — 엔진/진해석.gl · 엔진/시험_틀해석.gl)가 jinja2(transformers 의 채팅 템플릿 환경)와 같은 글을
          내는가 — 기능 사례(시험/틀해석.py — jinja2 가 없으면 건너뜀)
+     4m. 토크나이저의 정규식 사전 처리(0.12.0 12-G2 — 엔진/정규식.gl · 엔진/시험_토큰.gl)가 llama.cpp 의 어휘 시험(시험/어휘시험.txt 의 열세
+         어휘 — --어휘 <폴더>, 시험/어휘받기.py 가 받는다. 폴더를 주지 않으면 건너뜀)과 같은 토큰을 내는가(시험/어휘시험.py)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
 
   python -X utf8 시험/빠른점검.py [--글 <글 저장소 — 기본 ../geul-lang-v2>] [--병렬 N] [--출력 <폴더 — 기본 빌드/점검>] [--해시갱신] [--계약없이]
-                                [--모듈없이]
+                                [--모듈없이] [--어휘 <llama.cpp 의 어휘 시험 폴더>]
 --모듈없이: 5 · 7(모듈 · SASS)을 건너뛴다 — CI 는 커널/ · 백엔드/ · 시험/모듈해시.txt · 시험/SASS넘침.txt · 시험/글저장소커밋.txt · 이 파일 · ci.yml 이
 앞 커밋과 같으면 이것으로 돈다(모듈은 그 파일들로만 정해진다 — 엔진/ · 앱/ 은 모듈을 바꾸지 않는다). 하나라도 바뀌면 모두 본다.
 글 저장소(고정 판 — 시험/글저장소커밋.txt)에는 build/self_컴파일러.exe(리눅스에서는 확장자 없이)가 있어야 한다(문서/개발.md 의
@@ -433,6 +435,21 @@ def 틀해석(출력):
     알림("jinja 템플릿 해석기(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
 
 
+def 어휘시험(출력, 폴더):
+    """0.12.0 12-G2 — 토크나이저(정규식 사전 처리 · 손으로 짠 갈래 · SentencePiece)가 llama.cpp 의 어휘 시험과 같은 토큰을 내는가(GPU 없이)"""
+    if not 폴더:
+        print("어휘 시험: 건너뜀(--어휘 를 주지 않음 — 시험/어휘받기.py 로 받는다)", flush=True)
+        요약.append("건너뜀  [어휘 시험] --어휘 없음")
+        return
+    exe = os.path.join(출력, "시험_토큰" + EXE)
+    if not os.path.exists(exe):
+        알림("토크나이저 어휘 시험(GPU 없이)", False, "시험_토큰 이 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "어휘시험.py"), exe, 폴더], os.path.join(출력, "어휘시험.txt"))
+    알림("토크나이저 어휘 시험(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
 def 요청지킴(출력):
     """추론 서버의 브라우저 지킴(엔진/요청지킴.gl) — DNS 리바인딩 Host · 웹페이지의 Origin 을 막고 프로그램 · 앱 프록시는 받는가(GPU 없이)"""
     exe = os.path.join(출력, "시험_요청지킴" + EXE)
@@ -554,6 +571,7 @@ def main():
     p.add_argument("--넘침갱신", action="store_true", help="시험/SASS넘침.txt 를 지금 넘치는 커널로 다시 쓴다")
     p.add_argument("--계약없이", action="store_true", help="계약 자체 시험(numpy)을 건너뛴다 — 운영체제와 무관한 CPU 시험이라 다른 곳에서 돌린 것으로 갈음할 때")
     p.add_argument("--모듈없이", action="store_true", help="모듈 · SASS 를 건너뛴다 — 커널 · 생성기 · 글 고정 커밋이 앞 커밋과 같을 때(CI)")
+    p.add_argument("--어휘", default="", help="llama.cpp 의 어휘 시험 파일 폴더(시험/어휘받기.py) — 주면 토크나이저를 견준다")
     a = p.parse_args()
     글 = os.path.abspath(a.글)
     출력 = os.path.abspath(a.출력)
@@ -580,6 +598,7 @@ def main():
             로프표(출력)
             디버거제이슨(출력)
             틀해석(출력)
+            어휘시험(출력, os.path.abspath(a.어휘) if a.어휘 else "")
             요청지킴(출력)
             망가진입력(출력)
             모델해시(출력)

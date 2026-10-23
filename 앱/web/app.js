@@ -1301,7 +1301,7 @@ const TMX = [
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다/g, 'Files with RoPE scaling ($1) are not supported'],
   [/지원하지 않는 모델 크기입니다\(너비 (\d+) · 헤드 (\d+) · KV 헤드 (\d+) · FFN (\d+)\) — 헤드 크기 128인 모델\(Qwen2 1\.5B 이상 · Qwen3 · Llama 3\.x · Mistral 등\)만 지원합니다/g, 'Unsupported model size (hidden $1 · heads $2 · KV heads $3 · FFN $4) — only models with head size 128 (Qwen2 1.5B and up · Qwen3 · Llama 3.x · Mistral and the like) are supported'],
   [/지원하지 않는 토크나이저입니다\((.*?)\) — gpt2\(바이트 BPE\)와 llama\(SentencePiece\)만 지원합니다/g, 'Unsupported tokenizer ($1) — only gpt2 (byte-level BPE) and llama (SentencePiece) are supported'],
-  [/지원하지 않는 토크나이저 사전 처리입니다\((.*?)\) — qwen2 · deepseek-r1-qwen · llama-bpe · dbrx · minicpm5만 지원합니다/g, 'Unsupported tokenizer pre-processing ($1) — only qwen2 · deepseek-r1-qwen · llama-bpe · dbrx · minicpm5 are supported'],
+  [/지원하지 않는 토크나이저 사전 처리입니다\((.*?)\) — llama\.cpp 의 사전 처리 표에 없거나 GeulPU가 아직 받지 않는 갈래입니다/g, 'Unsupported tokenizer pre-processing ($1) — it is not in llama.cpp\'s pre-tokenizer table, or GeulPU does not accept this kind yet'],
   [/지원하지 않는 GGUF 버전입니다\((\d+)\) — 버전 3만 지원합니다/g, 'Unsupported GGUF version ($1) — only version 3 is supported'],
   [/GGUF 헤더를 끝까지 읽지 못했습니다\(파일이 잘렸거나 손상됨\)/g, 'Could not read the whole GGUF header (the file is truncated or damaged)'],
   [/GGUF 헤더가 손상되었습니다/g, 'The GGUF header is damaged'],

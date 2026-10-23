@@ -46,8 +46,16 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   with other chat templates now load — the app refuses only templates the interpreter cannot parse. Files without a chat template get
   the basic ChatML template, as in llama.cpp. Other values in `chat_template_kwargs` are passed to the template, and requests with
   tools now split the thinking of any template that uses `<think>` into `reasoning_content` (before, only Qwen3's).
+- **Tokenizers follow llama.cpp's pre-tokenizer table.** Byte-level BPE models load by their `tokenizer.ggml.pre` name from a table
+  generated from llama.cpp b11829 — 57 of its 66 name groups, among them Qwen3.5 / 3.8's `qwen35`, GPT-2, Falcon, StarCoder, DeepSeek,
+  Command-R, Tekken and GPT-4o / Llama 4 — split by a regex engine that follows llama.cpp's rules (its hand-written fast paths, and
+  std::regex's order on the category-collapsed text for the rest). On llama.cpp's own vocabulary tests (13 vocabularies, 602 cases) the
+  tokens are identical, and the models already supported give the same tokens as before. Letter and number categories now come from
+  llama.cpp's Unicode 15.1 table (the 622 CJK Extension I characters are letters). The app's model check uses the same table.
 
 ### Fixed
+
+- GGUF files without tensors (vocabulary-only files) were refused as damaged.
 
 - **R1-Distill-Qwen's `/v1/chat/completions` used the wrong chat template.** The server rendered Qwen's ChatML, whose `<|im_start|>`
   is not in this model's vocabulary, so the markers were split into ordinary text; it now renders the DeepSeek-R1 template (the chat
