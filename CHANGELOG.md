@@ -20,6 +20,10 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   when the vocabulary has `<|im_start|>` and `<|im_end|>` as special tokens, and the tokenizer accepts the `dbrx` pre-tokenizer (the
   Llama 3 split without the whole-word shortcut, as in llama.cpp): on twelve texts, including the whole user guide (14,424 tokens),
   the token ids equal llama.cpp b11827's.
+- **MiniCPM5** (OpenBMB, Llama architecture). Its `minicpm5` pre-tokenizer splits digit runs into groups of three first and then applies
+  the Llama 3 split to each piece on its own, as llama.cpp does; its RMSNorm eps of 10⁻⁶ gets a module family of its own (`llamae6…` —
+  the qwen2 kernels with a marker kernel the engine checks against the file); and the server renders its chat template (BOS, every answer
+  with its thinking block, `enable_thinking` true · false · not given). Its XML tool-call form is not accepted yet (400).
 
 ### Fixed
 

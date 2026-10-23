@@ -236,7 +236,8 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
       division, correctly rounded), angle = position · θ′_i (fp64 product), cos and sin correctly rounded to float32 (decimal).
       Without it, θ′_i = θ_i. A `rope.scaling.type` other than none is refused.
    3. **eps**: RMSNorm eps = 10⁻⁵ (the module constant float32(10⁻⁵) = 0x3727C5AC — it must equal the GGUF's value). The formula
-      is item 1 unchanged.
+      is item 1 unchanged. GeulPUv2 0.12.0, step 12-1b — a llama model with eps 10⁻⁶ (MiniCPM5) uses float32(10⁻⁶) = 0x358637BD (modules
+      llamae6… — `커널생성 llamae6큰`; the marker kernel eps6표시 at the end of the module lets the engine check it against the file).
 
 8. **YaRN position scaling** (GeulPUv2 ③a — Qwen2.5 7B and larger · Qwen3, [문서/긴문맥.md](../문서/긴문맥.md), Korean): on only
    when the context (max length) exceeds the GGUF's position count (`context_length` — Qwen2.5 32,768 · Qwen3 40,960); the factor s

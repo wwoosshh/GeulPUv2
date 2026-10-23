@@ -487,6 +487,8 @@
     (m != 없음 그리고 m→모양 != 없음 그리고 m→모양→토큰앞 != 없음 그리고 문자열_같은가(m→모양→토큰앞, "deepseek-r1-qwen"))이면 { 반환 "deepseek-r1". }
     (m != 없음 그리고 m→모양 != 없음 그리고 m→모양→틀R1)이면 { 반환 "deepseek-r1". }                (* 0.12.0 12-1 — R1-Distill-Llama *)
     (m != 없음 그리고 m→모양 != 없음 그리고 m→모양→구조 != 없음 그리고 문자열_같은가(m→모양→구조, "qwen3"))이면 { 반환 "qwen3". }    (* 37단계 *)
+    (* 0.12.0 12-1b — MiniCPM5 의 틀도 생각 켬 · 끔(enable_thinking)과 <think> 묶음 — 화면은 Qwen3 처럼 *)
+    (m != 없음 그리고 m→모양 != 없음 그리고 m→모양→틀미니씨피엠)이면 { 반환 "qwen3". }
     (* 39단계 — 서버의 Llama 3 틀(pre llama-bpe) · Mistral 틀(SentencePiece) — 화면은 chatml 처럼 /v1/chat/completions *)
     (m != 없음 그리고 m→모양 != 없음 그리고 m→모양→토큰모델 != 없음 그리고 문자열_같은가(m→모양→토큰모델, "llama"))이면 { 반환 "mistral". }
     (m != 없음 그리고 m→모양 != 없음 그리고 m→모양→토큰앞 != 없음 그리고 (문자열_같은가(m→모양→토큰앞, "llama-bpe") 또는

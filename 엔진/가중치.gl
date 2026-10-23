@@ -24,6 +24,7 @@
 참거짓 qwen3모델 = 거짓.    (* 37단계 — 구조 qwen3: 치우침이 없으면 0 을 더하고(계약 4.5), RoPE 앞에 머리마다 q · k 정규화(계약 4.6 — 머리정규화128) *)
 참거짓 llama모델 = 거짓.    (* 39단계 — 구조 llama(Llama 3.x · Mistral): q · k 줄 되돌리기 · RoPE 늘이기 인자 · eps 10⁻⁵ (계약 4.7) *)
 참거짓 eps5모델 = 거짓.     (* #16 — 구조 qwen2 에 RMSNorm eps 10⁻⁵ (DeepSeek-R1-Distill-Qwen-14B): 모듈 qwen2e5…(커널생성 qwen2e5큰 — 계약 4.1) *)
+참거짓 eps6모델 = 거짓.     (* 0.12.0 12-1b — 구조 llama 에 RMSNorm eps 10⁻⁶ (MiniCPM5): 모듈 llamae6…(커널생성 llamae6큰 — 계약 4.7) *)
 실수 참조 로프인자 = 없음.  (* 39단계 — rope_freqs(짧은실수 64 칸을 실수로) — 없으면 없음. 로프.gl 의 표가 θ_i / f_i 로 쓴다 *)
 정수 얀원래 = 0.            (* GeulPUv2 ③a — YaRN 의 원래 길이(Qwen 공식 32,768 — Qwen2.5 7B 이상 · Qwen3), 0 이면 늘이지 않는 모델 *)
 
@@ -429,6 +430,7 @@
     qwen3모델 = 문자열_같은가(구조, "qwen3").                    (* 37단계 *)
     llama모델 = 문자열_같은가(구조, "llama").                    (* 39단계 *)
     eps5모델 = 거짓.
+    eps6모델 = 거짓.
     (아닌 문자열_같은가(구조, "qwen2") 그리고 아닌 qwen3모델 그리고 아닌 llama모델)이면 { 파일에_쓰기(표준오류(), "qwen2 · qwen3 · llama 모델만 받는다(%s)\n", 구조). 1로 종료하다. }
     문자열 앞 = "qwen2".
     qwen3모델이면 { 앞 = "qwen3". }
@@ -498,7 +500,8 @@
         메타있음(g, "llama.rope.dimension_count")이면 { rd = 메타정수(g, "llama.rope.dimension_count"). }
         (hd2 != 128 또는 hv2 != 128 또는 rd != 128)이면 { 파일에_쓰기(표준오류(), "llama: 머리 크기 %lld · %lld · RoPE %lld 은 받지 않는다(128 만)\n", hd2, hv2, rd). 1로 종료하다. }
         실수 eps2 = 메타실수(g, "llama.attention.layer_norm_rms_epsilon").
-        (eps2 < 0.0000099999 또는 eps2 > 0.0000100001)이면 { 파일에_쓰기(표준오류(), "llama: RMSNorm eps %g 은 받지 않는다(모듈의 상수 10⁻⁵)\n", eps2). 1로 종료하다. }
+        (eps2 >= 0.00000099999 그리고 eps2 <= 0.00000100001)이면 { eps6모델 = 참. }        (* 0.12.0 12-1b — 10⁻⁶ 은 llamae6 모듈 *)
+        아니면 (eps2 < 0.0000099999 또는 eps2 > 0.0000100001)이면 { 파일에_쓰기(표준오류(), "llama: RMSNorm eps %g 은 받지 않는다(모듈의 상수 10⁻⁵ · 10⁻⁶)\n", eps2). 1로 종료하다. }
         (메타있음(g, "llama.expert_count") 그리고 메타정수(g, "llama.expert_count") > 0)이면 {
             파일에_쓰기(표준오류(), "llama: 전문가 섞기(MoE — 전문가 %lld)는 받지 않는다(Mixtral 등)\n", 메타정수(g, "llama.expert_count")). 1로 종료하다.
         }
@@ -564,6 +567,7 @@
    37단계 — Qwen3 는 qwen3{…}_… (커널생성 qwen3큰 — 머리 정규화 판이 모듈 끝에) *)
 [모듈구조]는 -> 문자열 {
     qwen3모델이면 { 반환 "qwen3". }
+    (llama모델 그리고 eps6모델)이면 { 반환 "llamae6". }     (* 0.12.0 12-1b — eps 10⁻⁶ (커널생성 llamae6큰 — 모듈 끝에 eps6표시) *)
     llama모델이면 { 반환 "llama". }                 (* 39단계 — 머리 128 모듈에 eps 10⁻⁵ (커널생성 llama큰) *)
     eps5모델이면 { 반환 "qwen2e5". }               (* #16 — qwen2 에 eps 10⁻⁵ (커널생성 qwen2e5큰 — 모듈 끝에 eps5표시) *)
     반환 "qwen2".
