@@ -175,6 +175,8 @@ def 모델모양(meta, 텐서):
     형식글 = {8: "Q8_0", 2: "Q4_0"}.get(q형)
     if q형 in (12, 13, 14, 23):
         형식글 = "KI" if any(t == 23 for n, (t, _) in 텐서.items() if n.startswith("blk.")) else "K"
+    if q형 in (0, 1, 30):                        # 0.12.0 12-3d-1 — F32 · F16 · BF16: 모듈 W16(16비트 블록 가중치 — 계약 1.3)
+        형식글 = "W16"
     템플릿 = meta.get("tokenizer.chat_template") or ""
     매개 = 0
     for _, d in 텐서.values():
@@ -648,7 +650,8 @@ def 단계목록(gguf, 모, 확인, 저장소, 앱봄):
     파일 = os.path.basename(gguf)
     매개 = 모["매개변수"]
     params = 모["크기표"] or (f"{매개 / 1e9:.1f}B".replace(".0B", "B") if 매개 >= 1e9 else f"{매개 / 1e6:.0f}M")
-    양자 = {7: "Q8_0", 2: "Q4_0", 15: "Q4_K_M", 14: "Q4_K_S", 17: "Q5_K_M", 16: "Q5_K_S", 18: "Q6_K", 30: "IQ4_XS"}.get(모["파일형식"], 모["형식글"])
+    양자 = {7: "Q8_0", 2: "Q4_0", 15: "Q4_K_M", 14: "Q4_K_S", 17: "Q5_K_M", 16: "Q5_K_S", 18: "Q6_K", 30: "IQ4_XS",
+            0: "F32", 1: "F16", 32: "BF16"}.get(모["파일형식"], 모["형식글"])
     라이선스 = {"apache-2.0": "Apache-2.0", "mit": "MIT"}.get(모["라이선스"].lower(), 모["라이선스"] or "<라이선스>")
     날 = time.strftime("%Y-%m-%d")
     gpu = GPU이름()
