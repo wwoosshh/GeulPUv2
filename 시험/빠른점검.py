@@ -270,9 +270,10 @@ def 모듈(글, 출력, 병렬, 갱신):
             if os.path.exists(x):
                 os.remove(x)
         t0 = time.time()
-        # 깃발(--공유32 같은 것)은 출력 경로 뒤에 — 커널생성의 인자 차례
-        자리 = [x for x in 인자 if not x.startswith("--")]
-        깃발 = [x for x in 인자 if x.startswith("--")]
+        # 깃발(--공유32 같은 것)은 출력 경로 뒤에 — 커널생성의 인자 차례. 표의 깃발은 늘 끝에 있고, 값을 받는 깃발(--헤드 64 — 0.12.0
+        # 12-3c-2)은 그 값과 함께 옮긴다
+        i = next((k for k, x in enumerate(인자) if x.startswith("--")), len(인자))
+        자리, 깃발 = 인자[:i], 인자[i:]
         rc, 꼬리 = 돌리기([생성기] + 자리 + [gl] + 깃발, os.path.join(출력, f"생성_{이름}.txt"))
         if rc != 0 or not os.path.exists(gl):
             return 이름, None, None, None, f"생성 실패: {꼬리}", 0.0
