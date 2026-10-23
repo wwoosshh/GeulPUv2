@@ -187,6 +187,8 @@ def 견주기(이름, 참조, 글, 보기):
     ("한도-재귀매크로", "{% macro m(n) %}{% if n > 0 %}{{ m(n - 1) }}{% endif %}{{ n }}{% endmacro %}{{ m(30) }}|{{ m(200) }}", [사람]),
     ("깊은괄호", "{{ " + "(" * 30 + "1" + ")" * 30 + " }}", [사람]),
     ("한도-깊은목록", "{% set ns = namespace(x=1) %}{% for i in range(300) %}{% set ns.x = [ns.x] %}{% endfor %}{{ ns.x|length }}", [사람]),
+    ("큰정수", "{{ big }}|{{ big|tojson }}|{{ [big, small]|tojson }}|{{ small }}|{{ negz|tojson }}{{ negz }}|{{ big == big }}",
+     [{"big": 12345678901234567890, "small": -9223372036854775808, "negz": 0}]),
     ("format거르개", "{{ '%s(%r) %d%%'|format(name, name, 3) }}{{ '%(a)s-%(b)s'|format(a=1, b='x') }}{{ '%i'|format(2.9) }}", [사람]),
     ("sort", "{{ [3, 1, 2]|sort }}{{ ['b', 'A', 'a', 'B']|sort }}{{ ['b', 'A', 'a', 'B']|sort(case_sensitive=true) }}{{ [3, 1, 2]|sort(reverse=true) }}"
      "{{ ms|sort(attribute='n')|map(attribute='n')|list }}{{ ['a', 'A', 'b', 'a']|unique|list }}{{ [1, 2, 1, 3]|unique|list }}",
