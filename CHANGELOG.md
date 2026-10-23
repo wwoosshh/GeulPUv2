@@ -71,6 +71,8 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 ### Fixed
 
 - GGUF files without tensors (vocabulary-only files) were refused as damaged.
+- The app showed the module family "KI" next to the name of files mixing IQ4_XS with k-quants (model picker, chat header, status
+  line); it now shows the file's quantization name, as for other k-quant files.
 
 - **R1-Distill-Qwen's `/v1/chat/completions` used the wrong chat template.** The server rendered Qwen's ChatML, whose `<|im_start|>`
   is not in this model's vocabulary, so the markers were split into ordinary text; it now renders the DeepSeek-R1 template (the chat

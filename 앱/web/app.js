@@ -1788,10 +1788,11 @@ function labelById(id) {
   const c = S.st && S.st.catalog.find(x => x.id === id);
   return c ? `${c.name} · ${c.quant}` : (id || '');
 }
-// 양자화 이름 — k-양자화 파일은 관리자가 "K" 로만 알려 주므로 목록의 이름(Q4_K_M 등)이나 가중치 형식으로 채운다
+// 양자화 이름 — 관리자는 모듈 종류(k-양자화 "K" · IQ4_XS 가 섞인 "KI" · F16 · BF16 · F32 의 "W16")로만 알려 주므로 목록의 이름(Q4_K_M 등)이나
+// 가중치 형식으로 채운다
 function quantOf(m) {
   const s = (m && m.shape) || {};
-  if (s.quant && s.quant !== 'K') return s.quant;
+  if (s.quant && !['K', 'KI', 'W16'].includes(s.quant)) return s.quant;
   const c = catalogOf(m);
   if (c && c.quant) return c.quant;
   return s.weight_type || s.quant || '';
