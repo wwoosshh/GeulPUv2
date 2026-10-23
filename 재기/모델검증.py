@@ -190,6 +190,7 @@ def 모델모양(meta, 텐서):
             "너비": 키("embedding_length"), "헤드": 키("attention.head_count"), "KV헤드": 키("attention.head_count_kv"),
             "확장폭": 키("feed_forward_length"), "어휘": 텐서.get("token_embd.weight", (0, [0, 0]))[1][-1],
             "eps": float(키("attention.layer_norm_rms_epsilon", 0.0) or 0.0), "형식글": 형식글 or f"?({q형})", "매개변수": 매개,
+            "헤드크기": 키("attention.key_length", 0), "RoPE": 키("rope.dimension_count", 0),
             "토큰모델": meta.get("tokenizer.ggml.model") or "", "토큰앞": meta.get("tokenizer.ggml.pre") or "",
             "템플릿": bool(템플릿), "템플릿도구": "tools" in 템플릿, "생각켬끔": "enable_thinking" in 템플릿}
 
@@ -205,8 +206,13 @@ def 모듈규칙(모):
         구 = "qwen2e5" if 0.0000099999 <= eps <= 0.0000100001 else "qwen2"
     짧은 = {"Q8_0": "Q8", "Q4_0": "Q4", "K": "K", "KI": "KI"}.get(모["형식글"], 모["형식글"])
     모["모듈구조"] = 구
-    모["모듈"] = f"{구}{짧은}_{모['너비']}x{모['헤드']}x{모['KV헤드']}x{모['확장폭']}x{모['어휘']}"
+    # 0.12.0 12-3c-2 — 헤드 크기(key_length — 없으면 너비 / 헤드, qwen3 은 128) · RoPE 차원(llama 의 rope.dimension_count — 없으면 헤드 크기)
+    hd = 128 if 모["구조"] == "qwen3" else (모.get("헤드크기") or (모["너비"] // 모["헤드"] if 모["헤드"] else 0))
+    rd = (모.get("RoPE") or hd) if 모["구조"] == "llama" else hd
+    머리 = "" if (hd, rd) == (128, 128) else (f"_h{hd}" if rd == hd else f"_h{hd}r{rd}")
+    모["모듈"] = f"{구}{짧은}_{모['너비']}x{모['헤드']}x{모['KV헤드']}x{모['확장폭']}x{모['어휘']}{머리}"
     모["생성기인자"] = [f"{구}큰", 모["형식글"], str(모["너비"]), str(모["헤드"]), str(모["KV헤드"]), str(모["확장폭"]), str(모["어휘"])]
+    모["머리옵션"] = [] if (hd, rd) == (128, 128) else ["--헤드", str(hd), "--RoPE", str(rd)]
     if "KV8" not in 모:
         모["KV8"] = 모["형식글"] in ("K", "KI") and 모["헤드"] > 0 and 모["너비"] == 128 * 모["헤드"]
     모["빠른어텐션"] = ("F2B" if 구 == "qwen3" else "F2") if 모["KV8"] else None
@@ -216,11 +222,12 @@ def 변형들(모):
     """앱이 이 모델에 쓰는 CUDA 모듈(앱/일.gl 의 모듈준비 — 정밀은 --먼): (이름, 모듈 이름, 생성기 옵션, 참조7B 옵션). 처음이 정밀,
     마지막이 가장 빠른 모듈 — 앱의 기본은 기본변형"""
     m = 모["모듈"]
-    out = [("정밀", m + "_먼", ["--먼"], []), ("F1", m + "_빠른", ["--빠른"], ["--빠른"])]
+    h = 모.get("머리옵션", [])                  # 0.12.0 12-3c-2 — 헤드 크기 · RoPE 차원(128 이면 없음)
+    out = [("정밀", m + "_먼", ["--먼"] + h, []), ("F1", m + "_빠른", ["--빠른"] + h, ["--빠른"])]
     if 모["KV8"]:
         fa = 모["빠른어텐션"]
-        out.append(("KV8", m + "_빠른_KV8", ["--빠른", "--KV8"], ["--KV8"]))
-        out.append((f"{fa}_KV8", f"{m}_빠른_{fa}_KV8", ["--빠른", "--KV8", f"--{fa}"], [f"--{fa}"]))
+        out.append(("KV8", m + "_빠른_KV8", ["--빠른", "--KV8"] + h, ["--KV8"]))
+        out.append((f"{fa}_KV8", f"{m}_빠른_{fa}_KV8", ["--빠른", "--KV8", f"--{fa}"] + h, [f"--{fa}"]))
     return out
 
 

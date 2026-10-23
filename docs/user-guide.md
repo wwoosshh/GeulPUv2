@@ -380,9 +380,9 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 
 | Architecture | Models | Sizes |
 |---|---|---|
-| qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 1.5B and up (head size 128) — 1.5B · 3B · 7B · 14B run on this project's PC |
+| qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 0.5B and up (head size 64 · 96 · 128) — 0.5B · 1.5B · 3B · 7B · 14B run on this project's PC (head size 96 on a synthetic model) |
 | qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 4B · 8B run on this project's PC (14B on a synthetic model) |
-| llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | 1.5B · 2B · 3B · 7B · 8B — 70B checked as a shape with a synthetic model |
+| llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | Head size 64 · 96 · 128, including RoPE on part of each head — 1.5B · 2B · 3B · 7B · 8B run on this project's PC; head size 96, partial RoPE and 70B checked as shapes with synthetic models |
 
 The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
 parse are refused — it parsed all 228 templates of the 1,000 most-downloaded GGUF repositories on Hugging Face).

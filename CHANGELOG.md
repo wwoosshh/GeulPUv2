@@ -44,6 +44,14 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   to the CPU reference. These files load in **Exact mode by default**, with their own setting (Settings → "Computation mode — F16 · BF16
   · F32 files", or the mode chip while such a file is loaded): Fast stays available, but on these files it drifts further from Exact
   than llama.cpp does (Qwen2.5-1.5B F16: next-token KL 5.9× llama.cpp's, top-1 agreement 97.4 %), short of the B′ bar.
+- **Head sizes 64 and 96, RoPE on part of each head, narrower widths.** qwen2 and llama models with a head size of 64 or 96 now load —
+  Qwen2.5-0.5B (run on this project's PC), and Llama-architecture models of the Llama-3.2-1B shape with its 32-entry `rope_freqs` (tested
+  on a synthetic model) — as do
+  models that rotate only the first n_rot dimensions of each head (any multiple of 8) and widths that are multiples of 32 (k-quant files
+  still need 256). Inside attention each head is padded with zeros to 128, which gives the same bits as computing at the real size
+  (contract, "Head size and RoPE dimensions"); the KV cache is kept at the padded size, so a head-64 model uses twice the KV cache per
+  token of its real size. The number of heads must be even. On Vulkan these models use the plain module (no cooperative-matrix module),
+  and they don't run yet on devices with 32 KB of shared memory.
 - **Automatic model verification: one command tests a GGUF file before it joins the model list** (`재기/모델검증.py`,
   [문서/모델검증.md](문서/모델검증.md)). It reads the file and the packaged app's own model check, then runs what the app will run
   for that file: five-path bit tests for every CUDA module the app would build (exact and fast, plus the 8-bit KV and fast-attention
