@@ -307,6 +307,27 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
       product — SiLU as in step 2), then the input of `ssm_out` (two digits — one in F1).
    A layer is x ← x + mix(RMSNorm(x; `attn_norm`)), x ← x + SwiGLU(RMSNorm(x; `post_attention_norm`)) — mix is item 9 in the layers with
    (l + 1) % `full_attention_interval` = 0 and item 10 in the others.
+11. **MoE FFN** (0.12.0 12-3g — Qwen3.5 / 3.6 MoE, architecture `qwen35moe`, [`문서/블록조합.md`](../문서/블록조합.md)): in the FFN slot of a
+   layer, with h = RMSNorm(x; `post_attention_norm`) (item 1 — two digits when it feeds a linear layer):
+   1. **Router**: l_e = `ffn_gate_inp`_e · h (experts e = 0 … E − 1), l_s = `ffn_gate_inp_shexp` · h — the integer block contract of
+      section 1 (the file's F32 weights converted to the 16-bit blocks of 1.3 — the router and the shared gate can be one matrix with E + 1
+      columns: each column is computed on its own, so the values are the same). 12-3g-1 compared it with an fp32 fma chain over the F32
+      weights as they are: the block contract is closer to the math reference (exact integer sums per block — 64 roundings instead of
+      2,048; the 12-3g-1 results in `문서/0.12.0.md`).
+   2. **Softmax**: m = max_e l_e, e_i = written-exp(l_i − m), strand t (0 … 31) sums p_t = Σ_{i ≡ t (mod 32), ascending i} e_i (starting from
+      0), then halving from 16 (p_t ← p_t + p_{t+16}, …) gives S — the same shape as the fold of item 1; p_i = e_i / S (one division).
+   3. **Top k** (k = `expert_used_count`): descending l, equal values (−0 = +0) by the smaller index first — rank r = 0 … k − 1 picks
+      expert e_r.
+   4. **Weights**: s = p_(e_0) + … + p_(e_(k−1)) (additions in rank order), w_r = p_(e_r) / max(s, 2⁻¹⁴) (one division — 2⁻¹⁴ is llama.cpp's
+      floor 6.103515625e-5).
+   5. **Experts**: y_r = down_(e_r)(SwiGLU(gate_(e_r) · h, up_(e_r) · h)) — the integer block contract of section 1 (each expert matrix in its
+      own format) and the SwiGLU of item 3 (two digits into down). A row's y_r depends only on that row and that expert's weights — the
+      same bits however rows are grouped per expert.
+   6. **Sum**: o = w_0 · y_0 (one product), then o ← fma(w_r, y_r, o) for r = 1 … k − 1 in order.
+   7. **Shared expert**: y_s = down_s(SwiGLU(gate_s · h, up_s · h)) (items 1 and 3), g = σ(l_s) (the σ of item 9), o ← fma(g, y_s, o).
+   8. **Residual**: x ← x + o (one addition).
+   This is llama.cpp's `build_moe_ffn` (softmax → top k → weights divided by their sum → sum of expert outputs × weights, shared expert ×
+   sigmoid gate) with its order fixed. The layers are items 9 and 10 as before; only the FFN is this one.
 
 ### Head size 128 (stage 22 — Qwen2.5-7B and larger)
 
@@ -432,5 +453,6 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | IQ4_XS (GeulPUv2 0.11.0, step 1-6c — [`시험/계약자체.py`](../시험/계약자체.py) · [`시험/판26.py`](../시험/판26.py) · [`시험/참조7B.py`](../시험/참조7B.py) · [`엔진/시험_7B.gl`](../엔진/시험_7B.gl)) | the CPU reference itself (values unpacked one by one from raw blocks — the formula of llama.cpp's dequantize_row_iq4_xs — and slow against BLAS); every IQ4_XS kernel variant of the KI module (row kernel, 11 tile variants, 3 row-tile variants, three epilogues, two embeddings, logits) with the real weights of two IQ4_XS files (Qwen3-0.6B requantized — one mixing in Q5_K · Q6_K, one with an IQ4_XS token table and output) and random and extreme activations, exact and fast modules, against the CPU reference; every row's logits of a whole model (three chat prompts + 16 generated tokens) against the CPU reference and the five paths, table steps of 2–8 rows, long context |
 | General path — 0.12.0 12-3b ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조7B.py`](../시험/참조7B.py)) | the 16-bit block weight conversion against exact rational arithmetic, `행렬곱16` against the contract's sentences transcribed in rational arithmetic (exact and fast, depth padded with zeros), bit equality of attention with a zero-padded head; the CPU reference (F16 · BF16 · F32, head 64, width 896) against llama.cpp's next-token distribution |
 | 16-bit block weight kernels — 0.12.0 12-3c-1 ([`시험/판16.py`](../시험/판16.py)) | every kernel variant of the `--W16` modules (exact and fast) — 11 tile kernels × two epilogues, the one-row kernel × three epilogues, `SwiGLU정수로`, the F16 · BF16 · F32 embeddings and their decode-graph variants (subnormal values included) — with random weights (sizes varying by row and block, zero blocks, values 2⁻²⁰ of the block maximum), random and extreme activations and extreme weights (blocks whose exponent is clipped at −98), up to the edges of 100 rows, 1,000 columns and depth 1,100 (zero-padded), against the CPU reference |
+| MoE — 0.12.0 12-3g-1 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조35.py`](../시험/참조35.py) · [`시험/qwen35수학.py`](../시험/qwen35수학.py)) | top-k ties (−0 and +0 too), the softmax (fold over 32 strands), weights, sum and the router's fma chain against scalar computations copied from the contract text, one row's result independent of the other rows (the same bits however rows are picked and grouped); the CPU reference (Qwen3.6-35B-A3B Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions and chosen experts |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
 | Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS; the RoPE table (item 8 — unscaled and YaRN factors 2 · 4 up to position 131,072 — [`엔진/시험_로프표.gl`](../엔진/시험_로프표.gl) against the CPU reference in [`시험/로프표.py`](../시험/로프표.py), byte for byte) — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |
