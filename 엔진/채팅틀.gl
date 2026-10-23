@@ -13,7 +13,11 @@
 포함 "진해석.gl"
 
 진틀 참조 서버틀 = 없음.
-문자열 서버틀오류 = 없음.          (* 틀이 없거나 풀리지 않을 때 — 채팅은 400, 글 완성(/v1/completions)은 된다 *)
+문자열 서버틀오류 = 없음.          (* 틀이 풀리지 않을 때 — 채팅은 400, 글 완성(/v1/completions)은 된다 *)
+참거짓 틀기본 = 거짓.              (* GGUF 에 틀이 없어 기본 ChatML 틀로 그린다 *)
+(* GGUF 에 tokenizer.chat_template 이 없을 때 — llama.cpp 처럼 기본 ChatML 틀(common/chat.cpp 의 CHATML_TEMPLATE_SRC 와 같은 글):
+   메시지마다 '<|im_start|>' + role + '\n' + content + '<|im_end|>\n', 끝에 '<|im_start|>assistant\n' *)
+문자열 기본챗ML틀 = "\{% for message in messages %\}\{\{ '<|im_start|>' + message.role + '\\n' + message.content + '<|im_end|>\\n' \}\}\{% endfor %\}\{% if add_generation_prompt %\}\{\{ '<|im_start|>assistant\\n' \}\}\{% endif %\}".
 참거짓 틀시스템받음 = 참.
 참거짓 틀인자글 = 거짓.
 참거짓 틀도구그림 = 거짓.
@@ -65,10 +69,8 @@
 [채팅틀준비]는 {
     서버틀 = 없음.
     서버틀오류 = 없음.
-    채팅틀원문 == 없음이면 {
-        서버틀오류 = "이 모델 파일에는 채팅 틀(tokenizer.chat_template)이 없다 — 채팅은 받지 않고 /v1/completions 는 된다".
-        반환.
-    }
+    틀기본 = 채팅틀원문 == 없음.
+    틀기본이면 { 채팅틀원문 = 기본챗ML틀. }
     서버틀 = 진틀풀기(채팅틀원문, 글자수(채팅틀원문)).
     서버틀 == 없음이면 {
         바이트열 참조 eb = 바이트열_만들기().

@@ -69,6 +69,11 @@ def raise_exception(msg):
     raise jinja2.exceptions.TemplateError(msg)
 
 
+# GGUF 에 tokenizer.chat_template 이 없을 때 — 서버(엔진/채팅틀.gl 의 기본챗ML틀)와 llama.cpp 처럼 기본 ChatML 틀
+기본챗ML틀 = ("{% for message in messages %}{{ '<|im_start|>' + message.role + '\\n' + message.content + '<|im_end|>\\n' }}{% endfor %}"
+          "{% if add_generation_prompt %}{{ '<|im_start|>assistant\\n' }}{% endif %}")
+
+
 def 내용글(m):
     c = m.get("content")
     if isinstance(c, list):
@@ -136,7 +141,7 @@ def 참조들(gguf, 경우, 생각끔):
     """경우 파일(dict) 의 경우마다 참조 글 — {id: 글 | {"error": 까닭}}"""
     meta = gguf_meta(gguf, {"tokenizer.chat_template", "tokenizer.ggml.tokens", "tokenizer.ggml.bos_token_id", "tokenizer.ggml.eos_token_id",
                             "tokenizer.ggml.pre"})
-    틀글 = meta["tokenizer.chat_template"]
+    틀글 = meta.get("tokenizer.chat_template") or 기본챗ML틀
     낱말 = meta.get("tokenizer.ggml.tokens")
     bos = 낱말[meta["tokenizer.ggml.bos_token_id"]] if 낱말 and meta.get("tokenizer.ggml.bos_token_id") is not None else ""
     eos = 낱말[meta["tokenizer.ggml.eos_token_id"]] if 낱말 and meta.get("tokenizer.ggml.eos_token_id") is not None else ""

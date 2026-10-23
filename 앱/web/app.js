@@ -1288,7 +1288,7 @@ const TMX = [
   [/RoPE 늘이기\(([^)]+)\)가 들어간 Qwen2 파일은 지원하지 않습니다 — 늘이기 정보가 없는 같은 모델의 파일이면 7B 이상은 YaRN으로 131,072까지 늘입니다/g, "Qwen2 files with RoPE scaling ($1) are not supported — with the same model's file without scaling information, models of 7B and up reach 131,072 through YaRN"],
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다\(늘이기 인자는 rope_freqs 텐서로만\)/g, 'Files with RoPE scaling ($1) are not supported (scaling factors only through the rope_freqs tensor)'],
   [/전문가 섞기\(MoE — 전문가 (\d+)개\) 모델은 아직 지원하지 않습니다/g, 'Mixture-of-experts models (MoE — $1 experts) are not supported yet'],
-  [/채팅 틀이 GeulPU가 그리는 틀\(ChatML · Llama 3 · Mistral · DeepSeek-R1 · MiniCPM5\)과 다른 파일입니다 — 아직 지원하지 않습니다/g, 'The chat template differs from the ones GeulPU renders (ChatML · Llama 3 · Mistral · DeepSeek-R1 · MiniCPM5) — not supported yet'],
+  [/이 파일의 채팅 템플릿\(tokenizer\.chat_template\)을 GeulPU의 jinja 해석기가 아직 풀지 못합니다\((.*)\)/g, "GeulPU's jinja interpreter cannot parse this file's chat template (tokenizer.chat_template) yet ($1)"],
   [/채팅 틀이 Llama 3 · Mistral의 것과 다른 파일입니다\(ChatML 등을 쓰는 미세조정\) — 아직 지원하지 않습니다/g, 'The chat template differs from the Llama 3 · Mistral ones (a fine-tune using ChatML or similar) — not supported yet'],
   [/RoPE 늘이기\((.+?)\)가 들어간 파일은 지원하지 않습니다/g, 'Files with RoPE scaling ($1) are not supported'],
   [/지원하지 않는 모델 크기입니다\(너비 (\d+) · 헤드 (\d+) · KV 헤드 (\d+) · FFN (\d+)\) — 헤드 크기 128인 모델\(Qwen2 1\.5B 이상 · Qwen3 · Llama 3\.x · Mistral 등\)만 지원합니다/g, 'Unsupported model size (hidden $1 · heads $2 · KV heads $3 · FFN $4) — only models with head size 128 (Qwen2 1.5B and up · Qwen3 · Llama 3.x · Mistral and the like) are supported'],

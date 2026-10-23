@@ -257,8 +257,6 @@
 짧은실수 참조 토큰점수 = 없음.    (* SentencePiece 의 점수 *)
 사전 참조 모든낱말 = 없음.   (* SentencePiece — 모든 토큰의 글 → 번호(llama.cpp 의 token_to_id) *)
 정수[256] 바이트토큰.        (* SentencePiece — 바이트 → <0xNN> 토큰의 번호 *)
-참거짓 틀모름 = 거짓.        (* GGUF 의 chat_template 이 Llama 3 · Mistral · DeepSeek-R1 · 기본 ChatML 의 꼴이 아니다(서버는 채팅을 받지 않는다) *)
-참거짓 틀도구 = 거짓.        (* GeulPUv2 ②단계 — GGUF 의 chat_template 에 tools 가 있다 *)
 (* 0.12.0 12-1 — pre dbrx(HyperCLOVAX-SEED): llama.cpp 처럼 Llama 3 의 정규식(숫자 1 ~ 3 자리, NFC 없음)이지만 조각 통째의 낱말을 먼저 보지
    않고(ignore_merges 없음), BOS 는 add_bos 가 있을 때만 붙인다 *)
 참거짓 디비알엑스 = 거짓.
@@ -266,10 +264,7 @@
    정규식(숫자는 \p{N}+ — 이미 세 자리 안이다)을 따로 건다(조각 끝이 글 끝 — 공백의 (?!\S) 가 조각 안에서 본다). 통째 낱말 건너뛰기 있음 *)
 참거짓 미니씨피엠 = 거짓.
 참거짓 라마식 = 거짓.        (* 0.12.0 12-1 — 라마BPE · 디비알엑스 · 미니씨피엠: Llama 3 의 정규식 · 메타데이터의 BOS · EOS · 끝 토큰 *)
-참거짓 틀R1 = 거짓.          (* 0.12.0 12-1 — chat_template 이 DeepSeek-R1 의 꼴(<｜User｜> · <｜Assistant｜> — R1-Distill-Qwen · Llama) *)
-참거짓 틀R1생각 = 거짓.      (* 0.12.0 12-1 — 그 틀이 생성 머리 뒤에 '<think>\n' 을 붙인다(R1-Distill-Llama 의 GGUF) *)
-참거짓 틀챗ML = 거짓.        (* 0.12.0 12-1 — llama 구조 · SentencePiece 어휘의 기본 ChatML 틀(<|im_start|> · <|im_end|> 가 특수 토큰 — HyperCLOVAX-SEED) *)
-참거짓 틀미니씨피엠 = 거짓.  (* 0.12.0 12-1b — MiniCPM5 의 틀(bos_token · ChatML · 모든 답에 생각 묶음 · XML 꼴 도구 — <tool_sep> 가 있다) *)
+참거짓 틀R1 = 거짓.          (* 0.12.0 12-1 — chat_template 이 DeepSeek-R1 의 꼴(<｜User｜> · <｜Assistant｜> — R1-Distill-Qwen · Llama): qwen 어휘도 시작글번호 *)
 (* 0.12.0 12-G1b — 서버가 jinja 해석기로 그리는 GGUF 의 chat_template(없으면 없음)과 그 맥락의 bos_token · eos_token(GGUF 의 bos · eos_token_id —
    모델의 갈래와 상관없이, 없으면 −1) *)
 문자열 채팅틀원문 = 없음.
@@ -397,22 +392,14 @@
         }
         앞공백붙임 = 메타참거짓(g, "tokenizer.ggml.add_space_prefix", 참).
     }
-    (* 0.12.0 12-1 — chat_template 의 꼴: DeepSeek-R1(두 표지가 특수 토큰인 어휘), 기본 ChatML(llama 구조 · SentencePiece 어휘 — 기본챗ML인가) *)
+    (* 0.12.0 12-1 — chat_template 이 DeepSeek-R1 의 꼴(두 표지가 특수 토큰인 어휘)인가 *)
     틀R1 = 거짓.
-    틀R1생각 = 거짓.
-    틀챗ML = 거짓.
     메타있음(g, "tokenizer.chat_template")이면 {
         문자열 틀글0 = 메타글(g, "tokenizer.chat_template").
         정수 사용자표 = 글로번호("<｜User｜>").
         정수 도우미표 = 글로번호("<｜Assistant｜>").
         틀R1 = 문자열_포함(틀글0 에서, "<｜User｜>" 를) 그리고 문자열_포함(틀글0 에서, "<｜Assistant｜>" 를) 그리고 사용자표 >= 0 그리고 도우미표 >= 0 그리고
               특수인가(사용자표) 그리고 특수인가(도우미표).
-        틀R1생각 = 틀R1 그리고 문자열_포함(틀글0 에서, "<｜Assistant｜><think>" 를).
-        정수 챗시작 = 글로번호("<|im_start|>").
-        정수 챗끝 = 글로번호("<|im_end|>").
-        틀챗ML = (라마식 또는 문장조각) 그리고 아닌 틀R1 그리고 기본챗ML인가(틀글0) 그리고 챗시작 >= 0 그리고 챗끝 >= 0 그리고 특수인가(챗시작) 그리고 특수인가(챗끝).
-        틀미니씨피엠 = (라마식 또는 문장조각) 그리고 아닌 틀R1 그리고 문자열_포함(틀글0 에서, "<tool_sep>" 를) 그리고 문자열_포함(틀글0 에서, "<|im_start|>" 를) 그리고
-                     챗시작 >= 0 그리고 챗끝 >= 0 그리고 특수인가(챗시작) 그리고 특수인가(챗끝).
     }
     (* BOS — llama.cpp 처럼: Llama 3(pre llama-bpe)과 SentencePiece 는 기본으로 붙이고 add_bos_token 이 있으면 그것을 따른다. qwen 은 붙이지 않는다.
        0.12.0 12-1 — dbrx 는 add_bos_token 이 있을 때만(llama.cpp 의 기본 거짓). 시작글번호는 채팅 틀의 bos_token(붙이기와 상관없이 GGUF 의
@@ -454,22 +441,7 @@
         끝목록더하기(글로번호("<|endoftext|>")).
         끝목록더하기(글로번호("</s>")).
     }
-    (* 39단계 — GGUF 의 chat_template 이 서버의 틀과 같은 꼴인가: llama 구조 · SentencePiece 어휘의 틀이 Llama 3(<|start_header_id|>) ·
-       Mistral([INST]) · DeepSeek-R1 · 기본 ChatML 의 어느 꼴도 아니면 틀모름 — 채팅은 받지 않고 글 완성만. 0.12.0 12-1 — dbrx 는 Llama 3 ·
-       Mistral 틀이 없어 R1 · 기본 ChatML 만, 틀이 없어도 틀모름 *)
-    틀모름 = 거짓.
-    ((라마식 또는 문장조각) 그리고 메타있음(g, "tokenizer.chat_template"))이면 {
-        문자열 틀글 = 메타글(g, "tokenizer.chat_template").
-        참거짓 아는틀 = 틀R1 또는 틀챗ML 또는 틀미니씨피엠.
-        (라마BPE 그리고 문자열_포함(틀글 에서, "<|start_header_id|>" 를))이면 { 아는틀 = 참. }
-        (문장조각 그리고 문자열_포함(틀글 에서, "[INST]" 를))이면 { 아는틀 = 참. }
-        아닌 아는틀이면 { 틀모름 = 참. }
-    }
-    ((디비알엑스 또는 미니씨피엠) 그리고 아닌 메타있음(g, "tokenizer.chat_template"))이면 { 틀모름 = 참. }
-    (* GeulPUv2 ②단계 — 채팅 틀이 도구(tools)를 그리는가(Qwen2.5 · Qwen3 · Llama 3.1 · 3.2 의 틀 — 이 GGUF 의 Mistral · R1 틀에는 없다) *)
-    틀도구 = 거짓.
-    메타있음(g, "tokenizer.chat_template")이면 { 틀도구 = 문자열_포함(메타글(g, "tokenizer.chat_template") 에서, "tools" 를). }
-    (* 0.12.0 12-G1b — 서버의 jinja 해석기가 쓴다 *)
+    (* 0.12.0 12-G1b — 서버의 jinja 해석기가 쓴다(그 틀이 무엇이든 — 모델마다 손으로 짠 틀과 그 꼴 고르기를 대신한다) *)
     채팅틀원문 = 없음.
     메타있음(g, "tokenizer.chat_template")이면 { 채팅틀원문 = 메타글(g, "tokenizer.chat_template"). }
     채팅BOS번호 = -1.
@@ -482,20 +454,6 @@
         정수 ei = 메타정수(g, "tokenizer.ggml.eos_token_id").
         (ei >= 0 그리고 ei < 토큰수)이면 { 채팅EOS번호 = ei. }
     }
-}
-
-(* 0.12.0 12-1 — 기본 ChatML 틀인가: 메시지마다 '<|im_start|>' + 역할 + '\n' + content + '<|im_end|>\n', 끝에 '<|im_start|>assistant\n' 만
-   그리는 꼴(HyperCLOVAX-SEED 의 GGUF). 기본 시스템 말 · 도구 · 생각 · bos_token 을 그리는 틀은 다른 글이 되므로 아니다 *)
-[문자열 틀글을 기본챗ML인가]는 -> 참거짓 {
-    아닌 (문자열_포함(틀글 에서, "<|im_start|>" 를) 그리고 문자열_포함(틀글 에서, "<|im_end|>" 를))이면 { 반환 거짓. }
-    아닌 (문자열_포함(틀글 에서, "message['role']" 를) 또는 문자열_포함(틀글 에서, "message.role" 를))이면 { 반환 거짓. }
-    문자열_포함(틀글 에서, "tools" 를)이면 { 반환 거짓. }
-    문자열_포함(틀글 에서, "think" 를)이면 { 반환 거짓. }
-    문자열_포함(틀글 에서, "bos_token" 를)이면 { 반환 거짓. }
-    문자열_포함(틀글 에서, "You are" 를)이면 { 반환 거짓. }
-    문자열_포함(틀글 에서, "system_message" 를)이면 { 반환 거짓. }
-    문자열_포함(틀글 에서, "loop.first" 를)이면 { 반환 거짓. }
-    반환 참.
 }
 
 (* 39단계 — 글이 같은 토큰의 번호(종류와 상관없이 — llama.cpp 의 token_to_id), 없으면 -1 *)
