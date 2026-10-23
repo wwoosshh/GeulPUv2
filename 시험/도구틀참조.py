@@ -98,6 +98,7 @@ def main():
     라마 = "<|start_header_id|>" in 틀글
     qwen3 = "enable_thinking" in 틀글
     r1 = "<｜User｜>" in 틀글 and "<｜Assistant｜>" in 틀글          # 0.12.0 12-1 — DeepSeek-R1(R1-Distill-Qwen · Llama)
+    미니 = "<tool_sep>" in 틀글                                     # 0.12.0 12-1b — MiniCPM5(XML 꼴 도구 — 서버는 아직 받지 않는다)
     틀도구 = "tools" in 틀글
     bos = "<|begin_of_text|>" if 라마 else "<|endoftext|>"
     eos = "<|eot_id|>" if 라마 else "<|im_end|>"
@@ -121,6 +122,9 @@ def main():
         if r1 and (c.get("tools") or 도구말):        # 0.12.0 12-1 — 서버는 R1 의 도구 꼴(tool▁calls)을 받지 않는다(설계 — 400)
             out[c["id"]] = {"error": "R1 틀의 도구 꼴은 서버가 받지 않는다"}
             continue
+        if 미니 and (c.get("tools") or 도구말):      # 0.12.0 12-1b — MiniCPM5 의 XML 도구 꼴은 아직(400)
+            out[c["id"]] = {"error": "MiniCPM5 틀의 도구 꼴은 서버가 아직 받지 않는다"}
+            continue
         if c.get("tools") and c.get("tool_choice") != "none" and not 틀도구:     # 틀에 도구가 없으면 서버는 tools 를 400 으로
             out[c["id"]] = {"error": "이 틀은 도구를 그리지 않는다"}
             continue
@@ -133,7 +137,7 @@ def main():
         except Exception as e:                      # Llama 의 호출 둘 등 — 서버도 400 이어야 한다
             out[c["id"]] = {"error": f"{type(e).__name__}: {e}"}
     json.dump(out, open(출력, "w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
-    print(f"{len(out)} 경우 · {'llama' if 라마 else ('qwen3' if qwen3 else ('r1' if r1 else 'chatml'))} · 생각끔 {생각끔} → {출력}")
+    print(f"{len(out)} 경우 · {'llama' if 라마 else ('minicpm5' if 미니 else ('qwen3' if qwen3 else ('r1' if r1 else 'chatml')))} · 생각끔 {생각끔} → {출력}")
 
 
 if __name__ == "__main__":
