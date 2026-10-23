@@ -4,11 +4,12 @@
 그대로이고, 연산마다 계약의 차례 · 반올림이다.
 
   python -I 시험/참조35.py <qwen35 gguf> --수학 <폴더> <출력.json> [--빠른]
+  python -I 시험/참조35.py <qwen35 gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--빠른]
 
 --수학 <폴더>: 12-3a 의 시험/qwen35수학.py 가 남긴 토큰.json · 수학{i}.npy(fp64 의 이상적인 모델 — 로그 확률) · 라마{i}.npy(llama.cpp 로짓)와
 견준다 — 계약의 손실 KL(수학 ‖ 계약) · 1위 일치, 그리고 같은 자리의 KL(수학 ‖ llama.cpp). --빠른: 빠른 계약 F1(선형층의 활성값 자리 하나 —
 어텐션 · GDN 은 그대로).
-엔진(12-3e 의 커널 · 엔진)이 생기면 그 출력 폴더와 비트까지 견주는 길을 더한다(참조7B.py 의 꼴).
+--엔진 <폴더>(12-3e-4): 시험_7B 가 남긴 경우{i}_토큰.bin · 경우{i}_로짓.bin(잡기시작 0 의 경우 — 모든 행)과 계약의 순전파를 비트까지(참조7B.py 의 꼴).
 """
 import json
 import os
@@ -145,12 +146,38 @@ def 로그소프트맥스(x):
     return x - np.log(np.exp(x).sum(-1, keepdims=True))
 
 
+def 엔진대조(gguf, 폴더, 출력):
+    """12-3e-4 — 시험_7B 의 출력(경우마다 토큰열 S 와 모든 행의 로짓)을 계약의 순전파와 비트까지."""
+    g = GR.GGUF(gguf)
+    경우 = []
+    while os.path.exists(os.path.join(폴더, f"경우{len(경우)}_토큰.bin")):
+        경우.append(np.fromfile(os.path.join(폴더, f"경우{len(경우)}_토큰.bin"), np.int64))
+    print("경우", [len(S) for S in 경우], flush=True)
+    t0 = time.time()
+    로짓, 시작 = 앞으로(g, 경우)
+    V = 로짓.shape[1]
+    결과 = {"gguf": os.path.basename(gguf), "모드": "F1" if R7.선형자리수 == 1 else "정밀", "경우": []}
+    for i, S in enumerate(경우):
+        A = np.fromfile(os.path.join(폴더, f"경우{i}_로짓.bin"), f32).reshape(len(S), V)
+        R = 로짓[시작[i]:시작[i + 1]]
+        한 = {"토큰": len(S), "다른 칸": R7.다른칸(A, R), "칸": int(A.size), "행마다 다른 칸": [R7.다른칸(A[k], R[k]) for k in range(len(S))]}
+        결과["경우"].append(한)
+        print(f"경우 {i}: 행 {len(S)} — 다른 칸 {한['다른 칸']} / {한['칸']}", flush=True)
+    결과["CPU 참조 초"] = round(time.time() - t0, 1)
+    결과["모두 0"] = all(c["다른 칸"] == 0 for c in 결과["경우"])
+    print("모두 0:", 결과["모두 0"], flush=True)
+    json.dump(결과, open(출력, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     if "--빠른" in sys.argv:
         R7.선형자리수 = 1
     인자 = [a for a in sys.argv[1:] if not a.startswith("--")]
     gguf = 인자[0]
+    if "--엔진" in sys.argv:
+        엔진대조(gguf, sys.argv[sys.argv.index("--엔진") + 1], [a for a in 인자[1:] if a != sys.argv[sys.argv.index("--엔진") + 1]][0])
+        return
     폴더 = sys.argv[sys.argv.index("--수학") + 1]
     출력 = [a for a in 인자[1:] if a != 폴더][0]
     g = GR.GGUF(gguf)

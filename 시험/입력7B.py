@@ -9,6 +9,9 @@
 39단계 — 구조 llama(Llama 3 · Mistral)는 채팅 틀을 서버(호스트/서버몸.gl 의 라마3틀 · 미스트랄틀)와 같은 글로 짓고, 토큰 번호는
 llama.cpp 의 llama-tokenize(특수 토큰 알아봄 · BOS 를 덧붙이지 않음 — 틀의 글에 BOS 가 있다)로: --라마토큰 <llama-tokenize.exe>.
 무작위 토큰은 어휘 앞쪽의 보통 토큰(종류 1)에서(Llama 3 은 0 … 127999).
+0.12.0 12-3e-4 — --토큰 <토큰.json>: 토크나이저 없이 JSON 의 토큰열들(시험/qwen35수학.py 의 토큰.json — "토큰": [[…], …])을 경우로
+(걸음 17 · 잡기시작 0)와 첫 토큰열을 되풀이한 1100 토큰(잡기시작 1000 — 묶음 경계 1024 를 넘는 길끼리의 대조). Qwen3.5 처럼 이 도구의
+토크나이저가 아직 모르는 어휘에.
 """
 import json
 import os
@@ -79,6 +82,13 @@ def main():
     gguf, 출력 = sys.argv[1:3]
     최대길이 = int(sys.argv[sys.argv.index("--최대길이") + 1]) if "--최대길이" in sys.argv else 4096
     로짓행 = int(sys.argv[sys.argv.index("--로짓행") + 1]) if "--로짓행" in sys.argv else 128
+    if "--토큰" in sys.argv:                  # 0.12.0 12-3e-4 — 토크나이저 없이 JSON 의 토큰열
+        토큰들 = json.load(open(sys.argv[sys.argv.index("--토큰") + 1], encoding="utf-8"))["토큰"]
+        경우들 = [([int(t) for t in ids], 17, 0) for ids in 토큰들]
+        긴 = (토큰들[0] * (1100 // len(토큰들[0]) + 1))[:1100]
+        경우들.append(([int(t) for t in 긴], 17, 1000))
+        쓰기(출력, 최대길이, 로짓행, 경우들)
+        return
     g = GR.GGUF(gguf)
     구조 = g.meta.get("general.architecture", "qwen2")
     if 구조 == "llama":                        # 39단계
@@ -110,6 +120,10 @@ def main():
             상한 = next((i for i, t in enumerate(종류) if t != 1), len(종류))
             assert 상한 > 0, "어휘 앞쪽에 보통 토큰이 없다"
         경우들 = [([int(t) for t in r.integers(0, 상한, len(ids))], n, 잡기) for ids, n, 잡기 in 경우들]
+    쓰기(출력, 최대길이, 로짓행, 경우들)
+
+
+def 쓰기(출력, 최대길이, 로짓행, 경우들):
     with open(출력, "wb") as f:
         w = lambda v: f.write(int(v).to_bytes(8, "little", signed=True))
         w(최대길이), w(로짓행), w(len(경우들))
