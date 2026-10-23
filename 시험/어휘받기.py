@@ -13,6 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")          # -I 는 PYTHONUTF8 을 보지 않는다 — 윈도 CI 의 cp1252
     폴더 = sys.argv[1]
     os.makedirs(폴더, exist_ok=True)
     판, 목록 = None, []
