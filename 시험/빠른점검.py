@@ -24,7 +24,8 @@
      4m. 토크나이저의 정규식 사전 처리(0.12.0 12-G2 — 엔진/정규식.gl · 엔진/시험_토큰.gl)가 llama.cpp 의 어휘 시험(시험/어휘시험.txt 의 열세
          어휘 — --어휘 <폴더>, 시험/어휘받기.py 가 받는다. 폴더를 주지 않으면 건너뜀)과 같은 토큰을 내는가(시험/어휘시험.py)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
-     (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것)
+     (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것.
+     0.12.0 12-3g-2 — --MoE 행은 CUDA 만이라 SPIR-V 칸이 "-")
   6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
 
   python -X utf8 시험/빠른점검.py [--글 <글 저장소 — 기본 ../geul-lang-v2>] [--병렬 N] [--출력 <폴더 — 기본 빌드/점검>] [--해시갱신] [--계약없이]
@@ -280,6 +281,8 @@ def 모듈(글, 출력, 병렬, 갱신):
         rc, 꼬리 = 돌리기([뒷단, gl, "-o", ptx], os.path.join(출력, f"PTX_{이름}.txt"))
         if rc != 0 or not os.path.exists(ptx):
             return 이름, 해시(gl), None, None, f"PTX 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0
+        if "--MoE" in 인자:                 # 0.12.0 12-3g-2 — MoE 의 판(원자 더하기)은 CUDA 만: SPIR-V 칸은 "-"
+            return 이름, 해시(gl), 해시(ptx), "-", "", time.time() - t0
         rc, 꼬리 = 돌리기([뒷단V, gl, "-o", spvs], os.path.join(출력, f"SPIRV_{이름}.txt"))
         if rc != 0 or not os.path.exists(spvs):
             return 이름, 해시(gl), 해시(ptx), None, f"SPIR-V 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0
