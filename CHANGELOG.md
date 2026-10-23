@@ -35,8 +35,8 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   Qwen2.5-3B uses the Qwen Research License (non-commercial), noted in its description.
 - The model finder no longer calls head-size-128 llama models of 1.4–2.5B (HyperCLOVAX-SEED 1.5B, MiniCPM5 2B) unsupported, and the
   suggested model skips the new 0.6B.
-- **Model intake: one command tests a GGUF file before it joins the model list** (`재기/모델들이기.py`,
-  [문서/모델들이기.md](문서/모델들이기.md)). It reads the file and the packaged app's own model check, then runs what the app will run
+- **Automatic model verification: one command tests a GGUF file before it joins the model list** (`재기/모델검증.py`,
+  [문서/모델검증.md](문서/모델검증.md)). It reads the file and the packaged app's own model check, then runs what the app will run
   for that file: five-path bit tests for every CUDA module the app would build (exact and fast, plus the 8-bit KV and fast-attention
   modules where the app uses them), long-context and speculative-decoding bit tests, the CPU reference, quality against llama.cpp (the
   app's default mode against the B′ bar), the chat template against jinja2 and the tokenizer against llama-tokenize, and chat and tool
