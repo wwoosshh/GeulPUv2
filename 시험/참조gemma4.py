@@ -4,14 +4,19 @@ GeGLU · 소프트캡 · 슬라이딩 윈도 · 가중치 없는 v 정규화 · 
 시험/gemma4수학.py(llama.cpp 의 src/models/gemma4.cpp 와 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다. 지금은 dense(12B · 31B)만.
 
   python -I 시험/참조gemma4.py <gemma4 gguf> --수학 <폴더> <출력.json> [--빠른] [--저장된]
+  python -I 시험/참조gemma4.py <gemma4 gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--입력 <시험_7B 의 입력 파일>]
 
 --수학 <폴더>: 시험/gemma4수학.py 의 토큰.json · 수학{i}.npy(fp64 의 이상적인 모델) · 라마{i}.npy(llama.cpp), 그리고 있으면 채팅 확인의
 채팅토큰.json · 채팅수학{i}.npy · 채팅라마{i}.npy 와 견준다 — 계약의 손실 KL(수학 ‖ 계약) · 1위 일치, 같은 자리의 KL(수학 ‖ llama.cpp).
 채팅(답을 예측하는 행)이 먼저, 글(모든 행)이 다음. 계약의 로짓(소프트캡 뒤 — fp32 그대로)을 {채팅|글}계약{i}.npy 로 남기고,
 --저장된 은 순전파 없이 그 파일로 견준다(비교만 다시).
+--엔진 <폴더>(0.13.0 12-3h-4): 시험_7B 의 출력과 계약의 순전파를 비트까지 — 잡기시작 0 의 경우는 모든 행(경우{i}_토큰.bin · 경우{i}_로짓.bin
+— 참조35.py 의 꼴), 잡기시작 뒤의 행만 남긴 경우(경우{i}_뒤로짓.bin — 1,100 토큰처럼 슬라이딩 윈도 1,024 를 넘는 위치)는 --입력 의 프롬프트와
+요약.txt 의 생성 토큰으로 토큰열을 다시 짓고 행 [잡기시작, 끝) 만. 로짓은 견줄 행만 셈한다(행마다 따로라 값은 같다).
 """
 import json
 import os
+import struct
 import sys
 import time
 
@@ -49,8 +54,9 @@ def 설정(g):
     return s
 
 
-def 앞으로(g, 경우, 말=True):
-    """계약의 순전파 — 토큰열들(경우마다 위치 0 부터)의 모든 행 로짓 [Σ 행][어휘](소프트캡 뒤)과 경우의 시작 행."""
+def 앞으로(g, 경우, 말=True, 행=None):
+    """계약의 순전파 — 토큰열들(경우마다 위치 0 부터)의 모든 행 로짓 [Σ 행][어휘](소프트캡 뒤)과 경우의 시작 행. 행 = 경우마다 (a, b) 면
+    로짓은 그 행 [a, b) 만(시작 행도 그 행들의 것)."""
     s = 설정(g)
     NL, D, H, eps = s["층"], s["너비"], s["머리"], s["eps"]
     x = C.곱(R35.임베딩(g, 경우), C.제곱근(f32(D)))               # 계약 4.12 — 임베딩 × fp32(√너비)(√ 는 IEEE 바른 반올림)
@@ -99,12 +105,73 @@ def 앞으로(g, 경우, 말=True):
             x = C.곱(x, f32(g.풀기(p + "layer_output_scale.weight")[0]))
         if 말:
             print(f"층 {l}({'윈도' if w else '전체'}): {time.time() - tl:.1f} 초", flush=True)
+    if 행 is not None:
+        x = np.concatenate([x[시작[si] + a:시작[si] + b] for si, (a, b) in enumerate(행)], 0)
+        시작 = np.cumsum([0] + [b - a for a, b in 행])
     h = C.rms정규화(x, g.풀기("output_norm.weight"), eps)
     wh = R7.가중(g, "output.weight" if "output.weight" in g.tensors else "token_embd.weight")
     로짓 = R7.곱(h, wh, z0(wh[1].shape[0]))
     if s["캡"]:
         로짓 = C.소프트캡(로짓, s["캡"])
     return 로짓, 시작
+
+
+def 입력경우들(경로):
+    """시험_7B 의 입력 파일 — [최대길이][로짓행][경우 수], 경우마다 [p][n][잡기시작][토큰 p 개](8 바이트 정수) → [(p, n, 잡기, 프롬프트)]"""
+    b = open(경로, "rb").read()
+    _, _, k = struct.unpack_from("<qqq", b, 0)
+    o, 경우 = 24, []
+    for _ in range(k):
+        p, n, 잡기 = struct.unpack_from("<qqq", b, o)
+        경우.append((p, n, 잡기, np.frombuffer(b, np.int64, p, o + 24).copy()))
+        o += 24 + 8 * p
+    return 경우
+
+
+def 엔진대조(gguf, 폴더, 출력, 입력=None):
+    """12-3h-4 — 시험_7B 의 출력(경우마다 토큰열과 로짓)을 계약의 순전파와 비트까지."""
+    g = GR.GGUF(gguf)
+    입력경우 = 입력경우들(입력) if 입력 else None
+    생성 = {}
+    요약 = os.path.join(폴더, "요약.txt")
+    if os.path.exists(요약):
+        for 줄 in open(요약, encoding="utf-8"):
+            w = 줄.split()
+            if len(w) > 2 and w[0] == "경우" and w[2] == "토큰":
+                생성[int(w[1])] = [int(t) for t in w[3:]]
+    경우, 구간, 파일, 번호 = [], [], [], []
+    i = 0
+    while True:
+        tp, bp = os.path.join(폴더, f"경우{i}_토큰.bin"), os.path.join(폴더, f"경우{i}_뒤로짓.bin")
+        if os.path.exists(tp):
+            S = np.fromfile(tp, np.int64)
+            경우.append(S), 구간.append((0, len(S))), 파일.append(os.path.join(폴더, f"경우{i}_로짓.bin")), 번호.append(i)
+        elif os.path.exists(bp) and 입력경우 is not None:
+            p, n, 잡기, 프롬프트 = 입력경우[i]
+            S = np.concatenate([프롬프트, np.asarray(생성[i][:n - 1], np.int64)])
+            경우.append(S), 구간.append((잡기, len(S))), 파일.append(bp), 번호.append(i)
+        elif os.path.exists(bp):
+            print(f"경우 {i}: 잡기시작 뒤의 로짓만 있다 — --입력 이 없어 건너뜀", flush=True)
+        else:
+            break
+        i += 1
+    print("경우", [(번호[k], len(S), 구간[k]) for k, S in enumerate(경우)], flush=True)
+    t0 = time.time()
+    로짓, 시작 = 앞으로(g, 경우, 행=구간)
+    V = 로짓.shape[1]
+    결과 = {"gguf": os.path.basename(gguf), "모드": "F1" if R7.선형자리수 == 1 else "정밀", "경우": []}
+    for k in range(len(경우)):
+        a, b = 구간[k]
+        A = np.fromfile(파일[k], f32).reshape(b - a, V)
+        R = 로짓[시작[k]:시작[k + 1]]
+        한 = {"경우": 번호[k], "토큰": len(경우[k]), "행": [int(a), int(b)], "다른 칸": R7.다른칸(A, R), "칸": int(A.size),
+             "행마다 다른 칸": [R7.다른칸(A[j], R[j]) for j in range(b - a)]}
+        결과["경우"].append(한)
+        print(f"경우 {번호[k]}: 행 {a} … {b - 1} — 다른 칸 {한['다른 칸']} / {한['칸']}", flush=True)
+    결과["CPU 참조 초"] = round(time.time() - t0, 1)
+    결과["모두 0"] = bool(결과["경우"]) and all(c["다른 칸"] == 0 for c in 결과["경우"])
+    print("모두 0:", 결과["모두 0"], flush=True)
+    json.dump(결과, open(출력, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 
 def 로그소프트맥스(x):
@@ -120,6 +187,11 @@ def main():
     저장된 = "--저장된" in sys.argv
     인자 = [a for a in sys.argv[1:] if not a.startswith("--")]
     gguf = 인자[0]
+    if "--엔진" in sys.argv:
+        폴더e = sys.argv[sys.argv.index("--엔진") + 1]
+        입력 = sys.argv[sys.argv.index("--입력") + 1] if "--입력" in sys.argv else None
+        엔진대조(gguf, 폴더e, [a for a in 인자[1:] if a not in (폴더e, 입력)][0], 입력)
+        return
     폴더 = sys.argv[sys.argv.index("--수학") + 1]
     출력 = [a for a in 인자[1:] if a != 폴더][0]
     g = GR.GGUF(gguf)
