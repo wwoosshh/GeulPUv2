@@ -102,6 +102,39 @@ This page is for building GeulPU from source and finding your way around the cod
     `빌드/wikitext-2/wiki.test.raw`, the same file llama.cpp's perplexity tool uses: put `wikitext-2-raw/wiki.test.raw` from the
     `wikitext-2-raw-v1.zip` that llama.cpp's `scripts/get-wikitext-2.sh` downloads there (sha256 `173c87a53759e020…`).
 
+## Working in parallel
+
+Rules for several pieces of work (people or agent sessions) that share the repository and one GPU. Code that belongs to one model
+architecture is being moved into one folder per architecture, which the engine, the app and the kernel generator reach through a
+registry (from 2026-10-24); when that is done, this section will describe how to add an architecture.
+
+| Role | Does | Edits |
+|---|---|---|
+| Integration | merges into `main`, releases, the shared core (engine, kernel generator, the app's common parts, the registry, CI, shared test tables), user documentation | everything |
+| Model | adds or changes one architecture (contract section, CPU reference, kernels, engine wiring, tests) — one worktree, one branch | that architecture's files and its one registry line. A change to the shared core goes to the integration work as a small pull request (what, why, which test) |
+| Q&A and outreach | explanations, reading measurements, drafts of mails and posts | no code |
+
+- **The GPU has a queue.** Every command that uses the GPU (시험_7B, the servers, a test instance of the app, llama.cpp, kernel
+  variant tests, measurements) runs through `python -I -X utf8 시험/GPU줄.py 실행 --이름 "<branch> — <task>" -- <command> [args …]`:
+  first come, first served, one at a time, and the processes the command starts end with it. `시험/GPU줄.py 상태` shows who holds the
+  GPU, who is waiting, and nvidia-smi's memory and processes (including ones outside the queue). Wait with work that needs no GPU
+  (contract, CPU reference, documentation).
+- **Three levels of checks.** (1) Every commit, minutes, no GPU: the quick check (CI — module hashes, contract self-tests, builds).
+  (2) Every model pull request, short GPU time in the queue: one representative file through [`재기/모델검증.py`](../재기/모델검증.py);
+  a model that does not fit this PC is checked on a file with fewer layers (like [`시험/작은MoE.py`](../시험/작은MoE.py)). (3) Releases or
+  overnight, long GPU time: Vulkan, long context, quality, 32 KB shared memory, cross-check.
+- **One pull request per step of a model**: (1) contract and CPU reference (no GPU) → (2) kernels and unit tests (short GPU) → (3) engine
+  and app wiring → (4) verification → (5) user documentation and release (integration). Models at different steps only have to queue for
+  step 4, the long GPU step.
+- **User documentation changes only at release.** Pull requests leave README, 사용안내, user-guide and the support tables alone (the
+  integration work updates them for a release). A change users will notice adds one fragment file, `문서/바뀐것.d/<branch>.md`
+  (format in [`_꼴.md`](../문서/바뀐것.d/_꼴.md): kind, Korean, `---`, English). On the release branch,
+  `python -I -X utf8 시험/바뀐것합치기.py --쓰기` moves the fragments into [문서/바뀐것.md](../문서/바뀐것.md) ("다음 판") and
+  [CHANGELOG.md](../CHANGELOG.md) ("Unreleased") and deletes them. The quick check validates the fragments.
+- **Merging**: branch → pull request → green CI → squash merge (as before). When `main` is merged into a branch, the tables that grow by
+  lines ([`시험/모듈해시.txt`](../시험/모듈해시.txt), [`시험/SASS넘침.txt`](../시험/SASS넘침.txt)) keep the lines of both sides
+  (`merge=union` in `.gitattributes`); if both sides changed the same line, the quick check reports the hash mismatch.
+
 ## Research log
 
 The engine came out of a research program (stages 0–40, 2026-10-08 to 10-18) whose record — criteria committed before measuring, every
