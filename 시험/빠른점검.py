@@ -6,6 +6,7 @@
      2b. 디버거 v1 — 도구/debugger.py 의 실행 로그 나누기 · 분기 요청 · 중단점 · 비교 계산을 손으로 정한 값과 참조로, node 가 있으면
          화면(app.js)의 같은 계산도(시험/디버거도구.py · 시험/디버거화면.js)
      2c. 앱 화면 — app.js 문법(node) · 화면 문구가 모두 영어 사전에 있는가(시험/화면사전.py)
+     2d. 여러 세션으로 개발하기 — GPU 줄의 자체 시험(시험/GPU줄.py — GPU 없이) · 바뀐 것 조각(문서/바뀐것.d/)의 꼴(시험/바뀐것합치기.py)
   3. 커널 변형(타일 모양) 표가 생성기 · 엔진에서 같은가
   4. 글(geul) 언어 프로그램이 빌드되는가 — 커널 생성기 · PTX · SPIR-V 백엔드(백엔드/)와 엔진 프로그램 모두(글 컴파일러)
      4b. 문맥 저장소의 GPU 없는 시험 — 가짜 장치 위의 저장소.gl(엔진/시험_저장소CPU.gl)을 파이썬 참조(시험/저장소CPU.py)와 비교
@@ -159,6 +160,15 @@ def 디버거도구(출력):
     t0 = time.time()
     rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "디버거도구.py")], os.path.join(출력, "디버거도구.txt"))
     알림("디버거 도구(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
+def 개발도구(출력):
+    """여러 세션으로 개발하기(문서/개발.md) — GPU 줄의 자체 시험(GPU 없이: 겹침 · 선 차례 · 죽은 대기자의 자리)과 바뀐 것 조각의 꼴"""
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "GPU줄.py"), "자체시험"], os.path.join(출력, "GPU줄.txt"))
+    알림("GPU 줄(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "바뀐것합치기.py")], os.path.join(출력, "바뀐것조각.txt"))
+    알림("바뀐 것 조각의 꼴(문서/바뀐것.d)", rc == 0, 꼬리)
 
 
 # ---- 3. 판 표 ----
@@ -590,6 +600,7 @@ def main():
         계약자체(출력)
     디버거도구(출력)
     화면점검(출력)
+    개발도구(출력)
     판표()
     도구 = [os.path.join(글, "build", "self_컴파일러" + EXE)]
     없는것 = [x for x in 도구 if not os.path.exists(x)]
