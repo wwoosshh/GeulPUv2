@@ -233,6 +233,10 @@ def 실행(a):
     if not 명령:
         print("GPU 줄: 돌릴 명령이 없다 — 실행 [--이름 …] -- <명령> …", file=sys.stderr)
         return 2
+    # 셸처럼 PATH 로 찾는다 — 윈도의 CreateProcess 는 PATH 보다 System32 를 먼저 보아 'bash' 가 WSL 의 bash 가 된다(E:/… 경로를 못 본다)
+    찾음 = shutil.which(명령[0])
+    if 찾음:
+        명령 = [찾음] + 명령[1:]
     d = 폴더()
     나 = {"pid": os.getpid(), "시작값": 시작값(os.getpid()), "이름": a.이름 or 기본이름(), "명령": " ".join(명령)[:300],
          "폴더": os.getcwd(), "선때": time.time()}
