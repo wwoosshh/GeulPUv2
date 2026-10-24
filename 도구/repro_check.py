@@ -24,6 +24,12 @@ Qwen3 순전파, 22 · 26 · 37단계에서 GPU 와 모든 값이 같았던 것)
     python -I 도구/repro_check.py <실행 로그.jsonl> <모델.gguf> --requests 0,25 [--branches 1] [--out 결과.json] [--skip-hash]
 
 샘플링 설정이 요청에 없으면 서버의 기본값(온도 0.8 · top_k 40 · top_p 0.95 · min_p 0.05)이다.
+
+#96 — 층 렌즈(logit lens, 계약 5.3): 재현 파일의 고른 스텝(1 부터 — 연구 패널의 '스텝 N')에서 그 토큰을 매긴 행의 residual stream 을
+층마다 끝의 로짓 계산으로 읽어 층마다 1위 토큰 · 고른 토큰의 확률과 순위 · 엔트로피 · 상위 k · 로짓 해시를 보인다(--out 이면 JSON 에도).
+마지막 층은 끝 로짓과 비트까지 같아야 한다(계약 5.3 의 2). 같은 CPU 계산 한 번에 함께 셈한다:
+
+    python -I 도구/repro_check.py <재현 파일.json> <모델.gguf> --layer-lens 5,12 [--out 결과.json] [--skip-hash]
 """
 import argparse
 import hashlib
@@ -43,6 +49,7 @@ import gguf읽기 as GR       # noqa: E402
 import 로그확률 as LP       # noqa: E402
 import 참조7B as REF        # noqa: E402
 import 뽑기 as SM           # noqa: E402
+import 토크나이저 as TK     # noqa: E402
 
 M64 = (1 << 64) - 1
 
@@ -68,6 +75,55 @@ def 파일해시(경로):
 def 지문(sha, prompt, tokens, hashes):
     fp = hashlib.sha256(f"geulpu-fp/1\nmodel {sha}\nprompt {','.join(map(str, prompt))}\ntokens {','.join(map(str, tokens))}\n".encode()).hexdigest()
     return fp, hashlib.sha256(f"{fp}\n{','.join(hashes)}\n".encode()).hexdigest()
+
+
+def 순위(z, c):
+    """계약 5.2 의 5 의 차례(z 내림차순, 같으면 번호 오름차순 — −0 과 +0 은 같은 값)에서 토큰 c 의 자리(1 부터)."""
+    v = z[c]
+    return 1 + int(np.count_nonzero(z > v)) + int(np.count_nonzero(z[:c] == v))
+
+
+def 토큰글함수(g):
+    """GGUF 의 낱말표로 토큰 번호 → 보일 글(바이트 BPE 면 바이트를 UTF-8 로 — 끊긴 바이트는 바꿈표, 그 밖은 ▁ 을 빈칸으로)."""
+    toks = g.meta.get("tokenizer.ggml.tokens") or []
+    if g.meta.get("tokenizer.ggml.model") == "gpt2":
+        거꾸로 = {c: b for b, c in TK._바이트글자().items()}
+
+        def 글(i):
+            t = toks[i] if 0 <= i < len(toks) else "?"
+            try:
+                return bytes(거꾸로[c] for c in t).decode("utf-8", errors="replace")
+            except KeyError:                                 # 특수 토큰(<|im_end|> 등)은 바이트 표 밖의 글자 — 그대로
+                return t
+        return 글
+    return lambda i: (toks[i] if 0 <= i < len(toks) else "?").replace("▁", " ")
+
+
+def 층렌즈(zz, 끝z, c, 위수, 글, 걸음, 행):
+    """한 스텝의 층 렌즈(계약 5.3) — zz [층][어휘], 끝z 그 행의 끝 로짓, c 고른 토큰. 층마다 계약 5.2 를 그대로 · 보이고 JSON 을 돌려준다."""
+    L = zz.shape[0]
+    끝같음 = bool(np.array_equal(np.ascontiguousarray(zz[L - 1]).view(np.uint32), np.ascontiguousarray(끝z, np.float32).view(np.uint32)))
+    j = {"step": 걸음, "row": 행, "token": int(c), "layers": L, "token_logprobs": [], "entropy": [], "ranks": [], "top_ids": [],
+         "top_logprobs": [], "logit_hashes": [], "last_layer_equals_final": 끝같음}
+    print(f"층 렌즈 — 스텝 {걸음}(행 {행} · 고른 토큰 #{c} {글(c)!r}):", flush=True)
+    for l in range(L):
+        z = zz[l]
+        r = LP.로그확률행(z, 위수=위수)
+        lp, H, 자리 = float(r["로그확률"][c]), float(r["H"]), 순위(z, c)
+        j["token_logprobs"].append(lp)
+        j["entropy"].append(H)
+        j["ranks"].append(자리)
+        j["top_ids"].append([int(q) for q, _ in r["위"]])
+        j["top_logprobs"].append([float(v) for _, v in r["위"]])
+        j["logit_hashes"].append(행해시(z))
+        q1, v1 = r["위"][0]
+        print(f"  층 {l:>3}: 1위 #{q1} {글(q1)!r} {100 * np.exp(v1):.2f} % · 고른 토큰 {100 * np.exp(lp):.4g} %({자리:,}위) · 엔트로피 {H:.3f} nat",
+              flush=True)
+    남는 = next((l for l in range(L) if all(x == 1 for x in j["ranks"][l:])), None)
+    j["first_layer_top1_to_end"] = 남는
+    print(f"  고른 토큰이 1위로 끝까지 남는 첫 층: {남는 if 남는 is not None else '없음(끝 층에서도 1위가 아니다)'} · "
+          f"마지막 층 = 끝 로짓: {'같음(비트)' if 끝같음 else '다름'}", flush=True)
+    return j
 
 
 서버기본 = {"temperature": 0.8, "top_k": 40, "top_p": 0.95, "min_p": 0.05}     # 서버(엔진/서버몸.gl 의 일감받기)의 기본값
@@ -213,6 +269,8 @@ def main():
     ap.add_argument("--skip-hash", "--해시건너뜀", dest="skip_hash", action="store_true", help="모델 파일의 SHA-256 을 계산하지 않는다")
     ap.add_argument("--requests", help="실행 로그 — 확인할 요청 차례(i), 쉼표로")
     ap.add_argument("--branches", help="실행 로그 — 확인할 분기(b), 쉼표로")
+    ap.add_argument("--layer-lens", "--층렌즈", dest="layer_lens", metavar="5,12",
+                    help="재현 파일 — 층 렌즈(계약 5.3)를 셈할 스텝(1 부터, 연구 패널의 '스텝 N'), 쉼표로")
     a = ap.parse_args()
     raw = open(a.repro_file, encoding="utf-8").read()
     첫 = raw.lstrip().split("\n", 1)[0]
@@ -221,6 +279,8 @@ def main():
     except ValueError:
         첫줄 = None
     if 헤더인가(첫줄):                                      # 실행 로그(JSONL)
+        if a.layer_lens:
+            sys.exit("--layer-lens 는 아직 재현 파일(geulpu-capsule/1)만 받는다 — 연구 패널에서 그 답의 재현 파일을 내보내 쓴다")
         실행확인(a, [json.loads(l) for l in raw.splitlines() if l.strip()])
         return
     cap = json.loads(raw)                                   # 파이썬의 json 은 큰 정수(시드)를 그대로 읽는다
@@ -258,9 +318,18 @@ def main():
     if REF.C.F2B:
         결과["contract"] = 결과.get("contract", 계약).replace("F2 (fast attention)", "F2B (fast attention, per-block q exponent)")
     S = np.array(P + toks[:-1], np.int64)                   # 행 P−1 … P+n−2 가 결과 토큰마다의 분포
-    print(f"CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 결과 {n} 토큰) …", flush=True)
+    렌즈걸음 = [int(v) for v in (a.layer_lens or "").split(",") if v.strip()]
+    for s in 렌즈걸음:
+        if not 1 <= s <= n:
+            sys.exit(f"--layer-lens 의 스텝 {s} 가 범위 밖이다(1 … {n})")
+    렌즈행 = [len(P) - 2 + s for s in 렌즈걸음]              # 스텝 s(1 부터)의 분포는 행 P − 1 + (s − 1)
+    print(f"CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 결과 {n} 토큰"
+          f"{f' · 층 렌즈 스텝 {렌즈걸음}' if 렌즈걸음 else ''}) …", flush=True)
     t0 = time.time()
-    로짓, _ = REF.앞으로(g, [S], 말=False, 얀=얀(얀배))
+    if 렌즈걸음:
+        로짓, _, 렌즈 = REF.앞으로(g, [S], 말=False, 얀=얀(얀배), 렌즈행=렌즈행)
+    else:
+        로짓, _ = REF.앞으로(g, [S], 말=False, 얀=얀(얀배))
     결과["cpu_seconds"] = round(time.time() - t0, 1)
     다름 = {"logit_hash": [], "logprob": [], "entropy": [], "top_k": [], "sampled_token": []}
     보일이름 = {"logit_hash": "로짓 해시", "logprob": "로그확률", "entropy": "엔트로피", "top_k": "상위 k", "sampled_token": "샘플링한 토큰"}
@@ -289,7 +358,12 @@ def main():
         print(f"{보일이름[이름]}: {보임}", flush=True)
     지문보임 = {"same": "같음", "absent": "재현 파일에 없음", "different": "다름"}[결과["fingerprint"]]
     print(f"지문: {지문보임}", flush=True)
-    결과["all_same"] = all(not v for v in 다름.values()) and 결과["fingerprint"] in ("same", "absent")
+    렌즈같음 = True
+    if 렌즈걸음:                                            # #96 — 층 렌즈(계약 5.3)
+        글 = 토큰글함수(g)
+        결과["layer_lens"] = [층렌즈(렌즈[q], 로짓[렌즈행[q]], toks[s - 1], k or 10, 글, s, 렌즈행[q]) for q, s in enumerate(렌즈걸음)]
+        렌즈같음 = all(x["last_layer_equals_final"] for x in 결과["layer_lens"])
+    결과["all_same"] = all(not v for v in 다름.values()) and 결과["fingerprint"] in ("same", "absent") and 렌즈같음
     print("모두 같음 — 이 재현 파일은 계약대로 계산한 값과 비트까지 같다" if 결과["all_same"] else "다른 곳이 있다", flush=True)
     if a.out:
         json.dump(결과, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

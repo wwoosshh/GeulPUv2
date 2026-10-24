@@ -157,10 +157,11 @@ def 치우침(g, 이름, n):
     return g.풀기(이름) if 이름 in g.tensors else np.zeros(n, f32)
 
 
-def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
+def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None, 렌즈행=None):
     """정수 계약의 앞으로 — 토큰열들(경우마다 위치 0 부터)의 모든 행 로짓 [Σ 행][어휘]과 경우의 시작 행. 끝행만: 경우마다 끝 행의 로짓만
     [경우][어휘] (탐욕 생성 — 시험/참조생성.py; 행마다의 값은 같다). 얀: YaRN (배, 원래 길이)(계약 4.8) — 서버가 그 요청을 셈할 때 쓴
-    배(재현 파일 · 실행 로그의 yarn). 없으면 늘이지 않는다(#23 — 긴 문맥의 서버가 낸 답을 늘이지 않은 RoPE 로 다시 셈해 '다름'이 났다)."""
+    배(재현 파일 · 실행 로그의 yarn). 없으면 늘이지 않는다(#23 — 긴 문맥의 서버가 낸 답을 늘이지 않은 RoPE 로 다시 셈해 '다름'이 났다).
+    렌즈행: 층 렌즈(계약 5.3, #96) — 이 행들(경우를 이은 행 번호)의 층마다 로짓 [행][층][어휘]을 셋째 값으로 함께 돌려준다."""
     s_ = 설정(g)
     NL, NH, NKV, eps, θ = s_["층"], s_["머리"], s_["KV머리"], s_["eps"], s_["θ"]
     qwen3 = s_["구조"] == "qwen3"
@@ -193,6 +194,7 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
 
     def 돌리기(r, 위치):
         return C.rope(r, cos, sin, 위치) if 돌림 == HD else np.concatenate([C.rope(r[:, :돌림], cos, sin, 위치), r[:, 돌림:]], 1)
+    렌즈들 = []                                 # 층마다 고른 행의 잔차 — 블록 l 의 출력(계약 5.3 의 x_l)
     for l in range(NL):
         tl = time.time()
         p = f"blk.{l}."
@@ -230,6 +232,8 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
         uu = 곱(h, 가중(g, p + "ffn_up.weight"), np.zeros(F, f32))
         f = C.swiglu(gg, uu)
         x = (x + 곱(f, 가중(g, p + "ffn_down.weight"), np.zeros(D, f32))).astype(f32)
+        if 렌즈행 is not None:
+            렌즈들.append(x[list(렌즈행)].copy())
         if 말:
             print(f"층 {l}: {time.time() - tl:.1f} 초", flush=True)
     if 끝행만:
@@ -237,7 +241,12 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None):
     h = C.rms정규화(x, g.풀기("output_norm.weight"), eps)
     wh = 가중(g, "output.weight" if "output.weight" in g.tensors else "token_embd.weight")     # 37단계 — 묶인 출력(Qwen3-1.7B)
     로짓 = 곱(h, wh, np.zeros(wh[1].shape[0], f32))
-    return 로짓, 시작
+    if 렌즈행 is None:
+        return 로짓, 시작
+    R = len(렌즈행)                            # 계약 5.3 — 끝 로짓과 같은 식(RMSNorm(output_norm) → 로짓 선형)을 층마다의 행에. 행끼리 따로라 값은 같다
+    hl = C.rms정규화(np.concatenate(렌즈들, 0), g.풀기("output_norm.weight"), eps)       # [층 · 행][D] — 층 l 의 행 q 는 l · R + q
+    zl = 곱(hl, wh, np.zeros(wh[1].shape[0], f32))
+    return 로짓, 시작, np.ascontiguousarray(zl.reshape(NL, R, -1).transpose(1, 0, 2))
 
 
 def main():
