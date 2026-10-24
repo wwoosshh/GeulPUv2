@@ -328,6 +328,35 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
    8. **Residual**: x ← x + o (one addition).
    This is llama.cpp's `build_moe_ffn` (softmax → top k → weights divided by their sum → sum of expert outputs × weights, shared expert ×
    sigmoid gate) with its order fixed. The layers are items 9 and 10 as before; only the FFN is this one.
+12. **Gemma 4** (0.12.0 12-3h — architecture `gemma4`, dense: 12B · 31B, [`문서/블록조합.md`](../문서/블록조합.md)): sliding-window layers
+   (`attention.sliding_window_pattern` true) and full-attention layers have different shapes — head size `key_length_swa` · `key_length`
+   (256 · 512 in the 12B), KV heads `attention.head_count_kv`[l] (8 · 1), RoPE θ `rope.freq_base_swa` · `rope.freq_base`. The other blocks are
+   items 1 – 5 as they are (no biases — 0 is added).
+   1. **Input**: x = embedding (the vocabulary's values as they are — a · q − b for k-quants, stage 26) · c_e (one product),
+      c_e = sqrt(fp32(width)) (IEEE correctly rounded — 0x4277DEF6 for width 3,840).
+   2. **Attention**: h = RMSNorm(x; `attn_norm`) (item 1), q = `attn_q` · h, k₀ = `attn_k` · h, v₀ = `attn_v` · h — layers without `attn_v` (the
+      12B's full layers) use v₀ = k₀. q and k₀ get item 6's per-head normalization (D = head size — with item 1's 256 strands a 512 head
+      gives each strand two elements), weights `attn_q_norm` · `attn_k_norm`. v₀ gets the same per-head normalization with **weight 1**
+      (y = x · r — multiplying by 1 changes nothing). RoPE covers the whole head (n_rot = head size — item 2 of "Head size and RoPE
+      dimensions", pairs (i, i + h/2)); full layers divide by `rope_freqs.weight` (h/2 entries): θ′_i = θ_i / f_i (the rule of 7.2 — in the
+      Gemma 4 12B only the first 64 pairs have 1, the rest 10³⁰: the angle is tiny, cos is 1 and sin a tiny fp32 number). The score scale
+      is **c = 1** (the one product of sections 2 and 3 is exact — no 1/√h). GQA is item 4. Sliding-window layers also mask keys with
+      (row position − key position) ≥ W (`attention.sliding_window` — 1,024 in the 12B) on top of the causal mask: per row, tiles (64 keys)
+      and groups (16 tiles) with no key the row sees are skipped, and the first tile and first group with a key the row sees are its
+      initial values (the merge of section 3 — without a window these are always the first tile and group, so the earlier contract is
+      unchanged). The output goes into `attn_output` (two digits).
+   3. **After attention**: x ← x + RMSNorm(o; `post_attention_norm`) (item 1 — one addition).
+   4. **GeGLU**: h₂ = RMSNorm(x; `ffn_norm`), g = `ffn_gate` · h₂, u = `ffn_up` · h₂, s = g · g, t = s · g, y = fma(c_b, t, c_a · g),
+      h = (g · σ(y)) · u — σ as in item 9, c_a = fp32(2 √(2/π)) = 0x3FCC422A, c_b = fp32(2 √(2/π) · 0.044715) = 0x3D922279 (IEEE rounding at each
+      operation). This writes the tanh approximation of GELU, ½ g (1 + tanh(√(2/π)(g + 0.044715 g³))), as g · σ(2 √(2/π)(g + 0.044715 g³))
+      (the same function). h goes into `ffn_down` (two digits), x ← x + RMSNorm(`ffn_down` · h; `post_ffw_norm`).
+   5. **Layer scale**: if `layer_output_scale.weight` (one fp32 s_l per layer) exists, x ← x · s_l (one product per element).
+   6. **End**: RMSNorm(x; `output_norm`), logits z = output (`output.weight` — `token_embd.weight` without it) · x (section 1), softcap
+      (when `final_logit_softcapping` = c is present): y = z · fp32(2/c), result = fma(2c, σ(y), −c) — c · tanh(z/c) = 2c · σ(2z/c) − c (2c and −c
+      must be exact in fp32 — c = 30 in the 12B, fp32(2/30) = 0x3D888889).
+   The layers are x ← x + RMSNorm(attention(RMSNorm(x; `attn_norm`)); `post_attention_norm`), x ← x + RMSNorm(GeGLU(RMSNorm(x; `ffn_norm`));
+   `post_ffw_norm`), x ← x · s_l. This is llama.cpp's `src/models/gemma4.cpp` (master 7894e8b) with its order fixed (PLE, KV sharing and
+   MoE — E2B · E4B · 26B-A4B — are not covered yet).
 
 ### Head size 128 (stage 22 — Qwen2.5-7B and larger)
 
@@ -455,5 +484,6 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | 16-bit block weight kernels — 0.12.0 12-3c-1 ([`시험/판16.py`](../시험/판16.py)) | every kernel variant of the `--W16` modules (exact and fast) — 11 tile kernels × two epilogues, the one-row kernel × three epilogues, `SwiGLU정수로`, the F16 · BF16 · F32 embeddings and their decode-graph variants (subnormal values included) — with random weights (sizes varying by row and block, zero blocks, values 2⁻²⁰ of the block maximum), random and extreme activations and extreme weights (blocks whose exponent is clipped at −98), up to the edges of 100 rows, 1,000 columns and depth 1,100 (zero-padded), against the CPU reference |
 | MoE — 0.12.0 12-3g-1 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조35.py`](../시험/참조35.py) · [`시험/qwen35수학.py`](../시험/qwen35수학.py)) | top-k ties (−0 and +0 too), the softmax (fold over 32 strands), weights, sum and the router's fma chain against scalar computations copied from the contract text, one row's result independent of the other rows (the same bits however rows are picked and grouped); the CPU reference (Qwen3.6-35B-A3B Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions and chosen experts |
 | MoE kernels — 0.12.0 12-3g-2 ([`시험/판MoE.py`](../시험/판MoE.py)) | the `--MoE Q8_0 · K` modules: `MoE라우팅` (ties, −0 and +0, experts spanning several tiles, empty experts), `MoE배치`, `MoE모으기`, every grouped tile kernel (11 variants × epilogues "" and SwiGLU정수 × Q8_0, Q4_K, Q5_K, Q6_K — 64 random experts; rows outside an expert's range stay untouched) and `MoE합`, then the MoE FFN chained through the GPU outputs, against the CPU reference |
+| Gemma 4 — 0.12.0 12-3h-1 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants c_a, c_b and fp32(2/30); GeGLU and the softcap against scalar computations copied from the contract text, and their error bounds against the exact values; the sliding window (a window ≥ the length gives the same bits as attention without a window, keys outside the window cannot change the result, every row equals a hand fold of its tiles and groups); the CPU reference (gemma-4-12b-it Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions on chat answers and on text |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
 | Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS; the RoPE table (item 8 — unscaled and YaRN factors 2 · 4 up to position 131,072 — [`엔진/시험_로프표.gl`](../엔진/시험_로프표.gl) against the CPU reference in [`시험/로프표.py`](../시험/로프표.py), byte for byte) — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |

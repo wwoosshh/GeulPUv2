@@ -14,6 +14,8 @@
   8. Qwen3.5 의 계약 4.9 · 4.10(0.12.0 12-3e): 로그1p · σ · softplus 의 오차, 열 합의 차례, GDN · 합성곱을 청크로 나눠도 같은 비트
   9. MoE 의 계약 4.11(0.12.0 12-3g): 상위 k 의 같은 값(−0 · +0), softmax(가닥 32 의 접기) · 무게 · 합 · 라우터 FMA 체인(비교용) 대 계약 문장의
      차례, 한 행의 셈이 다른 행과 상관없음
+  10. Gemma 4 의 계약 4.12(0.12.0 12-3h): 상수, GeGLU · 소프트캡 대 계약 문장과 참값, 슬라이딩 윈도의 어텐션(창 ≥ 길이 = 창 없음, 창 밖의 키를
+     바꿔도 같은 비트, 행 = 계약 문장대로 따로 접은 것)
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
@@ -760,6 +762,65 @@ def 시험_MoE(r):
          다른칸(C.라우터FMA(h[[6, 0]], W), lf[[6, 0]]) == 0)
 
 
+def 시험_gemma4(r):
+    """0.12.0 12-3h — 계약 4.12(Gemma 4): 상수의 비트, GeGLU · 소프트캡 대 계약 문장을 그대로 옮긴 차례(스칼라)와 fp64 참값에 대한 오차,
+    슬라이딩 윈도의 어텐션 — 창이 길이 이상이면 창 없음과 같은 비트, 창 밖의 키를 바꿔도 행의 출력이 같은 비트, 행 하나를 계약 문장대로(보는
+    키가 있는 조각 · 묶음만, 첫 것이 처음 값) 따로 접은 것과 같은 비트."""
+    확인("계약 4.12 — 상수 c_a · c_b · 2/30 · √3840 의 비트",
+         int(C.겔루a.view(np.int32)) == 0x3FCC422A and int(C.겔루b.view(np.int32)) == 0x3D922279 and
+         int(f32(2.0 / 30.0).view(np.int32)) == 0x3D888889 and int(C.제곱근(f32(3840)).view(np.int32)) == 0x4277DEF6)
+    g = np.concatenate([r.standard_normal(4000) * 3, [0.0, -0.0, 1e-30, -1e-30, 30.0, -30.0, 1e4, -1e4]]).astype(f32)
+    u = r.standard_normal(len(g)).astype(f32)
+    문장 = np.empty(len(g), f32)
+    for i in range(len(g)):
+        s = C.곱(g[i], g[i])
+        t = C.곱(s, g[i])
+        y = C.fma32(C.겔루b, t, C.곱(C.겔루a, g[i]))
+        문장[i] = C.곱(C.곱(g[i], C.시그모이드(y)), u[i])
+    확인("계약 4.12 — GeGLU 대 계약 문장의 차례(스칼라)", 다른칸(C.겔루(g, u), 문장) == 0)
+    gg = (r.standard_normal(200000) * 3).astype(f32)
+    gd = gg.astype(np.float64)
+    참 = 0.5 * gd * (1 + np.tanh(np.sqrt(2 / np.pi) * (gd + 0.044715 * gd ** 3)))
+    오차 = np.abs(C.겔루(gg, np.ones_like(gg)) - 참) / np.maximum(np.abs(참), 2.0 ** -20)
+    확인("계약 4.12 — GELU(tanh 근사)의 상대오차 < 32 · 2⁻²⁴", 오차.max() < 32 * 2.0 ** -24, f"최대 {오차.max():.2e}")
+    z = np.concatenate([r.standard_normal(4000) * 20, [0.0, -0.0, 1e-20, 300.0, -300.0, 1e30]]).astype(f32)
+    문장 = np.empty(len(z), f32)
+    for i in range(len(z)):
+        문장[i] = C.fma32(f32(60), C.시그모이드(C.곱(z[i], f32(2.0 / 30.0))), f32(-30))
+    확인("계약 4.12 — 소프트캡 대 계약 문장의 차례(스칼라)", 다른칸(C.소프트캡(z, 30.0), 문장) == 0)
+    zz = (r.standard_normal(200000) * 20).astype(f32)
+    오차 = np.abs(C.소프트캡(zz, 30.0) - 30 * np.tanh(zz.astype(np.float64) / 30))
+    확인("계약 4.12 — 소프트캡의 절대오차 < 16 · 2⁻²⁴ · 30", 오차.max() < 16 * 2.0 ** -24 * 30, f"최대 {오차.max():.2e}")
+    n, hd, W = 1150, 64, 130
+    q, k, v = (r.standard_normal((n, hd)).astype(f32) for _ in range(3))
+    확인("계약 4.12 — 창이 길이 이상이면 창 없음과 같은 비트", 다른칸(C.어텐션(q, k, v, 창=n), C.어텐션(q, k, v)) == 0)
+    a = C.어텐션(q, k, v, 창=W)
+    k2, v2 = k.copy(), v.copy()
+    R = 1100
+    k2[:R - W + 1] = r.standard_normal((R - W + 1, hd))
+    v2[:R - W + 1] = r.standard_normal((R - W + 1, hd))
+    확인("계약 4.12 — 창 밖의 키 · 값을 바꿔도 행의 출력은 같은 비트", 다른칸(C.어텐션(q, k2, v2, 창=W)[R], a[R]) == 0)
+    (Dq, Eq), (Dk, Ek), (Dv, Ev) = C.어텐션자리로(q, "q"), C.어텐션자리로(k, "k"), C.어텐션자리로(v, "v")
+    nq, nk, nv = (D[1] * 256 + D[0] for D in (Dq, Dk, Dv))
+    Pq, Pk, Pv = C.거듭제곱(Eq), C.거듭제곱(Ek), C.거듭제곱(Ev)
+    같음 = True
+    for R in (0, 63, 64, 129, 130, 200, 1023, 1024, 1100, 1149):
+        M = None
+        for g0 in range(0, n, 1024):                                 # 계약 문장: 묶음 차례, 묶음 안은 조각 차례 — 보는 키가 있는 것만
+            Mg = None
+            for 시작 in range(g0, min(g0 + 1024, n), 64):
+                보는 = [j for j in range(시작, min(시작 + 64, n)) if j <= R and R - j < W]
+                if not 보는:
+                    continue
+                m, l, o = C._조각몫(nq, nk, nv, Pq, Pk, Pv, np.array([R]), 시작, n, None, W)
+                Mg = (m, l, o) if Mg is None else C._접기(*Mg, m, l, o)
+            if Mg is None:
+                continue
+            M = Mg if M is None else C._접기(*M, *Mg)
+        같음 &= 다른칸(C.나눔(M[2], M[1][:, None])[0], a[R]) == 0
+    확인("계약 4.12 — 슬라이딩 윈도의 행 = 계약 문장대로 따로 접은 것(보는 조각 · 묶음만, 첫 것이 처음 값)", 같음)
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -775,6 +836,7 @@ def main():
     시험_가중치16(r)
     시험_GDN(r)
     시험_MoE(r)
+    시험_gemma4(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
     return 0 if not 실패 else 1
 
