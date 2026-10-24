@@ -6,6 +6,17 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+### Added
+
+- **Cached prompt tokens in `usage`.** Every `/v1/chat/completions` and `/v1/completions` response — and the usage chunk of a stream
+  with `include_usage` — now carries `usage.prompt_tokens_details.cached_tokens`: the prompt tokens taken from a cache instead of being
+  computed (this slot's cache, another slot's copy or the context store — the same count as the extension field
+  `geulpu.prompt_tokens_cached`). The last prompt token is always computed, so a repeated prompt reports `prompt_tokens − 1`, and a
+  request with `"cache_prompt": false` reports 0. Clients that check per request whether the prompt cache was used read it from the
+  same field as with llama.cpp and OpenAI.
+
 ## 0.12.0 — More models: Qwen3.5 · Qwen3.6 MoE · F16 / BF16 / F32 files · chat templates from the file (2026-10-24)
 
 ### Added

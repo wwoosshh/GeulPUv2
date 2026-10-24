@@ -8,7 +8,7 @@
   보내 요청마다 뽑은 토큰과 걸음마다의 로짓 해시(geulpu.logit_hash)가 모두 같은지. (마) 토큰 프롬프트 요청의 걸음마다 로짓(기록)이
   시험_7B 의 한 번에 길((나) 길 — 22a · 23a 에서 CPU 참조와 대조한 길)의 해당 행과 비트까지 같은지. (바) 둘째 차례가 프롬프트 캐시를 쓸 때와
   cache_prompt false 일 때 같은지. (가)의 기록(뽑기 요청의 로짓 · 토큰)은 28b (3) 이 쓴다.
-28c: API 열세 가지(문서/28단계.md).
+28c: API 열네 가지(문서/28단계.md — 14 는 usage.prompt_tokens_details.cached_tokens).
 """
 import argparse, hashlib, http.client, json, os, random, socket, struct, subprocess, sys, threading, time, io
 
@@ -276,14 +276,16 @@ def 일28c(a):
         판(3, "채팅", s == 200 and d["object"] == "chat.completion" and d["model"] == "x" and ch["message"]["role"] == "assistant"
            and len(ch["message"]["content"]) > 0 and ch["finish_reason"] in ("stop", "length")
            and u["total_tokens"] == u["prompt_tokens"] + u["completion_tokens"] and u["completion_tokens"] == 생성수
-           and d["id"].startswith("chatcmpl-"))
+           and 0 <= u["prompt_tokens_details"]["cached_tokens"] < u["prompt_tokens"] and d["id"].startswith("chatcmpl-"))
+        세수 = lambda x: {k: x[k] for k in ("prompt_tokens", "completion_tokens", "total_tokens")}     # cached_tokens 는 캐시에 따라 다르다
         온글 = ch["message"]["content"]
         s2, 조각, 끝 = 흘림요청(p, "/v1/chat/completions", dict(몸, stream_options={"include_usage": True}))
         내용 = [x for x in 조각 if x.get("choices")]
         이은 = "".join((x["choices"][0]["delta"].get("content") or "") for x in 내용)
         사용 = [x for x in 조각 if not x.get("choices") and x.get("usage")]
         판(4, "흘려보내기", s2 == 200 and 끝 and 내용[0]["choices"][0]["delta"].get("role") == "assistant" and 이은 == 온글
-           and 내용[-1]["choices"][0]["finish_reason"] == ch["finish_reason"] and len(사용) == 1 and 사용[0]["usage"] == u
+           and 내용[-1]["choices"][0]["finish_reason"] == ch["finish_reason"] and len(사용) == 1 and 세수(사용[0]["usage"]) == 세수(u)
+           and "cached_tokens" in 사용[0]["usage"]["prompt_tokens_details"]
            and all(x["object"] == "chat.completion.chunk" for x in 조각), f"(조각 {len(조각)})")
         s3, d3 = 요청(p, "POST", "/v1/completions", {"prompt": "The quick brown fox", "max_tokens": 8, "temperature": 0, "geulpu": {}})
         s4, d4 = 요청(p, "POST", "/v1/completions", {"prompt": [785, 3974, 13876, 38835], "max_tokens": 8, "temperature": 0, "geulpu": {}})
@@ -305,7 +307,7 @@ def 일28c(a):
         몸8 = {"messages": [{"role": "user", "content": 한글}], "temperature": 0, "max_tokens": 16, "geulpu": {}}
         s, d8a = 요청(p, "POST", "/v1/chat/completions", json.dumps(몸8, ensure_ascii=False).encode("utf-8"))
         s, d8b = 요청(p, "POST", "/v1/chat/completions", json.dumps(몸8, ensure_ascii=True).encode("ascii"))
-        판(8, "한글 · 이모지(날글 · \\u)", d8a["geulpu"]["tokens"] == d8b["geulpu"]["tokens"] and d8a["usage"] == d8b["usage"]
+        판(8, "한글 · 이모지(날글 · \\u)", d8a["geulpu"]["tokens"] == d8b["geulpu"]["tokens"] and 세수(d8a["usage"]) == 세수(d8b["usage"])
            and d8a["choices"][0]["message"]["content"] == d8b["choices"][0]["message"]["content"])
         e1 = 요청(p, "POST", "/v1/chat/completions", b"{bad json")
         e2 = 요청(p, "GET", "/nope")
@@ -354,6 +356,16 @@ def 일28c(a):
         r = c.getresponse(); r.read()
         판(13, "OPTIONS 의 CORS", r.status == 204 and r.getheader("Access-Control-Allow-Origin") == "*")
         c.close()
+        # 14 usage.prompt_tokens_details.cached_tokens — 같은 요청을 다시 보내면 마지막 행만 빼고 캐시에서(마지막 프롬프트 행은 늘 셈),
+        # cache_prompt false 면 0, 확장 필드 geulpu.prompt_tokens_cached 와 같다
+        몸14 = {"messages": [{"role": "user", "content": "Describe a lighthouse at night in two sentences."}], "temperature": 0,
+               "max_tokens": 12, "geulpu": {}}
+        요청(p, "POST", "/v1/chat/completions", 몸14)
+        s, d14 = 요청(p, "POST", "/v1/chat/completions", 몸14)
+        s, d14b = 요청(p, "POST", "/v1/chat/completions", dict(몸14, cache_prompt=False))
+        ct, ctb = d14["usage"]["prompt_tokens_details"]["cached_tokens"], d14b["usage"]["prompt_tokens_details"]["cached_tokens"]
+        판(14, "cached_tokens", ct == d14["usage"]["prompt_tokens"] - 1 and ct == d14["geulpu"]["prompt_tokens_cached"] and ctb == 0
+           and d14b["geulpu"]["prompt_tokens_cached"] == 0 and d14b["geulpu"]["tokens"] == d14["geulpu"]["tokens"], f"({ct} · {ctb})")
     finally:
         sv.끄기()
     결과["통과"] = all(v for k, v in 결과.items() if k != "통과")
