@@ -281,11 +281,11 @@ def 상태(a):
     smi = shutil.which("nvidia-smi")
     if smi:
         r = subprocess.run([smi, "--query-gpu=name,memory.used,memory.total,utilization.gpu", "--format=csv,noheader"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, encoding=("mbcs" if 윈도 else "utf-8"), errors="replace")
         for 줄 in r.stdout.strip().splitlines():
             print(f"GPU: {줄}")
         r = subprocess.run([smi, "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, encoding=("mbcs" if 윈도 else "utf-8"), errors="replace")
         앱 = [x for x in r.stdout.strip().splitlines() if x.strip()]
         print(f"GPU 를 쓰는 프로세스: {len(앱)} 개" + "".join(f"\n  {x}" for x in 앱))
     print(f"폴더: {d}")
