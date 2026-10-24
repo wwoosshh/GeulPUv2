@@ -461,6 +461,23 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
   section 4.8, 0 = none) choose the contract the check uses). [`도구/repro_check.py`](../도구/repro_check.py) checks it without a GPU, with this
   contract's CPU reference (sections 1–5): the same tokens, logit hashes, log-probabilities and fingerprints.
 
+### 5.3 Layer lens — the logit lens (GeulPUv2 #96, [`문서/층렌즈.md`](../문서/층렌즈.md))
+
+The layer lens reads the residual stream of one prompt row at every layer with the final logit computation (the logit lens — the
+next-token distribution the model would give if it stopped at that layer). It is defined for the blocks of section 4 (qwen2, qwen3,
+llama); architectures with other blocks do not accept it until their own section defines it.
+
+1. x_l(r): the output of block l (0 … L − 1) for row r — the D float32 values after both residual additions (attention and FFN), that
+   is, the input of block l + 1. It is the engine's residual row as is.
+2. z⁽ˡ⁾(r) = the logit linear layer (section 1 — in the output weight's format, bias 0) of RMSNorm(x_l(r); `output_norm`) (section 4,
+   item 1) — the same formula and the same module contract (exact or fast) as the final logits. So z⁽ᴸ⁻¹⁾(r) is bit-identical to row
+   r's final logits.
+3. For each layer, section 5.2 as is: the logprob of the target (the token r + 1 that row r scores), the entropy, the top k and the
+   logit hash.
+
+[`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens` computes the layer lens for steps of a capsule without a GPU, with this
+section's CPU reference.
+
 ## 6. What the tests check ([`시험/`](../시험))
 
 | Test | What |
