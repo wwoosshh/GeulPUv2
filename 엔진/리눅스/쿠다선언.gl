@@ -45,3 +45,5 @@
 외부 "libcuda.so.1" "cuCtxEnablePeerAccess" [공허 참조 피어문맥을 중간정수 깃발을 cuCtxEnablePeerAccess]는 -> 중간정수.
 외부 "libcuda.so.1" "cuDriverGetVersion" [공허 참조 판을 cuDriverGetVersion]는 -> 중간정수.
 외부 "libcuda.so.1" "cuFuncGetAttribute" [공허 참조 값을 중간정수 속성을 공허 참조 함수를 cuFuncGetAttribute]는 -> 중간정수.
+외부 "libcuda.so.1" "cuMemHostGetDevicePointer_v2" [공허 참조 주소를 공허 참조 호스트를 중간정수 깃발을 cuMemHostGetDevicePointer_v2]는 -> 중간정수.     (* 0.12.0 12-3g-3c — 고정 메모리의 장치 주소 *)
+외부 "libcuda.so.1" "cuMemFreeHost" [공허 참조 호스트를 cuMemFreeHost]는 -> 중간정수.
