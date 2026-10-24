@@ -10,6 +10,10 @@
   - 0.12.0 12-G2 — 바이트 BPE 의 사전 처리는 llama.cpp 의 표에 있는 바이트 꼴 이름만(qwen35 · gpt-2 는 지나고, gemma4 · kimi-k2 · 모르는 이름은 그 까닭)
 
   python -I 시험/모델모양.py <GeulPU.exe> <빈 자료 폴더>
+  python -I 시험/모델모양.py <GeulPU.exe> <빈 자료 폴더> --엔진 <서버.exe>
+2026-10-24 구조 개선 — --엔진: 앱 옆의 bin 폴더에 server-cuda.exe 로 서버를 두고(임시 폴더) 엔진의 모델 확인(서버 --모델확인 — 엔진/모델확인.gl)의
+길을 본다: 앱이 규칙을 모르는 구조(gemma4 · 모르는 이름 — 낱말표 텐서 하나만 든 머리)는 엔진의 까닭('… 구조는 받지 않는다 — 받는 구조: …'),
+/api/state 의 engine.archs 에 엔진의 구조들. 서버가 뜨지 못하는 기기(NVIDIA 드라이버가 없는 CI 등)면 건너뜀(종료 0).
 
 마지막 줄 '모델 모양: 모두 통과 (N 가지)'(종료 0) 또는 '… 틀림 N'(종료 1)."""
 import json
@@ -104,6 +108,83 @@ def 사전처리경우들():
         ("모르는 사전 처리는 받지 않는다", q2 + [("tokenizer.ggml.pre", "no-such-pre")], 앞_까닭),
     ]
 
+def 머리텐서(메타, 텐서들):
+    """GGUF v3 머리 — 메타는 머리() 와 같고, 텐서는 (이름, [차원…], 형식) — 자료 없이(엔진 --모델확인 --머리만 이 보는 꼴)"""
+    몸 = b"GGUF" + struct.pack("<I", 3) + struct.pack("<q", len(텐서들)) + struct.pack("<q", len(메타))
+    for 열쇠, 값 in 메타:
+        if isinstance(값, str):
+            몸 += 글(열쇠) + struct.pack("<I", 8) + 글(값)
+        elif isinstance(값, int):
+            몸 += 글(열쇠) + struct.pack("<I", 4) + struct.pack("<I", 값)
+        else:
+            몸 += 글(열쇠) + struct.pack("<I", 6) + struct.pack("<f", 값)
+    for 이름, 차원, 형식 in 텐서들:
+        몸 += 글(이름) + struct.pack("<I", len(차원)) + struct.pack(f"<{len(차원)}Q", *차원) + struct.pack("<I", 형식) + struct.pack("<Q", 0)
+    return 몸 + b"\0" * ((-len(몸)) % 32)
+
+
+def 엔진경우들():
+    낱말 = [("token_embd.weight", [64, 1000], 0)]
+    return [
+        ("앱이 모르는 구조 gemma4 는 엔진이 정한다", [("general.architecture", "gemma4")], 낱말, "gemma4 구조는 받지 않는다 — 받는 구조: "),
+        ("모르는 구조 이름도 엔진의 까닭", [("general.architecture", "no-such-arch")], 낱말, "no-such-arch 구조는 받지 않는다 — 받는 구조: "),
+    ]
+
+
+def 엔진시험(exe, 자료, 서버):
+    """앱 · 서버를 임시 폴더(앱 + bin\\server-cuda.exe)에 두고 엔진의 길 — 서버가 뜨지 못하면 건너뜀"""
+    shutil.rmtree(자료, ignore_errors=True)
+    os.makedirs(os.path.join(자료, "모델"))
+    앱곳 = os.path.join(자료, "앱")
+    os.makedirs(os.path.join(앱곳, "bin"))
+    shutil.copyfile(exe, os.path.join(앱곳, "GeulPU.exe"))
+    shutil.copyfile(서버, os.path.join(앱곳, "bin", "server-cuda.exe"))
+    표 = 엔진경우들()
+    for i, (_, 메타, 텐서, _) in enumerate(표):
+        with open(os.path.join(자료, "모델", f"e{i}.gguf"), "wb") as f:
+            f.write(머리텐서(메타, 텐서))
+    포트 = 빈포트()
+    주소 = f"http://127.0.0.1:{포트}"
+    기록 = open(os.path.join(os.path.dirname(자료.rstrip("\\/")), "모델모양_엔진앱.txt"), "ab")
+    p = subprocess.Popen([os.path.join(앱곳, "GeulPU.exe"), "--포트", str(포트), "--자료", 자료, "--열지않음"], stdout=기록,
+                         stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+    틀림 = []
+    try:
+        상태 = None
+        for _ in range(300):
+            try:
+                상태 = json.loads(urllib.request.urlopen(주소 + "/api/state", timeout=10).read())
+                break
+            except Exception:
+                if p.poll() is not None:
+                    break
+                time.sleep(0.1)
+        if 상태 is None:
+            raise SystemExit(f"앱이 뜨지 않았다(종료 코드 {p.poll()})")
+        엔진 = 상태.get("engine")
+        if not 엔진:
+            print("모델 모양(엔진): 건너뜀 — 서버(--구조들)가 뜨지 못했다(GPU 드라이버가 없는 기기)")
+            return
+        이름들 = [x.get("name") for x in 엔진.get("archs", [])]
+        맞음 = "qwen2" in 이름들 and "qwen35" in 이름들
+        print(f"{'통과' if 맞음 else '틀림'}  engine.archs — {이름들}", flush=True)
+        if not 맞음:
+            틀림.append("engine.archs")
+        칸 = {os.path.basename(m["path"]): m for m in 상태["models"]}
+        for i, (이름, _, _, 기대) in enumerate(표):
+            s = (칸.get(f"e{i}.gguf") or {}).get("shape") or {}
+            까닭 = s.get("reason") or ""
+            맞음 = s.get("ok") is False and 까닭.startswith(기대)
+            print(f"{'통과' if 맞음 else '틀림'}  {이름} — {까닭[:70]}", flush=True)
+            if not 맞음:
+                틀림.append(이름)
+    finally:
+        p.terminate()
+        p.wait(30)
+    print(f"모델 모양(엔진): 모두 통과 ({len(표) + 1} 가지)" if not 틀림 else f"모델 모양(엔진): 틀림 {len(틀림)} — {'; '.join(틀림)}")
+    sys.exit(1 if 틀림 else 0)
+
+
 def 빈포트():
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -113,6 +194,9 @@ def 빈포트():
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     exe, 자료 = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
+    if "--엔진" in sys.argv:
+        엔진시험(exe, 자료, os.path.abspath(sys.argv[sys.argv.index("--엔진") + 1]))
+        return
     shutil.rmtree(자료, ignore_errors=True)
     os.makedirs(os.path.join(자료, "모델"))
     표 = 경우들()

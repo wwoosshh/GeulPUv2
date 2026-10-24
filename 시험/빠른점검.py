@@ -529,6 +529,13 @@ def 모델모양(출력):
     rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "모델모양.py"), exe, os.path.join(출력, "모델모양자료")],
                       os.path.join(출력, "모델모양.txt"))
     알림("앱의 모델 모양(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
+    # 2026-10-24 구조 개선 — 엔진의 모델 확인의 길(앱 옆에 서버를 두고 — 서버가 뜨지 못하는 기기면 건너뜀)
+    서버 = os.path.join(출력, "서버" + EXE)
+    if os.path.exists(서버):
+        t1 = time.time()
+        rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "모델모양.py"), exe, os.path.join(출력, "모델모양엔진자료"),
+                          "--엔진", 서버], os.path.join(출력, "모델모양엔진.txt"))
+        알림("앱의 모델 확인 — 엔진의 길(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t1:.1f} 초)")
 
 
 def 앱누수(출력):
