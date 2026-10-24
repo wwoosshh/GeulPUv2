@@ -4,3 +4,4 @@
 # 여러 가지가 줄을 더하는 표 — main 을 받아 올 때 두 쪽의 줄을 모두 남긴다(문서/개발.md 의 '여러 세션으로 개발하기')
 시험/모듈해시.txt merge=union
 시험/SASS넘침.txt merge=union
+구조/등록.gl merge=union
