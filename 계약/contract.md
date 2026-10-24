@@ -461,6 +461,28 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
   section 4.8, 0 = none) choose the contract the check uses). [`도구/repro_check.py`](../도구/repro_check.py) checks it without a GPU, with this
   contract's CPU reference (sections 1–5): the same tokens, logit hashes, log-probabilities and fingerprints.
 
+### 5.3 Layer lens — the logit lens (GeulPUv2 #96, [`문서/층렌즈.md`](../문서/층렌즈.md))
+
+The layer lens reads the residual stream of one prompt row at every layer with the final logit computation (the logit lens — the
+next-token distribution the model would give if it stopped at that layer). It is defined for the blocks of section 4 (qwen2, qwen3,
+llama); architectures with other blocks do not accept it until their own section defines it.
+
+1. x_l(r): the output of block l (0 … L − 1) for row r — the D float32 values after both residual additions (attention and FFN), that
+   is, the input of block l + 1. It is the engine's residual row as is.
+2. z⁽ˡ⁾(r) = the logit linear layer (section 1 — in the output weight's format, bias 0) of RMSNorm(x_l(r); `output_norm`) (section 4,
+   item 1) — the same formula and the same module contract (exact or fast) as the final logits. So z⁽ᴸ⁻¹⁾(r) is bit-identical to row
+   r's final logits.
+3. For each layer, section 5.2 as is: the logprob of the target (the token r + 1 that row r scores), the entropy, the top k and the
+   logit hash, and the target's rank (its position, from 1, in the order of 5.2 item 5 — z descending, then index ascending).
+
+Responses: on a completions (`/v1/completions`) echo (`max_tokens` may be 0; `logprobs` is required), asking for `geulpu.layer_lens`
+(`true` or `{"top_k": k}` — k from 0 to 20, by default the `logprobs` k) reads row r = `echo_from` − 1 (the row that scores token
+`echo_from`; `echo_from` must be at least 1 and at most the prompt length − 1) at all L layers, and `geulpu.layer_lens` carries `row`,
+`token`, `layers` and, per layer, `token_logprobs`, `entropy`, `top_ids`, `top_logprobs`, `logit_hashes` and `ranks` (layers 0 … L − 1
+in order; numbers with 17 significant digits as in 5.2). A model that does not accept it (other blocks, or split across GPUs) gets 400.
+[`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens` computes the layer lens for steps of a capsule without a GPU, with this
+section's CPU reference.
+
 ## 6. What the tests check ([`시험/`](../시험))
 
 | Test | What |
@@ -486,4 +508,5 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 | MoE kernels — 0.12.0 12-3g-2 ([`시험/판MoE.py`](../시험/판MoE.py)) | the `--MoE Q8_0 · K` modules: `MoE라우팅` (ties, −0 and +0, experts spanning several tiles, empty experts), `MoE배치`, `MoE모으기`, every grouped tile kernel (11 variants × epilogues "" and SwiGLU정수 × Q8_0, Q4_K, Q5_K, Q6_K — 64 random experts; rows outside an expert's range stay untouched) and `MoE합`, then the MoE FFN chained through the GPU outputs, against the CPU reference |
 | Gemma 4 — 0.12.0 12-3h-1 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants c_a, c_b and fp32(2/30); GeGLU and the softcap against scalar computations copied from the contract text, and their error bounds against the exact values; the sliding window (a window ≥ the length gives the same bits as attention without a window, keys outside the window cannot change the result, every row equals a hand fold of its tiles and groups); the CPU reference (gemma-4-12b-it Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions on chat answers and on text |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
+| Layer lens (#96 — [`시험/렌즈.py`](../시험/렌즈.py) · [`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens`) | the server's per-layer (all L layers) logit hash, target logprob, entropy, top k and rank against the CPU reference (5.3); the last layer against the echo values of the same response; the echo of the lens path (the plan path, also for four rows or fewer) against the echo of the whole answer without the lens; CUDA against Vulkan (exact); refusals (no echo, echo_from at the end, top_k 21, wrong type); inside the CPU reference, the last layer against the final logits |
 | Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS; the RoPE table (item 8 — unscaled and YaRN factors 2 · 4 up to position 131,072 — [`엔진/시험_로프표.gl`](../엔진/시험_로프표.gl) against the CPU reference in [`시험/로프표.py`](../시험/로프표.py), byte for byte) — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |
