@@ -121,7 +121,7 @@ def CPU확인(결과, a, 적기):
     """4 — 층마다 CPU 참조(계약 5.3)와 로짓 해시 · 5.2 의 값이 비트까지 같은가. 결과의 프롬프트 · 답 · 스텝마다의 layer_lens 로"""
     import gguf읽기 as GR
     import 참조7B as REF
-    from repro_check import 행해시
+    from repro_check import 행해시, 순위
     if a.빠른 or a.KV8 or a.F2 or a.F2B:
         REF.선형자리수 = 1
     REF.C.KV8 = bool(a.KV8 or a.F2 or a.F2B)
@@ -142,7 +142,8 @@ def CPU확인(결과, a, 적기):
             r = LP.로그확률행(z, 위수=len(ll["top_ids"][l]))
             같음 = (행해시(z) == ll["logit_hashes"][l] and float(r["로그확률"][x["token"]]) == ll["token_logprobs"][l]
                     and float(r["H"]) == ll["entropy"][l] and [int(v) for v, _ in r["위"]] == ll["top_ids"][l]
-                    and [float(v) for _, v in r["위"]] == ll["top_logprobs"][l])
+                    and [float(v) for _, v in r["위"]] == ll["top_logprobs"][l]
+                    and ("ranks" not in ll or 순위(z, x["token"]) == ll["ranks"][l]))
             if not 같음:
                 다른층.append(l)
         적기(f"s{x['step']} 층마다 = CPU 참조", not 다른층 and 렌즈[q].shape[0] == ll["layers"], f"다른 층 {다른층[:8]}" if 다른층 else "")

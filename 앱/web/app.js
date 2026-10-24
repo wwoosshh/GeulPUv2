@@ -918,6 +918,16 @@ const DICT = {
   "{}위 밖": "outside the top {}",
   "{}위": "#{}",
   "대안 상위 {}개": "Top {} alternatives",
+  "층 렌즈": "Layer lens",
+  "층 {}개": "{0} {0|layer|layers}",
+  "이 토큰을 고른 자리의 계산을 층마다 끝의 출력으로 읽어, 그 층에서 멈췄다면 어떤 토큰을 냈을지 보입니다(logit lens — 정밀도 계약 5.3).": "Reads the computation at the position that chose this token at every layer with the final output, to show which token the model would have produced had it stopped at that layer (logit lens — precision contract 5.3).",
+  "층마다 읽기": "Read every layer",
+  "층마다 읽는 중…": "Reading every layer…",
+  "층": "Layer",
+  "1위": "Top 1",
+  "층 {}의 상위 {}개": "Top {1} at layer {0}",
+  "고른 토큰은 층 {}부터 1위로 끝까지 남습니다. 마지막 층({})은 위의 확률과 같습니다(끝 출력).": "The chosen token is first from layer {0} to the end. The last layer ({1}) equals the probability above (the final output).",
+  "고른 토큰은 마지막 층에서도 1위가 아닙니다(샘플링). 마지막 층({})은 위의 확률과 같습니다(끝 출력).": "The chosen token is not first even at the last layer (it was sampled). The last layer ({0}) equals the probability above (the final output).",
   "이 답의 모델({})을 불러옵니다.": "This loads the answer's model ({}).",
   "가장 작은 마진 (스텝 {})": "Smallest margin (step {})",
   "마진이 작은 스텝 (마진 < {})": "Low-margin steps (margin < {})",
@@ -5537,7 +5547,66 @@ function labStrip(an, toks, sel, onSel, label) {
   return box;
 }
 // 걸음 하나 — 확률 · 순위 · 엔트로피 · 여유 · 로짓 해시, 대안 상위 k(막대). 갈래를 낼 수 있으면 대안마다 '여기서 분기'
-function labDetail(an, toks, i, canBranch, onBranch) {
+// #96 — 층 렌즈(logit lens, 계약 5.3): 걸음 i 의 토큰을 매긴 행(residual stream)을 층마다 끝의 로짓 계산으로 읽는다. 같은 모델로 · 같은 echo 길
+async function labLens(model, prompt, toks, i) {
+  await labEnsureModel(model);
+  const P = prompt.length;
+  const j = await labApi('/v1/completions', {
+    prompt: prompt.concat(toks.slice(0, i + 1)), echo: true, max_tokens: 0, logprobs: LAB_K, temperature: 0,
+    geulpu: { echo_from: P + i, logit_hash: true, layer_lens: true },
+  });
+  return j.geulpu.layer_lens;
+}
+// 층 × (1위 토큰 · 확률, 고른 토큰의 확률 · 순위, 엔트로피) — 층을 누르면 그 층의 상위 k. 셈한 것은 an.lens[i] 에(한 번)
+function labLensBox(an, toks, i, ctx) {
+  an.lens = an.lens || {};
+  const v = an.lens[i];
+  const rerender = () => document.querySelectorAll('.lab-detail-holder').forEach(x => x._render && x._render());
+  const head = h('div', { class: 'row g8 nowrap' }, h('span', { class: 'eyebrow' }, T('층 렌즈')), h('span', { class: 'grow' }),
+    v && v.layers ? h('span', { class: 'eyebrow mono' }, T`층 ${v.layers}개`) : null);
+  if (!v || v.err) {
+    return h('div', { class: 'col g8' }, head,
+      labNote(T('이 토큰을 고른 자리의 계산을 층마다 끝의 출력으로 읽어, 그 층에서 멈췄다면 어떤 토큰을 냈을지 보입니다(logit lens — 정밀도 계약 5.3).')),
+      v && v.err ? h('p', { class: 'small m0 lens-err' }, v.err) : null,
+      h('div', null, h('button', {
+        class: 'btn sm needs-conn', disabled: (LAB.busy || S.streaming) ? true : null,
+        onclick: () => {
+          an.lens[i] = { busy: true };
+          rerender();
+          labLens(ctx.model, an.prompt, toks, i).then(r => { an.lens[i] = r; }).catch(e => { an.lens[i] = { err: e.message }; }).finally(rerender);
+        },
+      }, I('layers', 's'), T('층마다 읽기'))));
+  }
+  if (v.busy) return h('div', { class: 'col g8' }, head, labNote(T('층마다 읽는 중…')));
+  const L = v.layers, ids = [].concat(...v.top_ids);
+  if (ids.some(id => LAB.texts[id] === undefined)) labTexts(ids.concat([v.token])).then(rerender);
+  const txt = id => (LAB.texts[id] === undefined ? '…' : tokShow(LAB.texts[id]));
+  let stay = L;                                       // 고른 토큰이 1위로 끝까지 남는 첫 층
+  while (stay > 0 && v.ranks[stay - 1] === 1) stay--;
+  an.lensOpen = an.lensOpen || {};
+  const rows = [h('div', { class: 'lens-row lens-head small muted' }, h('span', null, T('층')), h('span', null, T('1위')), h('span', null, T('확률')),
+    h('span', null, T('고른 토큰')), h('span', null, T('순위')), h('span', null, T('엔트로피')))];
+  for (let l = 0; l < L; l++) {
+    const t1 = v.top_ids[l][0], key = i + ':' + l;
+    rows.push(h('div', {
+      class: 'lens-row' + (v.ranks[l] === 1 ? ' top1' : '') + (l === stay ? ' stay' : ''), role: 'button', tabindex: '0',
+      'aria-expanded': an.lensOpen[key] ? 'true' : 'false', 'aria-label': T`층 ${l}의 상위 ${v.top_ids[l].length}개`,
+      onclick: () => { an.lensOpen[key] = !an.lensOpen[key]; rerender(); },
+      onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); an.lensOpen[key] = !an.lensOpen[key]; rerender(); } },
+    }, h('span', { class: 'mono' }, String(l)), h('span', { class: 'alt-t' }, t1 === undefined ? '-' : txt(t1)),
+      h('span', { class: 'alt-p' }, t1 === undefined ? '-' : pct(v.top_logprobs[l][0])), h('span', { class: 'alt-p' }, pct(v.token_logprobs[l])),
+      h('span', { class: 'alt-p' }, T`${fmtNum(v.ranks[l])}위`), h('span', { class: 'alt-p' }, nat(v.entropy[l]))));
+    if (an.lensOpen[key]) rows.push(h('div', { class: 'alts lens-alts' }, v.top_ids[l].map((id, q) => h('div', { class: 'alt' + (id === toks[i] ? ' chosen' : '') },
+      h('span', { class: 'alt-t' }, txt(id)),
+      h('span', { class: 'alt-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.max(1, Math.round(Math.exp(v.top_logprobs[l][q]) * 100))}%` })),
+      h('span', { class: 'alt-p' }, pct(v.top_logprobs[l][q])), h('span', { class: 'alt-go' }, '')))));
+  }
+  return h('div', { class: 'col g8' }, head,
+    labNote(stay < L ? T`고른 토큰은 층 ${stay}부터 1위로 끝까지 남습니다. 마지막 층(${L - 1})은 위의 확률과 같습니다(끝 출력).`
+      : T`고른 토큰은 마지막 층에서도 1위가 아닙니다(샘플링). 마지막 층(${L - 1})은 위의 확률과 같습니다(끝 출력).`),
+    h('div', { class: 'lens' }, rows));
+}
+function labDetail(an, toks, i, canBranch, onBranch, lensCtx) {
   const ids = an.topIds[i] || [], lps = an.topLp[i] || [];
   if (ids.some(id => LAB.texts[id] === undefined)) labTexts(ids).then(() => document.querySelectorAll('.lab-detail-holder').forEach(x => x._render && x._render()));
   const st = labStep(an, toks, i);
@@ -5562,7 +5631,8 @@ function labDetail(an, toks, i, canBranch, onBranch) {
       h('div', { class: 'k' }, T('마진')), h('div', { class: 'v' }, isFinite(st.margin) ? nat(st.margin) + ' nat' : '-'),
       h('div', { class: 'k' }, T('로짓 해시')), h('div', { class: 'v mono small' }, an.hashes[i] || '-')),
     h('div', { class: 'eyebrow' }, T`대안 상위 ${ids.length}개`),
-    h('div', { class: 'alts' }, rows));
+    h('div', { class: 'alts' }, rows),
+    lensCtx && an.prompt && ((modelOf(lensCtx.model) || {}).shape || {}).layer_lens_ok ? labLensBox(an, toks, i, lensCtx) : null);
 }
 function labDetailHolder(get) {
   const holder = h('div', { class: 'lab-detail-holder' });
@@ -5598,7 +5668,7 @@ function labObs() {
   const fragAt = [];
   for (let i = 0; i < an.lp.length; i++) if (labStep(an, toks, i).margin < LAB.delta) fragAt.push(i);
   const f = labFind(LAB.tid);
-  const holder = labDetailHolder(() => (LAB.sel >= 0 && LAB.sel < an.lp.length ? labDetail(an, toks, LAB.sel, !!(f && f.live))
+  const holder = labDetailHolder(() => (LAB.sel >= 0 && LAB.sel < an.lp.length ? labDetail(an, toks, LAB.sel, !!(f && f.live), undefined, { model: tr.model })
     : labNote(T('토큰을 누르면 그 스텝의 대안과 수치가 보입니다. 토큰 줄에서 화살표 키로 스텝을 옮깁니다.'))));
   const strip = labStrip(an, toks, LAB.sel, i => { LAB.sel = i; holder._render(); }, T('답의 토큰'));
   const jump = dir => {

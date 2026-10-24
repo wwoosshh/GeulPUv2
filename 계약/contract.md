@@ -473,8 +473,13 @@ llama); architectures with other blocks do not accept it until their own section
    item 1) — the same formula and the same module contract (exact or fast) as the final logits. So z⁽ᴸ⁻¹⁾(r) is bit-identical to row
    r's final logits.
 3. For each layer, section 5.2 as is: the logprob of the target (the token r + 1 that row r scores), the entropy, the top k and the
-   logit hash.
+   logit hash, and the target's rank (its position, from 1, in the order of 5.2 item 5 — z descending, then index ascending).
 
+Responses: on a completions (`/v1/completions`) echo (`max_tokens` may be 0; `logprobs` is required), asking for `geulpu.layer_lens`
+(`true` or `{"top_k": k}` — k from 0 to 20, by default the `logprobs` k) reads row r = `echo_from` − 1 (the row that scores token
+`echo_from`; `echo_from` must be at least 1 and at most the prompt length − 1) at all L layers, and `geulpu.layer_lens` carries `row`,
+`token`, `layers` and, per layer, `token_logprobs`, `entropy`, `top_ids`, `top_logprobs`, `logit_hashes` and `ranks` (layers 0 … L − 1
+in order; numbers with 17 significant digits as in 5.2). A model that does not accept it (other blocks, or split across GPUs) gets 400.
 [`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens` computes the layer lens for steps of a capsule without a GPU, with this
 section's CPU reference.
 

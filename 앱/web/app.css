@@ -906,6 +906,17 @@ details.fold > :not(summary) { margin-top: 12px; }
 .alt-bar > i { display: block; height: 100%; background: var(--body); }
 .alt-p { text-align: right; font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .alt-go { font-size: 11px; color: var(--mute); text-align: center; }
+/* #96 — 층 렌즈: 층 · 1위 토큰 · 확률 · 고른 토큰의 확률 · 순위 · 엔트로피(누르면 그 층의 상위 k) */
+.lens { display: flex; flex-direction: column; gap: 1px; }
+.lens-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 52px 60px 64px 52px; align-items: center; gap: 6px; min-height: 26px; padding: 0 4px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+.lens-row:hover, .lens-row:focus-visible { background: var(--fill); outline: none; }
+.lens-row.lens-head { cursor: default; min-height: 22px; }
+.lens-row.lens-head:hover { background: none; }
+.lens-row > .mono { color: var(--mute); font: 400 12px/18px var(--font-mono); }
+.lens-row.top1 > .mono { color: var(--ink); }
+.lens-row.stay { box-shadow: inset 2px 0 0 var(--ink); }
+.lens-alts { margin: 2px 0 6px 34px; }
+.lens-err { color: var(--err); }
 .icon-btn.sm { width: 28px; height: 28px; }
 .lab-vs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 table.data.lab-table th, table.data.lab-table td { padding: 8px 12px; font-size: 13px; }
@@ -919,6 +930,7 @@ pre.log.lab-code { max-height: 220px; white-space: pre; word-break: normal; over
   .lab-head { padding: 8px 8px 12px 16px; }
   .lab-body { padding: 12px 16px 24px; }
   .alt { grid-template-columns: minmax(0, 1fr) 56px 52px 28px; }
+  .lens-row { grid-template-columns: 24px minmax(0, 1fr) 48px 52px 56px 44px; gap: 4px; }
 }
 
 /* 디버거(디버거 v1) — 실행 목록(왼쪽) · 고른 실행(오른쪽). 넓은 창은 두 칸이 저마다 스크롤(화면은 고정), 좁은 창은 위아래로 */
