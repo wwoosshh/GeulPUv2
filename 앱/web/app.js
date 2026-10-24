@@ -1816,8 +1816,9 @@ const modeOfMsg = m => m.mode || (m.tid && TRACES[m.tid] ? modeOfTrace(TRACES[m.
 // 0.12.0 12-3d-1 — 계산 방식 설정은 둘: 양자화 파일(precision — 기본 빠름)과 F16 · BF16 · F32 파일(precision_unquantized — 기본 정밀)
 const unquant = m => !!(m && m.shape && m.shape.quant === 'W16');
 // 0.12.0 12-3f-2 — Qwen3.5(qwen35)는 아직 정밀만(빠른 모드의 모듈 · 검증은 뒤에)
-const exactOnly = m => !!(m && m.shape && (m.shape.arch === 'qwen35' || m.shape.arch === 'qwen35moe'));   // 0.12.0 12-3g-4 — MoE 도
-const isMoE = m => !!(m && m.shape && m.shape.arch === 'qwen35moe');
+// 2026-10-24 구조 개선 — 엔진이 정한 것(shape.exact_only — 엔진/모델확인.gl), 없으면(옛 상태) 구조 이름으로
+const exactOnly = m => !!(m && m.shape && (m.shape.exact_only !== undefined ? m.shape.exact_only : (m.shape.arch === 'qwen35' || m.shape.arch === 'qwen35moe')));   // 0.12.0 12-3g-4 — MoE 도
+const isMoE = m => !!(m && m.shape && ((m.shape.experts || 0) > 0 || m.shape.arch === 'qwen35moe'));
 const precKey = m => unquant(m) ? 'precision_unquantized' : 'precision';
 const precSet = (m, set) => exactOnly(m) ? 'exact' : unquant(m) ? (set.precision_unquantized || 'exact') : (set.precision || 'fast');
 // 계산 방식 칩이 가리키는 모델 — 올라 있거나 올리는 중인 모델, 없으면 지금 채팅의 모델
@@ -3992,9 +3993,11 @@ const HFHOST = 'https://huggingface.co';
 const quantFromName = n => { const m = /(IQ\d_[A-Z]+|Q\d_K(?:_[SML])?|Q\d_\d|BF16|F16|F32)/i.exec(n || ''); return m ? m[1].toUpperCase() : ''; };
 const quantOk = q => /^(Q8_0|Q4_0|Q4_K(_[SM])?|Q5_K(_[SM])?|Q6_K|IQ4_XS|F16|BF16|F32)$/.test(q);      // 1.0.0 1-6c — IQ4_XS(CUDA 먼저). 0.12.0 12-3d-1 — F16 · BF16 · F32
 const hfName = id => String(id).split('/').pop().replace(/[-_.]?GGUF$/i, '');
-const archOk = a => a === 'qwen2' || a === 'qwen3' || a === 'llama' || a === 'qwen35' || a === 'qwen35moe';      // 39단계 — llama(Llama 3.1 · 3.2 · Mistral). 0.12.0 — Qwen3.5 · MoE
+// 2026-10-24 구조 개선 — 엔진이 받는 구조(/api/state 의 engine.archs — 서버 --구조들), 없으면(엔진을 띄우지 못함) 옛 목록
+const engArchs = () => (S.st && S.st.engine && Array.isArray(S.st.engine.archs)) ? S.st.engine.archs : null;
+const archOk = a => { const l = engArchs(); return l ? l.some(x => x.name === a) : (a === 'qwen2' || a === 'qwen3' || a === 'llama' || a === 'qwen35' || a === 'qwen35moe'); };      // 39단계 — llama(Llama 3.1 · 3.2 · Mistral). 0.12.0 — Qwen3.5 · MoE
 // 0.12.0 12-3g-4 — 아직 CUDA 만 도는 구조(Qwen3.5 · MoE), 저장소의 구조
-const cudaArch = a => a === 'qwen35' || a === 'qwen35moe';
+const cudaArch = a => { const l = engArchs(); return l ? l.some(x => x.name === a && !!x.vulkan_reason) : (a === 'qwen35' || a === 'qwen35moe'); };
 const fdArch = m => (m && m.gguf && m.gguf.architecture) || '';
 // Qwen3.5 · MoE 는 Q8_0 · k-양자화(Q4_K · Q5_K · Q6_K)만(IQ4_XS · Q4_0 · F16 · BF16 · F32 는 아직)
 const quantOkFor = (q, a) => quantOk(q) && (!cudaArch(a) || /^(Q8_0|Q[456]_K(_[SM])?)$/.test(q));
