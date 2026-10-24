@@ -80,8 +80,10 @@ What a pull request should contain:
 - Describe what changed, why, how you checked it, and whether output bits change.
 - Commit messages: a short title line, a blank line, then the details (English or Korean). The pull request title becomes the commit
   title on `main`, so write it the same way.
-- If users will notice the change, add a line to [CHANGELOG.md](CHANGELOG.md). The Korean changelog
-  ([문서/바뀐것.md](문서/바뀐것.md)) can be left to the maintainer.
+- If users will notice the change, add a changelog fragment instead of editing [CHANGELOG.md](CHANGELOG.md): one file
+  `문서/바뀐것.d/<branch>.md` in the format of [`문서/바뀐것.d/_꼴.md`](문서/바뀐것.d/_꼴.md) (the kind — 더함 added · 바꿈 changed · 고침
+  fixed —, the Korean line, `---`, the English line). Write the English half; the maintainer can add the Korean half. Fragments are
+  merged into the changelogs at release time, so parallel pull requests do not collide there.
 - By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE).
 
 ## Versioning
@@ -93,7 +95,8 @@ in [docs/versioning.md](docs/versioning.md).
 ## Releasing (maintainers)
 
 1. Choose the number by the [versioning rules](docs/versioning.md) and write it in [`앱/판.gl`](앱/판.gl) (`앱판 = "X.Y.Z"`).
-2. Turn the "Unreleased" sections into `## X.Y.Z — <title> (<date>)` in [CHANGELOG.md](CHANGELOG.md) and
+2. Merge the changelog fragments with `python -I -X utf8 시험/바뀐것합치기.py --쓰기`, then turn the "Unreleased" sections into
+   `## X.Y.Z — <title> (<date>)` in [CHANGELOG.md](CHANGELOG.md) and
    [문서/바뀐것.md](문서/바뀐것.md) — the release workflow puts both into the release notes and stops if either is missing. Update
    `version` and `date-released` in [CITATION.cff](CITATION.cff).
 3. Package locally with `앱\꾸리기.ps1 -GeulRoot ..\geul-lang-v2`: the five build hashes must match the cross-check reference
