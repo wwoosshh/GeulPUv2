@@ -104,9 +104,9 @@ This page is for building GeulPU from source and finding your way around the cod
 
 ## Working in parallel
 
-Rules for several pieces of work (people or agent sessions) that share the repository and one GPU. Code that belongs to one model
-architecture is being moved into one folder per architecture, which the engine, the app and the kernel generator reach through a
-registry (from 2026-10-24); when that is done, this section will describe how to add an architecture.
+Rules for several pieces of work (people or agent sessions) that share the repository and one GPU. The engine code that belongs to one
+model architecture lives in one folder per architecture (`구조/<name>/`), and the engine and the app reach it through a registry
+([`엔진/구조표.gl`](../엔진/구조표.gl), [`구조/등록.gl`](../구조/등록.gl)) — see "Adding an architecture" below.
 
 | Role | Does | Edits |
 |---|---|---|
@@ -134,6 +134,37 @@ registry (from 2026-10-24); when that is done, this section will describe how to
 - **Merging**: branch → pull request → green CI → squash merge (as before). When `main` is merged into a branch, the tables that grow by
   lines ([`시험/모듈해시.txt`](../시험/모듈해시.txt), [`시험/SASS넘침.txt`](../시험/SASS넘침.txt)) keep the lines of both sides
   (`merge=union` in `.gitattributes`); if both sides changed the same line, the quick check reports the hash mismatch.
+
+### Adding an architecture
+
+One GGUF `general.architecture` is one architecture. The engine's shared code (엔진/엔진.gl, 엔진K.gl, 가중치.gl, 서버몸.gl) never looks at
+the architecture name; it calls the current architecture's table (`현재구조` — function slots, values, capabilities). A new architecture
+comes in as one folder and two registry lines.
+
+1. **Contract and CPU reference** (no GPU): the contract section ([계약/계약.md](../계약/계약.md) §4, [contract.md](../계약/contract.md)), the
+   CPU reference ([계약/정수계약.py](../계약/정수계약.py) functions and `시험/참조<name>.py`), an fp64 math reference, tests in
+   [시험/계약자체.py](../시험/계약자체.py).
+2. **Kernels**: the architecture's kernels in one generator file (`커널/생성<name>.gl`); [커널/커널생성.gl](../커널/커널생성.gl) gets a mode, an
+   include and the rejections of unsupported combinations. Bit tests per kernel against the CPU reference (`시험/<name>판.py`), the module
+   hash row (`--해시갱신`) and the SASS spill lines (`시험/SASS_WSL.py`).
+3. **Engine**: `구조/<name>/엔진.gl` (plus `가중치.gl` for large weight code) defines one table — start from `기본구조표("<name>")`, the
+   shared path, and change only the slots that differ. [엔진/구조표.gl](../엔진/구조표.gl) is the reference for the slots: configuration and
+   module naming (`설정읽기`, `모듈구조`, `모듈꼬리`, `생성옵션`, `생성모드`, `표시판`), weights (`층깔기` … `올리기끝`), kernels, memory and
+   buffers (`모듈준비`, `장치바이트`, `큰할당`, `버퍼잡기`), the layer recipe (`층띄움들`), logits post-processing (`로짓뒤`), matmul kinds
+   (shared numbers 0 … 5; the architecture defines the rest), the KV layout, per-slot state, and capabilities (`생성그래프`, `표판`, `추측`,
+   `슬롯복사`, `저장소`, `나누기`, plus what the app chooses: `정밀만`, `벌칸까닭`, `KV8됨`, `F2B`, `공유32됨`, `협력됨`, `먼됨`). Start narrow
+   (no CUDA graph, table step, speculative decoding, slot copy, context store or layer split; exact mode only; a Vulkan reason): the engine
+   then runs its generic fallbacks. Register it in [구조/등록.gl](../구조/등록.gl) with `포함 "<name>/엔진.gl"` and `<name>구조들등록().`
+   (the file merges line by line). Examples: [구조/qwen35/엔진.gl](../구조/qwen35/엔진.gl) (Qwen3.5 and MoE — almost every slot) and
+   [구조/표준.gl](../구조/표준.gl) (qwen2, qwen3, llama — the shared path).
+4. **Verification**: bit-compare 시험_7B's five paths with the CPU reference on a file with fewer layers (like
+   [시험/작은MoE.py](../시험/작은MoE.py)), in the GPU queue; check the real file with [재기/모델검증.py](../재기/모델검증.py); add a case to
+   [시험/구조회귀.py](../시험/구조회귀.py), which compares every architecture's bits with a baseline after shared-core changes.
+5. **App**: the app asks the engine whether it accepts a file, which module and generator arguments it needs and what it can do
+   (`server --모델확인` — [엔진/모델확인.gl](../엔진/모델확인.gl)), so no app code changes. A catalog entry (`앱/data/models.json`), and changes to
+   the server's shared parts such as a new tool-call format, go to the integration work as small pull requests.
+6. **Documentation**: a changelog fragment (`문서/바뀐것.d/<branch>.md`); stage notes in `구조/<name>/기록.md`. User documentation and the
+   support tables change at release time (integration).
 
 ## Research log
 
