@@ -17,6 +17,19 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   request with `"cache_prompt": false` reports 0. Clients that check per request whether the prompt cache was used read it from the
   same field as with llama.cpp and OpenAI.
 
+## 0.12.1 — Fix: the speed test and `geulpu.speculative` (2026-10-24)
+
+A bug fix on the 0.12 line. Outputs of 0.12.0 are unchanged.
+
+### Fixed
+
+- **`geulpu.speculative` is accepted again, and the speed test runs.** Since 0.12.0 a request with
+  `"geulpu": {"speculative": true | false}` (speculative decoding on or off) was rejected with HTTP 400 ("geulpu.speculative must be a
+  boolean") on every model except Qwen3.5: a line added for Qwen3.5 had landed between the "is a boolean" check and its "wrong type"
+  branch. The app's speed test (Benchmark → Speed test) sends `"speculative": false` with every measurement, so it stopped with
+  "HTTP 400" on those models. Qwen3.5 still runs without speculative decoding, and a value of the wrong type is now rejected on every
+  model.
+
 ## 0.12.0 — More models: Qwen3.5 · Qwen3.6 MoE · F16 / BF16 / F32 files · chat templates from the file (2026-10-24)
 
 ### Added
