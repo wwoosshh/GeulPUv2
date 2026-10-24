@@ -91,6 +91,12 @@
     eps5모델 = 거짓.
     eps6모델 = 거짓.
     층수 = 메타정수(g, 키35("block_count")).
+    (* MTP(다음 토큰 예측) 층 — nextn_predict_layers: block_count 의 끝 층들. 본 계산(로짓)에는 쓰지 않아 엔진은 읽지 않는다(llama.cpp 도
+       본 그래프에서 건너뛴다 — Qwen3.8-27B 의 unsloth · bartowski · lmstudio 파일은 block_count 65 = 층 64 + MTP 1) *)
+    정수 MTP층 = 0.
+    메타있음(g, 키35("nextn_predict_layers"))이면 { MTP층 = 메타정수(g, 키35("nextn_predict_layers")). }
+    (MTP층 < 0 또는 MTP층 >= 층수)이면 { 파일에_쓰기(표준오류(), "Qwen3.5: nextn_predict_layers %lld 은 받지 않는다(block_count %lld)\n", MTP층, 층수). 1로 종료하다. }
+    층수 -= MTP층.
     머리수 = 메타정수(g, 키35("attention.head_count")).
     KV머리수 = 메타정수(g, 키35("attention.head_count_kv")).
     너비 = 메타정수(g, 키35("embedding_length")).
@@ -98,7 +104,8 @@
     MoE모델이면 { 확장폭 = 메타정수(g, "qwen35moe.expert_shared_feed_forward_length"). } 아니면 { 확장폭 = 메타정수(g, "qwen35.feed_forward_length"). }
     모델위치 = 메타정수(g, 키35("context_length")).
     로프밑 = 메타실수(g, 키35("rope.freq_base")).
-    선형간격 = 메타정수(g, 키35("full_attention_interval")).
+    선형간격 = 4.                                               (* llama.cpp 와 같은 기본(키가 없을 때) *)
+    메타있음(g, 키35("full_attention_interval"))이면 { 선형간격 = 메타정수(g, 키35("full_attention_interval")). }
     GDNk머리 = 메타정수(g, 키35("ssm.group_count")).
     GDNv머리 = 메타정수(g, 키35("ssm.time_step_rank")).
     정수 hd = 메타정수(g, 키35("attention.key_length")).
@@ -131,6 +138,21 @@
     }
     (선형간격 < 1 또는 GDNk머리 < 1 또는 GDNk머리 > 512 또는 GDNv머리 < 1 또는 GDNv머리 > 512 또는 GDNv머리 % GDNk머리 != 0)이면 {
         파일에_쓰기(표준오류(), "Qwen3.5: 받지 않는 GDN 모양: 간격 %lld · k 헤드 %lld · v 헤드 %lld\n", 선형간격, GDNk머리, GDNv머리). 1로 종료하다.
+    }
+    (* attention.recurrent_layers(층마다 선형 어텐션인가 — 있으면 llama.cpp 는 간격보다 이것을 따른다): 엔진은 간격의 차례만 계산하므로 같은지
+       본다(MTP 층의 칸은 보지 않는다) *)
+    메타있음(g, 키35("attention.recurrent_layers"))이면 {
+        정수 ro = 메타배열(g, 키35("attention.recurrent_layers")).
+        (배열원소형식 != 7 또는 배열개수 < 층수)이면 {
+            파일에_쓰기(표준오류(), "Qwen3.5: attention.recurrent_layers 의 꼴(원소 타입 %lld · %lld 개)은 받지 않는다\n", 배열원소형식, 배열개수). 1로 종료하다.
+        }
+        반복 (정수 l는 0부터 층수 전까지) {
+            참거짓 선형 = (g→자료[ro + l] & 255) != 0.
+            참거짓 어텐션 = (l + 1) % 선형간격 == 0.
+            ((선형 그리고 어텐션) 또는 (아닌 선형 그리고 아닌 어텐션))이면 {
+                파일에_쓰기(표준오류(), "Qwen3.5: 층 %lld 의 종류(attention.recurrent_layers)가 전체 어텐션 간격 %lld 의 차례와 달라 받지 않는다\n", l, 선형간격). 1로 종료하다.
+            }
+        }
     }
     (* o 투영(attn_output · ssm_out)은 같은 종류(깊이 = 질의 폭) *)
     (256 * 머리수 != GDNv머리 * 128 또는 안폭 != GDNv머리 * 128)이면 {

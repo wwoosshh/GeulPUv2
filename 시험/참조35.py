@@ -36,12 +36,15 @@ def 설정35(g):
     구조 = m["general.architecture"]
     assert 구조 in ("qwen35", "qwen35moe"), 구조
     k = 구조 + "."
-    s = {"층": m[k + "block_count"], "너비": m[k + "embedding_length"], "머리": m[k + "attention.head_count"],
+    # MTP 층(nextn_predict_layers — block_count 의 끝 층들)은 본 계산에 쓰지 않는다(엔진의 설정읽기35 와 같다). 간격이 없으면 llama.cpp 의 기본 4
+    s = {"층": m[k + "block_count"] - m.get(k + "nextn_predict_layers", 0), "너비": m[k + "embedding_length"], "머리": m[k + "attention.head_count"],
          "KV머리": m[k + "attention.head_count_kv"], "헤드": m[k + "attention.key_length"], "eps": float(m[k + "attention.layer_norm_rms_epsilon"]),
-         "돌림": m[k + "rope.dimension_count"], "θ": float(m[k + "rope.freq_base"]), "간격": m[k + "full_attention_interval"],
+         "돌림": m[k + "rope.dimension_count"], "θ": float(m[k + "rope.freq_base"]), "간격": m.get(k + "full_attention_interval", 4),
          "d": m[k + "ssm.state_size"], "Hk": m[k + "ssm.group_count"], "Hv": m[k + "ssm.time_step_rank"], "합성곱": m[k + "ssm.conv_kernel"]}
     assert m[k + "attention.value_length"] == s["헤드"] and s["합성곱"] == 4 and s["d"] == 128 and s["Hv"] % s["Hk"] == 0, s
     assert m.get(k + "rope.scaling.type", "none") == "none", "RoPE 늘이기는 받지 않는다"
+    rl = m.get(k + "attention.recurrent_layers")
+    assert rl is None or all(bool(rl[l]) == ((l + 1) % s["간격"] != 0) for l in range(s["층"])), "층의 종류가 간격의 차례와 다르다"
     s["moe"] = 구조 == "qwen35moe"                                  # 0.12.0 12-3g — FFN 이 MoE(계약 4.11)
     if s["moe"]:
         s["전문가"], s["고름"] = m[k + "expert_count"], m[k + "expert_used_count"]

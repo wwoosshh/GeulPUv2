@@ -61,6 +61,12 @@ EXE = ".exe" if os.name == "nt" else ""
      "qwen35큰 K 2560 16 4 9216 248320 --빠른"),
     ("qwen35moe-작은-빠른", "구조회귀/작은MoE.gguf", "qwen35moeQ8_2048x16x2x512x248320_MoEKN_빠른",
      "qwen35큰 Q8_0 2048 16 2 512 248320 --MoE K --W16 --K낱말 --빠른"),
+    # Qwen3.8-27B 의 모양(v 헤드 48) · MTP 층(nextn) — 시험/합성35.py 로 실제 파일의 머리(bartowski · lmstudio 의 Q4_K_M — 앞 16 MB)에서 만든
+    # 층 4 + MTP 의 합성 파일(값은 무작위)
+    ("qwen35-27b-Q8-합성", "q38/syn/q38-27b-q8-mtp.gguf", "qwen35Q8_5120x24x4x17408x248320",
+     "qwen35큰 Q8_0 5120 24 4 17408 248320"),
+    ("qwen35-27b-K-합성", "q38/syn/q38-27b-k-mtp.gguf", "qwen35K_5120x24x4x17408x248320",
+     "qwen35큰 K 5120 24 4 17408 248320"),
 ]
 도구들 = {"커널생성": "커널/커널생성.gl", "ptx-backend": "백엔드/PTX/PTX.gl", "시험_7B": "엔진/시험_7B.gl"}
 
