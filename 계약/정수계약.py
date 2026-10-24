@@ -245,14 +245,17 @@ def 점수눈금(hd):
     return f32(0.125) if hd == 64 else f32(1.0 / np.sqrt(np.float64(hd)))
 
 
-def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None):
+def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None, 창=None):
     """행 Rr(위치 — 모두 시작 이상)의 키 조각 [시작, 시작 + 64) 몫 (m, l, o) — 9단계 계약의 1~4(점수 · 최댓값 · 적힌지수 · 합 · e′ 자리 ·
     가중합). 헤드 크기 hd = nq 의 열 수(64 · 128 — 블록 hd/32 개를 b 오름차순으로, 22단계). 8비트 KV(③b-2 — 계약 F1A′)면 nk · nv 가 8비트
     정수이고 Pk · Pv 가 fp32 스케일이라, 그 곱(점수의 곱 · FMA, e′)마다 반올림 하나 — 식과 차례는 같다.
-    0.12.0 12-3b — 눈금: 점수 스케일(없으면 점수눈금(hd)). 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 스케일을 준다."""
+    0.12.0 12-3b — 눈금: 점수 스케일(없으면 점수눈금(hd)). 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 스케일을 준다.
+    0.12.0 12-3h — 창: 슬라이딩 윈도(계약 4.12 — Gemma 4) — (행 위치 − 키 위치) ≥ 창 인 키도 가린다."""
     hd = nq.shape[1]
     keys = np.arange(시작, min(시작 + 64, n))
     valid = keys[None, :] <= Rr[:, None]                         # [R][keys]
+    if 창:
+        valid &= (Rr[:, None] - keys[None, :]) < 창
     # 1. 점수
     s = None
     for b in range(hd // 32):
@@ -294,7 +297,7 @@ def _접기(M, L, O, m, l, o):
     return M2, fma32(l, 나, 곱(L, 가)), fma32(o, 나[:, None], 곱(O, 가[:, None]))
 
 
-def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None):
+def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None, 창=None):
     """머리 하나의 어텐션(원인 가림, × 점수눈금(hd) — 머리 64 는 0.125) — 정수 KV 계약의 참조. q · k · v [n][hd] 짧은실수(hd 64 · 128) →
     출력 [n − 첫행][hd] 짧은실수(O / L).
     프롬프트 판(mma)과 생성 판(dp4a) 모두와 비트까지 같아야 한다(9a).
@@ -302,7 +305,9 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None):
     조각을 차례로 접어 묶음의 (M_g, L_g, O_g) 를 만들고(묶음의 첫 조각이 처음 값), 묶음들을 차례로 같은 식으로 접는다(첫 묶음이 처음 값).
     위치 1024 까지는 묶음이 하나라 9~12단계의 한 층 접기와 같다. 묶음=None 이면 한 층(9~12단계 계약 — 견주기용).
     첫행: 이 행부터만 계산한다(긴 문맥의 짧은 덩이 대조 — 앞 행은 건너뛴다; 값은 모든 행을 계산할 때의 그 행과 같다).
-    눈금: 0.12.0 12-3b — 점수 스케일(없으면 점수눈금(hd)) — 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 fp32(1/√h)."""
+    눈금: 0.12.0 12-3b — 점수 스케일(없으면 점수눈금(hd)) — 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 fp32(1/√h).
+    창: 0.12.0 12-3h — 슬라이딩 윈도(계약 4.12): (행 위치 − 키 위치) ≥ 창 인 키도 가린다. 행마다 그 행이 보는 키가 하나도 없는 조각 · 묶음은
+    건너뛰고, 행이 보는 키가 있는 첫 조각 · 첫 묶음이 그 행의 처음 값이다(창이 없으면 언제나 묶음의 첫 조각 · 첫 묶음 — 앞의 계약 그대로)."""
     if F2:                                                          # GeulPUv2 빠른 어텐션 F2(시험용)
         return 어텐션F2(q, k, v, 조각, 묶음, 첫행)
     q, k, v = (np.asarray(x, f32) for x in (q, k, v))
@@ -318,23 +323,43 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None):
     L = np.zeros(len(R_), f32)
     O = np.zeros((len(R_), hd), f32)
     폭 = 조각 * 묶음 if 묶음 else n + 조각                              # 묶음 하나의 위치 수
+
+    def 보임(R, a, b):
+        """행 R 이 키 [a, b) 가운데 하나라도 보는가(원인 가림 · 창)"""
+        ok = R >= a
+        if 창:
+            ok &= (R - np.minimum(b - 1, R)) < 창
+        return ok
+    처음 = np.ones(len(R_), bool)                                     # 아직 처음 값이 없는 행
     for g0 in range(0, n, 폭):
-        selg = R_ >= g0                                              # 이 묶음에 유효한 키가 있는 행
-        Mg = np.zeros(int(selg.sum()), f32)
-        Lg = np.zeros(int(selg.sum()), f32)
-        Og = np.zeros((int(selg.sum()), hd), f32)
-        for 시작 in range(g0, min(g0 + 폭, n), 조각):
-            sel = R_ >= 시작
-            m, l, o = _조각몫(nq, nk, nv, Pq, Pk, Pv, R_[sel], 시작, n, 눈금)
-            idx = np.nonzero(sel[selg])[0]
-            if 시작 == g0:                                          # 묶음의 첫 조각 — 처음 값
-                Mg[idx], Lg[idx], Og[idx] = m, l, o
-            else:
-                Mg[idx], Lg[idx], Og[idx] = _접기(Mg[idx], Lg[idx], Og[idx], m, l, o)
-        if g0 == 0:                                                  # 첫 묶음 — 처음 값
-            M[selg], L[selg], O[selg] = Mg, Lg, Og
-        else:
-            M[selg], L[selg], O[selg] = _접기(M[selg], L[selg], O[selg], Mg, Lg, Og)
+        g1 = min(g0 + 폭, n)
+        selg = 보임(R_, g0, g1)                                       # 이 묶음에 보는 키가 있는 행
+        if not selg.any():
+            continue
+        Rg = R_[selg]
+        Mg = np.zeros(len(Rg), f32)
+        Lg = np.zeros(len(Rg), f32)
+        Og = np.zeros((len(Rg), hd), f32)
+        처음g = np.ones(len(Rg), bool)
+        for 시작 in range(g0, g1, 조각):
+            sel = 보임(Rg, 시작, min(시작 + 조각, n))
+            if not sel.any():
+                continue
+            m, l, o = _조각몫(nq, nk, nv, Pq, Pk, Pv, Rg[sel], 시작, n, 눈금, 창)
+            idx = np.nonzero(sel)[0]
+            첫 = 처음g[idx]                                          # 이 행이 보는 첫 조각 — 처음 값
+            Mg[idx[첫]], Lg[idx[첫]], Og[idx[첫]] = m[첫], l[첫], o[첫]
+            뒤 = idx[~첫]
+            if len(뒤):
+                Mg[뒤], Lg[뒤], Og[뒤] = _접기(Mg[뒤], Lg[뒤], Og[뒤], m[~첫], l[~첫], o[~첫])
+            처음g[idx] = False
+        gi = np.nonzero(selg)[0]
+        첫 = 처음[gi]                                                # 이 행이 보는 첫 묶음 — 처음 값
+        M[gi[첫]], L[gi[첫]], O[gi[첫]] = Mg[첫], Lg[첫], Og[첫]
+        뒤 = gi[~첫]
+        if len(뒤):
+            M[뒤], L[뒤], O[뒤] = _접기(M[뒤], L[뒤], O[뒤], Mg[~첫], Lg[~첫], Og[~첫])
+        처음[gi] = False
     return 나눔(O, L[:, None])
 
 
@@ -1070,6 +1095,31 @@ def 시그모이드(x):
     e = 적힌지수(빼기(f32(0), np.abs(x)))
     d = 더(f32(1), e)
     return np.where(버림(x) >= 0, 나눔(f32(1), d), 나눔(e, d)).astype(f32)
+
+
+겔루a = f32(1.5957691669464111328125)                    # fp32(2 · √(2/π)) — 0x3FCC422A
+겔루b = f32(0.071354813873767852783203125)               # fp32(2 · √(2/π) · 0.044715) — 0x3D922279
+
+
+def 겔루(g, u):
+    """계약 4.12 — Gemma 4 의 GeGLU h = GELU(g) · u. GELU 는 tanh 근사(½ g (1 + tanh(√(2/π) (g + 0.044715 g³))) = g · σ(2 √(2/π) (g + 0.044715 g³)))
+    를 4.9 의 σ 로: s = g · g, t = s · g, y = 곱해더하기(겔루b, t, 겔루a · g), h = (g · σ(y)) · u(연산마다 IEEE 반올림)."""
+    g, u = np.asarray(g, f32), np.asarray(u, f32)
+    with np.errstate(over="ignore"):                               # 넘치면 IEEE 대로 무한(σ(±∞) 는 1 · 0)
+        t = 곱(곱(g, g), g)
+        y = fma32(np.broadcast_to(겔루b, t.shape), t, 곱(겔루a, g))
+    return 곱(곱(g, 시그모이드(y)), u)
+
+
+def 소프트캡(z, c):
+    """계약 4.12 — 로짓의 소프트캡 c · tanh(z / c) = 2c · σ(2z / c) − c 를 4.9 의 σ 로: y = z · fp32(2 / c), 결과 = 곱해더하기(2c, σ(y), −c)
+    (2c · −c 는 짧은실수로 정확해야 한다 — Gemma 4 는 c = 30)."""
+    c = float(c)
+    assert float(f32(2 * c)) == 2 * c and float(f32(c)) == c, "소프트캡 c 는 짧은실수로 정확해야 한다"
+    z = np.asarray(z, f32)
+    y = 곱(z, f32(2.0 / c))
+    s = 시그모이드(y)
+    return fma32(np.broadcast_to(f32(2 * c), s.shape), s, np.broadcast_to(f32(-c), s.shape))
 
 
 def 실루(x):
