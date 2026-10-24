@@ -74,7 +74,7 @@ else {
 # ---- 2. 빌드 ----
 $Dist = Join-Path $Out ('GeulPU-' + $Ver)
 if (Test-Path -LiteralPath $Dist) { Remove-Item -LiteralPath $Dist -Recurse -Force }
-foreach ($d in @('bin', 'kernels', 'web', 'data', 'data\crosscheck')) { New-Item -ItemType Directory -Path (Join-Path $Dist $d) -Force | Out-Null }
+foreach ($d in @('bin', 'kernels', 'web', 'data', 'data\crosscheck', 'data\crosscheck\pair')) { New-Item -ItemType Directory -Path (Join-Path $Dist $d) -Force | Out-Null }
 $Bin = Join-Path $Dist 'bin'
 Say 'PTX · SPIR-V 백엔드...'
 Run $Comp @('백엔드/PTX/PTX.gl', '-o', (Join-Path $Bin 'ptx-backend.exe')) $Root 'ptx-backend'           # 이 저장소의 백엔드 (앞단은 GEUL_ROOT 의 self/)
@@ -103,6 +103,10 @@ Copy-Item -Path (Join-Path $Here 'web\*') -Destination (Join-Path $Dist 'web') -
 Copy-Item -LiteralPath (Join-Path $Here 'data\models.json') -Destination (Join-Path $Dist 'data')
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\expected.json') -Destination (Join-Path $Dist 'data\crosscheck')
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\requests.json') -Destination (Join-Path $Dist 'data\crosscheck')
+# 0.11.1 — 파일 쌍 재현성(Liu · Tsai 의 파일): 파일 목록 · 문제의 프롬프트 토큰 · 기준 PC 의 스텝마다 해시
+foreach ($f in @('models.json', 'requests.json', 'expected.json')) {
+    Copy-Item -LiteralPath (Join-Path $Root ('교차검증\쌍\' + $f)) -Destination (Join-Path $Dist 'data\crosscheck\pair')
+}
 Copy-Item -LiteralPath (Join-Path $Root 'LICENSE') -Destination $Dist
 Copy-Item -LiteralPath (Join-Path $Here '읽어보기.txt') -Destination (Join-Path $Dist 'README.txt')
 
@@ -130,8 +134,11 @@ Get-ChildItem -LiteralPath $Dist -Recurse -File | Sort-Object FullName | ForEach
     $rel = $_.FullName.Substring($Dist.Length + 1).Replace('\', '/')
     $files[$rel] = Sha $_.FullName
 }
+# 0.11.1 — 계약의 판: 계약 문서(계약/계약.md)와 CPU 참조(계약/정수계약.py)의 SHA-256 — 결과의 environment 에 적힌다
+$Contract = Sha (Join-Path $Root '계약\계약.md')
+$ContractRef = Sha (Join-Path $Root '계약\정수계약.py')
 $verObj = [ordered]@{ name = 'GeulPU'; version = $Ver; commit = $Commit; dirty = $Dirty; built = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ');
-                      geul_commit = $GeulHead; platform = 'windows-x64'; files = $files }
+                      geul_commit = $GeulHead; platform = 'windows-x64'; contract = $Contract; contract_reference = $ContractRef; files = $files }
 [IO.File]::WriteAllText((Join-Path $Dist 'version.json'), ($verObj | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
 Remove-Item -LiteralPath $Tmp -Recurse -Force -ErrorAction SilentlyContinue
 if ($NoZip) { Say ('꾸림: ' + $Dist); exit 0 }

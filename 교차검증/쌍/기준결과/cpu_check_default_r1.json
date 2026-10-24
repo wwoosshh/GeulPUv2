@@ -1,0 +1,26 @@
+{
+ "file": "run.jsonl",
+ "format": "geulpu-run-log/1",
+ "model_sha256_expected": "dd707be38b3665750ee68abd253865c83886a34cec2ffa837d5aa433438381a5",
+ "items": [
+  {
+   "item": "요청 1",
+   "steps": 217,
+   "cpu_seconds": 792.8,
+   "same": true,
+   "score_line": false,
+   "logit_hash": {
+    "same": true,
+    "different_steps": [],
+    "of": 217
+   },
+   "sampled_token": {
+    "same": true,
+    "different_steps": [],
+    "of": 217
+   }
+  }
+ ],
+ "model_sha256": "same",
+ "all_same": true
+}
