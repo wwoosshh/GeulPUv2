@@ -38,6 +38,10 @@ MODELS=(
   # 14B 는 덩이 1024 행이면 12 GB 에 문맥 8,192 가 들지 않는다(2,688 로 줄어 긴 창이 넘친다 — 256 행도 16비트 KV 는 7,936) — 덩이 128 행
   # (다섯째 칸 — 비트는 덩이와 상관없다)
   "qwen2.5-coder14b-q4km|$M/qwen2.5-coder-14b-instruct-q4_k_m.gguf|qwen2큰 K 5120 40 8 13824 152064|F1 KV8 F2_KV8|128"
+  # Qwen3.5(구조 qwen35 — 빠른 모드 F1, 구조/qwen35/기록.md): 헤드 256 의 8비트 KV · 빠른 어텐션 판이 없어 F1 만
+  "qwen3.5-0.8b-q8|$M/Qwen3.5-0.8B-Q8_0.gguf|qwen35큰 Q8_0 1024 8 2 3584 248320|F1"
+  "qwen3.5-4b-q4km|$M/Qwen3.5-4B-Q4_K_M.gguf|qwen35큰 K 2560 16 4 9216 248320|F1"
+  "qwen3.5-9b-q4km|$M/Qwen3.5-9B-Q4_K_M.gguf|qwen35큰 K 4096 16 4 12288 248320|F1"
 )
 mod() {  # 이름 모양인자 변형 → 모듈 경로(표준 출력)
   local p=$MD/$1_$3.ptx g=$MD/$1_$3.gl

@@ -55,6 +55,12 @@ EXE = ".exe" if os.name == "nt" else ""
      "qwen35큰 K 2560 16 4 9216 248320"),
     ("qwen35moe-작은", "구조회귀/작은MoE.gguf", "qwen35moeQ8_2048x16x2x512x248320_MoEKN",
      "qwen35큰 Q8_0 2048 16 2 512 248320 --MoE K --W16 --K낱말"),
+    ("qwen35-Q8-빠른", "v12/models/Qwen3.5-0.8B-Q8_0.gguf", "qwen35Q8_1024x8x2x3584x248320_빠른",
+     "qwen35큰 Q8_0 1024 8 2 3584 248320 --빠른"),
+    ("qwen35-K-빠른", "v12/models/Qwen3.5-4B-Q4_K_M.gguf", "qwen35K_2560x16x4x9216x248320_빠른",
+     "qwen35큰 K 2560 16 4 9216 248320 --빠른"),
+    ("qwen35moe-작은-빠른", "구조회귀/작은MoE.gguf", "qwen35moeQ8_2048x16x2x512x248320_MoEKN_빠른",
+     "qwen35큰 Q8_0 2048 16 2 512 248320 --MoE K --W16 --K낱말 --빠른"),
 ]
 도구들 = {"커널생성": "커널/커널생성.gl", "ptx-backend": "백엔드/PTX/PTX.gl", "시험_7B": "엔진/시험_7B.gl"}
 
