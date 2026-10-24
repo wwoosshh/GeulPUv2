@@ -6029,6 +6029,10 @@ function labCapsuleText(tid) {
     },
     fingerprint: fx && fx.fp ? { token: fx.fp, logit: fx.fpLogit } : null,
   };
+  // #96 — 셈한 층 렌즈(계약 5.3)도 — 스텝(1 부터)마다 서버의 layer_lens 그대로. repro_check 가 GPU 없이 다시 셈해 견준다
+  const lens = Object.keys(an.lens || {}).map(Number).filter(i => i >= o && an.lens[i] && an.lens[i].layers).sort((a, b) => a - b)
+    .map(i => Object.assign({ step: i - o + 1 }, an.lens[i]));
+  if (lens.length) cap.result.layer_lens = lens;
   const txt = '{\n' + Object.keys(cap).map(k => JSON.stringify(k) + ':' + JSON.stringify(cap[k])).join(',\n') + '\n}\n';
   return tr.req.temp > 0 ? txt.replace('"seed":"__SEED__"', '"seed":' + (tr.seed || '0')) : txt;
 }

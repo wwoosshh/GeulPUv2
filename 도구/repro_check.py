@@ -27,7 +27,8 @@ Qwen3 순전파, 22 · 26 · 37단계에서 GPU 와 모든 값이 같았던 것)
 
 #96 — 층 렌즈(logit lens, 계약 5.3): 재현 파일의 고른 스텝(1 부터 — 연구 패널의 '스텝 N')에서 그 토큰을 매긴 행의 residual stream 을
 층마다 끝의 로짓 계산으로 읽어 층마다 1위 토큰 · 고른 토큰의 확률과 순위 · 엔트로피 · 상위 k · 로짓 해시를 보인다(--out 이면 JSON 에도).
-마지막 층은 끝 로짓과 비트까지 같아야 한다(계약 5.3 의 2). 같은 CPU 계산 한 번에 함께 셈한다:
+마지막 층은 끝 로짓과 비트까지 같아야 한다(계약 5.3 의 2). 같은 CPU 계산 한 번에 함께 셈한다. 재현 파일에 연구 패널이 셈한 층 렌즈
+(result.layer_lens — 스텝마다 서버의 geulpu.layer_lens)가 들어 있으면 --layer-lens 없이도 그 스텝들을 셈해 층마다 비트까지 견준다:
 
     python -I 도구/repro_check.py <재현 파일.json> <모델.gguf> --layer-lens 5,12 [--out 결과.json] [--skip-hash]
 """
@@ -99,12 +100,15 @@ def 토큰글함수(g):
     return lambda i: (toks[i] if 0 <= i < len(toks) else "?").replace("▁", " ")
 
 
-def 층렌즈(zz, 끝z, c, 위수, 글, 걸음, 행):
-    """한 스텝의 층 렌즈(계약 5.3) — zz [층][어휘], 끝z 그 행의 끝 로짓, c 고른 토큰. 층마다 계약 5.2 를 그대로 · 보이고 JSON 을 돌려준다."""
+def 층렌즈(zz, 끝z, c, 위수, 글, 걸음, 행, 기록=None):
+    """한 스텝의 층 렌즈(계약 5.3) — zz [층][어휘], 끝z 그 행의 끝 로짓, c 고른 토큰. 층마다 계약 5.2 를 그대로 · 보이고 JSON 을 돌려준다.
+    기록: 재현 파일에 든 그 스텝의 layer_lens(서버가 낸 것) — 있으면 층마다 비트까지 견준다."""
     L = zz.shape[0]
     끝같음 = bool(np.array_equal(np.ascontiguousarray(zz[L - 1]).view(np.uint32), np.ascontiguousarray(끝z, np.float32).view(np.uint32)))
     j = {"step": 걸음, "row": 행, "token": int(c), "layers": L, "token_logprobs": [], "entropy": [], "ranks": [], "top_ids": [],
          "top_logprobs": [], "logit_hashes": [], "last_layer_equals_final": 끝같음}
+    if 기록 is not None:
+        위수 = len(기록["top_ids"][0]) if 기록.get("top_ids") and 기록["top_ids"][0] is not None else 위수
     print(f"층 렌즈 — 스텝 {걸음}(행 {행} · 고른 토큰 #{c} {글(c)!r}):", flush=True)
     for l in range(L):
         z = zz[l]
@@ -123,6 +127,13 @@ def 층렌즈(zz, 끝z, c, 위수, 글, 걸음, 행):
     j["first_layer_top1_to_end"] = 남는
     print(f"  고른 토큰이 1위로 끝까지 남는 첫 층: {남는 if 남는 is not None else '없음(끝 층에서도 1위가 아니다)'} · "
           f"마지막 층 = 끝 로짓: {'같음(비트)' if 끝같음 else '다름'}", flush=True)
+    if 기록 is not None:                                     # 재현 파일의 값(서버가 낸 것)과 — 층마다 로짓 해시 · 5.2 의 값 · 순위
+        다른층 = [l for l in range(L) if l >= int(기록.get("layers") or 0) or any(
+            (기록.get(c) or [None] * L)[l] != j[c][l] for c in ("logit_hashes", "token_logprobs", "entropy", "top_ids", "top_logprobs", "ranks")
+            if c in 기록)]
+        j["recorded"] = "same" if not 다른층 and int(기록.get("layers") or 0) == L and int(기록.get("token", c)) == int(c) else "different"
+        j["recorded_different_layers"] = 다른층[:50]
+        print(f"  재현 파일의 층 렌즈: {'같음(비트)' if j['recorded'] == 'same' else f'다름 — 층 {다른층[:8]}'}", flush=True)
     return j
 
 
@@ -318,7 +329,8 @@ def main():
     if REF.C.F2B:
         결과["contract"] = 결과.get("contract", 계약).replace("F2 (fast attention)", "F2B (fast attention, per-block q exponent)")
     S = np.array(P + toks[:-1], np.int64)                   # 행 P−1 … P+n−2 가 결과 토큰마다의 분포
-    렌즈걸음 = [int(v) for v in (a.layer_lens or "").split(",") if v.strip()]
+    렌즈기록 = {int(x["step"]): x for x in (rs.get("layer_lens") or []) if isinstance(x, dict) and "step" in x}   # #96 — 패널이 넣은 층 렌즈
+    렌즈걸음 = [int(v) for v in (a.layer_lens or "").split(",") if v.strip()] or sorted(렌즈기록)
     for s in 렌즈걸음:
         if not 1 <= s <= n:
             sys.exit(f"--layer-lens 의 스텝 {s} 가 범위 밖이다(1 … {n})")
@@ -361,8 +373,8 @@ def main():
     렌즈같음 = True
     if 렌즈걸음:                                            # #96 — 층 렌즈(계약 5.3)
         글 = 토큰글함수(g)
-        결과["layer_lens"] = [층렌즈(렌즈[q], 로짓[렌즈행[q]], toks[s - 1], k or 10, 글, s, 렌즈행[q]) for q, s in enumerate(렌즈걸음)]
-        렌즈같음 = all(x["last_layer_equals_final"] for x in 결과["layer_lens"])
+        결과["layer_lens"] = [층렌즈(렌즈[q], 로짓[렌즈행[q]], toks[s - 1], k or 10, 글, s, 렌즈행[q], 렌즈기록.get(s)) for q, s in enumerate(렌즈걸음)]
+        렌즈같음 = all(x["last_layer_equals_final"] and x.get("recorded", "same") == "same" for x in 결과["layer_lens"])
     결과["all_same"] = all(not v for v in 다름.values()) and 결과["fingerprint"] in ("same", "absent") and 렌즈같음
     print("모두 같음 — 이 재현 파일은 계약대로 계산한 값과 비트까지 같다" if 결과["all_same"] else "다른 곳이 있다", flush=True)
     if a.out:

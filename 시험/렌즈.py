@@ -80,7 +80,8 @@ def 돌리기(a):
         L = int(ll.get("layers") or 0)
         print(f"스텝 {i + 1}(행 {ef - 1} · 토큰 #{T[i]}): 층 {L}", flush=True)
         적기(f"s{i + 1} 꼴", ll.get("row") == ef - 1 and ll.get("token") == T[i] and L > 0
-             and all(len(ll[c]) == L for c in ("token_logprobs", "entropy", "top_ids", "top_logprobs", "logit_hashes")),
+             and all(len(ll[c]) == L for c in ("token_logprobs", "entropy", "top_ids", "top_logprobs", "logit_hashes", "ranks"))
+             and ll["ranks"][L - 1] == (1 + g["prompt_top_ids"][ef].index(T[i]) if T[i] in g["prompt_top_ids"][ef] else ll["ranks"][L - 1]),
              f"row {ll.get('row')} · token {ll.get('token')}")
         echo = {"hash": g["prompt_logit_hashes"][0], "lp": lp["token_logprobs"][ef], "H": g["prompt_entropy"][ef],
                 "ids": g["prompt_top_ids"][ef], "lps": g["prompt_top_logprobs"][ef]}
