@@ -6,6 +6,40 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.11.1 — File-pair reproducibility benchmark · k-quants on 32 KB GPUs (2026-10-24)
+
+0.11.1 adds a benchmark item and brings k-quant files to GPUs with 32 KB of shared memory. Under the [versioning rules](docs/versioning.md)
+  these would make a MINOR release; they are shipped on the 0.11 line as 0.11.1 so that 0.12.0 stays the model-expansion release
+  (Qwen3.5, F16 · BF16 · F32, chat templates — still in progress). Outputs of 0.11.0 are unchanged.
+
+### Added
+
+- **File-pair reproducibility** (Benchmark). Runs GGUF files that quantize the same model in different ways in exact mode and reports
+  two things: whether every step of 32 math problems gives the same logit hash (FNV-1a 64) as the reference PC — the same check on any
+  GPU — and how the files differ: the first step where their greedy answers diverge, and the per-token log-probability difference when
+  the reference file's answers are scored by another file (echo scoring, the same arithmetic as `도구/debugger.py compare`). It comes
+  with the files of Liu and Tsai's paper on the verifiability gap in quantized GGUF supply chains (arXiv:2610.19498): two
+  Qwen2.5-1.5B-Instruct Q4_K_M files that llama.cpp b10448 made from the same f16 with floating-point contraction on and off (perplexity
+  can't tell them apart), bartowski's imatrix quantization, and bartowski's Qwen2.5-7B-Instruct Q4_K_M and Q8_0, which the paper
+  re-derived byte for byte. The card downloads each file and checks its SHA-256. The result folder holds every response with its
+  per-step hashes, a run log per file that `도구/repro_check.py` can re-check on a CPU without a GPU, and `pair-<A>-<B>.json` with the
+  per-token differences; export it as a zip. Reference results and how to reproduce them: [docs/file-pair.md](docs/file-pair.md).
+- Result environments (and version.json) record the SHA-256 of the contract document and of its CPU reference
+  (`contract_sha256` · `contract_reference_sha256`).
+
+### Changed
+
+- **k-quant files (Q4_K · Q5_K · Q6_K) run on GPUs with 32 KB of shared memory** — AMD's Windows driver, Intel integrated graphics.
+  Their kernels prefetch fewer stages to fit in 32 KB; the order of every sum is unchanged, so the output bits are the same as on CUDA.
+  Checked with the 32 KB limit emulated on an RTX 4070 Ti's Vulkan driver and on an Intel UHD Graphics 770; not yet on AMD hardware.
+  The four 256-column tile kernels don't fit and are skipped there, so long prompts are slower on those GPUs.
+  (From the 0.12.0 work, #81.)
+
+### Fixed
+
+- Loading a model on a 32 KB GPU sometimes stopped: the Vulkan layer wrote error text from the worker thread that prepares kernels
+  while the main thread used the same formatting buffer. (From #82.)
+
 ## 0.11.0 — Faster by default: agent replay 22 % shorter (2026-10-23)
 
 ### Changed

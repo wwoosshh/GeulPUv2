@@ -37,6 +37,28 @@ const DICT = {
   "하드웨어 확인": "Hardware check",
   "재현성 검증 · 빠른 확인(문제 2개)": "Reproducibility check · quick (2 problems)",
   "재현성 검증 · 문제 32개": "Reproducibility check · 32 problems",
+  // 0.11.1 — 파일 쌍 재현성
+  "파일 쌍 재현성": "File-pair reproducibility",
+  "파일 쌍 재현성 · 빠른 확인(문제 4개)": "File-pair reproducibility · quick (4 problems)",
+  "파일 쌍 재현성 · 문제 32개": "File-pair reproducibility · 32 problems",
+  "파일마다 1~20분": "1–20 min per file",
+  "같은 모델을 다르게 양자화한 GGUF 파일들(Liu · Tsai, arXiv:2610.19498)을 정밀 모드로 돌려, 문제 32개의 스텝마다 로짓 해시가 기준 PC와 같은지 보고 파일끼리의 차이(답이 처음 갈리는 스텝 · 토큰마다의 로그확률 차)를 잽니다.": "Runs GGUF files that quantize the same model in different ways (Liu · Tsai, arXiv:2610.19498) in exact mode, checks that the logit hash of every step of 32 problems matches the reference PC, and measures how the files differ (the first step where the answers diverge · the log-probability difference per token).",
+  "받는 중 {}%": "Downloading {0}%",
+  "받기": "Download",
+  "이어서 받기": "Resume download",
+  "빠른 확인 — 문제 4개(전체 검증 아님)": "Quick check — 4 problems (not a full check)",
+  "파일은 Hugging Face에서 받고, 받은 뒤 SHA-256을 확인합니다. 그래픽 메모리가 파일 크기보다 1 GB 이상 커야 그 파일을 돌립니다(7B Q8_0은 약 9 GB).": "Files are downloaded from Hugging Face and checked with SHA-256 afterwards. A file runs only if the graphics memory is at least 1 GB larger than the file (about 9 GB for 7B Q8_0).",
+  "위의 파일 가운데 하나 이상을 받으세요.": "Download at least one of the files above.",
+  "돌릴 파일을 하나 이상 고르세요": "Pick at least one file to run",
+  "Qwen2.5 GGUF 파일들": "Qwen2.5 GGUF files",
+  " · 빠른 확인(문제 4개)": " · quick check (4 problems)",
+  "다름 · 스텝 {}부터": "Different · from step {0}",
+  "파일끼리": "Between files",
+  "A의 답을 A · B로 점수 매긴 값 · 스텝은 0부터": "A's answers scored by A and by B · steps count from 0",
+  "A ↔ B": "A ↔ B",
+  "처음 갈리는 스텝(가운데값 · 최소~최대)": "First diverging step (median · min–max)",
+  "B의 1위가 A의 토큰과 다른 스텝": "Steps where B's top-1 differs from A's token",
+  "토큰마다의 차는 결과 폴더의 pair-A-B.json에 있습니다.": "The per-token differences are in pair-A-B.json in the result folder.",
   "텐서 코어 경로": "Tensor-core path",
   "기본 경로": "Basic path",
   "CUDA 경로": "CUDA path",
@@ -186,7 +208,6 @@ const DICT = {
   "모델 보기": "View models",
   "먼저 모델이 필요합니다": "First, you need a model",
   "이 PC에는 {} {}({}) 모델을 추천합니다.": "For this PC we recommend {} {} ({}).",
-  "이 GPU(공유 메모리 32 KB)는 가중치가 모두 Q8_0이거나 모두 Q4_0인 파일만 실행합니다. 목록의 Q8_0 7B는 그래픽 메모리가 10 GB 이상 필요하고(이 PC {}), 흔한 Q4_0 파일은 출력 가중치가 Q6_K라 아직 받지 않습니다. 지금은 이 PC에서 실행할 수 있는 파일이 없습니다.": "This GPU (32 KB of shared memory) only runs files whose weights are all Q8_0 or all Q4_0. The Q8_0 7B files in the list need 10 GB of graphics memory or more (this PC: {}), and common Q4_0 files keep the output weights in Q6_K, which is not supported yet. No file in the list runs on this PC right now.",
   "목록의 모델 가운데 이 PC의 그래픽 메모리({})에 맞는 것이 없습니다. Hugging Face에서 더 작은 파일을 찾아볼 수 있습니다 — 받기 전에 실행되는지 확인합니다.": "None of the listed models fit this PC's graphics memory ({}). You can look for smaller files on Hugging Face — GeulPU checks that a file runs before downloading it.",
   "추천 모델 다운로드": "Download the recommended model",
   "모델 찾기": "Find models",
@@ -691,19 +712,19 @@ const DICT = {
   "자동 — 브라우저 언어": "Auto — browser language",
   "재현성 검증의 기준 모델입니다. 수학 문제 32개의 출력이 기준 PC(NVIDIA · CUDA)와 비트 단위로 같은지 확인할 수 있습니다. 답하기 전에 생각 과정(<think>)을 길게 쓰는 추론 모델입니다.": "The reference model of the reproducibility check. You can check that its outputs on 32 math problems are bit-identical to the reference PC (NVIDIA · CUDA). A reasoning model that writes a long thought process (<think>) before answering.",
   "한국어 · 영어 일반 대화 모델입니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A general chat model for Korean and English. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD etc.). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "4비트 k-양자화 파일이라 VRAM 8 GB급 GPU에서도 실행됩니다. k-양자화 모델은 CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다(AMD는 아직 지원하지 않음). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file, so it also runs on GPUs with about 8 GB of VRAM. k-quant models run on CUDA or on Vulkan GPUs with 48 KB or more of shared memory (AMD is not supported yet). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "추론 모델의 4비트 k-양자화 파일입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file of the reasoning model. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "4비트 k-양자화 파일이라 VRAM 8 GB급 GPU에서도 실행됩니다. k-양자화 모델은 CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file, so it also runs on GPUs with about 8 GB of VRAM. k-quant models run on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "추론 모델의 4비트 k-양자화 파일입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 4-bit k-quant file of the reasoning model. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
   "코드 작성 · 설명에 맞춘 모델입니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A model tuned for writing and explaining code. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "14B 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
-  "14B 추론 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B reasoning model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "14B 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
+  "14B 추론 모델입니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-15).": "A 14B reasoning model. The engine reduces the context length automatically to fit the graphics memory. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) (2026-10-15).",
   "Qwen3 대화 모델입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정의 '생각 과정 쓰기'를 끄면 바로 답합니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행되지만 그래픽 메모리가 16 GB 이상이어야 합니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A Qwen3 chat model. It writes a thought process before answering; turn off 'Thinking' in the generation settings to get the answer directly. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD etc.), but it needs 16 GB or more of graphics memory. This file was run and checked on CUDA (RTX 4070 Ti) and Vulkan (2026-10-15).",
-  "Qwen3-8B의 작은 파일입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A smaller file of Qwen3-8B. It writes a thought process before answering, which you can turn off in the generation settings. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was run and checked on CUDA (RTX 4070 Ti) and Vulkan (2026-10-15).",
+  "Qwen3-8B의 작은 파일입니다. 답하기 전에 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A smaller file of Qwen3-8B. It writes a thought process before answering, which you can turn off in the generation settings. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was run and checked on CUDA (RTX 4070 Ti) and Vulkan (2026-10-15).",
   "작은 Qwen3 모델입니다(1.8 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 에뮬레이션한 Vulkan에서 실행을 확인했습니다(2026-10-15).": "A small Qwen3 model (1.8 GB). It runs even on PCs with little graphics memory. It writes a thought process, which you can turn off in the generation settings. This file was run and checked on CUDA (RTX 4070 Ti), Vulkan, and Vulkan emulating the limits of a 32 KB shared-memory device (2026-10-15).",
   "14B Qwen3 모델입니다. 이 모양(너비 5120 · 헤드 40/8 · FFN 17408)은 같은 모양의 합성 모델로 출력이 비트 단위로 맞는지 확인했지만, 이 파일로는 아직 실행해 보지 않았습니다. 문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다.": "A 14B Qwen3 model. This shape (hidden 5120 · heads 40/8 · FFN 17408) was checked for bit-exact output with a synthetic model of the same shape, but this file has not been run yet. The engine reduces the context length automatically to fit the graphics memory.",
-  "Meta의 Llama 3.1 대화 모델(4비트 k-양자화)입니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.1 커뮤니티 라이선스를 따릅니다 — 사용 조건과 이용 정책(Acceptable Use Policy)이 있고, 월 사용자 7억 명이 넘는 서비스는 Meta의 허가가 필요합니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Meta's Llama 3.1 chat model (4-bit k-quant). Korean is not among its officially supported languages (English and seven others). It follows the Llama 3.1 Community License — there are usage conditions and an Acceptable Use Policy, and services with more than 700 million monthly users need permission from Meta. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
+  "Meta의 Llama 3.1 대화 모델(4비트 k-양자화)입니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.1 커뮤니티 라이선스를 따릅니다 — 사용 조건과 이용 정책(Acceptable Use Policy)이 있고, 월 사용자 7억 명이 넘는 서비스는 Meta의 허가가 필요합니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Meta's Llama 3.1 chat model (4-bit k-quant). Korean is not among its officially supported languages (English and seven others). It follows the Llama 3.1 Community License — there are usage conditions and an Acceptable Use Policy, and services with more than 700 million monthly users need permission from Meta. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
   "Llama 3.1 대화 모델의 Q8_0 파일입니다. Llama 3.1 커뮤니티 라이선스(사용 조건 · 이용 정책)를 따릅니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했고, 같은 글의 모든 토큰에서 다음 토큰 확률이 llama.cpp와 거의 같음(평균 KL 0.0004 이하)을 확인했습니다(2026-10-16).": "The Q8_0 file of the Llama 3.1 chat model. It follows the Llama 3.1 Community License (usage conditions · Acceptable Use Policy). As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD and others). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan, and its next-token probabilities on every token of the same text were checked to be nearly the same as llama.cpp's (mean KL 0.0004 or less) (2026-10-16).",
   "작은 Llama 3.2 대화 모델입니다(3.4 GB). 그래픽 메모리가 적은 PC에서도 실행됩니다. 공식 지원 언어(영어 등 8개)에 한국어는 들지 않습니다. Llama 3.2 커뮤니티 라이선스(사용 조건 · 이용 정책)를 따릅니다. 이 파일은 CUDA(RTX 4070 Ti) · Vulkan · 공유 메모리 32 KB 장치의 한도를 에뮬레이션한 Vulkan에서 실행을 확인했습니다(2026-10-16).": "A small Llama 3.2 chat model (3.4 GB). It runs on PCs with little graphics memory too. Korean is not among its officially supported languages (English and seven others). It follows the Llama 3.2 Community License (usage conditions · Acceptable Use Policy). This file was checked to run on CUDA (RTX 4070 Ti) · Vulkan · Vulkan emulating the limits of a device with 32 KB of shared memory (2026-10-16).",
-  "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 템플릿에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Mistral AI's Mistral 7B Instruct v0.3 (4-bit k-quant). Its chat template has no system role, so the system prompt is put in front of the first question. Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory. This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
+  "Mistral AI의 Mistral 7B Instruct v0.3(4비트 k-양자화)입니다. 채팅 템플릿에 시스템 역할이 없어 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했습니다(2026-10-16).": "Mistral AI's Mistral 7B Instruct v0.3 (4-bit k-quant). Its chat template has no system role, so the system prompt is put in front of the first question. Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan (2026-10-16).",
   "Mistral 7B Instruct v0.3의 Q8_0 파일입니다. 시스템 프롬프트는 첫 질문 앞에 붙여 보냅니다. Q8_0 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다. 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을 확인했고, 같은 글의 모든 토큰에서 다음 토큰 확률이 llama.cpp와 거의 같음을 확인했습니다(2026-10-16).": "The Q8_0 file of Mistral 7B Instruct v0.3. The system prompt is put in front of the first question. As a Q8_0 file it also runs on GPUs with 32 KB of shared memory (AMD and others). This file was checked to run on CUDA (RTX 4070 Ti) and Vulkan, and its next-token probabilities on every token of the same text were checked to be nearly the same as llama.cpp's (2026-10-16).",
   "Hugging Face에서 고른 파일 — 받기 전에 GGUF 헤더로 GeulPU가 지원하는 구조인지 확인했습니다.": "A file picked from Hugging Face — its GGUF header was checked before downloading to confirm GeulPU accepts its shape.",
   "Hugging Face에서 고른 파일 — 받기 전에 GGUF 머리로 GeulPU가 받는 모양인지 확인했습니다.": "A file picked from Hugging Face — its GGUF header was checked before downloading to confirm GeulPU accepts its shape.",   // 0.6.0 까지 모델 목록에 적힌 옛 글
@@ -1158,6 +1179,12 @@ const TMX = [
   [/속도 측정 — /g, 'Speed test — '],
   [/재현성 검증\(빠른 확인\) — 문제 2개 · 64토큰/g, 'Reproducibility check (quick) — 2 problems · 64 tokens'],
   [/재현성 검증 — 문제 32개/g, 'Reproducibility check — 32 problems'],
+  [/파일 쌍 재현성\(빠른 확인\) — 문제 4개/g, 'File-pair reproducibility (quick) — 4 problems'],
+  [/파일 쌍 재현성 — 문제 32개/g, 'File-pair reproducibility — 32 problems'],
+  [/결과\(빠른 확인 — 문제 4개\): 모든 문제가 기준 PC와 똑같은 출력입니다 — /g, 'Result (quick check — 4 problems): every problem gives exactly the same output as the reference PC — '],
+  [/결과\(기준 없이 기록만\): /g, 'Result (recorded without a reference): '],
+  [/결과: 고른 파일이 없습니다/g, 'Result: no files were selected'],
+  [/\b(default|ffpoff|imatrix|7b-q4km|7b-q8_0) 오류/g, '$1 error'],
   // 결과 요약(교차검증)
   [/결과: 기준 PC와 다른 출력이 있거나 끝나지 못한 실행이 있습니다 — /g, 'Result: some outputs differ from the reference PC, or some runs did not finish — '],
   [/결과: 모든 문제가 기준 PC\(NVIDIA · CUDA\)와 똑같은 출력입니다 — /g, 'Result: every problem gives exactly the same output as the reference PC (NVIDIA · CUDA) — '],
@@ -1247,6 +1274,17 @@ const TMX = [
   [/\[([^\]]+)\] 문제 (\d+)개를 보냅니다\(최대 답변 길이 (\d+)토큰\)\./g, '[$1] Sending $2 problems (max answer length $3 tokens).'],
   [/생성 도중 추론 서버가 종료되었습니다\(logs 폴더의 server-(\S+)-\*\.log 참고\)/g, 'The inference server exited during generation (see server-$1-*.log in the logs folder)'],
   [/생성 중 — (.+?)\(GPU에 따라 5~20분\)/g, 'Generating — $1 (5–20 min depending on the GPU)'],
+  // 0.11.1 — 파일 쌍 재현성의 단계 · 기록
+  [/생성 중 — (.+?)\(GPU에 따라 1~20분\)/g, 'Generating — $1 (1–20 min depending on the GPU)'],
+  [/(\S+) — 파일 확인 중/g, '$1 — checking the file'],
+  [/(\S+) — 커널 모듈 준비 중/g, '$1 — preparing kernel modules'],
+  [/(\S+) — 기준 파일의 답 점수 매기는 중/g, "$1 — scoring the reference file's answers"],
+  [/\[([^\]]+)\] 기준 파일\(([^)]+)\)의 답 (\d+)개를 이 파일로 점수 매깁니다\(echo\)\./g, "[$1] Scoring the $3 answers of the reference file ($2) with this file (echo)."],
+  [/\[([^\]]+)\] 기준 파일\(([^)]+)\)과 견줌 — /g, '[$1] Compared with the reference file ($2) — '],
+  [/\[정보\] 기준 데이터\(expected\.json\)가 없어 견주지 않고 기록만 합니다\./g, '[info] No reference data (expected.json) — recording without comparing.'],
+  [/파일이 없습니다 — 벤치마크 화면에서 받은 뒤 다시 실행하세요/g, 'The file is missing — download it on the Benchmark screen, then run again'],
+  [/그래픽 메모리가 모자랍니다\(파일 ([\d.]+) GB — 그래픽 메모리 ([\d.]+) GB 이상\)/g, 'Not enough graphics memory (file $1 GB — needs $2 GB or more of graphics memory)'],
+  [/파일 쌍 검증 데이터\(data\\crosscheck\\pair\)를 읽지 못했습니다/g, 'Could not read the file-pair data (data\\crosscheck\\pair)'],
   [/재현성 검증 기준 데이터\(data\\crosscheck\)를 읽지 못했습니다/g, 'Could not read the reproducibility reference data (data\\crosscheck)'],
   [/재현성 검증에 필요한 모델\(DeepSeek-R1-Distill-Qwen-7B Q8_0, 8\.1 GB\)이 없습니다 — 모델 화면에서 다운로드하거나 파일을 추가하세요/g, 'The model needed for the reproducibility check (DeepSeek-R1-Distill-Qwen-7B Q8_0, 8.1 GB) is missing — download it or add the file on the Models screen'],
   [/모델 파일 무결성 확인 중\(SHA-256\)/g, "Verifying the model file's integrity (SHA-256)"],
@@ -1309,7 +1347,7 @@ const TMX = [
   [/지원하지 않는 가중치 형식입니다\((.+?)\) — Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS만 지원합니다/g, 'Unsupported weight format ($1) — only Q8_0 · Q4_0 · Q4_K · Q5_K · Q6_K · IQ4_XS are supported'],
   [/IQ4_XS 파일은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\. 같은 모델의 Q4_K_M · Q8_0 파일은 Vulkan에서도 실행됩니다\./g, "IQ4_XS files run only on CUDA (NVIDIA GPUs) for now. The same model's Q4_K_M · Q8_0 files also run on Vulkan."],
   [/GeulPU가 지원하지 않는 파일입니다/g, "GeulPU doesn't support this file"],
-  [/이 GPU에서는 Q4_K_M 같은 k-양자화 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_0 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run k-quant files such as Q4_K_M yet. The same model's Q8_0 · Q4_0 files run (a limit of GPUs with 32 KB of shared memory)."],
+  [/이 GPU에서는 이 파일을 아직 실행할 수 없습니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run this file yet (a limit of GPUs with 32 KB of shared memory)."],
   // 받기
   [/ — 다시 누르면 이어서 받습니다/g, ' — click again to resume'],
   [/요청을 열지 못했습니다\(오류 (\d+)\)/g, 'Could not open the request (error $1)'],
@@ -1786,11 +1824,12 @@ function kindKey(x) {
 }
 const qtag = m => (quantOf(m) ? h('span', { class: 'qlab' }, quantOf(m)) : null);
 const kindOf = m => ({ think: T('추론 모델'), code: T('코드 모델'), chat: T('일반 모델') })[kindKey(m)];
-function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), server: T('모델 불러오기'), device: T('하드웨어 확인') }[j.kind] || TM(j.title); }
+function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), pair: T('파일 쌍 재현성'), server: T('모델 불러오기'), device: T('하드웨어 확인') }[j.kind] || TM(j.title); }
 const jobModel = j => String(j.title || '').split(' — ')[1] || '';
 function jobTitle(j) {
   if (j.kind === 'diag' || j.kind === 'speed' || j.kind === 'server') return `${jobName(j)} · ${labelById(jobModel(j))}`;
   if (j.kind === 'crosscheck') return /줄인|빠른/.test(j.title) ? T('재현성 검증 · 빠른 확인(문제 2개)') : T('재현성 검증 · 문제 32개');
+  if (j.kind === 'pair') return /빠른/.test(j.title) ? T('파일 쌍 재현성 · 빠른 확인(문제 4개)') : T('파일 쌍 재현성 · 문제 32개');
   return TM(j.title);
 }
 // 재현성 검증의 경로 이름(관리자의 "협력 행렬 모듈 …" 등)을 쓰는 사람의 말로
@@ -1799,12 +1838,14 @@ function pathLabel(l) {
 }
 // 10B 이상이면 문맥 · 작업 메모리를 더 크게 어림한다(목록의 "14B" · Hugging Face 에서 더한 "14.8B" 모두)
 const isBig = c => { const p = parseFloat(String(c.params || '').replace(/[^\d.]/g, '')); return p >= 10 || (!(p > 0) && /\b(1[0-9]|[2-9]\d)b\b/i.test(c.id || '')); };
+// 파일 이름의 형식 → 도는 장치(목록의 devices 와 같은 값): IQ4_XS 는 CUDA 만, F16 · BF16 · F32 는 공유 메모리 32 KB GPU 밖, 나머지는 어디서나
+const devicesOfQuant = q => q === 'IQ4_XS' ? 'cuda' : /F16|F32/.test(q) ? 'w16' : /K/.test(q) ? 'k' : 'all';
 // 이 PC 의 그래픽 메모리에 맞는가(목록의 크기 + 문맥 · 작업 메모리 어림)
 function fitOf(c) {
   const d = S.st && S.st.device;
   if (!d || !d.checked) return null;
   if (!d.layer) return { k: 'nogpu', t: T('쓸 수 있는 GPU 없음') };
-  if (c.devices === 'k' && d.layer === 'vulkan' && d.variant === '공유32') return { k: 'unsup', t: T('이 GPU 미지원') };
+  if (c.devices === 'w16' && d.layer === 'vulkan' && d.variant === '공유32') return { k: 'unsup', t: T('이 GPU 미지원') };    // 0.12.0 12-4 — k-양자화는 공유 32 KB 에서도, F16 · BF16 · F32 는 아직
   if (c.devices === 'cuda' && d.layer === 'vulkan') return { k: 'unsup', t: T('이 GPU 미지원') };      // 1.0.0 1-6c — IQ4_XS 는 CUDA 먼저
   const big = isBig(c);
   const mem = d.memory / GIB, size = c.size / GIB;
@@ -2798,17 +2839,15 @@ function renderMsgs() {
       actions = h('div', { class: 'row mt24' }, h('button', { class: 'btn', onclick: () => show('models') }, I('box', 's'), T('모델 보기')));
     } else {
       title = T('먼저 모델이 필요합니다');
-      // 맞는 것이 없을 때 — 공유 메모리 32 KB GPU(AMD 등)는 형식 제약까지 그대로 밝힌다(흔한 Q4_0 파일도 출력이 Q6_K 라 아직 받지 않음)
+      // 맞는 것이 없을 때(0.12.0 12-4 — 공유 메모리 32 KB GPU 도 k-양자화를 돌려 형식 제약을 따로 밝히지 않는다)
       lede = recC ? T`이 PC에는 ${recC.name} ${recC.quant}(${fmtBytes(recC.size)}) 모델을 추천합니다.`
-        : st.device.variant === '공유32' ? T`이 GPU(공유 메모리 32 KB)는 가중치가 모두 Q8_0이거나 모두 Q4_0인 파일만 실행합니다. 목록의 Q8_0 7B는 그래픽 메모리가 10 GB 이상 필요하고(이 PC ${fmtBytes(st.device.memory)}), 흔한 Q4_0 파일은 출력 가중치가 Q6_K라 아직 받지 않습니다. 지금은 이 PC에서 실행할 수 있는 파일이 없습니다.`
-          : T`목록의 모델 가운데 이 PC의 그래픽 메모리(${fmtBytes(st.device.memory)})에 맞는 것이 없습니다. Hugging Face에서 더 작은 파일을 찾아볼 수 있습니다 — 받기 전에 실행되는지 확인합니다.`;
+        : T`목록의 모델 가운데 이 PC의 그래픽 메모리(${fmtBytes(st.device.memory)})에 맞는 것이 없습니다. Hugging Face에서 더 작은 파일을 찾아볼 수 있습니다 — 받기 전에 실행되는지 확인합니다.`;
       actions = h('div', { class: 'col g0' },
         recDl ? dlBox(recC) : null,
         h('div', { class: 'row mt24' },
           recC && !recC.installed && !recDl ? h('button', { class: 'btn primary needs-conn', onclick: () => startDownload(recC) }, I('download', 's'), T('추천 모델 다운로드')) : null,
-          !recC && st.device.variant !== '공유32' ? h('button', { class: 'btn primary needs-conn', onclick: openHfSearch }, I('search', 's'), T('모델 찾기')) : null,
+          !recC ? h('button', { class: 'btn primary needs-conn', onclick: openHfSearch }, I('search', 's'), T('모델 찾기')) : null,
           !recC ? h('button', { class: 'btn needs-conn', onclick: () => browse('') }, I('plus', 's'), T('GGUF 파일 추가')) : null,
-          !recC && st.device.variant === '공유32' ? h('button', { class: 'btn ghost', onclick: () => show('device') }, I('cpu', 's'), T('하드웨어 보기')) : null,
           recC ? h('button', { class: 'btn' + (!recDl ? ' ghost' : ''), onclick: () => show('models') }, recDl ? T('다운로드 진행 보기') : T('모델 둘러보기')) : null));
     }
     put(box, h('div', { class: 'hello' }, head, h('h1', null, title), lede ? h('p', null, lede) : null, actions));
@@ -4301,7 +4340,7 @@ function fdDetail(repo) {
 function fdBest(rows, sup) {
   if (sup.k === 'arch' || sup.k === 'size' || sup.k === 'task') return null;
   const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOk(q) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
-  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: q === 'IQ4_XS' ? 'cuda' : /K/.test(q) ? 'k' : 'all' }); };
+  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: devicesOfQuant(q) }); };
   const good = ok.filter(f => { const t = fit(f); return t && t.k === 'ok'; });
   if (good.length) return good.find(f => quantFromName(f.path) === 'Q4_K_M') || good.sort((a, b) => b.size - a.size)[0];
   const tight = ok.filter(f => { const t = fit(f); return t && t.k === 'tight'; }).sort((a, b) => a.size - b.size);
@@ -4323,7 +4362,7 @@ function fdFileRow(repo, f, sup, best, m) {
   const c = fdCat(repo).find(x => (x.url || '') === `${HFHOST}/${repo}/resolve/main/${f.path}` || (x.file || '').toLowerCase() === name.toLowerCase());
   const mdl = c && c.installed ? modelOf(c.installed) : st.models.find(x => x.path && x.path.toLowerCase().endsWith('\\' + name.toLowerCase()));
   const ds = c ? dlStateOf(c) : null;
-  const fit = fitOf({ size: f.size, params: '', id: repo, devices: c && c.devices ? c.devices : (/K/.test(q) ? 'k' : 'all') });
+  const fit = fitOf({ size: f.size, params: '', id: repo, devices: c && c.devices ? c.devices : devicesOfQuant(q) });
   let why = '';
   if (sup.k === 'arch') why = T('지원하지 않는 구조');
   else if (sup.k === 'size') why = T('아직 미지원 크기');
@@ -4427,8 +4466,11 @@ const BENCH = [
     desc: T('프롬프트 처리(512 · 2048토큰)와 답 생성 속도를 토큰/초로 세 번씩 측정합니다.') },
   { kind: 'crosscheck', title: T('재현성 검증'), needModel: false, time: T('경로마다 5~20분'),
     desc: T('DeepSeek-R1-Distill-Qwen-7B Q8_0으로 수학 문제 32개를 풀어 기준 PC의 출력과 비트 단위로 비교합니다. 빌드와 커널의 해시도 함께 확인합니다.') },
+  { kind: 'pair', title: T('파일 쌍 재현성'), needModel: false, time: T('파일마다 1~20분'),
+    desc: T('같은 모델을 다르게 양자화한 GGUF 파일들(Liu · Tsai, arXiv:2610.19498)을 정밀 모드로 돌려, 문제 32개의 스텝마다 로짓 해시가 기준 PC와 같은지 보고 파일끼리의 차이(답이 처음 갈리는 스텝 · 토큰마다의 로그확률 차)를 잽니다.') },
 ];
-const KIND = { '진단': ['pulse', T('하드웨어 진단')], '속도': ['bolt', T('속도 측정')], '교차검증': ['shield', T('재현성 검증')] };
+const KIND = { '진단': ['pulse', T('하드웨어 진단')], '속도': ['bolt', T('속도 측정')], '교차검증': ['shield', T('재현성 검증')], '파일쌍': ['shield', T('파일 쌍 재현성')] };
+const pairTitle = c => (EN && c.title_en) || c.title || c.label;
 const R1_REF = 'deepseek-r1-distill-qwen-7b-q8_0';
 function benchModel(runnables) {
   if (!runnables.some(m => m.id === S.benchModel)) S.benchModel = runnables.length ? runnables[0].id : '';
@@ -4461,11 +4503,12 @@ function renderBench() {
   const st = S.st;
   const page = $('#page-bench');
   const j0 = st.job;
-  const j = j0 && (j0.state === 'running' || (['diag', 'speed', 'crosscheck'].includes(j0.kind) && jobKey(j0) !== S.jobHide)) ? j0 : null;
+  const j = j0 && (j0.state === 'running' || (['diag', 'speed', 'crosscheck', 'pair'].includes(j0.kind) && jobKey(j0) !== S.jobHide)) ? j0 : null;
   const runnables = sortedModels().filter(runnable);
   const hasR1 = st.models.some(m => m.catalog === R1_REF && runnable(m));
   const sel = benchModel(runnables);
-  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], runnables.map(m => m.id), hasR1, sel, S.results && S.results.length];
+  const pairs = (st.pair_catalog || []).map(c => [c.id, c.installed, dlStateOf(c), c.download && c.download.state, c.download && c.download.total ? Math.floor(20 * c.download.received / c.download.total) : 0]);
+  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], runnables.map(m => m.id), hasR1, sel, S.results && S.results.length, pairs];
   if (changed('bench', struct)) {
     const busy = !!(j && j.state === 'running');
     const r1c = st.catalog.find(c => c.id === R1_REF);
@@ -4534,14 +4577,36 @@ function jobCard(j) {
     h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T('실행 기록')), h('pre', { class: 'log', id: 'joblog' })),
     h('details', { class: 'fold', hidden: true }, h('summary', null, I('chevR', 's'), T('도구 출력')), h('pre', { class: 'log', id: 'job-tail' })));
 }
+// 0.11.1 — 파일 쌍 재현성의 파일: 고르기(설치된 것만) · 크기 · 받기(목록의 다운로드와 같은 길 — 받은 뒤 SHA-256)
+function pairFiles() {
+  const cat = (S.st && S.st.pair_catalog) || [];
+  const off = S.pairOff || (S.pairOff = new Set());
+  return h('div', { class: 'col g12' },
+    h('div', { class: 'col g8' }, cat.map(c => {
+      const ds = dlStateOf(c), d = c.download;
+      const pct = d && d.total ? Math.floor(100 * d.received / d.total) : 0;
+      return h('div', { class: 'row g8' },
+        h('label', { class: 'check grow' }, h('input', {
+          type: 'checkbox', class: 'pair-f', 'data-label': c.label, checked: c.installed && !off.has(c.label) ? true : null, disabled: c.installed ? null : true,
+          onchange: ev => { if (ev.target.checked) off.delete(c.label); else off.add(c.label); },
+        }), h('span', { class: 'col g4' }, h('span', { class: 'ink' }, c.label), h('span', { class: 'small muted' }, pairTitle(c)))),
+        h('span', { class: 'small muted num nw' }, fmtBytes(c.size)),
+        c.installed ? h('span', { class: 'tag ok' }, T('설치됨'))
+          : ds === 'run' ? h('span', { class: 'tag' }, T`받는 중 ${pct}%`)
+            : h('button', { class: 'btn sm needs-conn', onclick: () => startDownload(Object.assign({}, c, { note: pairTitle(c) })) }, I('download', 's'), ds === 'pause' ? T('이어서 받기') : T('받기')));
+    })),
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', class: 'pair-quick' }), T('빠른 확인 — 문제 4개(전체 검증 아님)')),
+    h('div', { class: 'small muted' }, T('파일은 Hugging Face에서 받고, 받은 뒤 SHA-256을 확인합니다. 그래픽 메모리가 파일 크기보다 1 GB 이상 커야 그 파일을 돌립니다(7B Q8_0은 약 9 GB).')));
+}
 function benchCard(b, runnables, hasR1, busy, r1c) {
   const extra = b.kind === 'crosscheck' ? h('div', { class: 'col g12' },
     h('label', { class: 'check' }, h('input', { type: 'checkbox', class: 'cc-quick' }), T('빠른 확인 — 문제 2개 · 64토큰(전체 검증 아님)')),
-    h('select', { class: 'input cc-mod', 'aria-label': T('검증할 경로') }, h('option', { value: 'both' }, T('모든 경로(권장)')), h('option', { value: 'coop' }, T('텐서 코어 경로만')), h('option', { value: 'base' }, T('기본 경로만')))) : null;
-  const can = b.needModel ? runnables.length > 0 : hasR1;
+    h('select', { class: 'input cc-mod', 'aria-label': T('검증할 경로') }, h('option', { value: 'both' }, T('모든 경로(권장)')), h('option', { value: 'coop' }, T('텐서 코어 경로만')), h('option', { value: 'base' }, T('기본 경로만')))) : b.kind === 'pair' ? pairFiles() : null;
+  const can = b.needModel ? runnables.length > 0 : b.kind === 'pair' ? ((S.st && S.st.pair_catalog) || []).some(c => c.installed) : hasR1;
   let need = null;
   if (!can && b.kind === 'crosscheck') need = h('div', { class: 'note-line' }, I('info', 's'), h('div', { class: 'col g8' }, h('span', null, T('DeepSeek-R1-Distill-Qwen-7B Q8_0 모델이 필요합니다.')),
     r1c && !r1c.installed ? h('div', null, h('button', { class: 'btn sm needs-conn', onclick: () => startDownload(r1c) }, I('download', 's'), T`다운로드(${fmtBytes(r1c.size)})`)) : null));
+  else if (!can && b.kind === 'pair') need = h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('위의 파일 가운데 하나 이상을 받으세요.')));
   else if (!can) need = h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('먼저 모델을 설치하세요.')));
   return h('div', { class: 'card bench-card', 'data-kind': b.kind },
     h('div', null, h('h2', null, b.title), h('div', { class: 'eyebrow' }, b.time)),
@@ -4552,6 +4617,11 @@ function benchCard(b, runnables, hasR1, busy, r1c) {
         const body = {};
         if (b.needModel) { body.model = S.benchModel; if (!body.model) return; }
         if (b.kind === 'crosscheck') { body.quick = card.querySelector('.cc-quick').checked; body.modules = card.querySelector('.cc-mod').value; }
+        if (b.kind === 'pair') {
+          body.quick = card.querySelector('.pair-quick').checked;
+          body.files = [...card.querySelectorAll('.pair-f')].filter(x => x.checked).map(x => x.dataset.label).join(',');
+          if (!body.files) { toast(T('돌릴 파일을 하나 이상 고르세요')); return; }
+        }
         if (S.streaming) { toast(T('채팅의 답이 끝난 뒤 실행할 수 있습니다')); return; }
         if (S.st.server.state === 'ready' && !(await confirmBox(T('채팅 모델을 내립니다'), h('p', { class: 'muted m0' }, T('측정하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?')), T('계속')))) return;
         try { await api('/api/bench/' + b.kind, body); resetSig(); refresh(); }
@@ -4595,11 +4665,11 @@ function resultVerdict(x) {
   if (/똑같은 출력|앞부분이 같습니다/.test(t)) return ['ok', T('일치')];
   return null;
 }
-const resultModel = x => (x.kind === '교차검증' ? labelById(R1_REF) : x.model ? labelById(x.model) : '-');
+const resultModel = x => (x.kind === '교차검증' ? labelById(R1_REF) : x.kind === '파일쌍' ? T('Qwen2.5 GGUF 파일들') : x.model ? labelById(x.model) : '-');
 function resultSummary(x) {
   const k = kpiFromText(x.kind, x.headline);
   if (k) return k.filter(Boolean).slice(0, 3).map(([v, l, s]) => `${s || l} ${v}`).join(NB);
-  if (x.kind === '교차검증') {
+  if (x.kind === '교차검증' || x.kind === '파일쌍') {
     const t = headText(x.headline);
     const tail = t.includes(' — ') ? t.split(' — ').pop() : t;
     return (isQuick(x) ? T('빠른 확인') + NB : '') + TM(pathLabel(tail));
@@ -4613,7 +4683,7 @@ function resultsTable(rs) {
     h('thead', null, h('tr', null, h('th', null, T('종류')), h('th', { class: 'c-model' }, T('모델', 'th')), h('th', { class: 'c-date' }, T('일시')), h('th', { class: 'c-res' }, T('결과')), h('th', { class: 'r' }, h('span', { class: 'sr' }, T('동작'))))),
     h('tbody', null, rs.map(x => {
       const k = KIND[x.kind] || ['terminal', x.kind];
-      const v = x.kind === '교차검증' ? resultVerdict(x) : null;
+      const v = x.kind === '교차검증' || x.kind === '파일쌍' ? resultVerdict(x) : null;
       const sum = resultSummary(x);
       const vt = v ? h('span', { class: 'tag ' + v[0] }, v[0] === 'err' ? I('alert') : null, v[1]) : null;
       return h('tr', { class: 'clk', onclick: e => { if (!e.target.closest('a, button')) openResult(x.name); } },
@@ -4645,6 +4715,26 @@ function diagLabel(k) {
   else if ((m = /^프롬프트 (\d+)$/.exec(s))) s = T`프롬프트 ${m[1]}토큰`;
   return alt ? s + T(' · 대체 커널') : s;
 }
+// 0.11.1 — 파일 쌍 재현성: 실행 이름(라벨 — 파일 설명), 파일끼리의 표(A 의 답을 A · B 로 점수 매긴 값 — 스텝은 0 부터)
+function pairRunName(run) {
+  const c = ((S.st && S.st.pair_catalog) || []).find(x => x.label === run.label);
+  return `${run.label} — ${c ? pairTitle(c) : run.title || ''}`;
+}
+const signed = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
+function pairTable(pairs) {
+  return h('div', null,
+    h('div', { class: 'section-head mt24' }, h('span', { class: 'sec' }, T('파일끼리')), h('span', { class: 'grow' }), h('span', { class: 'small muted' }, T('A의 답을 A · B로 점수 매긴 값 · 스텝은 0부터'))),
+    h('div', { class: 'list' }, h('table', { class: 'data' },
+      h('thead', null, h('tr', null, h('th', null, T('A ↔ B')), h('th', { class: 'r' }, T('같은 답')), h('th', { class: 'r' }, T('처음 갈리는 스텝(가운데값 · 최소~최대)')),
+        h('th', { class: 'r' }, T('토큰당 로그확률 차(B − A)')), h('th', { class: 'r' }, T('B의 1위가 A의 토큰과 다른 스텝')))),
+      h('tbody', null, pairs.map(p => h('tr', null,
+        h('td', { class: 'ink' }, `${p.a} ↔ ${p.b}`),
+        h('td', { class: 'r num' }, `${p.same}/${p.requests}`),
+        h('td', { class: 'r num' }, p.first_divergence ? `${p.first_divergence.median} (${p.first_divergence.min}~${p.first_divergence.max})` : '–'),
+        h('td', { class: 'r num' }, p.tokens ? signed(p.delta_mean_per_token, 5) : '–'),
+        h('td', { class: 'r num' }, `${fmtNum(p.b_top1_differs)} / ${fmtNum(p.tokens)}`)))))),
+    h('div', { class: 'small muted mt8' }, T('토큰마다의 차는 결과 폴더의 pair-A-B.json에 있습니다.')));
+}
 async function openResult(name) {
   modal(h('div', { class: 'muted' }, T('불러오는 중…')), null, true);
   const [txt, summary, speed, diag, env] = await Promise.all([getFile(name, '결과.txt'), getFile(name, 'summary.json'), getFile(name, 'speed.json'), getFile(name, 'diag.json'), getFile(name, 'environment.json')]);
@@ -4652,7 +4742,7 @@ async function openResult(name) {
   const k = KIND[kind] || ['terminal', kind];
   const stamp = (name.match(/(\d{8}-\d{6})$/) || [])[1];
   const quick = kind === '교차검증' && (/빠름/.test(name) || /빠른 확인|줄인 판/.test(txt || ''));
-  const modelTxt = kind === '교차검증' ? labelById(R1_REF) : (speed && speed.model) ? labelById(speed.model) : (env && env.model) ? labelById(env.model) : '';
+  const modelTxt = kind === '교차검증' ? labelById(R1_REF) : kind === '파일쌍' ? T('Qwen2.5 GGUF 파일들') + (/빠름/.test(name) ? T(' · 빠른 확인(문제 4개)') : '') : (speed && speed.model) ? labelById(speed.model) : (env && env.model) ? labelById(env.model) : '';
   const extra = speed ? T` · 동시 ${speed.slots}개 · 문맥 ${fmtCtx(speed.context)}` : '';
   const eyebrow = [k[1] + (quick ? T(' · 빠른 확인(문제 2개 · 64토큰)') : ''), modelTxt + extra, stamp ? stampText(stamp) : ''].filter(Boolean).join(' · ');
   let title = TM(headText(txt)) || name;
@@ -4675,17 +4765,18 @@ async function openResult(name) {
       const items = [...(run.items || [])].sort((a, b) => (a.result === 'same') - (b.result === 'same'));
       const bad = items.filter(it => it.result !== 'same');
       const okRun = run.same === run.total;
-      parts.push(h('div', { class: 'section-head mt24' }, h('span', { class: 'sec' }, TM(pathLabel(run.label))), h('span', { class: 'grow' }),
+      parts.push(h('div', { class: 'section-head mt24' }, h('span', { class: 'sec' }, kind === '파일쌍' ? pairRunName(run) : TM(pathLabel(run.label))), h('span', { class: 'grow' }),
         h('span', { class: 'tag ' + (okRun ? (quick ? '' : 'ok') : 'err') }, okRun ? null : I('alert'), `${run.same}/${run.total}`), h('span', { class: 'tag dim' }, T`동시 ${run.slots}개 · ${run.generate_minutes < 1 ? T('1분 미만') : run.generate_minutes + T('분')}`)));
       if (run.error) parts.push(h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(run.error))));
       const table = rows => h('div', { class: 'list' }, h('table', { class: 'data' },
         h('thead', null, h('tr', null, h('th', null, T('문제')), h('th', null, T('판정')), h('th', { class: 'r' }, T('토큰')), h('th', { class: 'r' }, T('기준')), h('th', { 'data-tip': T('토큰마다 로짓(점수)의 SHA-256'), 'data-tip-pos': 'top' }, T('단계별 해시')))),
         h('tbody', null, rows.map(it => h('tr', null, h('td', { class: 'num', 'data-tip': T`파일 ${String(it.id).padStart(2, '0')}.json`, 'data-tip-pos': 'right' }, Number(it.id) + 1),
-          h('td', null, h('span', { class: 'tag ' + (it.result === 'same' ? (quick ? '' : 'ok') : 'err') }, it.result === 'same' ? null : I('alert'), it.result === 'same' ? T('같음') : it.result === 'different' ? T`다름 · ${it.first_diff_char}번째 글자부터` : T('오류'))),
+          h('td', null, h('span', { class: 'tag ' + (it.result === 'same' ? (quick ? '' : 'ok') : 'err') }, it.result === 'same' ? null : I('alert'), it.result === 'same' ? T('같음') : it.result === 'different' ? (it.first_diff_step !== undefined ? T`다름 · 스텝 ${it.first_diff_step}부터` : T`다름 · ${it.first_diff_char}번째 글자부터`) : it.result === 'no_reference' ? T('기준 없음') : T('오류'))),
           h('td', { class: 'r num' }, fmtNum(it.n)), h('td', { class: 'r num muted' }, fmtNum(it.expected_n)), h('td', { class: 'mono small muted' }, (it.logit_hashes_sha256 || '').slice(0, 16)))))));
       if (bad.length) parts.push(table(bad));
       parts.push(h('details', { class: 'fold mt12' }, h('summary', null, I('chevR', 's'), bad.length ? T`모든 문제 ${items.length}개 보기` : T`문제 ${items.length}개 보기`), table(items)));
     }
+    if (kind === '파일쌍' && summary.pairs && summary.pairs.length) parts.push(pairTable(summary.pairs));
     if (summary.build) parts.push(h('details', { class: 'fold mt16' }, h('summary', null, I('chevR', 's'), T('빌드 · 커널 해시')),
       h('div', { class: 'kv' }, Object.entries(summary.build).flatMap(([kk, v]) => [h('div', { class: 'k' }, kk), h('div', { class: 'v mono small break' }, v)]))));
   } else parts.push(h('h2', { class: 'mt8' }, title));
