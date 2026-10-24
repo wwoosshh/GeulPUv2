@@ -18,6 +18,13 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   contract's loss against the fp64 model is 1/5,400 of llama.cpp's (0.8B). The KV cache holds only the attention layers (a quarter of
   them); each slot keeps its own linear-attention state. For now: CUDA and Exact mode only, no speculative decoding or context store for
   this model, and a slot reuses its cache only when the new prompt continues everything the slot holds.
+- **Qwen3.5 · 3.6 MoE** (architecture `qwen35moe` — checked with Qwen3.6-35B-A3B Q4_K_M, now in the app's model list). The router, the
+  top-k choice, the expert FFNs and the shared expert are written into the precision contract (section 4.11); the engine's logits equal
+  the CPU reference bit for bit on files cut from the model (4 layers · 32 experts). Its 18.1 GB of experts do not fit in a 12 GB card:
+  as many as fit stay in graphics memory and the rest in pinned host memory, which the GPU reads directly over PCIe, and while the server
+  is idle between requests it moves the most used experts into graphics memory. Where an expert lives does not change any bit. On an
+  RTX 4070 Ti it uses about 10.5 GB of RAM and generates 64 tokens/s in Exact mode (llama.cpp b11846's fastest setting on the same PC:
+  80). For now: CUDA and Exact mode only, like Qwen3.5.
 - **DeepSeek-R1-Distill-Llama.** Llama-architecture models with DeepSeek-R1's chat template now load and chat. The server renders the
   DeepSeek-R1 template exactly as the GGUF's `chat_template` does under jinja2 (the BOS text, the last system message, `<｜User｜>` and
   `<｜Assistant｜>` turns with earlier answers cut after their last `</think>`, and the `<think>\n` generation prompt of the Llama-based

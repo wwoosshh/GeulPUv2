@@ -26,7 +26,7 @@
   <img src="docs/img/readme/debugger-ko.png" alt="GeulPU 디버거 — 기록한 요청 50개의 실행을 재생: 요청과 분기가 모두 비트까지 같음" width="100%">
 </p>
 
-GeulPU는 Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Distill · Llama 3 · Mistral 같은 GGUF 모델을 내 PC의 NVIDIA · AMD 그래픽카드에서 돌립니다.
+GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Distill · Llama 3 · Mistral 같은 GGUF 모델을 내 PC의 NVIDIA · AMD 그래픽카드에서 돌립니다.
 채팅 화면은 브라우저에 열리고, 다른 프로그램은 OpenAI 호환 API로 씁니다. 계산은 **정밀도 계약**(precision contract)이라는 문서로
 정해져 있어 모든 결과가 CPU 참조 구현과 비트까지 같습니다 — 같은 요청이면 배치 · 슬롯 · 프롬프트 캐시 · 추측 디코딩과 상관없이,
 정밀 모드에서는 GPU가 달라도 같은 토큰과 로짓이 나옵니다.
@@ -157,6 +157,7 @@ llama.cpp는 배치와 상관없이 같은 출력을 목표로 하지 않습니�
 | `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B(14B는 합성 모델로 모양 확인, 32B는 0.6B · 4B와 같은 길로 불러옴) | 같음 |
 | `llama` | Llama 3.1 · 3.2 Instruct(3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | 같음 |
 | `qwen35` | Qwen3.5 0.8B · 4B(지금은 CUDA · 정밀 모드만) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K |
+| `qwen35moe` | Qwen3.6-35B-A3B(MoE — 그래픽 메모리에 들지 않는 전문가는 RAM 에, 지금은 CUDA · 정밀 모드만) | Q4_K_M(전문가 Q4_K · Q5_K · Q6_K 또는 Q8_0) |
 
 헤드 크기 64 · 96 · 128 을 받고, RoPE 를 헤드의 일부에만 거는 모델도 받습니다. 미세조정 모델도 돕니다 — 서버가 모델 파일의 채팅 템플릿을 그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기).
 Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다. GPU: NVIDIA RTX

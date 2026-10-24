@@ -316,7 +316,7 @@ const DICT = {
   "폴더 경로": "Folder path",
   "모델 폴더 고르기": "Choose the model folder",
   "받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.": "Choose where downloaded models go. Applies from the next start.",
-  "GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the qwen2 architecture (Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B and up), the qwen3 architecture (Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B) and the llama architecture (Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5). Support is checked as soon as you add a file.",
+  "GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), qwen35 구조(Qwen3.5), qwen35moe 구조(Qwen3.6-35B-A3B 같은 MoE), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the qwen2 architecture (Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B and up), the qwen3 architecture (Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), the qwen35 architecture (Qwen3.5), the qwen35moe architecture (MoE such as Qwen3.6-35B-A3B) and the llama architecture (Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5). Support is checked as soon as you add a file.",
   "이동": "Go",
   "이 폴더 선택": "Choose this folder",
   "구조 정보 없음": "No architecture info",
@@ -605,6 +605,9 @@ const DICT = {
   "정밀도 계약 그대로 — 연구 · 검증용. 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다": "The precision contract as written — for research and verification. With the same model file, bit-identical on any PC or GPU (NVIDIA · AMD)",
   "Vulkan 장치는 늘 정밀로 셉니다": "Vulkan devices always compute in Exact",
   "Qwen3.5는 아직 정밀로만 셉니다": "Qwen3.5 computes in Exact only for now",
+  "MoE 모델은 아직 정밀로만 셉니다": "MoE models compute in Exact only for now",
+  "이 PC에 맞음 · 전문가 일부는 RAM": "Fits this PC · some experts in RAM",
+  "Qwen3.6의 MoE 모델입니다(35B — 전문가 256개 가운데 토큰마다 8개를 써서, 한 토큰에 쓰는 가중치는 약 3B). 그래픽 메모리에 들지 않는 전문가 가중치는 RAM(고정 메모리)에 두고 GPU가 PCIe로 바로 읽으며, 자주 쓰는 전문가를 그래픽 메모리로 옮깁니다 — 12 GB GPU에서는 RAM을 약 10.5 GB 씁니다. 아직 CUDA · 정밀 모드만 됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24).": "A Qwen3.6 MoE model (35B — it uses 8 of its 256 experts per token, so about 3B of weights per token). Expert weights that do not fit in graphics memory stay in RAM (pinned memory) and the GPU reads them directly over PCIe; frequently used experts are moved into graphics memory — on a 12 GB GPU it uses about 10.5 GB of RAM. CUDA and Exact mode only for now. This file was run on CUDA (RTX 4070 Ti) (2026-10-24).",
   "활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다": "8-bit activations (llama.cpp class) — faster prompts. Reproducible bit for bit with the same settings, but answers can differ from Exact",
   "바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다": "Switching reloads the loaded model in that mode",
   "다음에 모델을 불러올 때 적용합니다": "Applies the next time a model is loaded",
@@ -1328,7 +1331,16 @@ const TMX = [
   [/생성 64토큰\(문맥 1024 이후\)/g, 'generation 64 tokens (after context 1024)'],
   // 모델 파일(GGUF 머리) 까닭
   [/여러 조각으로 나뉜 GGUF의 일부입니다\((\d+)조각\) — 하나로 합친 파일만 지원합니다\(llama-gguf-split --merge\)/g, 'Part of a GGUF split into $1 parts — only merged single files are supported (llama-gguf-split --merge)'],
-  [/지원하지 않는 모델 구조입니다\((.+?)\) — 지금은 qwen2 구조\(Qwen2\.5 · DeepSeek-R1-Distill-Qwen\), qwen3 구조\(Qwen3\), llama 구조\(Llama 3\.1 · 3\.2 · Mistral\)만 지원합니다/g, 'Unsupported model architecture ($1) — only the qwen2 (Qwen2.5 · DeepSeek-R1-Distill-Qwen), qwen3 (Qwen3) and llama (Llama 3.1 · 3.2 · Mistral) architectures are supported for now'],
+  [/지원하지 않는 모델 구조입니다\((.+?)\) — 지금은 qwen2 구조\(Qwen2\.5 · DeepSeek-R1-Distill-Qwen\), qwen3 구조\(Qwen3\), qwen35 구조\(Qwen3\.5\), qwen35moe 구조\(Qwen3\.5 · 3\.6 MoE\), llama 구조\(Llama 3\.1 · 3\.2 · Mistral\)만 지원합니다/g, 'Unsupported model architecture ($1) — only the qwen2 (Qwen2.5 · DeepSeek-R1-Distill-Qwen), qwen3 (Qwen3), qwen35 (Qwen3.5), qwen35moe (Qwen3.5 · 3.6 MoE) and llama (Llama 3.1 · 3.2 · Mistral) architectures are supported'],
+  // 0.12.0 12-3g-4 — MoE 파일의 까닭
+  [/지원하지 않는 MoE 모양입니다\(전문가 (\d+)개 · 토큰마다 고르는 전문가 (\d+)개\)/g, 'Unsupported MoE shape ($1 experts · $2 experts chosen per token)'],
+  [/지원하지 않는 MoE 전문가 크기입니다\(전문가 FFN (\d+)\)/g, 'Unsupported MoE expert size (expert FFN $1)'],
+  [/전문가 텐서\(blk\.0\.ffn_gate_exps\.weight\)가 없습니다/g, 'The expert tensor (blk.0.ffn_gate_exps.weight) is missing'],
+  [/MoE 파일의 전문가 행렬은 모두 Q8_0이거나 모두 Q4_K · Q5_K · Q6_K여야 합니다/g, "An MoE file's expert matrices must be all Q8_0 or all Q4_K · Q5_K · Q6_K"],
+  [/k-양자화 전문가는 너비와 전문가 FFN 폭이 256의 배수여야 합니다/g, 'k-quant experts need a hidden size and expert FFN width that are multiples of 256'],
+  [/MoE 파일의 라우터\(ffn_gate_inp\)가 F32가 아닙니다/g, "The MoE file's router (ffn_gate_inp) is not F32"],
+  [/MoE 파일의 임베딩 형식\((.+?)\)은 지원하지 않습니다 — Q8_0 · Q4_K · Q5_K · Q6_K여야 합니다/g, "The MoE file's embedding type ($1) is not supported — it must be Q8_0 · Q4_K · Q5_K · Q6_K"],
+  [/MoE 파일의 출력 가중치 형식\((.+?)\)은 지원하지 않습니다 — Q8_0 · Q4_K · Q5_K · Q6_K여야 합니다/g, "The MoE file's output weight type ($1) is not supported — it must be Q8_0 · Q4_K · Q5_K · Q6_K"],
   [/지원하지 않는 헤드 크기입니다\((\d+) · (\d+)\) — 128만 지원합니다/g, 'Unsupported head size ($1 · $2) — only 128 is supported'],
   [/지원하지 않는 헤드 크기입니다\((\d+) · (\d+)\) — 64 · 96 · 128만 지원합니다/g, 'Unsupported head size ($1 · $2) — only 64 · 96 · 128 are supported'],
   [/RMSNorm eps가 10⁻⁶이 아닌 Qwen3 파일은 지원하지 않습니다/g, 'Qwen3 files whose RMSNorm eps is not 10⁻⁶ are not supported'],
@@ -1363,6 +1375,10 @@ const TMX = [
   [/F16 · BF16 · F32 파일의 층 가중치 (\d+)개가 그 세 형식이 아닙니다/g, '$1 layer weights of this F16 · BF16 · F32 file are not in those three formats'],
   [/이 GPU에서는 F16 · BF16 · F32 파일을 아직 실행할 수 없습니다\. 같은 모델의 Q8_0 · Q4_K_M 파일은 실행됩니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run F16 · BF16 · F32 files yet. The same model's Q8_0 · Q4_K_M files run (a limit of GPUs with 32 KB of shared memory)."],
   [/이 GPU에서는 헤드 크기가 128이 아니거나 RoPE를 헤드의 일부에만 거는 모델을 아직 실행할 수 없습니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run models whose head size isn't 128, or that apply RoPE to only part of each head, yet (a limit of GPUs with 32 KB of shared memory)."],
+  [/Qwen3\.5는 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\./g, 'Qwen3.5 runs only on CUDA (NVIDIA GPUs) for now.'],
+  [/MoE 모델\(Qwen3\.5 · 3\.6 MoE\)은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\./g, 'MoE models (Qwen3.5 · 3.6 MoE) run only on CUDA (NVIDIA GPUs) for now.'],
+  [/이 MoE 모델은 전문가 가중치 가운데 그래픽 메모리에 들지 않는 약 ([\d.]+) GB를 RAM\(고정 메모리\)에 둡니다\. 지금 남은 RAM이 ([\d.]+) GB라 모자랍니다 — 다른 프로그램을 닫고 다시 불러오세요\./g, 'This MoE model keeps about $1 GB of expert weights that do not fit in graphics memory in RAM (pinned memory). Only $2 GB of RAM is free — close other programs and load it again.'],
+  [/MoE 모델: 전문가 가중치 ([\d.]+) GB 가운데 그래픽 메모리에 들지 않는 몫\(약 ([\d.]+) GB\)은 RAM\(고정 메모리\)에 둡니다\./g, 'MoE model: of its $1 GB of expert weights, the part that does not fit in graphics memory (about $2 GB) stays in RAM (pinned memory).'],
   [/IQ4_XS 파일은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\. 같은 모델의 Q4_K_M · Q8_0 파일은 Vulkan에서도 실행됩니다\./g, "IQ4_XS files run only on CUDA (NVIDIA GPUs) for now. The same model's Q4_K_M · Q8_0 files also run on Vulkan."],
   [/GeulPU가 지원하지 않는 파일입니다/g, "GeulPU doesn't support this file"],
   [/이 GPU에서는 이 파일을 아직 실행할 수 없습니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run this file yet (a limit of GPUs with 32 KB of shared memory)."],
@@ -1800,7 +1816,8 @@ const modeOfMsg = m => m.mode || (m.tid && TRACES[m.tid] ? modeOfTrace(TRACES[m.
 // 0.12.0 12-3d-1 — 계산 방식 설정은 둘: 양자화 파일(precision — 기본 빠름)과 F16 · BF16 · F32 파일(precision_unquantized — 기본 정밀)
 const unquant = m => !!(m && m.shape && m.shape.quant === 'W16');
 // 0.12.0 12-3f-2 — Qwen3.5(qwen35)는 아직 정밀만(빠른 모드의 모듈 · 검증은 뒤에)
-const exactOnly = m => !!(m && m.shape && m.shape.arch === 'qwen35');
+const exactOnly = m => !!(m && m.shape && (m.shape.arch === 'qwen35' || m.shape.arch === 'qwen35moe'));   // 0.12.0 12-3g-4 — MoE 도
+const isMoE = m => !!(m && m.shape && m.shape.arch === 'qwen35moe');
 const precKey = m => unquant(m) ? 'precision_unquantized' : 'precision';
 const precSet = (m, set) => exactOnly(m) ? 'exact' : unquant(m) ? (set.precision_unquantized || 'exact') : (set.precision || 'fast');
 // 계산 방식 칩이 가리키는 모델 — 올라 있거나 올리는 중인 모델, 없으면 지금 채팅의 모델
@@ -1833,9 +1850,11 @@ function labelById(id) {
 // 가중치 형식으로 채운다
 function quantOf(m) {
   const s = (m && m.shape) || {};
-  if (s.quant && !['K', 'KI', 'W16'].includes(s.quant)) return s.quant;
+  const moe = s.experts > 0;                  // 0.12.0 12-3g-4 — MoE 의 모양 형식은 층(공유 전문가)의 것이라 목록 · 파일 이름의 이름을 먼저
+  if (!moe && s.quant && !['K', 'KI', 'W16'].includes(s.quant)) return s.quant;
   const c = catalogOf(m);
   if (c && c.quant) return c.quant;
+  if (moe) { const q = quantFromName(String((m && m.path) || '').split(/[\\/]/).pop()); if (q) return q; }
   return s.weight_type || s.quant || '';
 }
 const QORDER = ['F32', 'F16', 'BF16', 'Q8_0', 'Q6_K', 'Q5_K_M', 'Q5_K_S', 'Q4_K_M', 'Q4_K_S', 'Q4_0'];
@@ -1881,6 +1900,13 @@ function fitOf(c) {
   if (c.devices === 'cuda' && d.layer === 'vulkan') return { k: 'unsup', t: T('이 GPU 미지원') };      // 1.0.0 1-6c — IQ4_XS 는 CUDA 먼저
   const big = isBig(c);
   const mem = d.memory / GIB, size = c.size / GIB;
+  if (c.moe) {          // 0.12.0 12-3g-4 — MoE: dense 가중치가 그래픽 메모리에 들면 된다(들지 않는 전문가는 RAM — 고정 메모리)
+    // 목록에 없는 파일은 전문가를 파일의 85 % 로 어림한다(Qwen3.6-35B-A3B Q4_K_M 은 89 %)
+    const dense = (c.size - (c.expert_bytes > 0 ? c.expert_bytes : c.size * 0.85)) / GIB;
+    if (mem >= dense + 3.5) return { k: 'ok', t: T('이 PC에 맞음 · 전문가 일부는 RAM') };
+    if (mem >= dense + 2) return { k: 'tight', t: T('빠듯함 · 문맥이 줄어듦') };
+    return { k: 'no', t: T('그래픽 메모리 부족') };
+  }
   if (mem >= size + (big ? 4 : 2.5)) return { k: 'ok', t: T('이 PC에 맞음') };
   if (mem >= size + (big ? 1.5 : 1)) return { k: 'tight', t: T('빠듯함 · 문맥이 줄어듦') };
   return { k: 'no', t: T('그래픽 메모리 부족') };
@@ -2260,7 +2286,7 @@ $('#mode-chip').addEventListener('click', e => {
   const body = [
     h('div', { class: 'pop-title' }, T('계산 방식')),
     opt('exact', T('정밀'), T('정밀도 계약 그대로 — 연구 · 검증용. 같은 모델 파일이면 어느 PC · GPU(NVIDIA · AMD)에서도 비트까지 같습니다')),
-    opt('fast', T('빠름'), vk ? T('Vulkan 장치는 늘 정밀로 셉니다') : exactOnly(mm) ? T('Qwen3.5는 아직 정밀로만 셉니다') : T('활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')),
+    opt('fast', T('빠름'), vk ? T('Vulkan 장치는 늘 정밀로 셉니다') : isMoE(mm) ? T('MoE 모델은 아직 정밀로만 셉니다') : exactOnly(mm) ? T('Qwen3.5는 아직 정밀로만 셉니다') : T('활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다')),
     h('div', { class: 'pop-note' }, why || (loaded ? T('바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다') : T('다음에 모델을 불러올 때 적용합니다'))),
     !vk && unquant(mm) ? h('div', { class: 'pop-note' }, T('F16 · BF16 · F32 파일의 계산 방식은 따로 기억합니다 — 기본은 정밀')) : null,
   ];
@@ -3735,7 +3761,8 @@ function modelBlocks() {
     const s = head.shape || {};
     const ctxNow = Math.min(s.context || 0, S.st.settings.context || s.context || 0);
     const yarn = s.yarn_orig > 0 && ctxNow > (s.context_native || 0) ? ' · YaRN' : '';       // GeulPUv2 ③a — 파일의 위치 수를 넘는 문맥은 YaRN 으로
-    const sub = s.ok ? T`${s.params ? (s.params / 1e9).toFixed(1) + 'B' + NB : ''}${kindOf(head)}${NB}문맥 ${fmtCtx(ctxNow)}${yarn}${s.context > ctxNow ? T` (최대 ${fmtCtx(s.context)})` : ''}` : kindOf(head);
+    const moe = s.experts > 0 ? `MoE ${s.experts_used}/${s.experts}` + NB : '';                  // 0.12.0 12-3g-4 — 토큰마다 고르는 전문가 / 전문가
+    const sub = s.ok ? T`${(s.params ? (s.params / 1e9).toFixed(1) + 'B' + NB : '') + moe}${kindOf(head)}${NB}문맥 ${fmtCtx(ctxNow)}${yarn}${s.context > ctxNow ? T` (최대 ${fmtCtx(s.context)})` : ''}` : kindOf(head);
     return h('div', { class: 'mblock' },
       h('div', { class: 'mhead' },
         h('div', { class: 'main' }, h('div', { class: 'title' }, h('span', { class: 'nm' }, g.name)), h('div', { class: 'sub' }, sub))),
@@ -3951,7 +3978,7 @@ async function browse(path, pick) {
   const go = () => browse(inp.value.trim(), pick);
   inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
   modal(h('div', null, h('h2', null, pick ? T('모델 폴더 고르기') : T('GGUF 파일 추가')),
-    h('p', { class: 'small muted m0 mb12' }, pick ? T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.') : T('GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
+    h('p', { class: 'small muted m0 mb12' }, pick ? T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.') : T('GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), qwen35 구조(Qwen3.5), qwen35moe 구조(Qwen3.6-35B-A3B 같은 MoE), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
     h('div', { class: 'fs-path' }, inp, h('button', { class: 'btn', onclick: go }, T('이동'))), list),
     [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('닫기')),
       pick ? h('button', { class: 'btn primary', disabled: j.path ? null : true, onclick: () => { closeModal(); pick(j.path); } }, T('이 폴더 선택')) : null].filter(Boolean), false, '.fs-item');
@@ -3965,7 +3992,12 @@ const HFHOST = 'https://huggingface.co';
 const quantFromName = n => { const m = /(IQ\d_[A-Z]+|Q\d_K(?:_[SML])?|Q\d_\d|BF16|F16|F32)/i.exec(n || ''); return m ? m[1].toUpperCase() : ''; };
 const quantOk = q => /^(Q8_0|Q4_0|Q4_K(_[SM])?|Q5_K(_[SM])?|Q6_K|IQ4_XS|F16|BF16|F32)$/.test(q);      // 1.0.0 1-6c — IQ4_XS(CUDA 먼저). 0.12.0 12-3d-1 — F16 · BF16 · F32
 const hfName = id => String(id).split('/').pop().replace(/[-_.]?GGUF$/i, '');
-const archOk = a => a === 'qwen2' || a === 'qwen3' || a === 'llama';      // 39단계 — llama(Llama 3.1 · 3.2 · Mistral)
+const archOk = a => a === 'qwen2' || a === 'qwen3' || a === 'llama' || a === 'qwen35' || a === 'qwen35moe';      // 39단계 — llama(Llama 3.1 · 3.2 · Mistral). 0.12.0 — Qwen3.5 · MoE
+// 0.12.0 12-3g-4 — 아직 CUDA 만 도는 구조(Qwen3.5 · MoE), 저장소의 구조
+const cudaArch = a => a === 'qwen35' || a === 'qwen35moe';
+const fdArch = m => (m && m.gguf && m.gguf.architecture) || '';
+// Qwen3.5 · MoE 는 Q8_0 · k-양자화(Q4_K · Q5_K · Q6_K)만(IQ4_XS · Q4_0 · F16 · BF16 · F32 는 아직)
+const quantOkFor = (q, a) => quantOk(q) && (!cudaArch(a) || /^(Q8_0|Q[456]_K(_[SM])?)$/.test(q));
 // 크기로 어림하는 지원 여부(확인은 받기 전에 GGUF 머리로) — 매개변수 수(미세조정도 바탕과 같고, 출력을 따로 둔 변환은 낱말표만큼 크다).
 // Qwen3: 0.6B · 1.7B · 4B · 8B · 14B · 32B 는 실행(1.0.0 1-6a — 질의 폭이 너비와 다른 0.6B · 4B · 32B 도), 그 밖의 크기는 받기 전 확인.
 // Qwen2: 0.12.0 12-3d-2 — 헤드 크기 64 인 작은 것(0.5B 등)도 실행
@@ -4373,10 +4405,11 @@ function fdDetail(repo) {
     readme);
 }
 // 이 PC 에 가장 맞는 파일 — 받는 형식 가운데 메모리에 넉넉히 맞는 것 중 Q4_K_M → 가장 큰 것, 없으면 빠듯한 것 중 가장 작은 것
-function fdBest(rows, sup) {
+function fdBest(rows, sup, m) {
   if (sup.k === 'arch' || sup.k === 'size' || sup.k === 'task') return null;
-  const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOk(q) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
-  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: devicesOfQuant(q) }); };
+  const a = fdArch(m);
+  const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOkFor(q, a) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
+  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: cudaArch(a) ? 'cuda' : devicesOfQuant(q), moe: a === 'qwen35moe' }); };
   const good = ok.filter(f => { const t = fit(f); return t && t.k === 'ok'; });
   if (good.length) return good.find(f => quantFromName(f.path) === 'Q4_K_M') || good.sort((a, b) => b.size - a.size)[0];
   const tight = ok.filter(f => { const t = fit(f); return t && t.k === 'tight'; }).sort((a, b) => a.size - b.size);
@@ -4387,7 +4420,7 @@ function fdFiles(repo, files, sup, m) {
   // 받을 수 있는 형식(한 파일)이 먼저 — 양자화 차례 → 큰 것부터, 받지 못하는 것은 뒤에
   const can = f => quantOk(quantFromName(f.path)) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path);
   const rows = files.slice().sort((a, b) => (can(b) - can(a)) || qRank(quantFromName(a.path)) - qRank(quantFromName(b.path)) || b.size - a.size);
-  const best = fdBest(rows, sup);
+  const best = fdBest(rows, sup, m);
   return h('div', { class: 'fd-files' }, rows.map(f => fdFileRow(repo, f, sup, f === best, m)));
 }
 function fdFileRow(repo, f, sup, best, m) {
@@ -4398,13 +4431,15 @@ function fdFileRow(repo, f, sup, best, m) {
   const c = fdCat(repo).find(x => (x.url || '') === `${HFHOST}/${repo}/resolve/main/${f.path}` || (x.file || '').toLowerCase() === name.toLowerCase());
   const mdl = c && c.installed ? modelOf(c.installed) : st.models.find(x => x.path && x.path.toLowerCase().endsWith('\\' + name.toLowerCase()));
   const ds = c ? dlStateOf(c) : null;
-  const fit = fitOf({ size: f.size, params: '', id: repo, devices: c && c.devices ? c.devices : devicesOfQuant(q) });
+  const a = fdArch(m);
+  const fit = fitOf({ size: f.size, params: '', id: repo, devices: c && c.devices ? c.devices : cudaArch(a) ? 'cuda' : devicesOfQuant(q),
+    moe: c ? !!c.moe : a === 'qwen35moe', expert_bytes: c && c.expert_bytes ? c.expert_bytes : 0 });      // 0.12.0 12-3g-4
   let why = '';
   if (sup.k === 'arch') why = T('지원하지 않는 구조');
   else if (sup.k === 'size') why = T('아직 미지원 크기');
   else if (sup.k === 'task') why = T('대화용 모델이 아님');
   else if (split) why = T('여러 조각으로 나뉜 파일 — 합친 파일만 받습니다');
-  else if (q && !quantOk(q)) why = T`${q} 형식은 아직 미지원`;
+  else if (q && !quantOkFor(q, a)) why = T`${q} 형식은 아직 미지원`;
   else if (!q) why = T('양자화 형식을 알 수 없는 파일');
   else if (!c && !(f.lfs && f.lfs.oid)) why = T('SHA-256 정보가 없는 파일');
   const k = repo + '/' + f.path;
