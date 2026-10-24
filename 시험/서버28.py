@@ -331,15 +331,18 @@ def 일28c(a):
         so = socket.create_connection(("127.0.0.1", p), timeout=60)
         몸11 = json.dumps({"messages": [{"role": "user", "content": "Write a long story."}], "temperature": 0, "max_tokens": 400,
                           "stream": True}).encode()
-        so.sendall(b"POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: "
-                   + str(len(몸11)).encode() + b"\r\n\r\n" + 몸11)
+        so.sendall(b"POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:" + str(p).encode()       # 0.10.1 — 다른 Host 는 403(DNS 리바인딩 막음)
+                   + b"\r\nContent-Type: application/json\r\nContent-Length: " + str(len(몸11)).encode() + b"\r\n\r\n" + 몸11)
         받음 = b""
         while 받음.count(b"data: ") < 5:
-            받음 += so.recv(4096)
+            조각11 = so.recv(4096)
+            if not 조각11:                                           # 서버가 먼저 닫았다(오류 응답) — 실패로
+                break
+            받음 += 조각11
         so.close()
         time.sleep(0.5)
         s, d11 = 요청(p, "POST", "/v1/chat/completions", {"messages": [{"role": "user", "content": "Say hi."}], "temperature": 0, "max_tokens": 8})
-        판(11, "흘리는 중에 끊은 연결 뒤", s == 200 and len(d11["choices"][0]["message"]["content"]) > 0)
+        판(11, "흘리는 중에 끊은 연결 뒤", 받음.count(b"data: ") >= 5 and s == 200 and len(d11["choices"][0]["message"]["content"]) > 0)
         몸파일 = os.path.join(a.작업, "curl_몸.json")
         json.dump({"messages": [{"role": "user", "content": "Say hello in Korean."}], "temperature": 0, "max_tokens": 16},
                   open(몸파일, "w", encoding="utf-8"), ensure_ascii=False)
@@ -354,7 +357,7 @@ def 일28c(a):
         c = http.client.HTTPConnection("127.0.0.1", p, timeout=60)
         c.request("OPTIONS", "/v1/chat/completions", headers={"Origin": "http://example.com", "Access-Control-Request-Method": "POST"})
         r = c.getresponse(); r.read()
-        판(13, "OPTIONS 의 CORS", r.status == 204 and r.getheader("Access-Control-Allow-Origin") == "*")
+        판(13, "Origin 이 있는 요청은 403 · CORS 머리 없음(0.10.1)", r.status == 403 and r.getheader("Access-Control-Allow-Origin") is None)
         c.close()
         # 14 usage.prompt_tokens_details.cached_tokens — 같은 요청을 다시 보내면 마지막 행만 빼고 캐시에서(마지막 프롬프트 행은 늘 셈),
         # cache_prompt false 면 0, 확장 필드 geulpu.prompt_tokens_cached 와 같다
