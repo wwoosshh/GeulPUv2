@@ -26,7 +26,7 @@ branch from any token, and compare models and quantizations request by request.
   <img src="docs/img/readme/debugger.png" alt="The GeulPU debugger: a recorded run of 50 requests replayed — every request and branch is bit-identical" width="100%">
 </p>
 
-GeulPU runs GGUF models — Qwen3.5, Qwen3, Qwen2.5, DeepSeek-R1-Distill, Llama 3 and Mistral — on your own NVIDIA or AMD graphics card, with a chat
+GeulPU runs GGUF models — Qwen3.6-35B-A3B (MoE), Qwen3.5, Qwen3, Qwen2.5, DeepSeek-R1-Distill, Llama 3 and Mistral — on your own NVIDIA or AMD graphics card, with a chat
 screen in the browser and an OpenAI-compatible API. Its arithmetic is fixed by a written **precision contract**, so every result is
 bit-identical to a CPU reference implementation: the same request gives the same tokens and logits whatever the batch, the slot, the
 prompt cache or speculative decoding — and, in exact mode, whatever the GPU.
@@ -161,6 +161,7 @@ fastest speculative setting — with bit-identical output. Every measurement, wi
 | `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B (14B checked on a synthetic model; 32B loads the same way as 0.6B · 4B) | same |
 | `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | same |
 | `qwen35` | Qwen3.5 0.8B · 4B (CUDA, Exact mode for now) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K |
+| `qwen35moe` | Qwen3.6-35B-A3B (MoE — experts that do not fit in graphics memory stay in RAM; CUDA, Exact mode for now) | Q4_K_M (experts Q4_K · Q5_K · Q6_K or Q8_0) |
 
 Head sizes 64 · 96 · 128 are accepted, including models that apply RoPE to only part of each head. Fine-tunes of these models run too — the server runs each model file's own chat template with a jinja interpreter that matches
 transformers byte for byte. Qwen2.5 (7B and larger) and Qwen3 take up to 131,072 tokens of context

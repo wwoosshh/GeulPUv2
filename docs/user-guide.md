@@ -389,6 +389,7 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 | qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 4B · 8B run on this project's PC (14B on a synthetic model) |
 | llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | Head size 64 · 96 · 128, including RoPE on part of each head — 1.5B · 2B · 3B · 7B · 8B run on this project's PC; head size 96, partial RoPE and 70B checked as shapes with synthetic models |
 | qwen35 | Qwen3.5 (full-attention and linear-attention layers mixed) | 0.8B (Q8_0) · 4B (Q4_K_M) run on this project's PC — CUDA and Exact mode for now, without speculative decoding or the context store |
+| qwen35moe | Qwen3.5 · 3.6 MoE (Qwen3.5 layers with mixture-of-experts FFNs) | Qwen3.6-35B-A3B (Q4_K_M) runs on a 12 GB card — experts that do not fit in graphics memory stay in RAM (about 10.5 GB); CUDA and Exact mode for now |
 
 The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
 parse are refused — it parsed all 228 templates of the 1,000 most-downloaded GGUF repositories on Hugging Face).
