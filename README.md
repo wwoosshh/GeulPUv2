@@ -26,7 +26,8 @@ branch from any token, and compare models and quantizations request by request.
   <img src="docs/img/readme/debugger.png" alt="The GeulPU debugger: a recorded run of 50 requests replayed — every request and branch is bit-identical" width="100%">
 </p>
 
-GeulPU runs GGUF models — Qwen3.6-35B-A3B (MoE), Qwen3.5, Qwen3, Qwen2.5, DeepSeek-R1-Distill, Llama 3 and Mistral — on your own NVIDIA or AMD graphics card, with a chat
+GeulPU runs GGUF models — Qwen3.6-35B-A3B (MoE), Qwen3.5, Qwen3, Qwen2.5, DeepSeek-R1-Distill, Llama 3, Mistral and, from 0.13.0, Gemma 4
+([which models](#supported-models-and-hardware)) — on your own NVIDIA or AMD graphics card, with a chat
 screen in the browser and an OpenAI-compatible API. Its arithmetic is fixed by a written **precision contract**, so every result is
 bit-identical to a CPU reference implementation: the same request gives the same tokens and logits whatever the batch, the slot, the
 prompt cache or speculative decoding — and, in exact mode, whatever the GPU.
@@ -42,7 +43,8 @@ a token, a tool result, the quantization — and see the effect of that one chan
 - **Debugger for local models.** Record runs, replay them bit for bit, find low-margin steps, branch from any token or edited request,
   and compare two runs request by request — from the app or from scripts.
 - **Research panel.** For any answer in the chat: each token's probability, rank, top-10 alternatives, entropy and margin; branch,
-  compare, score text, export, and check reproduction files.
+  compare, score text, export, and check reproduction files. From 0.13.0 it also shows at which layer an answer appears — the logit lens
+  at every layer, and the Jacobian lens with a J file fitted on the original (PyTorch) model.
 - **Fast where it matters.** With the default settings, prompts and generation are faster than llama.cpp at every length measured
   (0.76–0.97× its time on Qwen2.5-7B, down to 0.48× deep into a Llama-3.1-8B session); speculative decoding that is 3.5–4× faster on
   editing tasks *and* bit-identical; a prompt cache on the SSD that restores a coding agent's 15k-token prompt in
@@ -155,20 +157,37 @@ fastest speculative setting — with bit-identical output. Every measurement, wi
 
 ## Supported models and hardware
 
-| Architecture | Models | Weight formats |
-|---|---|---|
-| `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen (0.5B and larger) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS (CUDA) · F16 · BF16 · F32 |
-| `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B (14B checked on a synthetic model; 32B loads the same way as 0.6B · 4B) | same |
-| `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | same |
-| `qwen35` | Qwen3.5 0.8B · 4B (CUDA, Exact mode for now) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K |
-| `qwen35moe` | Qwen3.6-35B-A3B (MoE — experts that do not fit in graphics memory stay in RAM; CUDA, Exact mode for now) | Q4_K_M (experts Q4_K · Q5_K · Q6_K or Q8_0) |
+GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-split --merge`). By architecture (GGUF's
+`general.architecture`):
 
-Head sizes 64 · 96 · 128 are accepted, including models that apply RoPE to only part of each head. Fine-tunes of these models run too — the server runs each model file's own chat template with a jinja interpreter that matches
-transformers byte for byte. Qwen2.5 (7B and larger) and Qwen3 take up to 131,072 tokens of context
-with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3 (verified on an AMD Radeon RX 9060 XT — on GPUs
-with 32 KB of shared memory, such as AMD's Windows driver, F16 · BF16 · F32 files don't run yet). Releases are built for Windows x64; on Linux GeulPU builds from source (tested
-under WSL2). Not yet: other architectures (Gemma, Phi, …), other mixture-of-experts models (Mixtral, Qwen3-30B-A3B, …), image input, Q2_K · Q3_K · IQ formats other
-than IQ4_XS (which runs on CUDA), macOS ([details](docs/user-guide.md#supported-models)).
+| Architecture | Models | Weight formats | GPUs · computation modes |
+|---|---|---|---|
+| `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen (0.5B and larger) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS (CUDA) · F16 · BF16 · F32 | CUDA · Vulkan, Exact · Fast |
+| `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B (14B checked on a synthetic model; 32B loads the same way as 0.6B · 4B) | same | same |
+| `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | same | same |
+| `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B (from 0.13.0 — the ggml-org and lmstudio Q4_K_M files) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K (from 0.13.0 also files that mix them from matrix to matrix) | CUDA, Exact · Fast (Fast from 0.13.0) |
+| `qwen35moe` | Qwen3.6-35B-A3B (MoE — experts that do not fit in graphics memory stay in RAM) | Q4_K_M (experts Q4_K · Q5_K · Q6_K or Q8_0) | CUDA, Exact |
+| `gemma4` | Gemma 4 12B instruct (from 0.13.0) | files whose matrices are all k-quants (Q4_K_M, …) or all Q8_0 | CUDA, Exact |
+
+Files GeulPU has run itself (**Verified by GeulPU** in the app — download them there and they are ready), by graphics memory:
+
+| Graphics memory | Files |
+|---|---|
+| 4 GB | Qwen3-0.6B Q8_0 · Qwen3.5-0.8B Q8_0 · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M · MiniCPM5-2B Q4_K_M |
+| 6 GB | Qwen3-1.7B Q8_0 · Qwen2.5-1.5B-Instruct Q8_0 · Qwen3-4B Q4_K_M · Qwen3.5-4B Q4_K_M · Llama-3.2-3B-Instruct Q8_0 · Qwen2.5-3B-Instruct Q8_0 |
+| 8 GB | Qwen3-8B Q4_K_M · Qwen3.5-9B Q4_K_M · Qwen2.5-7B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-7B Q4_K_M · DeepSeek-R1-Distill-Llama-8B Q4_K_M · Llama-3.1-8B-Instruct Q4_K_M · Mistral-7B-Instruct-v0.3 Q4_K_M · Qwen3-4B Q8_0 |
+| 12 GB | Qwen3-8B Q8_0 · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 · Llama-3.1-8B-Instruct Q8_0 · Mistral-7B-Instruct-v0.3 Q8_0 · Gemma-4-12B-it Q4_K_M (from 0.13.0) · Qwen3.6-35B-A3B Q4_K_M (plus about 10.5 GB of RAM) |
+| 16 GB or more | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M |
+
+Head sizes 64 · 96 · 128 are accepted, including models that apply RoPE to only part of each head. Fine-tunes of these models run too —
+the server runs each model file's own chat template with a jinja interpreter that matches transformers byte for byte. Qwen2.5 (7B and
+larger) and Qwen3 take up to 131,072 tokens of context with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan
+1.3 (verified on an AMD Radeon RX 9060 XT — on GPUs with 32 KB of shared memory, such as AMD's Windows driver, F16 · BF16 · F32 files
+don't run yet). Qwen3.5, Qwen3.6 MoE and Gemma 4 run on CUDA only for now. Releases are built for Windows x64; on Linux GeulPU builds
+from source (tested under WSL2). Not yet: other architectures (Phi, …), Gemma 4's E2B · E4B · 26B-A4B (MoE) · 31B, other
+mixture-of-experts models (Mixtral, Qwen3-30B-A3B, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS (which runs on CUDA),
+macOS ([details — sizes, licenses, GPUs](docs/user-guide.md#supported-models)). The app's **Find models** browses the GGUF models on Hugging
+Face, shows only those GeulPU runs (the others on request, with the reason) and marks for each file whether it fits your graphics memory.
 
 ## How it works
 

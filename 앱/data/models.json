@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "GeulPU 앱이 다운로드할 수 있는 모델 목록. check: crosscheck = 재현성 검증의 기준 모델(출력이 기준 PC와 비트 단위로 같은지 확인할 수 있음) · tested = 이 파일로 GeulPU에서 실행해 확인함(어느 백엔드에서 확인했는지는 note) · untested = 엔진이 지원하는 형식이지만 이 파일로는 아직 실행해 보지 않음(다운로드가 끝나면 앱이 GGUF 헤더를 보고 지원 여부를 알린다). size · sha256은 Hugging Face의 값(2026-10-15 · Llama · Mistral은 2026-10-16 · 0.12.0 에 넣은 아홉은 2026-10-23 · Qwen3.6-35B-A3B는 2026-10-24).",
+  "note": "GeulPU 앱이 다운로드할 수 있는 모델 목록. check: crosscheck = 재현성 검증의 기준 모델(출력이 기준 PC와 비트 단위로 같은지 확인할 수 있음) · tested = 이 파일로 GeulPU에서 실행해 확인함(어느 백엔드에서 확인했는지는 note) · untested = 엔진이 지원하는 형식이지만 이 파일로는 아직 실행해 보지 않음(다운로드가 끝나면 앱이 GGUF 헤더를 보고 지원 여부를 알린다). size · sha256은 Hugging Face의 값(2026-10-15 · Llama · Mistral은 2026-10-16 · 0.12.0 에 넣은 아홉은 2026-10-23 · Qwen3.6-35B-A3B는 2026-10-24 · Qwen3.5 셋 · Gemma 4 12B는 2026-10-25).",
   "models": [
     {
       "id": "deepseek-r1-distill-qwen-7b-q8_0",
@@ -288,6 +288,66 @@
       "moe": true,
       "expert_bytes": 18119393280,
       "note": "Qwen3.6의 MoE 모델입니다(35B — 전문가 256개 가운데 토큰마다 8개를 써서, 한 토큰에 쓰는 가중치는 약 3B). 그래픽 메모리에 들지 않는 전문가 가중치는 RAM(고정 메모리)에 두고 GPU가 PCIe로 바로 읽으며, 자주 쓰는 전문가를 그래픽 메모리로 옮깁니다 — 12 GB GPU에서는 RAM을 약 10.5 GB 씁니다. 아직 CUDA · 정밀 모드만 됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24)."
+    },
+    {
+      "id": "qwen3.5-9b-q4_k_m",
+      "name": "Qwen3.5-9B",
+      "params": "9B",
+      "quant": "Q4_K_M",
+      "file": "Qwen3.5-9B-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/Qwen3.5-9B-GGUF",
+      "size": 5680522464,
+      "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
+      "license": "Apache-2.0",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "Qwen3.5의 9B 모델입니다(4비트 k-양자화, 5.3 GB). 층 넷 가운데 셋이 선형 어텐션이라 긴 글에서도 KV 캐시가 작습니다. 빠른 모드는 0.13.0부터 됩니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-25)."
+    },
+    {
+      "id": "qwen3.5-4b-q4_k_m",
+      "name": "Qwen3.5-4B",
+      "params": "4B",
+      "quant": "Q4_K_M",
+      "file": "Qwen3.5-4B-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/Qwen3.5-4B-GGUF",
+      "size": 2740937888,
+      "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+      "license": "Apache-2.0",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "Qwen3.5의 4B 모델입니다(4비트 k-양자화, 2.6 GB). 층 넷 가운데 셋이 선형 어텐션이라 긴 글에서도 KV 캐시가 작습니다. 빠른 모드는 0.13.0부터 됩니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-25)."
+    },
+    {
+      "id": "qwen3.5-0.8b-q8_0",
+      "name": "Qwen3.5-0.8B",
+      "params": "0.8B",
+      "quant": "Q8_0",
+      "file": "Qwen3.5-0.8B-Q8_0.gguf",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q8_0.gguf",
+      "source": "huggingface.co/unsloth/Qwen3.5-0.8B-GGUF",
+      "size": 811843840,
+      "sha256": "0ad885ffd4bb022fc4f0d33a3308fa108ef8613159d3b3a67e23abca056b7a6c",
+      "license": "Apache-2.0",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "가장 작은 Qwen3.5 모델입니다(0.8 GB). 그래픽 메모리가 아주 적은 PC에서도 실행되지만, 답의 질은 큰 모델보다 낮습니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24)."
+    },
+    {
+      "id": "gemma-4-12b-it-q4_k_m",
+      "name": "Gemma-4-12B-it",
+      "params": "12B",
+      "quant": "Q4_K_M",
+      "file": "gemma-4-12b-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF/resolve/main/gemma-4-12b-it-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/gemma-4-12b-it-GGUF",
+      "size": 7121861440,
+      "sha256": "0a270ec9fe6b34f4a0d33992b6135117b484ebc4766ab76b51d4ae8c457e4c42",
+      "license": "Apache-2.0",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "Google의 Gemma 4 12B 대화 모델입니다(4비트 k-양자화, 6.6 GB). 0.13.0부터 실행됩니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 문맥 저장소 · 도구 호출은 쓰지 않습니다. 12 GB GPU에서 문맥은 약 7,300 토큰까지입니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-25)."
     },
     {
       "id": "llama-3.1-8b-instruct-q4_k_m",

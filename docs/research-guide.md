@@ -7,8 +7,8 @@ pick a different token and continue from there, and measures how much one word o
 probabilities of the same answer. Results can be saved as a single file (a reproduction file) that someone else checks, bit for bit,
 on their own PC.
 
-This guide walks through seven experiments from start to finish and explains every part of the panel along the way. With the same model
-file (Qwen2.5-7B-Instruct Q8_0), exact computation mode and temperature 0, **your PC will show the same answers and the same numbers as
+This guide walks through eight experiments from start to finish and explains every part of the panel along the way. With the same model
+file (Qwen2.5-7B-Instruct Q8_0 — Qwen3-0.6B Q8_0 for experiment 8), exact computation mode and temperature 0, **your PC will show the same answers and the same numbers as
 this guide** — that is the premise of the panel.
 
 ## Contents
@@ -17,7 +17,7 @@ this guide** — that is the premise of the panel.
 - [1. Setup](#1-setup)
 - [2. Opening the panel — a map](#2-opening-the-panel--a-map)
 - [3. Reading the numbers](#3-reading-the-numbers)
-- [4. Walkthrough — seven experiments](#4-walkthrough--seven-experiments)
+- [4. Walkthrough — eight experiments](#4-walkthrough--eight-experiments)
   - [Experiment 1. Where did the model hesitate](#experiment-1-where-did-the-model-hesitate) (Observe)
   - [Experiment 2. What if it had picked another token](#experiment-2-what-if-it-had-picked-another-token) (Intervene)
   - [Experiment 3. Where did two answers part](#experiment-3-where-did-two-answers-part) (Compare)
@@ -25,6 +25,7 @@ this guide** — that is the premise of the panel.
   - [Experiment 5. How much does one word of the question change the same answer](#experiment-5-how-much-does-one-word-of-the-question-change-the-same-answer) (Compare)
   - [Experiment 6. How plausible is a line of text](#experiment-6-how-plausible-is-a-line-of-text) (Score)
   - [Experiment 7. Having someone else check your result](#experiment-7-having-someone-else-check-your-result) (Reproduce)
+  - [Experiment 8. At which layer does the answer appear — the layer lens](#experiment-8-at-which-layer-does-the-answer-appear--the-layer-lens) (Observe — from 0.13.0)
   - [Where did the prompt cache break](#where-did-the-prompt-cache-break) (Observe)
   - [Getting the data out](#getting-the-data-out) (Export)
 - [5. From scripts — the API](#5-from-scripts--the-api)
@@ -132,7 +133,7 @@ The panel never touches chat speed. Chat generates as usual; only when you open 
 **Probabilities are the model's distribution (temperature 1)** — not the distribution filtered by the temperature, top-k or top-p used
 for sampling. So the same token has the same probability whatever temperature you generate with.
 
-## 4. Walkthrough — seven experiments
+## 4. Walkthrough — eight experiments
 
 ### Experiment 1. Where did the model hesitate
 
@@ -295,6 +296,60 @@ python -m venv .venv                      # once — `python -I` ignores package
 .venv/Scripts/pip install numpy               # Linux · macOS: .venv/bin/pip
 .venv/Scripts/python -I 도구/repro_check.py geulpu-repro.json Qwen2.5-7B-Instruct-Q8_0.gguf
 ```
+
+### Experiment 8. At which layer does the answer appear — the layer lens
+
+**Question**: just before the model writes its answer, what does the computation in the middle layers point at?
+
+From 0.13.0. Only the last layer produces the next token, but the computation of any layer (the residual stream) can be read with the
+final output computation too — the **logit lens** (the distribution the model would give if it stopped at that layer). The **Jacobian
+lens** (Anthropic, 2026) first moves that layer's values into the final layer's basis with a matrix J fitted on the original model, then
+reads them, so what the position points at shows earlier in the layers. The layer lens works for the Qwen2.5, Qwen3 and Llama
+architectures.
+
+The setup differs a little from the other experiments:
+
+- The model is **Qwen3-0.6B Q8_0** (download it in Find models). Put the J file attached to the release,
+  **`Qwen3-0.6B-Q8_0.jlens.safetensors`**, in the same folder as the model file and load the model (again). The app passes the J file to
+  the server, and once the server accepts it the layer lens gets a 'logit lens | Jacobian lens' switch (without a J file you get the logit
+  lens only).
+- Computation mode **Exact**, temperature 0, and turn off **Thinking** in the generation settings (Qwen3 writes its thinking first by
+  default).
+- In a new chat, send **What is the capital of South Korea? Answer in one word.** The answer is `South Korea's capital is Seoul.`
+
+<p>
+<img align="top" src="img/guide/18-lens-jacobian-en.png" width="49%" alt="Layer lens — Jacobian lens: at the step that chose South, layer 20 is 韩国 and layers 21–26 are Seoul; the last layer 27 is South">
+<img align="top" src="img/guide/18b-lens-logit-en.png" width="49%" alt="Layer lens — logit lens: at the same step, Seoul shows up only at layer 22">
+</p>
+
+1. Open the panel with the flask under the answer (Observe) and click the first token, `South` (step 1), in the token strip.
+2. Under the step detail, click **Layer lens → Read every layer**. For every layer (0–27) you get the top-1 token and its probability,
+   the chosen token's probability and rank, and the entropy. Click a layer to unfold its top k; the first layer from which the chosen token
+   stays first to the end is marked with a line.
+3. **Jacobian lens** (left picture): layer 20 is `韩国` (Korea, 37.1 %) and layers 21–26 are ` Seoul` (57.0 → 97.0 → 70.2 %). While the
+   model writes `South`, the answer five tokens ahead is already in the middle layers.
+4. Switch to the **logit lens** (right picture): at the same step ` Seoul` shows up only at layer 22 (24.8 %) — reading a middle layer's
+   values as if they were the last layer's does not bring such concepts out as well. The last layer (27) is the same in both lenses (the
+   final output, read without J — 53.5 %).
+
+In Korean (**대한민국의 수도는 어디인가요? 한 단어로 답하세요.**) the 0.6B model answers wrongly, `대한민국의 수도는 **인천**입니다.`
+(Incheon). At the asterisk token ` **` right before `인천` (step 8), the Jacobian lens has `东京` (Tokyo) at layers 18–21, ` Seoul` at 22–23
+and ` 서울` (Seoul) at 24–26 — the middle layers pointed at Seoul as the word to write after the asterisks, and at the next step the model
+wrote `인천` instead. The logit lens shows only ` **` from layer 19 at that step.
+
+Things to keep in mind:
+
+- Both lenses are fixed by the precision contract (the logit lens by [5.3](../계약/contract.md), the Jacobian lens by 5.4), so they are
+  bit-identical on every GPU and in every run. A reproduction file ([experiment 7](#experiment-7-having-someone-else-check-your-result))
+  carries the layer lens you computed, and the recipient checks both lenses bit for bit without a GPU:
+  `.venv/Scripts/python -I 도구/repro_check.py geulpu-repro.json Qwen3-0.6B-Q8_0.gguf --jlens Qwen3-0.6B-Q8_0.jlens.safetensors` (the J
+  file is matched by its SHA-256).
+- J was fitted on the original (BF16) model. On Q8_0, the per-layer top 1 was measured to agree with the original's in at least 93.8 % of
+  positions in layers 9–26, under a criterion set before measuring ([`문서/층렌즈.md`](../문서/층렌즈.md), in Korean). On low-bit files such as Q4_K_M
+  the per-layer top 1 agrees less with the original — read it for which concept shows up at which layer.
+- J files for other models are fitted from the original (Hugging Face) model with `도구/jlens_fit.py` — it needs a GPU and torch ·
+  transformers · jlens; the 0.6B model took about 17 minutes on an RTX 4070 Ti. Through the API, add
+  `"geulpu": {"echo_from": n, "layer_lens": {"jacobian": true}}` to the echo request of [5. From scripts — the API](#5-from-scripts--the-api).
 
 ### Where did the prompt cache break
 

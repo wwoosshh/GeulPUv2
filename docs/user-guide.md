@@ -213,16 +213,20 @@ computation mode (Vulkan always computes Exact, so set the computation mode to E
 runs therefore comes only from what you changed. Open the panel with the flask button at the top of the chat, or the
 flask under an answer (answers received in this version onward — research records stay in this browser).
 
-**New to it? Start with the [research panel guide](research-guide.md)** — seven experiments (where the model hesitated, branching,
-comparing two answers, the effect of quantization, the effect of one word, scoring text, reproduction files) with screenshots, how to
-read the numbers, and API examples.
+**New to it? Start with the [research panel guide](research-guide.md)** — eight experiments (where the model hesitated, branching,
+comparing two answers, the effect of quantization, the effect of one word, scoring text, reproduction files, the layer lens) with
+screenshots, how to read the numbers, and API examples.
 
 - **Observe** — the answer as tokens: each token's probability, rank, top-10 alternatives, entropy and the gap between the top two
   (margin). Low-margin steps (margin < δ — places where a slightly different computation or setting could pick another token) and steps
   where sampling picked a token that wasn't ranked first are marked. The answer header shows where the prompt was reused from (this
   slot · another slot · the prompt cache) and the **cache break** (which token, the text before it, before → now token) — when an agent
   puts something that changes every time (a clock, a working-folder path) near the start of its prompt, you can see the cache break there
-  ([guide — where did the prompt cache break](research-guide.md#where-did-the-prompt-cache-break)).
+  ([guide — where did the prompt cache break](research-guide.md#where-did-the-prompt-cache-break)). The step detail's **layer lens**
+  (from 0.13.0 — Qwen2.5, Qwen3 and Llama architectures) reads the computation at the position that chose the token at every layer with
+  the final output, showing at which layer the answer appears (the logit lens). With a J file (`<name>.jlens.safetensors`) next to the
+  model file it also reads the Jacobian lens
+  ([guide — experiment 8](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-layer-lens)).
 - **Intervene** — pick an alternative token at any step and **branch here**: generation continues with the same settings, the same
   seed and the same per-step random numbers, so the chosen token is the only change. You can also regenerate with only the
   temperature, seed or max length changed. New answers stay as versions.
@@ -231,7 +235,8 @@ read the numbers, and API examples.
   model) to see the effect of the quantization alone.
 - **Score** — paste text and get each token's log-probability and the perplexity.
 - **Reproduce** — fingerprints (SHA-256 — the recipe is in [contract](../계약/contract.md) §5.2), re-run without the cache and check, export a **reproduction file** (request, result,
-  log-probabilities and logit hashes in one JSON file) and load one to check it, hashes of the engine binaries and kernels.
+  log-probabilities and logit hashes in one JSON file — with any layer lens computed) and load one to check it, hashes of the engine
+  binaries and kernels.
 - **Export** — every value shown as JSON or CSV, and Python code that fetches the same values.
 
 Probabilities are the model's distribution (temperature 1), not the distribution filtered by the sampling temperature, top-k or
@@ -357,6 +362,12 @@ Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are
   after the chat template), `"echo_from": n` (echo log-probabilities from the token at index n on — 0-based; earlier ones are null), `"step_offset": n` (start the
   step index of the sampling random numbers at n — a branch continues with the same random numbers as the rest of the original answer),
   and `entropy` · `top_ids` · `top_logprobs` (aligned with the ids) · `seed` in the response.
+- Layer lens (from 0.13.0 — [precision contract 5.3 · 5.4](../계약/contract.md)): add `"geulpu": {"echo_from": n, "layer_lens": true}` to
+  an echo request (`"echo": true` · `"max_tokens": 0` · `"logprobs": k`) to read the row that scored token n at every layer with the final
+  logit computation; `geulpu.layer_lens` holds each layer's log-probability, entropy, top k, logit hash and rank (the logit lens — Qwen2.5,
+  Qwen3 and Llama architectures). With a J file (`<name>.jlens.safetensors`) next to the model file, `"layer_lens": {"jacobian": true}`
+  also returns the same row's Jacobian lens as `geulpu.jacobian_lens` — see
+  [experiment 8 of the research guide](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-layer-lens).
 - `/tokenize` · `/detokenize` · `/tokenizer_info` — in the same shape as vLLM.
 - In `geulpu`, `tokens` and `logit_hashes` include the step that sampled the stop token (EOS), while the log-probability arrays
   (`logprobs`, `entropy`, `top_ids`, `top_logprobs`) cover only the answer's tokens, as in OpenAI — one shorter when the answer ends with
@@ -388,8 +399,9 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 | qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 0.5B and up (head size 64 · 96 · 128) — 0.5B · 1.5B · 3B · 7B · 14B run on this project's PC (head size 96 on a synthetic model) |
 | qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 4B · 8B run on this project's PC (14B on a synthetic model) |
 | llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | Head size 64 · 96 · 128, including RoPE on part of each head — 1.5B · 2B · 3B · 7B · 8B run on this project's PC; head size 96, partial RoPE and 70B checked as shapes with synthetic models |
-| qwen35 | Qwen3.5 (full-attention and linear-attention layers mixed) | 0.8B (Q8_0) · 4B (Q4_K_M) run on this project's PC — CUDA and Exact mode for now, without speculative decoding or the context store |
+| qwen35 | Qwen3.5 (full-attention and linear-attention layers mixed) · Qwen3.8-27B | 0.8B (Q8_0) · 4B · 9B (Q4_K_M) run on this project's PC. From 0.13.0: Fast mode, and Qwen3.8-27B (the ggml-org and lmstudio Q4_K_M files, which mix formats from matrix to matrix — too large for this PC, checked bit for bit with synthetic files of the same shape). CUDA only, without speculative decoding or the context store |
 | qwen35moe | Qwen3.5 · 3.6 MoE (Qwen3.5 layers with mixture-of-experts FFNs) | Qwen3.6-35B-A3B (Q4_K_M) runs on a 12 GB card — experts that do not fit in graphics memory stay in RAM (about 10.5 GB); CUDA and Exact mode for now |
+| gemma4 | Gemma 4 (sliding-window and full-attention layers mixed) — from 0.13.0 | 12B instruct (Q4_K_M) runs on this project's PC — files whose matrices are all k-quants or all Q8_0 (Q8_0 checked bit for bit on a file with fewer layers). CUDA and Exact mode only, without speculative decoding, the context store or tool calls |
 
 The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
 parse are refused — it parsed all 228 templates of the 1,000 most-downloaded GGUF repositories on Hugging Face).
@@ -401,12 +413,15 @@ parse are refused — it parsed all 228 templates of the 1,000 most-downloaded G
   Use Policy — services with more than 700 million monthly users need permission from Meta), the Mistral 7B v0.3, Qwen2.5 (except 3B),
   Qwen3 and MiniCPM5 files are Apache 2.0, Qwen2.5-3B has the Qwen Research License (research and evaluation only — commercial use needs a
   license from Alibaba Cloud), DeepSeek-R1-Distill-Qwen is MIT (R1-Distill-Llama also follows Llama 3.1's license), and HyperCLOVAX-SEED has NAVER's own
-  HyperCLOVA X SEED license (also shown in the app's model descriptions).
-- **Not yet**: other architectures (Gemma, Phi, …), Mistral NeMo · Small (not run yet — their tekken tokenizer is accepted from 0.12.0), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B), MoE (Mixtral, Qwen3-30B-A3B, …),
-  image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0. Find models hides such files by default.
+  HyperCLOVA X SEED license; the Qwen3.5, Qwen3.6 and Gemma 4 files are Apache 2.0 (also shown in the app's model descriptions).
+- **Not yet**: other architectures (Phi, …), Gemma 4's E2B · E4B (per-layer embeddings), 26B-A4B (MoE) and 31B and its Q4_0 files, Mistral
+  NeMo · Small (not run yet — their tekken tokenizer is accepted from 0.12.0), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B),
+  other MoE models (Mixtral, Qwen3-30B-A3B, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0. Find models hides such
+  files by default.
 - **Depending on the GPU**: Q8_0 · Q4_0 and k-quants (Q4_K_M, …) run on CUDA and on every Vulkan GPU, including those with 32 KB of shared memory
   such as AMD's Windows driver (from 0.12.0 — checked with that limit emulated on an RTX 4070 Ti and on an Intel UHD Graphics 770). F16 · BF16 · F32
-  run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. IQ4_XS runs only on CUDA (NVIDIA GPUs) for now.
+  run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. IQ4_XS, Qwen3.5, Qwen3.6 MoE and Gemma 4 run only on CUDA (NVIDIA
+  GPUs) for now.
 
 ### Which model fits your PC
 
@@ -414,14 +429,14 @@ Files GeulPU has run itself (**Verified by GeulPU** in the app). Sizes use 1024-
 
 | Graphics memory | Suggested files |
 |---|---|
-| 4 GB | Qwen3-0.6B Q8_0 (0.6 GB) · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M (1.1 GB) · MiniCPM5-2B Q4_K_M (1.5 GB) |
-| 6 GB | Qwen3-1.7B Q8_0 (1.7 GB) · Qwen2.5-1.5B-Instruct Q8_0 (1.8 GB) · Qwen3-4B Q4_K_M (2.3 GB) · Llama-3.2-3B-Instruct Q8_0 (3.2 GB) · Qwen2.5-3B-Instruct Q8_0 (3.4 GB) |
-| 8 GB | Qwen3-8B Q4_K_M (4.7 GB) · Qwen2.5-7B-Instruct Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Qwen-7B Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Llama-8B Q4_K_M (4.6 GB) · Llama-3.1-8B-Instruct Q4_K_M (4.6 GB) · Mistral-7B-Instruct-v0.3 Q4_K_M (4.1 GB) · Qwen3-4B Q8_0 (4.0 GB) |
-| 12 GB | Qwen3-8B Q8_0 (8.1 GB) · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 (7.5 GB) · Llama-3.1-8B-Instruct Q8_0 (8.0 GB) · Mistral-7B-Instruct-v0.3 Q8_0 (7.2 GB) — 14B Q4_K_M also runs with a reduced context |
+| 4 GB | Qwen3-0.6B Q8_0 (0.6 GB) · Qwen3.5-0.8B Q8_0 (0.8 GB) · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M (1.1 GB) · MiniCPM5-2B Q4_K_M (1.5 GB) |
+| 6 GB | Qwen3-1.7B Q8_0 (1.7 GB) · Qwen2.5-1.5B-Instruct Q8_0 (1.8 GB) · Qwen3-4B Q4_K_M (2.3 GB) · Qwen3.5-4B Q4_K_M (2.6 GB) · Llama-3.2-3B-Instruct Q8_0 (3.2 GB) · Qwen2.5-3B-Instruct Q8_0 (3.4 GB) |
+| 8 GB | Qwen3-8B Q4_K_M (4.7 GB) · Qwen3.5-9B Q4_K_M (5.3 GB) · Qwen2.5-7B-Instruct Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Qwen-7B Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Llama-8B Q4_K_M (4.6 GB) · Llama-3.1-8B-Instruct Q4_K_M (4.6 GB) · Mistral-7B-Instruct-v0.3 Q4_K_M (4.1 GB) · Qwen3-4B Q8_0 (4.0 GB) |
+| 12 GB | Qwen3-8B Q8_0 (8.1 GB) · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 (7.5 GB) · Llama-3.1-8B-Instruct Q8_0 (8.0 GB) · Mistral-7B-Instruct-v0.3 Q8_0 (7.2 GB) · Gemma-4-12B-it Q4_K_M (6.6 GB — from 0.13.0, context about 7,300) · Qwen3.6-35B-A3B Q4_K_M (19.0 GB — about 10.5 GB of RAM for the experts that do not fit in graphics memory) — 14B Q4_K_M also runs with a reduced context |
 | 16 GB or more | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M (8.4 GB) |
 
-Qwen3-14B Q4_K_M has only been checked bit for bit on a synthetic model of the same shape and has not been run yet. The app tells you
-for every file whether it fits your graphics memory.
+Qwen3-14B Q4_K_M and Qwen3.8-27B have only been checked bit for bit on synthetic models of the same shape and have not been run yet.
+Qwen3.5 and Gemma 4 run only on CUDA. The app tells you for every file whether it fits your graphics memory.
 
 ## How it runs
 

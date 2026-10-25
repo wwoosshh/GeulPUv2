@@ -26,7 +26,7 @@
   <img src="docs/img/readme/debugger-ko.png" alt="GeulPU 디버거 — 기록한 요청 50개의 실행을 재생: 요청과 분기가 모두 비트까지 같음" width="100%">
 </p>
 
-GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Distill · Llama 3 · Mistral 같은 GGUF 모델을 내 PC의 NVIDIA · AMD 그래픽카드에서 돌립니다.
+GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Distill · Llama 3 · Mistral, 그리고 0.13.0 부터 Gemma 4 같은 GGUF 모델을 내 PC의 NVIDIA · AMD 그래픽카드에서 돌립니다([돌릴 수 있는 모델](#지원하는-모델과-하드웨어)).
 채팅 화면은 브라우저에 열리고, 다른 프로그램은 OpenAI 호환 API로 씁니다. 계산은 **정밀도 계약**(precision contract)이라는 문서로
 정해져 있어 모든 결과가 CPU 참조 구현과 비트까지 같습니다 — 같은 요청이면 배치 · 슬롯 · 프롬프트 캐시 · 추측 디코딩과 상관없이,
 정밀 모드에서는 GPU가 달라도 같은 토큰과 로짓이 나옵니다.
@@ -42,7 +42,8 @@ GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Dis
 - **로컬 모델을 위한 디버거.** 실행을 기록하고, 비트까지 재생하고, 마진이 작은 스텝을 찾고, 어느 토큰이나 고친 요청에서 분기하고,
   두 실행을 요청마다 비교합니다 — 앱 화면에서도, 스크립트에서도.
 - **연구 패널.** 채팅의 답마다 토큰의 확률 · 순위 · 상위 10 대안 · 엔트로피 · 마진을 보고, 분기 · 비교 · 점수 매기기 · 내보내기 ·
-  재현 파일 확인을 합니다.
+  재현 파일 확인을 합니다. 0.13.0 부터는 답이 몇 번째 층에서 생기는지도 봅니다 — 층마다 읽는 logit lens 와, 원본(PyTorch) 모델에서 맞춘
+  J 파일로 읽는 Jacobian lens.
 - **필요한 곳에서 빠름.** 기본 설정으로 잰 모든 길이에서 프롬프트와 생성이 llama.cpp보다 빠릅니다(Qwen2.5-7B에서 llama.cpp 시간의
   0.76 ~ 0.97배, Llama-3.1-8B의 긴 세션은 0.48배까지). 추측 디코딩은 고쳐 쓰는
   작업에서 3.5 ~ 4배 빠르면서 출력이 비트까지 같고, SSD의 프롬프트 캐시는 앱을 다시 켠 뒤에도 코딩 에이전트의 15k 토큰 프롬프트를
@@ -151,19 +152,35 @@ llama.cpp는 배치와 상관없이 같은 출력을 목표로 하지 않습니�
 
 ## 지원하는 모델과 하드웨어
 
-| 구조 | 모델 | 가중치 형식 |
-|---|---|---|
-| `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(0.5B 이상) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS(CUDA) · F16 · BF16 · F32 |
-| `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B(14B는 합성 모델로 모양 확인, 32B는 0.6B · 4B와 같은 길로 불러옴) | 같음 |
-| `llama` | Llama 3.1 · 3.2 Instruct(3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | 같음 |
-| `qwen35` | Qwen3.5 0.8B · 4B(지금은 CUDA · 정밀 모드만) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K |
-| `qwen35moe` | Qwen3.6-35B-A3B(MoE — 그래픽 메모리에 들지 않는 전문가는 RAM 에, 지금은 CUDA · 정밀 모드만) | Q4_K_M(전문가 Q4_K · Q5_K · Q6_K 또는 Q8_0) |
+GGUF 파일 하나를 받습니다(여러 조각이면 llama.cpp 의 `llama-gguf-split --merge` 로 합쳐서). 구조(GGUF 의 `general.architecture`)마다:
 
-헤드 크기 64 · 96 · 128 을 받고, RoPE 를 헤드의 일부에만 거는 모델도 받습니다. 미세조정 모델도 돕니다 — 서버가 모델 파일의 채팅 템플릿을 그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기).
-Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다. GPU: NVIDIA RTX
-30 시리즈 이상은 CUDA, 그 밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버처럼 공유 메모리가 32 KB인 GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음).
-릴리스는 Windows x64용이고, Linux에서는 소스에서 빌드합니다(WSL2에서 시험). 아직 안 되는 것: 다른 구조(Gemma · Phi 등), 다른 MoE 모델(Mixtral · Qwen3-30B-A3B 등),
-이미지 입력, Q2_K · Q3_K · IQ4_XS 밖의 IQ 형식(IQ4_XS 는 CUDA 에서), macOS([자세히](사용안내.md#지원하는-모델)).
+| 구조 | 모델 | 가중치 형식 | GPU · 계산 방식 |
+|---|---|---|---|
+| `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(0.5B 이상) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS(CUDA) · F16 · BF16 · F32 | CUDA · Vulkan, 정밀 · 빠름 |
+| `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B(14B는 합성 모델로 모양 확인, 32B는 0.6B · 4B와 같은 길로 불러옴) | 같음 | 같음 |
+| `llama` | Llama 3.1 · 3.2 Instruct(3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | 같음 | 같음 |
+| `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B(0.13.0 부터 — ggml-org · lmstudio 의 Q4_K_M) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K(0.13.0 부터 행렬마다 섞인 파일도) | CUDA, 정밀 · 빠름(빠름은 0.13.0 부터) |
+| `qwen35moe` | Qwen3.6-35B-A3B(MoE — 그래픽 메모리에 들지 않는 전문가는 RAM 에) | Q4_K_M(전문가 Q4_K · Q5_K · Q6_K 또는 Q8_0) | CUDA, 정밀 |
+| `gemma4` | Gemma 4 12B instruct(0.13.0 부터) | 행렬이 모두 k-양자화(Q4_K_M 등)이거나 모두 Q8_0 인 파일 | CUDA, 정밀 |
+
+GeulPU 가 직접 돌려 본 파일(앱의 **GeulPU 확인됨** — 앱에서 받으면 바로 씁니다)을 그래픽 메모리로 나누면:
+
+| 그래픽 메모리 | 파일 |
+|---|---|
+| 4 GB | Qwen3-0.6B Q8_0 · Qwen3.5-0.8B Q8_0 · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M · MiniCPM5-2B Q4_K_M |
+| 6 GB | Qwen3-1.7B Q8_0 · Qwen2.5-1.5B-Instruct Q8_0 · Qwen3-4B Q4_K_M · Qwen3.5-4B Q4_K_M · Llama-3.2-3B-Instruct Q8_0 · Qwen2.5-3B-Instruct Q8_0 |
+| 8 GB | Qwen3-8B Q4_K_M · Qwen3.5-9B Q4_K_M · Qwen2.5-7B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-7B Q4_K_M · DeepSeek-R1-Distill-Llama-8B Q4_K_M · Llama-3.1-8B-Instruct Q4_K_M · Mistral-7B-Instruct-v0.3 Q4_K_M · Qwen3-4B Q8_0 |
+| 12 GB | Qwen3-8B Q8_0 · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 · Llama-3.1-8B-Instruct Q8_0 · Mistral-7B-Instruct-v0.3 Q8_0 · Gemma-4-12B-it Q4_K_M(0.13.0 부터) · Qwen3.6-35B-A3B Q4_K_M(RAM 약 10.5 GB 더) |
+| 16 GB 이상 | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M |
+
+헤드 크기 64 · 96 · 128 을 받고, RoPE 를 헤드의 일부에만 거는 모델도 받습니다. 미세조정 모델도 돕니다 — 서버가 모델 파일의 채팅 템플릿을
+그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기). Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다. GPU:
+NVIDIA RTX 30 시리즈 이상은 CUDA, 그 밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버처럼 공유 메모리가 32 KB인
+GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음). Qwen3.5 · Qwen3.6 MoE · Gemma 4 는 아직 CUDA 에서만 돕니다. 릴리스는 Windows x64용이고,
+Linux에서는 소스에서 빌드합니다(WSL2에서 시험). 아직 안 되는 것: 다른 구조(Phi 등), Gemma 4 의 E2B · E4B · 26B-A4B(MoE) · 31B, 다른 MoE
+모델(Mixtral · Qwen3-30B-A3B 등), 이미지 입력, Q2_K · Q3_K · IQ4_XS 밖의 IQ 형식(IQ4_XS 는 CUDA 에서), macOS
+([자세히 — 크기 · 라이선스 · GPU 마다](사용안내.md#지원하는-모델)). 앱의 **모델 찾기**는 Hugging Face 의 GGUF 모델 가운데 GeulPU 에서 실행되는
+것을 보이고(실행 안 되는 것은 켜면 까닭과 함께), 파일마다 이 PC 의 그래픽 메모리에 맞는지 알려 줍니다.
 
 ## 동작 방식
 
