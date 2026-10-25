@@ -299,10 +299,11 @@ r = client.chat.completions.create(model="geulpu", messages=[{"role": "user", "c
 print(r.choices[0].message.content)
 ```
 
-- To turn thinking off on models that switch it (Qwen3, MiniCPM5), add `"chat_template_kwargs": {"enable_thinking": false}` to the
+- To turn thinking off on models that switch it (Qwen3, MiniCPM5 and, from 0.13.0, Gemma 4), add `"chat_template_kwargs": {"enable_thinking": false}` to the
   request (`extra_body=` in Python). Other values in `chat_template_kwargs` are passed to the chat template as they are.
-- By default the thinking (Qwen3, DeepSeek-R1, MiniCPM5) comes in front of the answer without tags. Add `"geulpu": {"special": true}` to
-  receive `<think>` and `</think>` as text, so you can separate the thinking from the answer. In requests that send `tools`, the
+- By default the thinking (Qwen3, DeepSeek-R1, MiniCPM5, Gemma 4) comes in front of the answer without tags. Add
+  `"geulpu": {"special": true}` to receive `<think>` and `</think>` (for Gemma 4, `<|channel>thought` and `<channel|>`) as text, so you can
+  separate the thinking from the answer. In requests that send `tools`, the
   thinking comes separately as `reasoning_content`.
 - Only this PC can connect, and there is no authentication. Requests that other websites send through your browser are refused.
 - `/v1/chat/completions` runs the model file's own chat template (the GGUF's `tokenizer.chat_template`) with a jinja interpreter that
@@ -319,8 +320,9 @@ commands) through an OpenAI-compatible API can connect.
 
 - The address is `http://127.0.0.1:44544/v1`; any API key and any model name work (the model loaded in the app answers — load a model
   in the app before using the agent).
-- Models that take tools: those whose chat template renders tools and whose call format is one of the four GeulPU reads (Qwen's
-  `<tool_call>` JSON, Llama 3's JSON, the XML of Qwen3.5 and Qwen3-Coder, MiniCPM's XML) — Qwen2.5, Qwen3, Llama 3.1 · 3.2 and MiniCPM5.
+- Models that take tools: those whose chat template renders tools and whose call format is one of the five GeulPU reads (Qwen's
+  `<tool_call>` JSON, Llama 3's JSON, the XML of Qwen3.5 and Qwen3-Coder, MiniCPM's XML and, from 0.13.0, Gemma 4's
+  `<|tool_call>call:name{…}`) — Qwen2.5, Qwen3, Qwen3.5, Llama 3.1 · 3.2, MiniCPM5 and Gemma 4 (from 0.13.0).
   Prompts with tools are also the model file's own chat template. Mistral, DeepSeek-R1 and HyperCLOVAX-SEED have no tools in their
   templates, so they refuse them (400). In tests Qwen2.5 1.5B and 3B often wrote the call's JSON wrongly (`{{…}}`), and
   Qwen2.5-Coder-14B wrapped its calls in `<tools>` instead of `<tool_call>`, so they were not read as calls (the prompts match the
@@ -401,7 +403,7 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 | llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | Head size 64 · 96 · 128, including RoPE on part of each head — 1.5B · 2B · 3B · 7B · 8B run on this project's PC; head size 96, partial RoPE and 70B checked as shapes with synthetic models |
 | qwen35 | Qwen3.5 (full-attention and linear-attention layers mixed) · Qwen3.8-27B | 0.8B (Q8_0) · 4B · 9B (Q4_K_M) run on this project's PC. From 0.13.0: Fast mode, and Qwen3.8-27B (the ggml-org and lmstudio Q4_K_M files, which mix formats from matrix to matrix — too large for this PC, checked bit for bit with synthetic files of the same shape). CUDA only, without speculative decoding or the context store |
 | qwen35moe | Qwen3.5 · 3.6 MoE (Qwen3.5 layers with mixture-of-experts FFNs) | Qwen3.6-35B-A3B (Q4_K_M) runs on a 12 GB card — experts that do not fit in graphics memory stay in RAM (about 10.5 GB); CUDA and Exact mode for now |
-| gemma4 | Gemma 4 (sliding-window and full-attention layers mixed) — from 0.13.0 | 12B instruct (Q4_K_M) runs on this project's PC — files whose matrices are all k-quants or all Q8_0 (Q8_0 checked bit for bit on a file with fewer layers). CUDA and Exact mode only, without speculative decoding, the context store or tool calls |
+| gemma4 | Gemma 4 (sliding-window and full-attention layers mixed) — from 0.13.0 | 12B instruct (Q4_K_M) runs on this project's PC — files whose matrices are all k-quants or all Q8_0 (Q8_0 checked bit for bit on a file with fewer layers). CUDA and Exact mode only, without speculative decoding or the context store |
 
 The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
 parse are refused — it parsed all 228 templates of the 1,000 most-downloaded GGUF repositories on Hugging Face).
