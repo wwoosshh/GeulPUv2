@@ -9,7 +9,10 @@
      · tool_calls 의 arguments 가 글이면 JSON 으로 풀어서 — 틀이 'arguments is string' 으로 글을 그대로 쓰는 꼴(Qwen3)이면 글 그대로
      · 틀이 system 말을 그리지 않으면(올릴 때 시험해 본다 — Mistral v0.3) 맨 앞 system 말을 첫 user 말 앞에 '<system>\n\n' 으로(39단계)
    도구 호출의 출력 꼴은 틀의 글로 고른다(틀도구꼴) — 1 Qwen 의 <tool_call>{JSON}</tool_call> · 2 Llama 3 의 JSON · 3 Qwen3.5 · Coder 의
-   <tool_call><function=…><parameter=…> XML · 4 MiniCPM 의 <function name=…><param name=…> XML. 아는 꼴이 아니면 tools 는 400. *)
+   <tool_call><function=…><parameter=…> XML · 4 MiniCPM 의 <function name=…><param name=…> XML · 0.13.0 5 Gemma 4 의
+   <|tool_call>call:이름{열쇠:값,…}<tool_call|>(젬마도구.gl). 아는 꼴이 아니면 tools 는 400.
+   생각 묶음은 <think> … </think>(틀생각), 0.13.0 — 또는 Gemma 4 의 <|channel>thought … <channel|>(틀채널 — 채널 이름 'thought' 와 뒤의
+   빈칸은 생각 글에 넣지 않는다). *)
 포함 "진해석.gl"
 
 진틀 참조 서버틀 = 없음.
@@ -22,6 +25,7 @@
 참거짓 틀인자글 = 거짓.
 참거짓 틀도구그림 = 거짓.
 참거짓 틀생각 = 거짓.
+참거짓 틀채널 = 거짓.              (* 0.13.0 — 틀이 생각을 <|channel>thought … <channel|> 로 그린다(Gemma 4) *)
 정수 틀도구꼴 = 0.
 바이트열 참조 채팅오류글 = 없음.
 정수 도구시작번호 = -1.            (* <tool_call> — 서버가 올릴 때 *)
@@ -33,13 +37,19 @@
 정수 함수끝번호 = -1.
 정수 매개시작번호 = -1.
 정수 매개끝번호 = -1.
-문자열 도구못받음글 = "이 모델의 채팅 틀은 도구를 받지 않는다(tools) — 틀이 tools 를 그리지 않거나, GeulPU 가 읽는 호출 꼴(Qwen 의 <tool_call> JSON · Llama 3 의 JSON · Qwen3.5 · Coder 의 XML · MiniCPM 의 XML)이 아니다".
+정수 젬마도구시작번호 = -1.        (* 0.13.0 — Gemma 4 의 <|tool_call> · <tool_call|> · 글의 따옴 <|"|>(사용자 정의 토큰 — 서버가 올릴 때) *)
+정수 젬마도구끝번호 = -1.
+정수 젬마따옴번호 = -1.
+정수 채널시작번호 = -1.            (* 0.13.0 — <|channel> · <channel|> *)
+정수 채널끝번호 = -1.
+문자열 도구못받음글 = "이 모델의 채팅 틀은 도구를 받지 않는다(tools) — 틀이 tools 를 그리지 않거나, GeulPU 가 읽는 호출 꼴(Qwen 의 <tool_call> JSON · Llama 3 의 JSON · Qwen3.5 · Coder 의 XML · MiniCPM 의 XML · Gemma 4 의 <|tool_call>call:)이 아니다".
 
-(* 그린 프롬프트가 생각을 연 채 끝나는가('<think>' 뒤에 줄바꿈뿐) *)
+(* 그린 프롬프트가 생각을 연 채 끝나는가('<think>' 뒤에 줄바꿈뿐 — 0.13.0 틀채널 이면 '<|channel>thought' 뒤에 빈칸뿐) *)
 [바이트열 참조 b를 끝이생각열기인가]는 -> 참거짓 {
     문자열 s = 바이트열_자료(b).
     정수 e = 바이트열_길이(b).
-    (e > 0 그리고 ((s[e - 1] & 255) == 10 또는 (s[e - 1] & 255) == 13))동안 { e -= 1. }
+    (e > 0 그리고 ((s[e - 1] & 255) == 10 또는 (s[e - 1] & 255) == 13 또는 (틀채널 그리고 ((s[e - 1] & 255) == 32 또는 (s[e - 1] & 255) == 9))))동안 { e -= 1. }
+    (틀채널 그리고 e >= 17 그리고 메모리_비교(s + e - 17, "<|channel>thought", 17) == 0)이면 { 반환 참. }
     e < 7이면 { 반환 거짓. }
     반환 메모리_비교(s + e - 7, "<think>", 7) == 0.
 }
@@ -85,13 +95,16 @@
     틀인자글 = 틀에있나("arguments is string").
     틀도구그림 = 틀에있나("tools").
     틀생각 = 틀에있나("<think>").
+    틀채널 = 틀에있나("<|channel>thought") 그리고 틀에있나("<channel|>") 그리고 채널시작번호 >= 0 그리고 채널끝번호 >= 0.     (* 0.13.0 *)
     틀도구꼴 = 0.
-    (틀에있나("<function=") 그리고 틀에있나("<parameter="))이면 { 틀도구꼴 = 3. }
+    틀에있나("<|tool_call>call:")이면 { 틀도구꼴 = 5. }                                        (* 0.13.0 — Gemma 4 *)
+    아니면 (틀에있나("<function=") 그리고 틀에있나("<parameter="))이면 { 틀도구꼴 = 3. }
     아니면 (틀에있나("<function name=") 그리고 틀에있나("<param name="))이면 { 틀도구꼴 = 4. }
     아니면 (틀에있나("<tool_call>") 그리고 틀에있나("tojson"))이면 { 틀도구꼴 = 1. }
     아니면 (라마BPE 그리고 틀에있나("<|start_header_id|>") 그리고 틀에있나("tojson"))이면 { 틀도구꼴 = 2. }
     ((틀도구꼴 == 1 또는 틀도구꼴 == 3) 그리고 (도구시작번호 < 0 또는 도구끝번호 < 0))이면 { 틀도구꼴 = 0. }
     (틀도구꼴 == 4 그리고 (함수시작번호 < 0 또는 함수끝번호 < 0 또는 매개시작번호 < 0 또는 매개끝번호 < 0))이면 { 틀도구꼴 = 0. }
+    (틀도구꼴 == 5 그리고 (젬마도구시작번호 < 0 또는 젬마도구끝번호 < 0 또는 젬마따옴번호 < 0))이면 { 틀도구꼴 = 0. }
     아닌 틀도구그림이면 { 틀도구꼴 = 0. }
     (* system 말을 그리는가 — 맨 앞 system 말의 글이 나오는지 그려 본다(오류 · 빠짐이면 첫 user 말 앞에 붙인다) *)
     바이트열 참조 b = 바이트열_만들기().

@@ -24,6 +24,8 @@
          내는가 — 기능 사례(시험/틀해석.py — jinja2 가 없으면 건너뜀)
      4m. 토크나이저의 정규식 사전 처리(0.12.0 12-G2 — 엔진/정규식.gl · 엔진/시험_토큰.gl)가 llama.cpp 의 어휘 시험(시험/어휘시험.txt 의 열네
          어휘 — 0.12.0 12-3h-2 에 gemma-4, --어휘 <폴더>, 시험/어휘받기.py 가 받는다. 폴더를 주지 않으면 건너뜀)과 같은 토큰을 내는가(시험/어휘시험.py)
+     4n. Gemma 4 의 도구 호출 풀기(0.13.0 — 엔진/젬마도구.gl · 엔진/시험_젬마도구.gl)가 llama.cpp 의 gemma4_to_json 과 같은 이름 · 인자 JSON 을
+         내는가(시험/젬마도구.py)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것.
      0.12.0 12-3g-2 — --MoE 행은 CUDA 만이라 SPIR-V 칸이 "-")
@@ -449,6 +451,17 @@ def 틀해석(출력):
     알림("jinja 템플릿 해석기(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
 
 
+def 젬마도구(출력):
+    """0.13.0 — Gemma 4 의 도구 호출(<|tool_call>call:이름{…}<tool_call|>)을 이름 · JSON 인자로 푸는가(GPU 없이)"""
+    exe = os.path.join(출력, "시험_젬마도구" + EXE)
+    if not os.path.exists(exe):
+        알림("Gemma 4 도구 호출 풀기(GPU 없이)", False, "시험_젬마도구 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "젬마도구.py"), exe], os.path.join(출력, "젬마도구.txt"))
+    알림("Gemma 4 도구 호출 풀기(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
 def 어휘시험(출력, 폴더):
     """0.12.0 12-G2 — 토크나이저(정규식 사전 처리 · 손으로 짠 갈래 · SentencePiece)가 llama.cpp 의 어휘 시험과 같은 토큰을 내는가(GPU 없이)"""
     if not 폴더:
@@ -620,6 +633,7 @@ def main():
             로프표(출력)
             디버거제이슨(출력)
             틀해석(출력)
+            젬마도구(출력)
             어휘시험(출력, os.path.abspath(a.어휘) if a.어휘 else "")
             요청지킴(출력)
             망가진입력(출력)
