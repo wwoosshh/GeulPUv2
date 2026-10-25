@@ -7,7 +7,8 @@
 어텐션, 그리고 묶음 둘에 걸친 창(행 1,100 — 창 130 · 1,024). 0.13.0 12-3h-6 — 생성(행 넷까지)의 조각어텐션젬마D · 조각접기젬마D 도
 같은 참값과(행 1 · 2 · 4 를 끝 · 가운데 · 처음 · 타일 경계, 행 1,100 은 그룹 경계 · 창 경계에). 0.13.0 12-3h-8 — 합친 판(접기자리로 ·
 조각접기자리로 · RMS더하기정수줄 · GeGLU자리로)은 두 판을 잇달아 띄운 것(접기 + 실수자리로 · RMS더하기 + RMS정규화정수줄 · GeGLU + 실수자리로)과
-같은 입력에서 바이트까지(잔차 · 자리 · 정보 — 행 합 판의 칸까지).
+같은 입력에서 바이트까지(잔차 · 자리 · 정보 — 행 합 판의 칸까지). 0.13.0 12-3h-9 — 윈도 층의 고리 버퍼(캐시의 위치 p 는 칸 p mod 고리):
+행들을 덩이씩 넣어 고리를 몇 번 돈 프롬프트 · 끝의 생성 · 고리에 남은 캐시, 그리고 고리가 아직 가진 창 안으로 되감아 다른 행으로 이은 것.
 
   python -I 시험/젬마판.py <ptx> <출력.json> [--행 300]
 
@@ -107,7 +108,7 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
         dv.띄우기(f"머리정규화젬마{D}", ((n * (H + HKV) + 3) // 4, 1), 128, [(1, pq), (1, pqw), (1, pkw), (0, n), (0, H), (0, HKV), (0, 폭)])
         dv.띄우기(f"RoPEKV젬마{D}", (((H + 2 * HKV) * nb + 31) // 32, n), 256,
                 [(1, pq), (1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, pcos), (1, psin), (0, n), (0, H), (0, HKV), (0, 폭),
-                 (0, 시작), (0, 최대길이)])
+                 (0, 시작), (0, 최대길이)])                                       # 고리 = 최대길이(고리 없음 — 칸 = 위치)
 
     자리다름 = {"접기": 0, "조각": 0}
 
@@ -126,8 +127,8 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
     def 어텐션(n, 시작, pqd, pqE, pkd, pkE, pvd, pvE, po, W):
         p묶 = dv.dr.할당(n * H * 묶음수 * (D + 4) * 4)
         dv.띄우기(f"타일어텐션젬마{D}", (-(-n * (H // HKV) // 16) * 묶음수, HKV), 128,           # 0.13.0 12-3h-7 — (질의 벡터 16 개 × 묶음, KV 헤드)
-                [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, 시작), (0, 최대길이), (0, W),
-                 (0, 비트(1.0))])
+                [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, 시작), (0, 최대길이),
+                 (0, 최대길이), (0, W), (0, 비트(1.0))])
         dv.띄우기(f"접기젬마{D}", (H, n), D, [(1, p묶), (1, po), (0, n), (0, H), (0, 시작), (0, 최대길이), (0, W)])
         자리대조("접기", n, po, f"접기자리로젬마{D}", p묶, [(0, n), (0, H), (0, 시작), (0, 최대길이), (0, W)])
 
@@ -197,6 +198,98 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
     return 다
 
 
+def 고리시험(dv, D, HKV, θ, T, 고리, 덩이, W, r, 되감기):
+    """0.13.0 12-3h-9 — 윈도 층의 고리 버퍼(키 · 값 · 지수 캐시의 위치 p 는 칸 p mod 고리 — 고리 ≥ 창 + 덩이 − 1): T 행을 덩이씩(앞단이 그
+    덩이의 키 · 값을 고리에 쓰고 어텐션이 읽는다 — 엔진의 프롬프트 길) 넣어 고리를 몇 번 돈 뒤 끝의 생성(행 넷까지)과 고리에 남은 캐시,
+    그리고 되감기 = (p, 새 행 수): 위치 p 로 되돌려(T − p ≤ 고리 − 창 + 1 — 고리가 아직 가진 창) 다른 행으로 이은 것."""
+    폭 = H * D + 2 * HKV * D + 1024
+    nb = D // 32
+    p되, n새 = 되감기
+    최대길이 = (max(T, p되 + n새) + 1023) // 1024 * 1024
+    묶음수 = 최대길이 // 1024
+    G_ = H // HKV
+
+    def 행들(n):
+        return (r.standard_normal((n, 폭)) * 10.0 ** r.uniform(-0.5, 0.5, (1, 폭))).astype(f32)
+    qkvA = 행들(T)
+    qkvB = np.concatenate([qkvA[:p되], 행들(n새)])
+    qw = (1.0 + 0.1 * r.standard_normal(D)).astype(f32)
+    kw = (1.0 + 0.1 * r.standard_normal(D)).astype(f32)
+    cos, sin = C.rope표(최대길이, θ, hd=D, 인자=None)
+    kb, vb = H * D, H * D + HKV * D
+
+    def 참(qkv):
+        qn = qkv.copy()
+        qn[:, :H * D] = C.머리정규화(qkv[:, :H * D], qw, EPS, D)
+        qn[:, kb:kb + HKV * D] = C.머리정규화(qkv[:, kb:kb + HKV * D], kw, EPS, D)
+        qn[:, vb:vb + HKV * D] = C.머리정규화(qkv[:, vb:vb + HKV * D], np.ones(D, f32), EPS, D)
+        위치 = np.arange(len(qkv))
+        qh = [C.rope(qn[:, a * D:(a + 1) * D], cos, sin, 위치) for a in range(H)]
+        kh = [C.rope(qn[:, kb + a * D:kb + (a + 1) * D], cos, sin, 위치) for a in range(HKV)]
+        vh = [np.ascontiguousarray(qn[:, vb + a * D:vb + (a + 1) * D]) for a in range(HKV)]
+        return kh, vh, np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=1.0, 창=W) for a in range(H)], 1)
+    t0 = time.time()
+    khA, vhA, oA = 참(qkvA)
+    oB = 참(qkvB)[2]
+    print(f"  고리 {고리}(창 {W} · 덩이 {덩이}): CPU 참조 {time.time() - t0:.1f} 초", flush=True)
+    pqw, pkw, pcos, psin = dv.up(qw), dv.up(kw), dv.up(cos), dv.up(sin)
+    pkd, pkE = dv.dr.할당(2 * HKV * 고리 * D), dv.dr.할당(HKV * 고리 * nb * 8)
+    pvd, pvE = dv.dr.할당(2 * HKV * 고리 * D), dv.dr.할당(HKV * 고리 * nb * 8)
+
+    def 앞단(qkv, s0, n):
+        pq = dv.up(qkv[s0:s0 + n])
+        pqd, pqE = dv.dr.할당(2 * n * H * D), dv.dr.할당(n * H * nb * 8)
+        dv.띄우기(f"머리정규화젬마{D}", ((n * (H + HKV) + 3) // 4, 1), 128, [(1, pq), (1, pqw), (1, pkw), (0, n), (0, H), (0, HKV), (0, 폭)])
+        dv.띄우기(f"RoPEKV젬마{D}", (((H + 2 * HKV) * nb + 31) // 32, n), 256,
+                [(1, pq), (1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, pcos), (1, psin), (0, n), (0, H), (0, HKV), (0, 폭),
+                 (0, s0), (0, 고리)])
+        return pqd, pqE
+
+    def 프롬프트(qkv, o참, s0, s1):
+        다름 = 0
+        for a in range(s0, s1, 덩이):
+            n = min(덩이, s1 - a)
+            pqd, pqE = 앞단(qkv, a, n)
+            p묶, po = dv.dr.할당(n * H * 묶음수 * (D + 4) * 4), dv.dr.할당(n * H * D * 4)
+            dv.띄우기(f"타일어텐션젬마{D}", (-(-n * G_ // 16) * 묶음수, HKV), 128,
+                    [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, a), (0, 최대길이),
+                     (0, 고리), (0, W), (0, 비트(1.0))])
+            dv.띄우기(f"접기젬마{D}", (H, n), D, [(1, p묶), (1, po), (0, n), (0, H), (0, a), (0, 최대길이), (0, W)])
+            dv.dr.맞추기()
+            다름 += 다른칸(dv.down(po, (n, H * D)), o참[a:a + n])
+        return 다름
+
+    def 생성(qkv, o참, s0, n):
+        pqd, pqE = 앞단(qkv, s0, n)            # 그 행들의 q(캐시에는 같은 값을 같은 칸에 다시 쓴다)
+        슬롯 = (W + 2) // 64 + 2                # 구조/gemma4/엔진.gl 의 젬마슬롯수(창 < 최대길이)
+        p조, po = dv.dr.할당(n * H * 슬롯 * (D + 4) * 4), dv.dr.할당(n * H * D * 4)
+        dv.띄우기(f"조각어텐션젬마{D}", (슬롯 * HKV, n), 256,
+                [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p조), (0, n), (0, H), (0, HKV), (0, s0), (0, 고리), (0, W),
+                 (0, 비트(1.0)), (0, 슬롯)])
+        dv.띄우기(f"조각접기젬마{D}", (H, n), D, [(1, p조), (1, po), (0, n), (0, H), (0, s0), (0, 최대길이), (0, W), (0, 슬롯)])
+        dv.dr.맞추기()
+        return 다른칸(dv.down(po, (n, H * D)), o참[s0:s0 + n])
+    다 = {}
+    이름 = f"고리 {고리}(창 {W} · 덩이 {덩이} · 행 {T})"
+    다[f"{이름} 프롬프트"] = 프롬프트(qkvA, oA, 0, T)
+    여유 = 고리 - W + 1                         # 고리가 아직 창을 가진 맨 앞 행 = T − 여유
+    다[f"{이름} 생성(행 넷까지) 3 경우"] = sum(생성(qkvA, oA, s0, n) for s0, n in ((T - 1, 1), (T - 4, 4), (T - 여유, 2)))
+    p0 = max(0, T - 고리)
+    칸 = np.arange(p0, T) % 고리
+    kD, kE_ = zip(*[C.자리로(x, 2) for x in khA])
+    vD, vE_ = zip(*[C.자리로(x, 2) for x in vhA])
+    키 = dv.down(pkd, (2, HKV, 고리, D), np.int8)[:, :, 칸]
+    값 = dv.down(pvd, (2, HKV, 고리 // 32, D, 32), np.int8).transpose(0, 1, 2, 4, 3).reshape(2, HKV, 고리, D)[:, :, 칸]
+    다[f"{이름} 고리에 남은 캐시(키 · 값 · 지수)"] = (
+        다른칸(키, np.stack([np.stack([d[j] for d in kD]) for j in range(2)]).astype(np.int8)[:, :, p0:T])
+        + 다른칸(dv.down(pkE, (HKV, 고리, nb), np.int64)[:, 칸], np.stack(kE_)[:, p0:T])
+        + 다른칸(값, np.stack([np.stack([d[j] for d in vD]) for j in range(2)]).astype(np.int8)[:, :, p0:T])
+        + 다른칸(dv.down(pvE, (HKV, 고리, nb), np.int64)[:, 칸], np.stack(vE_)[:, p0:T]))
+    assert T - p되 <= 여유, (T, p되, 여유)
+    다[f"{이름} 되감기 {T - p되} 토큰 → 새 행 {n새}"] = 프롬프트(qkvB, oB, p되, p되 + n새) + 생성(qkvB, oB, p되 + n새 - 1, 1)
+    return 다
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     global H
@@ -214,6 +307,9 @@ def main():
     다 = 층시험(dv, 256, 1, 10000.0, None, 1100, 1030, [130, 1024], r,
               생성들=[(1099, 1), (1022, 2), (1096, 4), (1030, 1), (129, 4), (1086, 4)])     # 그룹 경계 1,024 · 창 경계 · 슬롯 18 의 끝
     결과["경우"].update({f"긴 {k}": v for k, v in 다.items() if "어텐션" in k})
+    # ---- 0.13.0 12-3h-9 — 윈도 층의 고리 버퍼: 엔진의 꼴(창 1,024 · 덩이 512 → 고리 1,536)과 덩이가 64 의 배수가 아닌 작은 꼴 ----
+    결과["경우"].update(고리시험(dv, 256, 1, 10000.0, 3200, 1536, 512, 1024, r, (3200 - 450, 700)))
+    결과["경우"].update(고리시험(dv, 256, 1, 10000.0, 1000, 256, 100, 130, r, (1000 - 120, 300)))
     H = 16
     # ---- 크기와 상관없는 판 ----
     D, F, n = 3840, 15360, 37
