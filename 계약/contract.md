@@ -483,6 +483,33 @@ in order; numbers with 17 significant digits as in 5.2). A model that does not a
 [`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens` computes the layer lens for steps of a capsule without a GPU, with this
 section's CPU reference.
 
+### 5.4 Jacobian lens (GeulPUv2 #96 phase 2, [`문서/층렌즈.md`](../문서/층렌즈.md))
+
+The Jacobian lens moves the x_l of 5.3 into the final layer's basis with a D × D matrix J_l fitted outside, then reads it with the
+formula of 5.3 (Anthropic 2026 — J_l is the mean, over the positions p of the prompts, of Σ_{p′ ≥ p} ∂x_{L−1}(p′)/∂x_l(p) in the original
+model, fitted by jlens). J_l is not a value this contract computes but an input (the J file); this section fixes how to compute with
+it. So the same J file, the same model file and the same module contract give the same bits on every GPU and in every run. The blocks are
+those of 5.3.
+
+1. **J file** (`geulpu-jlens/1`): a safetensors file — for each source layer l (the fitted ones among 0 … L − 2) a tensor `J.<l>` (F16,
+   shape [D][D], row-major — row i is element i of u). In `__metadata__`, `format` is `geulpu-jlens/1`, `d_model` is D and `n_layers`
+   is L — the file is refused when either differs from the model. The fit record (`fit` — tool, commit, original model, prompts,
+   parameters) and the checked GGUF files (`checked` — file SHA-256 and agreement) are JSON strings and take no part in the computation.
+2. u_l(r) = J_l x_l(r): for each element i, a double s ← +0, then for j = 0, 1, …, D − 1 in order s ← s + J_l[i][j] · x_l(r)_j. The
+   halves of J are taken as they are (subnormals too); x is read like an input of rule R in section 0 (a subnormal reads as a zero of the
+   same sign — the engine's x_l has none). The product of a half and a float is exact in double; each addition rounds to the nearest
+   double (ties to even) — no fused multiply-add. u_l(r)_i = float(s) — like a result of rule R, one round to nearest at 24 significand
+   bits (with no exponent limit), and a magnitude below 2⁻¹²⁶ becomes a zero of the same sign. Elements i are independent, so splitting
+   them over threads gives the same bits.
+3. z_J⁽ˡ⁾(r) = item 2 of 5.3 applied to u_l(r) instead of x_l(r) — the logit linear layer of RMSNorm(u_l(r); `output_norm`), under the
+   same module contract (exact or fast). The last layer L − 1 and layers missing from the J file are not multiplied by J (z⁽ˡ⁾ of 5.3 as
+   is — the last layer is bit-identical to the final logits).
+4. For each layer, section 5.2 as is (the same as item 3 of 5.3).
+
+[`도구/jlens_fit.py`](../도구/jlens_fit.py) fits a J file with jlens on the original (Hugging Face) model.
+[`도구/repro_check.py`](../도구/repro_check.py) `--jlens <J file>` computes the Jacobian lens with this section's CPU reference for the
+steps of `--layer-lens`.
+
 ## 6. What the tests check ([`시험/`](../시험))
 
 | Test | What |
@@ -509,4 +536,5 @@ section's CPU reference.
 | Gemma 4 — 0.12.0 12-3h-1 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants c_a, c_b and fp32(2/30); GeGLU and the softcap against scalar computations copied from the contract text, and their error bounds against the exact values; the sliding window (a window ≥ the length gives the same bits as attention without a window, keys outside the window cannot change the result, every row equals a hand fold of its tiles and groups); the CPU reference (gemma-4-12b-it Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions on chat answers and on text |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
 | Layer lens (#96 — [`시험/렌즈.py`](../시험/렌즈.py) · [`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens`) | the server's per-layer (all L layers) logit hash, target logprob, entropy, top k and rank against the CPU reference (5.3); the last layer against the echo values of the same response; the echo of the lens path (the plan path, also for four rows or fewer) against the echo of the whole answer without the lens; CUDA against Vulkan (exact); refusals (no echo, echo_from at the end, top_k 21, wrong type); inside the CPU reference, the last layer against the final logits |
+| Jacobian lens (#96 phase 2 — [`시험/계약자체.py`](../시험/계약자체.py) · [`도구/repro_check.py`](../도구/repro_check.py) `--jlens`) | J곱 (item 2 of 5.4) against the contract's sentences carried out element by element — the ordered double sum and the rule-R rounding of the exact rational (subnormal halves, −0, 65504, a cancellation whose result depends on the order, values around the 2⁻¹²⁶ threshold), one row at a time against all rows at once, u = x (bits) when J is the identity; the J file (safetensors): write and read, a file built by hand from the specification, refusal of wrong files; in repro_check, the last layer against the final logits |
 | Quick check (CI) | without a GPU: the CPU reference against exact rational arithmetic and against an independent per-value dequantizer; byte-identical regeneration of every module; register spills in SASS; the RoPE table (item 8 — unscaled and YaRN factors 2 · 4 up to position 131,072 — [`엔진/시험_로프표.gl`](../엔진/시험_로프표.gl) against the CPU reference in [`시험/로프표.py`](../시험/로프표.py), byte for byte) — see [reproduce.md](https://github.com/wwoosshh/GeulPU/blob/main/docs/reproduce.md) |
