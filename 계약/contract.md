@@ -465,13 +465,15 @@ same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`promp
 
 The layer lens reads the residual stream of one prompt row at every layer with the final logit computation (the logit lens — the
 next-token distribution the model would give if it stopped at that layer). It is defined for the blocks of section 4 (qwen2, qwen3,
-llama); architectures with other blocks do not accept it until their own section defines it.
+llama) and, from 0.13.0, for the gemma4 block of 4.12; architectures with other blocks do not accept it until their own section defines it.
 
 1. x_l(r): the output of block l (0 … L − 1) for row r — the D float32 values after both residual additions (attention and FFN), that
-   is, the input of block l + 1. It is the engine's residual row as is.
+   is, the input of block l + 1. It is the engine's residual row as is. For gemma4 it is the x after the layer of 4.12 (both residual
+   additions and the layer scale of item 5).
 2. z⁽ˡ⁾(r) = the logit linear layer (section 1 — in the output weight's format, bias 0) of RMSNorm(x_l(r); `output_norm`) (section 4,
-   item 1) — the same formula and the same module contract (exact or fast) as the final logits. So z⁽ᴸ⁻¹⁾(r) is bit-identical to row
-   r's final logits.
+   item 1) — the same formula and the same module contract (exact or fast) as the final logits. For gemma4 the softcap of 4.12 item 6
+   follows (the same formula as the final logits — the softcap is monotonic, so the top 1 and the ranks are those before it, while the
+   probabilities and the entropy are those of the model's actual output). So z⁽ᴸ⁻¹⁾(r) is bit-identical to row r's final logits.
 3. For each layer, section 5.2 as is: the logprob of the target (the token r + 1 that row r scores), the entropy, the top k and the
    logit hash, and the target's rank (its position, from 1, in the order of 5.2 item 5 — z descending, then index ascending).
 
@@ -489,7 +491,8 @@ The Jacobian lens moves the x_l of 5.3 into the final layer's basis with a D × 
 formula of 5.3 (Anthropic 2026 — J_l is the mean, over the positions p of the prompts, of Σ_{p′ ≥ p} ∂x_{L−1}(p′)/∂x_l(p) in the original
 model, fitted by jlens). J_l is not a value this contract computes but an input (the J file); this section fixes how to compute with
 it. So the same J file, the same model file and the same module contract give the same bits on every GPU and in every run. The blocks are
-those of 5.3.
+qwen2, qwen3 and llama of section 4 (not gemma4 yet — no J has been fitted for that block; as in 5.3 item 2, its readout would end with
+the softcap).
 
 1. **J file** (`geulpu-jlens/1`): a safetensors file — for each source layer l (the fitted ones among 0 … L − 2) a tensor `J.<l>` (F16,
    shape [D][D], row-major — row i is element i of u). In `__metadata__`, `format` is `geulpu-jlens/1`, `d_model` is D and `n_layers`

@@ -223,9 +223,9 @@ screenshots, how to read the numbers, and API examples.
   slot · another slot · the prompt cache) and the **cache break** (which token, the text before it, before → now token) — when an agent
   puts something that changes every time (a clock, a working-folder path) near the start of its prompt, you can see the cache break there
   ([guide — where did the prompt cache break](research-guide.md#where-did-the-prompt-cache-break)). The step detail's **layer lens**
-  (from 0.13.0 — Qwen2.5, Qwen3 and Llama architectures) reads the computation at the position that chose the token at every layer with
+  (from 0.13.0 — Qwen2.5, Qwen3, Llama and Gemma 4 architectures) reads the computation at the position that chose the token at every layer with
   the final output, showing at which layer the answer appears (the logit lens). With a J file (`<name>.jlens.safetensors`) next to the
-  model file it also reads the Jacobian lens
+  model file it also reads the Jacobian lens (Qwen2.5, Qwen3 and Llama)
   ([guide — experiment 8](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-layer-lens)).
 - **Intervene** — pick an alternative token at any step and **branch here**: generation continues with the same settings, the same
   seed and the same per-step random numbers, so the chosen token is the only change. You can also regenerate with only the

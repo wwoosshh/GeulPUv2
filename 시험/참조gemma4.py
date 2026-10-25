@@ -54,9 +54,26 @@ def 설정(g):
     return s
 
 
-def 앞으로(g, 경우, 말=True, 행=None):
+def 층로짓(g, 잔차):
+    """계약 5.3(0.13.0 — gemma4 블록): 행마다 층마다 모은 잔차 [행][층][D](블록 l 의 출력 x_l — 층 배율 뒤, 블록 l + 1 의 입력)를 끝 로짓의
+    식(4.12 의 6 — RMSNorm(x; output_norm) · 출력 · 소프트캡)으로 읽는다 → [행][층][어휘]. 마지막 층은 끝 로짓과 같은 값이다. 행끼리 따로라
+    값은 같다(참조7B.py 의 층로짓 과 같은 꼴 — Jacobian lens 는 아직)."""
+    s = 설정(g)
+    R, NL, D = 잔차.shape
+    x = np.ascontiguousarray(np.asarray(잔차, f32).transpose(1, 0, 2)).reshape(NL * R, D)          # 층 l 의 행 q 는 l · R + q
+    hl = C.rms정규화(x, g.풀기("output_norm.weight"), s["eps"])
+    wh = R7.가중(g, "output.weight" if "output.weight" in g.tensors else "token_embd.weight")
+    zl = R7.곱(hl, wh, np.zeros(wh[1].shape[0], f32))
+    if s["캡"]:
+        zl = C.소프트캡(zl, s["캡"])
+    return np.ascontiguousarray(zl.reshape(NL, R, -1).transpose(1, 0, 2))
+
+
+def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
     """계약의 순전파 — 토큰열들(경우마다 위치 0 부터)의 모든 행 로짓 [Σ 행][어휘](소프트캡 뒤)과 경우의 시작 행. 행 = 경우마다 (a, b) 면
-    로짓은 그 행 [a, b) 만(시작 행도 그 행들의 것)."""
+    로짓은 그 행 [a, b) 만(시작 행도 그 행들의 것). 렌즈행(0.13.0 — 층 렌즈, 계약 5.3): 이 행들(경우를 이은 행 번호 — 행 으로 고르기
+    전의 것)의 층마다 로짓 [행][층][어휘]을 셋째 값으로 함께 돌려준다. 잔차: 셋째 값을 그 행들의 층마다 잔차 x_l [행][층][D] 로(층로짓 으로
+    읽는다 — 참조7B.py 의 앞으로 와 같은 꼴)."""
     s = 설정(g)
     NL, D, H, eps = s["층"], s["너비"], s["머리"], s["eps"]
     x = C.곱(R35.임베딩(g, 경우), C.제곱근(f32(D)))               # 계약 4.12 — 임베딩 × fp32(√너비)(√ 는 IEEE 바른 반올림)
@@ -68,6 +85,7 @@ def 앞으로(g, 경우, 말=True, 행=None):
 
     def z0(n):
         return np.zeros(n, f32)
+    잔들 = []
     for l in range(NL):
         tl = time.time()
         p = f"blk.{l}."
@@ -103,6 +121,8 @@ def 앞으로(g, 경우, 말=True, 행=None):
         x = C.더(x, C.rms정규화(f, g.풀기(p + "post_ffw_norm.weight"), eps))
         if p + "layer_output_scale.weight" in g.tensors:             # 계약 4.12 — 층 배율(잔차 전체에 곱 하나)
             x = C.곱(x, f32(g.풀기(p + "layer_output_scale.weight")[0]))
+        if 렌즈행 is not None:
+            잔들.append(np.array(x[list(렌즈행)], f32))                 # 0.13.0 — 계약 5.3 의 x_l(층 배율 뒤)
         if 말:
             print(f"층 {l}({'윈도' if w else '전체'}): {time.time() - tl:.1f} 초", flush=True)
     if 행 is not None:
@@ -113,6 +133,9 @@ def 앞으로(g, 경우, 말=True, 행=None):
     로짓 = R7.곱(h, wh, z0(wh[1].shape[0]))
     if s["캡"]:
         로짓 = C.소프트캡(로짓, s["캡"])
+    if 렌즈행 is not None:
+        잔 = np.ascontiguousarray(np.stack(잔들, 0).transpose(1, 0, 2))             # [행][층][D]
+        return 로짓, 시작, (잔 if 잔차 else 층로짓(g, 잔))
     return 로짓, 시작
 
 

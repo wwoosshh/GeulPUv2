@@ -304,8 +304,9 @@ python -m venv .venv                      # once — `python -I` ignores package
 From 0.13.0. Only the last layer produces the next token, but the computation of any layer (the residual stream) can be read with the
 final output computation too — the **logit lens** (the distribution the model would give if it stopped at that layer). The **Jacobian
 lens** (Anthropic, 2026) first moves that layer's values into the final layer's basis with a matrix J fitted on the original model, then
-reads them, so what the position points at shows earlier in the layers. The layer lens works for the Qwen2.5, Qwen3 and Llama
-architectures.
+reads them, so what the position points at shows earlier in the layers. The layer lens works for the Qwen2.5, Qwen3, Llama and Gemma 4
+architectures (for Gemma 4 the reading ends with the final logits' softcap), and the Jacobian lens for Qwen2.5, Qwen3 and Llama, whose
+J can be fitted.
 
 The setup differs a little from the other experiments:
 
