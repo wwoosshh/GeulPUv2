@@ -98,7 +98,7 @@ def 파이썬문법():
                     틀림.append(f"{os.path.relpath(경로, ROOT)}:{e.lineno} {e.msg}")
     알림("파이썬 문법", not 틀림, f"파일 {수} 개" + (f" — {틀림[:5]}" if 틀림 else ""))
     # #27 — 사용자가 직접 돌리는 도구는 문법만이 아니라 불러오기(import)까지: --help 가 종료 0 인가
-    for 이름 in ("debugger.py", "repro_check.py"):
+    for 이름 in ("debugger.py", "repro_check.py", "jlens_fit.py"):         # #96 2단계 — jlens_fit 은 torch 를 인자를 읽은 뒤에 부른다
         rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "도구", 이름), "--help"],
                           os.path.join(tempfile.gettempdir(), f"geulpu_help_{이름}.txt"))
         알림(f"도구 {이름} --help", rc == 0, 꼬리[-200:] if rc != 0 else "")

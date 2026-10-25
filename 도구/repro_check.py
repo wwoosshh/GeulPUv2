@@ -31,6 +31,11 @@ Qwen3 순전파, 22 · 26 · 37단계에서 GPU 와 모든 값이 같았던 것)
 (result.layer_lens — 스텝마다 서버의 geulpu.layer_lens)가 들어 있으면 --layer-lens 없이도 그 스텝들을 셈해 층마다 비트까지 견준다:
 
     python -I 도구/repro_check.py <재현 파일.json> <모델.gguf> --layer-lens 5,12 [--out 결과.json] [--skip-hash]
+
+#96 2단계 — Jacobian lens(계약 5.4): --jlens <J 파일> 이면 같은 스텝들의 같은 행을 J 파일의 J_l 로 옮겨(u_l = J_l x_l) 같은 식으로 읽는다
+— 층마다 같은 값들. 앞으로는 한 번이다(층마다의 잔차를 모아 logit lens 와 함께 읽는다):
+
+    python -I 도구/repro_check.py <재현 파일.json> <모델.gguf> --layer-lens 5,12 --jlens <모델>.jlens.safetensors [--out 결과.json]
 """
 import argparse
 import hashlib
@@ -47,6 +52,7 @@ ROOT = os.path.normpath(os.path.join(HERE, ".."))
 for _d in ("계약", "시험"):
     sys.path.insert(0, os.path.join(ROOT, _d))
 import gguf읽기 as GR       # noqa: E402
+import jlens읽기 as JL       # noqa: E402
 import 로그확률 as LP       # noqa: E402
 import 참조7B as REF        # noqa: E402
 import 뽑기 as SM           # noqa: E402
@@ -100,16 +106,16 @@ def 토큰글함수(g):
     return lambda i: (toks[i] if 0 <= i < len(toks) else "?").replace("▁", " ")
 
 
-def 층렌즈(zz, 끝z, c, 위수, 글, 걸음, 행, 기록=None):
-    """한 스텝의 층 렌즈(계약 5.3) — zz [층][어휘], 끝z 그 행의 끝 로짓, c 고른 토큰. 층마다 계약 5.2 를 그대로 · 보이고 JSON 을 돌려준다.
-    기록: 재현 파일에 든 그 스텝의 layer_lens(서버가 낸 것) — 있으면 층마다 비트까지 견준다."""
+def 층렌즈(zz, 끝z, c, 위수, 글, 걸음, 행, 기록=None, 이름="층 렌즈"):
+    """한 스텝의 층 렌즈(계약 5.3 — 이름 "Jacobian lens" 면 5.4) — zz [층][어휘], 끝z 그 행의 끝 로짓, c 고른 토큰. 층마다 계약 5.2 를
+    그대로 · 보이고 JSON 을 돌려준다. 기록: 재현 파일에 든 그 스텝의 layer_lens(서버가 낸 것) — 있으면 층마다 비트까지 견준다."""
     L = zz.shape[0]
     끝같음 = bool(np.array_equal(np.ascontiguousarray(zz[L - 1]).view(np.uint32), np.ascontiguousarray(끝z, np.float32).view(np.uint32)))
     j = {"step": 걸음, "row": 행, "token": int(c), "layers": L, "token_logprobs": [], "entropy": [], "ranks": [], "top_ids": [],
          "top_logprobs": [], "logit_hashes": [], "last_layer_equals_final": 끝같음}
     if 기록 is not None:
         위수 = len(기록["top_ids"][0]) if 기록.get("top_ids") and 기록["top_ids"][0] is not None else 위수
-    print(f"층 렌즈 — 스텝 {걸음}(행 {행} · 고른 토큰 #{c} {글(c)!r}):", flush=True)
+    print(f"{이름} — 스텝 {걸음}(행 {행} · 고른 토큰 #{c} {글(c)!r}):", flush=True)
     for l in range(L):
         z = zz[l]
         r = LP.로그확률행(z, 위수=위수)
@@ -133,7 +139,7 @@ def 층렌즈(zz, 끝z, c, 위수, 글, 걸음, 행, 기록=None):
             if c in 기록)]
         j["recorded"] = "same" if not 다른층 and int(기록.get("layers") or 0) == L and int(기록.get("token", c)) == int(c) else "different"
         j["recorded_different_layers"] = 다른층[:50]
-        print(f"  재현 파일의 층 렌즈: {'같음(비트)' if j['recorded'] == 'same' else f'다름 — 층 {다른층[:8]}'}", flush=True)
+        print(f"  재현 파일의 {이름}: {'같음(비트)' if j['recorded'] == 'same' else f'다름 — 층 {다른층[:8]}'}", flush=True)
     return j
 
 
@@ -282,6 +288,8 @@ def main():
     ap.add_argument("--branches", help="실행 로그 — 확인할 분기(b), 쉼표로")
     ap.add_argument("--layer-lens", "--층렌즈", dest="layer_lens", metavar="5,12",
                     help="재현 파일 — 층 렌즈(계약 5.3)를 셈할 스텝(1 부터, 연구 패널의 '스텝 N'), 쉼표로")
+    ap.add_argument("--jlens", metavar="model.jlens.safetensors",
+                    help="J 파일(계약 5.4 — geulpu-jlens/1) — 층 렌즈의 스텝들에서 Jacobian lens 도 셈한다")
     a = ap.parse_args()
     raw = open(a.repro_file, encoding="utf-8").read()
     첫 = raw.lstrip().split("\n", 1)[0]
@@ -290,8 +298,8 @@ def main():
     except ValueError:
         첫줄 = None
     if 헤더인가(첫줄):                                      # 실행 로그(JSONL)
-        if a.layer_lens:
-            sys.exit("--layer-lens 는 아직 재현 파일(geulpu-capsule/1)만 받는다 — 연구 패널에서 그 답의 재현 파일을 내보내 쓴다")
+        if a.layer_lens or a.jlens:
+            sys.exit("--layer-lens · --jlens 는 아직 재현 파일(geulpu-capsule/1)만 받는다 — 연구 패널에서 그 답의 재현 파일을 내보내 쓴다")
         실행확인(a, [json.loads(l) for l in raw.splitlines() if l.strip()])
         return
     cap = json.loads(raw)                                   # 파이썬의 json 은 큰 정수(시드)를 그대로 읽는다
@@ -334,12 +342,24 @@ def main():
     for s in 렌즈걸음:
         if not 1 <= s <= n:
             sys.exit(f"--layer-lens 의 스텝 {s} 가 범위 밖이다(1 … {n})")
+    렌즈J = None
+    if a.jlens:                                             # #96 2단계 — Jacobian lens(계약 5.4)
+        if not 렌즈걸음:
+            sys.exit("--jlens 는 층 렌즈의 스텝(--layer-lens 5,12 또는 재현 파일의 layer_lens)과 함께 쓴다")
+        렌즈J, 메타 = JL.읽기(a.jlens)
+        L모델, D모델 = REF.설정(g)["층"], g.tensors["token_embd.weight"][1][0]
+        if int(메타["n_layers"]) != L모델 or int(메타["d_model"]) != D모델:
+            sys.exit(f"J 파일의 층 · 너비({메타['n_layers']} · {메타['d_model']})가 모델({L모델} · {D모델})과 다르다")
+        결과["jlens"] = {"file": os.path.basename(a.jlens), "sha256": JL.해시(a.jlens), "source_layers": sorted(렌즈J)}
+        print(f"J 파일 {os.path.basename(a.jlens)} — 원천 층 {len(렌즈J)} 개 · SHA-256 {결과['jlens']['sha256'][:16]}…", flush=True)
     렌즈행 = [len(P) - 2 + s for s in 렌즈걸음]              # 스텝 s(1 부터)의 분포는 행 P − 1 + (s − 1)
     print(f"CPU 참조로 행 {len(S)} 개 계산하는 중(프롬프트 {len(P)} + 결과 {n} 토큰"
           f"{f' · 층 렌즈 스텝 {렌즈걸음}' if 렌즈걸음 else ''}) …", flush=True)
     t0 = time.time()
     if 렌즈걸음:
-        로짓, _, 렌즈 = REF.앞으로(g, [S], 말=False, 얀=얀(얀배), 렌즈행=렌즈행)
+        로짓, _, 잔 = REF.앞으로(g, [S], 말=False, 얀=얀(얀배), 렌즈행=렌즈행, 잔차=True)
+        렌즈 = REF.층로짓(g, 잔)
+        렌즈Jz = REF.층로짓(g, 잔, 렌즈J) if 렌즈J is not None else None
     else:
         로짓, _ = REF.앞으로(g, [S], 말=False, 얀=얀(얀배))
     결과["cpu_seconds"] = round(time.time() - t0, 1)
@@ -375,6 +395,10 @@ def main():
         글 = 토큰글함수(g)
         결과["layer_lens"] = [층렌즈(렌즈[q], 로짓[렌즈행[q]], toks[s - 1], k or 10, 글, s, 렌즈행[q], 렌즈기록.get(s)) for q, s in enumerate(렌즈걸음)]
         렌즈같음 = all(x["last_layer_equals_final"] and x.get("recorded", "same") == "same" for x in 결과["layer_lens"])
+        if 렌즈Jz is not None:                              # #96 2단계 — Jacobian lens(계약 5.4)
+            결과["jacobian_lens"] = [층렌즈(렌즈Jz[q], 로짓[렌즈행[q]], toks[s - 1], k or 10, 글, s, 렌즈행[q], 이름="Jacobian lens")
+                                    for q, s in enumerate(렌즈걸음)]
+            렌즈같음 = 렌즈같음 and all(x["last_layer_equals_final"] for x in 결과["jacobian_lens"])
     결과["all_same"] = all(not v for v in 다름.values()) and 결과["fingerprint"] in ("same", "absent") and 렌즈같음
     print("모두 같음 — 이 재현 파일은 계약대로 계산한 값과 비트까지 같다" if 결과["all_same"] else "다른 곳이 있다", flush=True)
     if a.out:
