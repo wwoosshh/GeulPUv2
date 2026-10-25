@@ -122,8 +122,8 @@ def 라마(gguf, 판폴더, 작업, kv="f16", 전문가CPU=False):
     앞 = {"f16": "라마", "q8_0": "라마q8_"}[kv]
     시작 = len(LM.로그)
     lm = LM.라마(gguf, n_ctx=n_ctx, n_batch=n_ctx, n_ubatch=512, n_seq_max=1, flash=-1, kv형식={"f16": 1, "q8_0": 8}[kv], 전문가CPU=전문가CPU)
-    if 전문가CPU:                         # 2026-10-25 — MoE 의 전문가 행렬을 CPU 에(llama-server 의 --cpu-moe — 12 GB 에 들지 않는 MoE)
-        print("llama.cpp 전문가 행렬을 CPU 에:", sum("overridden" in l for l in LM.로그[시작:]), "텐서")
+    if 전문가CPU:                         # 2026-10-25 — MoE 의 전문가 행렬을 호스트 메모리에(llama-server 의 --cpu-moe — 12 GB 에 들지 않는 MoE)
+        print("llama.cpp 전문가 행렬을 호스트 메모리에:", sum("overridden" in l for l in LM.로그[시작:]), "텐서")
     print("llama.cpp 문맥:", " | ".join(l.strip() for l in lm.문맥로그.splitlines() if any(x in l for x in ("flash", "Flash", "n_ctx", "n_ubatch", "CUDA", "type_k"))))
     for i, ids in enumerate(토큰들):
         lm.지우기()

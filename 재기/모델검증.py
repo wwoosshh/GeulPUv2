@@ -548,7 +548,7 @@ def 품질측정(gguf, 모, bin폴더, 모듈폴더, 출력, 품질라마, 위�
     if rc != 0:
         판("quality", "입력", False, 끝)
         return
-    # 2026-10-25 — 12 GB 에 들지 않는 MoE 는 llama.cpp 의 전문가 행렬을 CPU 에(시험/품질.py --전문가CPU — llama-server 의 --cpu-moe)
+    # 2026-10-25 — 12 GB 에 들지 않는 MoE 는 llama.cpp 의 전문가 행렬을 호스트 메모리에(시험/품질.py --전문가CPU — llama-server 의 --cpu-moe)
     전문가 = ["--전문가CPU"] if "--MoE" in 모.get("머리옵션", []) and os.path.getsize(gguf) > 큰모델 else []
     for kv in (None, "q8_0"):
         rc, 끝 = 돌리기(파이썬("시험/품질.py", "라마", gguf, 품질라마, 라, *(["--kv", kv] if kv else []), *전문가),

@@ -5,7 +5,7 @@
   llama_context_params: n_ctx 0, n_batch 4, n_ubatch 8, n_seq_max 12, n_threads 28, n_threads_batch 32,
                         flash_attn_type 52 (−1 자동, 0 끔, 1 켬), type_k 104, type_v 108 (ggml 형식: 0 F32, 1 F16),
                         offload_kqv 137, kv_unified 141 (b11496 의 llama.h 와 대조함)
-  llama_model_params: tensor_buft_overrides 8 (전문가CPU — MoE 의 전문가 행렬을 CPU 에), n_gpu_layers 16 (기본 −1 은 자동 맞춤 — 99 로
+  llama_model_params: tensor_buft_overrides 8 (전문가CPU — MoE 의 전문가 행렬을 GPU 메모리 대신 호스트 메모리에), n_gpu_layers 16 (기본 −1 은 자동 맞춤 — 99 로
                       모든 층을 GPU 에)
   llama_batch (llama_batch_init 이 돌려줌): n_tokens 0, token 8, embd 16, pos 24, n_seq_id 32, seq_id 40, logits 48
 
@@ -112,7 +112,7 @@ class 라마:
             L.llama_model_default_params(mp)
             assert struct.unpack_from("<ii", mp.raw, 16) == (-1, 1), "모델 구조체 기본값이 예상과 다르다"
             struct.pack_into("<i", mp, 16, 99)                       # n_gpu_layers: 모든 층을 GPU 에 (−1 은 "자동 맞춤")
-            if 전문가CPU:                                           # MoE 의 전문가 행렬은 CPU 에(llama-server 의 --cpu-moe)
+            if 전문가CPU:                                           # MoE 의 전문가 행렬은 호스트 메모리에(llama-server 의 --cpu-moe)
                 assert struct.unpack_from("<Q", mp.raw, 8)[0] == 0, "tensor_buft_overrides 의 기본값이 예상과 다르다"
                 self._덮개 = _전문가CPU덮개(G)
                 struct.pack_into("<Q", mp, 8, ctypes.addressof(self._덮개[1]))
