@@ -11,6 +11,11 @@
 
 상수 정수 종류35수 = 7.
 
+(* 2026-10-25 — k-양자화 파일 안의 Q8_0 행렬(Qwen3.8 의 ggml-org · bartowski 파일 — 행렬마다 형식이 섞인다): [고전 종류][층] 이 1 이면 그 행렬은
+   고전 Q8_0 의 표(가35값 · 가35척)와 판으로(구조/qwen35/엔진.gl 의 K행렬인가35 가 거짓), 0 이면 가중치K.gl 의 표(k-양자화 β · α 는 K 종류 6 · 7 —
+   lmstudio 파일) *)
+정수 참조 고전35 = 없음.
+
 [정수 l를 어텐션층인가35]는 -> 참거짓 { 반환 (l + 1) % 선형간격 == 0. }
 
 [GDN채널]는 -> 정수 { 반환 (2 * GDNk머리 + GDNv머리) * 128. }
@@ -29,7 +34,9 @@
 }
 
 [정수 종류를 정수 l를 종류35N]는 -> 정수 {
-    (K모델 그리고 종류 < 5)이면 { 반환 0. }          (* 0.12.0 12-3f-1 — k-양자화 파일은 β · α 만 이 표(나머지는 가중치K.gl 의 표 — K층깔기35) *)
+    K모델이면 {                                       (* 0.12.0 12-3f-1 — k-양자화 파일은 Q8_0 인 행렬만 이 표(나머지는 가중치K.gl 의 표 — K층깔기35) *)
+        고전35[종류 * 층수 + l] == 0이면 { 반환 0. }
+    }
     종류 == 0이면 {
         어텐션층인가(l)이면 { 반환 QKV폭. }
         반환 GDN채널().
@@ -91,6 +98,12 @@
     eps5모델 = 거짓.
     eps6모델 = 거짓.
     층수 = 메타정수(g, 키35("block_count")).
+    (* MTP(다음 토큰 예측) 층 — nextn_predict_layers: block_count 의 끝 층들. 본 계산(로짓)에는 쓰지 않아 엔진은 읽지 않는다(llama.cpp 도
+       본 그래프에서 건너뛴다 — Qwen3.8-27B 의 unsloth · bartowski · lmstudio 파일은 block_count 65 = 층 64 + MTP 1) *)
+    정수 MTP층 = 0.
+    메타있음(g, 키35("nextn_predict_layers"))이면 { MTP층 = 메타정수(g, 키35("nextn_predict_layers")). }
+    (MTP층 < 0 또는 MTP층 >= 층수)이면 { 파일에_쓰기(표준오류(), "Qwen3.5: nextn_predict_layers %lld 은 받지 않는다(block_count %lld)\n", MTP층, 층수). 1로 종료하다. }
+    층수 -= MTP층.
     머리수 = 메타정수(g, 키35("attention.head_count")).
     KV머리수 = 메타정수(g, 키35("attention.head_count_kv")).
     너비 = 메타정수(g, 키35("embedding_length")).
@@ -98,7 +111,8 @@
     MoE모델이면 { 확장폭 = 메타정수(g, "qwen35moe.expert_shared_feed_forward_length"). } 아니면 { 확장폭 = 메타정수(g, "qwen35.feed_forward_length"). }
     모델위치 = 메타정수(g, 키35("context_length")).
     로프밑 = 메타실수(g, 키35("rope.freq_base")).
-    선형간격 = 메타정수(g, 키35("full_attention_interval")).
+    선형간격 = 4.                                               (* llama.cpp 와 같은 기본(키가 없을 때) *)
+    메타있음(g, 키35("full_attention_interval"))이면 { 선형간격 = 메타정수(g, 키35("full_attention_interval")). }
     GDNk머리 = 메타정수(g, 키35("ssm.group_count")).
     GDNv머리 = 메타정수(g, 키35("ssm.time_step_rank")).
     정수 hd = 메타정수(g, 키35("attention.key_length")).
@@ -131,6 +145,21 @@
     }
     (선형간격 < 1 또는 GDNk머리 < 1 또는 GDNk머리 > 512 또는 GDNv머리 < 1 또는 GDNv머리 > 512 또는 GDNv머리 % GDNk머리 != 0)이면 {
         파일에_쓰기(표준오류(), "Qwen3.5: 받지 않는 GDN 모양: 간격 %lld · k 헤드 %lld · v 헤드 %lld\n", 선형간격, GDNk머리, GDNv머리). 1로 종료하다.
+    }
+    (* attention.recurrent_layers(층마다 선형 어텐션인가 — 있으면 llama.cpp 는 간격보다 이것을 따른다): 엔진은 간격의 차례만 계산하므로 같은지
+       본다(MTP 층의 칸은 보지 않는다) *)
+    메타있음(g, 키35("attention.recurrent_layers"))이면 {
+        정수 ro = 메타배열(g, 키35("attention.recurrent_layers")).
+        (배열원소형식 != 7 또는 배열개수 < 층수)이면 {
+            파일에_쓰기(표준오류(), "Qwen3.5: attention.recurrent_layers 의 꼴(원소 타입 %lld · %lld 개)은 받지 않는다\n", 배열원소형식, 배열개수). 1로 종료하다.
+        }
+        반복 (정수 l는 0부터 층수 전까지) {
+            참거짓 선형 = (g→자료[ro + l] & 255) != 0.
+            참거짓 어텐션 = (l + 1) % 선형간격 == 0.
+            ((선형 그리고 어텐션) 또는 (아닌 선형 그리고 아닌 어텐션))이면 {
+                파일에_쓰기(표준오류(), "Qwen3.5: 층 %lld 의 종류(attention.recurrent_layers)가 전체 어텐션 간격 %lld 의 차례와 달라 받지 않는다\n", l, 선형간격). 1로 종료하다.
+            }
+        }
     }
     (* o 투영(attn_output · ssm_out)은 같은 종류(깊이 = 질의 폭) *)
     (256 * 머리수 != GDNv머리 * 128 또는 안폭 != GDNv머리 * 128)이면 {
@@ -175,7 +204,8 @@
         (K형식인가(fl) 또는 K형식인가(fh))이면 { K형식있음 = 참. K일부 = 참. }
     }
     K모델이면 {
-        K종류수 = 6.                     (* 0 qkv(어텐션 구간 A · GDN qkv) · 1 o · 2 gu · 3 down · 4 qkv 구간 B(어텐션의 v — 형식이 다를 때) · 5 z *)
+        K종류수 = 8.                     (* 0 qkv(어텐션 구간 A · GDN qkv) · 1 o · 2 gu · 3 down · 4 qkv 구간 B(어텐션의 v — 형식이 다를 때) · 5 z ·
+                                            6 β · 7 α(2026-10-25 — k-양자화일 때) *)
         (너비 % 256 != 0 또는 확장폭 % 256 != 0 또는 질의폭 % 256 != 0)이면 {
             파일에_쓰기(표준오류(), "Qwen3.5 k-양자화: 너비 · 확장폭 · 질의 폭이 256 의 배수여야 한다(%lld · %lld · %lld)\n", 너비, 확장폭, 질의폭). 1로 종료하다.
         }
@@ -185,30 +215,45 @@
         (아닌 K형식인가(K낱말형식) 또는 K낱말형식 == GGUF_IQ4_XS 또는 아닌 K형식인가(K머리형식) 또는 K머리형식 == GGUF_IQ4_XS)이면 {
             파일에_쓰기(표준오류(), "Qwen3.5 k-양자화: 낱말표 · 출력도 Q4_K · Q5_K · Q6_K 여야 한다(%lld · %lld)\n", K낱말형식, K머리형식). 1로 종료하다.
         }
+        (* 2026-10-25 — 행렬마다 Q8_0(고전 판) 또는 Q4_K · Q5_K · Q6_K(k-양자화의 판). 한 행렬곱의 구간끼리는 섞지 않는다: 어텐션 층의
+           q · k · v 는 모두 Q8_0 이거나 모두 k-양자화, gate · up 도 그렇다 *)
+        고전35 = 초기할당(종류35수 * 층수 을, 8).
         반복 (정수 l는 0부터 층수 전까지) {
-            K행렬확인35(g, l, FFN이름35("ffn_gate.weight")). K행렬확인35(g, l, FFN이름35("ffn_up.weight")). K행렬확인35(g, l, FFN이름35("ffn_down.weight")).
+            참거짓 g8 = 행렬형식35(g, l, FFN이름35("ffn_gate.weight")) == GGUF_Q8_0.
+            참거짓 u8 = 행렬형식35(g, l, FFN이름35("ffn_up.weight")) == GGUF_Q8_0.
+            ((g8 그리고 아닌 u8) 또는 (아닌 g8 그리고 u8))이면 { 섞임35(l, "ffn_gate · ffn_up"). }
+            g8이면 { 고전35[2 * 층수 + l] = 1. }
+            행렬형식35(g, l, FFN이름35("ffn_down.weight")) == GGUF_Q8_0이면 { 고전35[3 * 층수 + l] = 1. }
             어텐션층인가(l)이면 {
-                K행렬확인35(g, l, "attn_q.weight"). K행렬확인35(g, l, "attn_k.weight"). K행렬확인35(g, l, "attn_v.weight").
-                K행렬확인35(g, l, "attn_output.weight").
+                참거짓 q8 = 행렬형식35(g, l, "attn_q.weight") == GGUF_Q8_0.
+                참거짓 k8 = 행렬형식35(g, l, "attn_k.weight") == GGUF_Q8_0.
+                참거짓 v8 = 행렬형식35(g, l, "attn_v.weight") == GGUF_Q8_0.
+                (q8 그리고 k8 그리고 v8)이면 { 고전35[0 * 층수 + l] = 1. }
+                아니면 (q8 또는 k8 또는 v8)이면 { 섞임35(l, "attn_q · attn_k · attn_v"). }
+                행렬형식35(g, l, "attn_output.weight") == GGUF_Q8_0이면 { 고전35[1 * 층수 + l] = 1. }
             }
             아니면 {
-                K행렬확인35(g, l, "attn_qkv.weight"). K행렬확인35(g, l, "attn_gate.weight"). K행렬확인35(g, l, "ssm_out.weight").
-                Q8행렬확인35(g, l, "ssm_beta.weight"). Q8행렬확인35(g, l, "ssm_alpha.weight").
+                행렬형식35(g, l, "attn_qkv.weight") == GGUF_Q8_0이면 { 고전35[0 * 층수 + l] = 1. }
+                행렬형식35(g, l, "ssm_out.weight") == GGUF_Q8_0이면 { 고전35[1 * 층수 + l] = 1. }
+                행렬형식35(g, l, "attn_gate.weight") == GGUF_Q8_0이면 { 고전35[4 * 층수 + l] = 1. }
+                행렬형식35(g, l, "ssm_beta.weight") == GGUF_Q8_0이면 { 고전35[5 * 층수 + l] = 1. }
+                행렬형식35(g, l, "ssm_alpha.weight") == GGUF_Q8_0이면 { 고전35[6 * 층수 + l] = 1. }
             }
         }
     }
 }
 
-(* 0.12.0 12-3f-1 — k-양자화 파일의 층 행렬: Q4_K · Q5_K · Q6_K(ssm_alpha · ssm_beta 는 Q8_0) *)
-[GGUF 참조 g를 정수 l를 문자열 꼬리를 K행렬확인35]는 {
+(* 0.12.0 12-3f-1 · 2026-10-25 — k-양자화 파일의 층 행렬 하나의 형식: Q8_0(고전 판) · Q4_K · Q5_K · Q6_K *)
+[GGUF 참조 g를 정수 l를 문자열 꼬리를 행렬형식35]는 -> 정수 {
     문자열 이름 = 층이름(l, 꼬리).
     정수 f = 정수목록_값(g→텐서형식, 텐서찾기(g, 이름)).
-    (아닌 K형식인가(f) 또는 f == GGUF_IQ4_XS)이면 { 파일에_쓰기(표준오류(), "%s: 형식 %lld — Qwen3.5 의 k-양자화 파일은 Q4_K · Q5_K · Q6_K 만(아직)\n", 이름, f). 1로 종료하다. }
+    (f != GGUF_Q8_0 그리고 (아닌 K형식인가(f) 또는 f == GGUF_IQ4_XS))이면 {
+        파일에_쓰기(표준오류(), "%s: 형식 %lld — Qwen3.5 의 k-양자화 파일은 행렬마다 Q8_0 · Q4_K · Q5_K · Q6_K 만(아직)\n", 이름, f). 1로 종료하다.
+    }
+    반환 f.
 }
-[GGUF 참조 g를 정수 l를 문자열 꼬리를 Q8행렬확인35]는 {
-    문자열 이름 = 층이름(l, 꼬리).
-    정수 f = 정수목록_값(g→텐서형식, 텐서찾기(g, 이름)).
-    f != GGUF_Q8_0이면 { 파일에_쓰기(표준오류(), "%s: 형식 %lld — ssm_alpha · ssm_beta 는 Q8_0 만(아직)\n", 이름, f). 1로 종료하다. }
+[정수 l를 문자열 무엇을 섞임35]는 {
+    파일에_쓰기(표준오류(), "층 %lld: %s 가 Q8_0 과 k-양자화로 섞였다 — 한 행렬곱 안의 섞임은 아직 받지 않는다\n", l, 무엇). 1로 종료하다.
 }
 
 (* 깔기 전에 모든 층의 텐서 모양 — 모양확인모두 의 Qwen3.5 판 *)
@@ -254,19 +299,19 @@
 [GGUF 참조 g를 정수 종류를 정수 l를 정수 참조 줄들을 정수 참조 임시를 층줄35]는 {
     종류 == 0이면 {
         어텐션층인가(l)이면 {
-            Q8줄들(g, 층이름(l, "attn_q.weight"), 줄들, 0).
-            Q8줄들(g, 층이름(l, "attn_k.weight"), 줄들, 2 * 질의폭).
-            Q8줄들(g, 층이름(l, "attn_v.weight"), 줄들, 2 * 질의폭 + 256 * KV머리수).
+            Q8줄들형식(g, 층이름(l, "attn_q.weight"), 줄들, 0, GGUF_Q8_0).
+            Q8줄들형식(g, 층이름(l, "attn_k.weight"), 줄들, 2 * 질의폭, GGUF_Q8_0).
+            Q8줄들형식(g, 층이름(l, "attn_v.weight"), 줄들, 2 * 질의폭 + 256 * KV머리수, GGUF_Q8_0).
         }
-        아니면 { Q8줄들(g, 층이름(l, "attn_qkv.weight"), 줄들, 0). }
+        아니면 { Q8줄들형식(g, 층이름(l, "attn_qkv.weight"), 줄들, 0, GGUF_Q8_0). }
     }
     아니면 종류 == 1이면 {
-        어텐션층인가(l)이면 { Q8줄들(g, 층이름(l, "attn_output.weight"), 줄들, 0). }
-        아니면 { Q8줄들(g, 층이름(l, "ssm_out.weight"), 줄들, 0). }
+        어텐션층인가(l)이면 { Q8줄들형식(g, 층이름(l, "attn_output.weight"), 줄들, 0, GGUF_Q8_0). }
+        아니면 { Q8줄들형식(g, 층이름(l, "ssm_out.weight"), 줄들, 0, GGUF_Q8_0). }
     }
     아니면 종류 == 2이면 {
-        Q8줄들(g, 층이름(l, FFN이름35("ffn_gate.weight")), 임시, 0).
-        Q8줄들(g, 층이름(l, FFN이름35("ffn_up.weight")), 임시, 확장폭).
+        Q8줄들형식(g, 층이름(l, FFN이름35("ffn_gate.weight")), 임시, 0, GGUF_Q8_0).
+        Q8줄들형식(g, 층이름(l, FFN이름35("ffn_up.weight")), 임시, 확장폭, GGUF_Q8_0).
         반복 (정수 j는 0부터 확장폭 / 32 전까지) {
             반복 (정수 i는 0부터 32 전까지) {
                 줄들[64 * j + i] = 임시[32 * j + i].
@@ -274,14 +319,21 @@
             }
         }
     }
-    아니면 종류 == 3이면 { Q8줄들(g, 층이름(l, FFN이름35("ffn_down.weight")), 줄들, 0). }
-    아니면 종류 == 4이면 { Q8줄들(g, 층이름(l, "attn_gate.weight"), 줄들, 0). }
+    아니면 종류 == 3이면 { Q8줄들형식(g, 층이름(l, FFN이름35("ffn_down.weight")), 줄들, 0, GGUF_Q8_0). }
+    아니면 종류 == 4이면 { Q8줄들형식(g, 층이름(l, "attn_gate.weight"), 줄들, 0, GGUF_Q8_0). }
     아니면 종류 == 5이면 { Q8줄들형식(g, 층이름(l, "ssm_beta.weight"), 줄들, 0, GGUF_Q8_0). }      (* 12-3f-1 — k-양자화 파일에서도 Q8_0 *)
     아니면 { Q8줄들형식(g, 층이름(l, "ssm_alpha.weight"), 줄들, 0, GGUF_Q8_0). }
 }
 
 (* 0.12.0 12-3f-1 — k-양자화 파일의 층 행렬(가중치K.gl 의 K층깔기 의 Qwen3.5 판): 종류 0 은 어텐션 층의 [q · 게이트 | k](v 의 형식이 같으면 v 까지)
-   · GDN 층의 attn_qkv, 1 은 attn_output · ssm_out(깊이 = 질의 폭), 2 gu, 3 down, 4 는 어텐션 층의 v(형식이 다를 때), 5 는 GDN 층의 z(attn_gate) *)
+   · GDN 층의 attn_qkv, 1 은 attn_output · ssm_out(깊이 = 질의 폭), 2 gu, 3 down, 4 는 어텐션 층의 v(형식이 다를 때), 5 는 GDN 층의 z(attn_gate),
+   6 · 7 은 GDN 층의 β · α(2026-10-25 — k-양자화일 때). Q8_0 인 행렬(고전35)은 이 표에 없다(고전 판 — 층깔기35) *)
+[정수 종류를 K고전종류35]는 -> 정수 {
+    종류 == 4이면 { 반환 0. }
+    종류 >= 5이면 { 반환 종류 - 1. }
+    반환 종류.
+}
+
 [GGUF 참조 g를 정수 종류를 K층깔기35]는 {
     정수 합 = 0.
     반복 (정수 l = 층시작: l < 조각층끝(): l += 1) {
@@ -289,7 +341,8 @@
         정수 K = 너비.
         정수 N = 0.
         참거짓 어텐션 = 어텐션층인가(l).
-        종류 == 0이면 {
+        고전35[K고전종류35(종류) * 층수 + l] != 0이면 { f = -1. }
+        아니면 종류 == 0이면 {
             어텐션이면 {
                 정수 fq = K텐서형식(g, 층이름(l, "attn_q.weight")).
                 정수 fk = K텐서형식(g, 층이름(l, "attn_k.weight")).
@@ -317,6 +370,8 @@
             N = 2 * 확장폭.
         }
         아니면 종류 == 3이면 { f = K텐서형식(g, 층이름(l, FFN이름35("ffn_down.weight"))). K = 확장폭. N = 너비. }
+        아니면 종류 == 6이면 { 아닌 어텐션이면 { f = K텐서형식(g, 층이름(l, "ssm_beta.weight")). N = GDNv머리. } }
+        아니면 종류 == 7이면 { 아닌 어텐션이면 { f = K텐서형식(g, 층이름(l, "ssm_alpha.weight")). N = GDNv머리. } }
         아니면 { 아닌 어텐션이면 { f = K텐서형식(g, 층이름(l, "attn_gate.weight")). N = GDNv머리 * 128. } }
         정수 자리 = 종류 * 층수 + (l - 층시작).
         K층형식[자리] = f.
@@ -374,6 +429,8 @@
             N2 = 2 * 확장폭.
         }
         아니면 종류 == 3이면 { K2 = K줄들(g, 층이름(l2, FFN이름35("ffn_down.weight")), 줄들, 0). N2 = 너비. }
+        아니면 종류 == 6이면 { K줄들(g, 층이름(l2, "ssm_beta.weight"), 줄들, 0). N2 = GDNv머리. }
+        아니면 종류 == 7이면 { K줄들(g, 층이름(l2, "ssm_alpha.weight"), 줄들, 0). N2 = GDNv머리. }
         아니면 { K줄들(g, 층이름(l2, "attn_gate.weight"), 줄들, 0). N2 = GDNv머리 * 128. }
         K깔기(f2, 줄들, K2, N2, 버퍼 + K층값[자리2], 버퍼 + K층척[자리2]).
     }
