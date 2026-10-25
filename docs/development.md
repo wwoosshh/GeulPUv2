@@ -150,9 +150,11 @@ comes in as one folder and two registry lines.
 3. **Engine**: `구조/<name>/엔진.gl` (plus `가중치.gl` for large weight code) defines one table — start from `기본구조표("<name>")`, the
    shared path, and change only the slots that differ. [엔진/구조표.gl](../엔진/구조표.gl) is the reference for the slots: configuration and
    module naming (`설정읽기`, `모듈구조`, `모듈꼬리`, `생성옵션`, `생성모드`, `표시판`), weights (`층깔기` … `올리기끝`), kernels, memory and
-   buffers (`모듈준비`, `장치바이트`, `큰할당`, `버퍼잡기`), the layer recipe (`층띄움들`), logits post-processing (`로짓뒤`), matmul kinds
-   (shared numbers 0 … 5; the architecture defines the rest), the KV layout, per-slot state, and capabilities (`생성그래프`, `표판`, `추측`,
-   `슬롯복사`, `저장소`, `나누기`, plus what the app chooses: `정밀만`, `벌칸까닭`, `KV8됨`, `F2B`, `공유32됨`, `협력됨`, `먼됨`). Start narrow
+   buffers (`모듈준비`, `장치바이트`, `큰할당`, `버퍼잡기`), the layer recipe (`층띄움들`), logits post-processing (`로짓뒤`, and `로짓뒤칸`
+   for one buffer — the layer lens rows), matmul kinds (shared numbers 0 … 5; the architecture defines the rest), the KV layout (`KV폭` —
+   elements per position of one cache layer), per-slot state, and capabilities (`생성그래프`, `표판`, `추측`, `슬롯복사`, `저장소`, `나누기`,
+   `캐시통째`, `되감기한도` — how many tokens a slot cache may be rewound and reused, which `버퍼잡기` may set, `공통어텐션` — whether the shared
+   attention buffers are allocated, `렌즈됨`, `J렌즈됨`, plus what the app chooses: `정밀만`, `벌칸까닭`, `KV8됨`, `F2B`, `공유32됨`, `협력됨`, `먼됨`). Start narrow
    (no CUDA graph, table step, speculative decoding, slot copy, context store or layer split; exact mode only; a Vulkan reason): the engine
    then runs its generic fallbacks. Register it in [구조/등록.gl](../구조/등록.gl) with `포함 "<name>/엔진.gl"` and `<name>구조들등록().`
    (the file merges line by line). Examples: [구조/qwen35/엔진.gl](../구조/qwen35/엔진.gl) (Qwen3.5 and MoE — almost every slot) and
