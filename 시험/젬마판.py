@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """0.12.0 12-3h-3 — Gemma 4 의 판(커널생성 gemma4큰 — 커널/생성젬마.gl)을 CPU 참조(계약/정수계약.py — 계약 4.12)와 비트까지:
-머리정규화젬마D(q · k 무게 · v 무게 없이) → RoPEKV젬마D(헤드 전체 NEOX — 전체 층은 rope_freqs 표, q 자리 · 키 · 값 캐시) → 어텐션젬마D묶음 ·
-접기젬마D(배율 1, 창), 그리고 RMS더하기젬마(층 배율과 함께 · 없이) · 곱하기젬마 · GeGLU젬마(gate · up 이 32 열마다 번갈아) · 소프트캡젬마.
+머리정규화젬마D(q · k 무게 · v 무게 없이) → RoPEKV젬마D(헤드 전체 NEOX — 전체 층은 rope_freqs 표, q 자리 · 키 · 값 캐시 — 값은 0.13.0
+12-3h-7 부터 키 32 개 블록마다 [차원][키]) → 타일어텐션젬마D(0.13.0 12-3h-7 — 텐서 코어) · 접기젬마D(배율 1, 창), 그리고 RMS더하기젬마(층
+배율과 함께 · 없이) · 곱하기젬마 · GeGLU젬마(gate · up 이 32 열마다 번갈아) · 소프트캡젬마.
 헤드 256(질의 16 · KV 8 — 슬라이딩 윈도 층)과 512(질의 16 · KV 1 — 전체 층), 같은 행들을 덩이 둘로(앞 덩이의 키 · 값을 캐시에) 돌린
 어텐션, 그리고 묶음 둘에 걸친 창(행 1,100 — 창 130 · 1,024). 0.13.0 12-3h-6 — 생성(행 넷까지)의 조각어텐션젬마D · 조각접기젬마D 도
 같은 참값과(행 1 · 2 · 4 를 끝 · 가운데 · 처음 · 타일 경계, 행 1,100 은 그룹 경계 · 창 경계에).
@@ -108,7 +109,7 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
 
     def 어텐션(n, 시작, pqd, pqE, pkd, pkE, pvd, pvE, po, W):
         p묶 = dv.dr.할당(n * H * 묶음수 * (D + 4) * 4)
-        dv.띄우기(f"어텐션젬마{D}묶음", (H * 묶음수, n), D,
+        dv.띄우기(f"타일어텐션젬마{D}", (-(-n * (H // HKV) // 16) * 묶음수, HKV), 128,           # 0.13.0 12-3h-7 — (질의 벡터 16 개 × 묶음, KV 헤드)
                 [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, 시작), (0, 최대길이), (0, W),
                  (0, 비트(1.0))])
         dv.띄우기(f"접기젬마{D}", (H, n), D, [(1, p묶), (1, po), (0, n), (0, H), (0, 시작), (0, 최대길이), (0, W)])
@@ -141,8 +142,8 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
     다[f"D{D} 키 자리"] = 다른칸(dv.down(pkd, (2, HKV, 최대길이, D), np.int8)[:, :, :T],
                              np.stack([np.stack([d[j] for d in kD]) for j in range(2)]).astype(np.int8))
     다[f"D{D} 키 지수"] = 다른칸(dv.down(pkE, (HKV, 최대길이, nb), np.int64)[:, :T], np.stack(kE_))
-    다[f"D{D} 값 자리"] = 다른칸(dv.down(pvd, (2, HKV, 최대길이, D), np.int8)[:, :, :T],
-                             np.stack([np.stack([d[j] for d in vD]) for j in range(2)]).astype(np.int8))
+    값 = dv.down(pvd, (2, HKV, 최대길이 // 32, D, 32), np.int8).transpose(0, 1, 2, 4, 3).reshape(2, HKV, 최대길이, D)   # 키 32 개 블록마다 [차원][키]
+    다[f"D{D} 값 자리"] = 다른칸(값[:, :, :T], np.stack([np.stack([d[j] for d in vD]) for j in range(2)]).astype(np.int8))
     다[f"D{D} 값 지수"] = 다른칸(dv.down(pvE, (HKV, 최대길이, nb), np.int64)[:, :T], np.stack(vE_))
     for W in 창들:
         po = dv.dr.할당(T * H * D * 4)
