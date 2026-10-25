@@ -5,7 +5,8 @@
   llama_context_params: n_ctx 0, n_batch 4, n_ubatch 8, n_seq_max 12, n_threads 28, n_threads_batch 32,
                         flash_attn_type 52 (−1 자동, 0 끔, 1 켬), type_k 104, type_v 108 (ggml 형식: 0 F32, 1 F16),
                         offload_kqv 137, kv_unified 141 (b11496 의 llama.h 와 대조함)
-  llama_model_params: n_gpu_layers 16 (기본 −1 은 자동 맞춤 — 99 로 모든 층을 GPU 에)
+  llama_model_params: tensor_buft_overrides 8 (전문가CPU — MoE 의 전문가 행렬을 CPU 에), n_gpu_layers 16 (기본 −1 은 자동 맞춤 — 99 로
+                      모든 층을 GPU 에)
   llama_batch (llama_batch_init 이 돌려줌): n_tokens 0, token 8, embd 16, pos 24, n_seq_id 32, seq_id 40, logits 48
 
 윈도우 x64 호출 규약: 8 바이트보다 큰 구조체를 값으로 넘기면 복사본의 주소가, 돌려받으면 호출하는 쪽이 준 자리의 주소가 넘어간다 —
@@ -48,9 +49,35 @@ def _불러오기(조용히):
     return _불러옴[0], _불러옴[1]
 
 
+def _전문가CPU덮개(G):
+    """2026-10-25 — llama_model_params.tensor_buft_overrides(자리 8): {pattern, buft} 의 배열(pattern 이 NULL 인 칸으로 끝). pattern 은
+    llama.cpp common 의 --cpu-moe 와 같은 정규식(LLM_FFN_EXPS_REGEX), buft 는 CPU 장치의 버퍼 형식(ggml_backend_dev_by_type(CPU = 0) →
+    ggml_backend_dev_buffer_type — ggml.dll 이나 ggml-base.dll). 돌려준 둘을 모델이 살아 있는 동안 들고 있어야 한다"""
+    B = ctypes.CDLL(os.path.join(DLL, "ggml-base.dll")) if os.path.exists(os.path.join(DLL, "ggml-base.dll")) else G
+
+    def 함수(이름):
+        for d in (G, B):
+            try:
+                return getattr(d, 이름)
+            except AttributeError:
+                pass
+        raise AttributeError(이름)
+    장치 = 함수("ggml_backend_dev_by_type")
+    장치.restype, 장치.argtypes = c_p, [ctypes.c_int]
+    형식 = 함수("ggml_backend_dev_buffer_type")
+    형식.restype, 형식.argtypes = c_p, [c_p]
+    dev = 장치(0)
+    assert dev, "llama.cpp 의 CPU 장치를 찾지 못했다"
+    buft = 형식(dev)
+    assert buft, "llama.cpp 의 CPU 버퍼 형식을 얻지 못했다"
+    글 = ctypes.create_string_buffer(rb"\.ffn_(up|down|gate|gate_up)_(ch|)exps")
+    판 = (c_p * 4)(ctypes.addressof(글), buft, None, None)
+    return 글, 판
+
+
 class 라마:
     def __init__(self, gguf, n_ctx=1024, n_batch=1024, n_ubatch=512, n_seq_max=4, flash=-1, kv형식=1, 통합KV=False, 조용히=True,
-                 모델=None):
+                 모델=None, 전문가CPU=False):
         L, G = self.L, self.G = _불러오기(조용히)
         for n in ("llama_model_default_params", "llama_context_default_params", "llama_batch_init"):
             getattr(L, n).restype = c_p
@@ -85,6 +112,10 @@ class 라마:
             L.llama_model_default_params(mp)
             assert struct.unpack_from("<ii", mp.raw, 16) == (-1, 1), "모델 구조체 기본값이 예상과 다르다"
             struct.pack_into("<i", mp, 16, 99)                       # n_gpu_layers: 모든 층을 GPU 에 (−1 은 "자동 맞춤")
+            if 전문가CPU:                                           # MoE 의 전문가 행렬은 CPU 에(llama-server 의 --cpu-moe)
+                assert struct.unpack_from("<Q", mp.raw, 8)[0] == 0, "tensor_buft_overrides 의 기본값이 예상과 다르다"
+                self._덮개 = _전문가CPU덮개(G)
+                struct.pack_into("<Q", mp, 8, ctypes.addressof(self._덮개[1]))
             self.model = L.llama_model_load_from_file(gguf.encode("utf-8"), mp)
             assert self.model, "llama.cpp 가 모델을 읽지 못했다"
             self.내모델 = True
