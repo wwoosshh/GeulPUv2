@@ -427,8 +427,14 @@ def 단계비트(gguf, 모, bin폴더, 모듈폴더, 출력, 라마):
             판("bits", "입력", None, "구조 llama 는 --tokenizer-llama(llama-tokenize)가 있어야 입력을 만든다")
             return []
         라마토큰 = ["--라마토큰", os.path.join(라마, "llama-tokenize" + EXE)]
-    elif 모["구조"] not in 표준구조:              # 2026-10-25 — 입력7B.py 의 토크나이저가 모르는 구조: 정한 무작위 토큰열(같은 길이 — 비트 대조에는 충분)
-        라마토큰 = ["--무작위", "24"]
+    elif 모["구조"] not in 표준구조:              # 2026-10-25 — 입력7B.py 의 토크나이저가 모르는 구조: 정한 무작위 토큰열(--토큰 — 비트 대조에는 충분)
+        import random
+        r = random.Random(24)
+        상한 = min(int(모["어휘"] or 32000), 150000)
+        토큰파일 = os.path.join(출력, "무작위토큰.json")
+        with open(토큰파일, "w", encoding="utf-8") as f:
+            json.dump({"토큰": [[r.randrange(상한) for _ in range(n)] for n in (24, 31, 19)]}, f)
+        라마토큰 = ["--토큰", 토큰파일]
     입력 = os.path.join(출력, "입력.bin")
     rc, 끝 = 돌리기(파이썬("시험/입력7B.py", gguf, 입력, *라마토큰), os.path.join(출력, "입력.txt"))
     if rc != 0:
