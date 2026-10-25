@@ -8,9 +8,10 @@ GeulPU 39단계의 시험/독립39.py(엔진 대 llama.cpp 의 모든 행 로짓
       주면 그 뒤 첫 줄바꿈 다음부터. 기본 글은 둘(wikitext-2 test 앞 · 연구자안내.md — 2단계). --긴: 8,192 토큰 창 하나(행 7,168 … 8,191 의
       로짓 — 2b단계). → 작업폴더/토큰.json · 입력.bin(엔진/시험_7B.gl 의 입력 — 로짓행 1024, 최대길이 2048 · 긴 창이 있으면 8192): 글마다
       경우 둘 — (프롬프트 1024, 잡기 0) → 행 0 … 1023, (프롬프트 2048, 잡기 1024) → 행 1024 … 2047, 긴 창은 (8192, 잡기 7168).
-  python -I 시험/품질.py 라마 <gguf> <llama 폴더> <작업폴더> [--kv q8_0]
+  python -I 시험/품질.py 라마 <gguf> <llama 폴더> <작업폴더> [--kv q8_0] [--전문가CPU]
       llama.cpp C API(재기/라마.py): n_ctx = n_batch = 2048(긴 창이 있으면 8192) · n_ubatch 512 · 플래시 어텐션 자동 · KV f16(--kv q8_0 이면
-      q8_0 — 참고값) · 모든 층 GPU → 라마{i}.npy · 라마긴.npy (q8_0 KV 는 라마q8_{i}.npy · 라마q8_긴.npy)
+      q8_0 — 참고값) · 모든 층 GPU → 라마{i}.npy · 라마긴.npy (q8_0 KV 는 라마q8_{i}.npy · 라마q8_긴.npy). --전문가CPU: MoE 의 전문가
+      행렬(ffn_*_exps)은 GPU 메모리 대신 호스트 메모리에(llama-server 의 --cpu-moe 와 같은 덮어쓰기 — 12 GB 에 들지 않는 Qwen3.6-35B-A3B 같은 MoE)
   python -I 시험/품질.py 견주기 <작업폴더> <정밀 시험_7B 출력> <결과.json> <이름=시험_7B 출력> [<이름=출력> …]
       (2단계 꼴도 받는다: 견주기 <작업폴더> <정밀 출력> <F1 출력> <결과.json> — 이름 F1)
       행마다(실수 64 비트) KL(정밀 ‖ x) = Σ p_정밀 (log p_정밀 − log p_x), 1위 토큰이 정밀과 같은가 — x = 변형들 · llama.cpp(f16 KV · 있으면
@@ -111,7 +112,7 @@ def 입력(gguf, 판폴더, 작업, 글들, 긴):
     print("입력: 글", len(토큰들), "· 2,048 토큰씩" + (f" · 긴 창 {긴이름} 8,192 토큰" if 긴토큰 else ""), "· 첫 토큰", [t[:4] for t in 토큰들])
 
 
-def 라마(gguf, 판폴더, 작업, kv="f16"):
+def 라마(gguf, 판폴더, 작업, kv="f16", 전문가CPU=False):
     os.environ["GEULPU_LLAMA"] = 판폴더
     sys.path.insert(0, os.path.join(ROOT, "재기"))
     import 라마 as LM                     # noqa: E402
@@ -119,7 +120,10 @@ def 라마(gguf, 판폴더, 작업, kv="f16"):
     토큰들, 긴 = T["토큰"], T.get("긴")
     n_ctx = 긴길이 if 긴 else 길이
     앞 = {"f16": "라마", "q8_0": "라마q8_"}[kv]
-    lm = LM.라마(gguf, n_ctx=n_ctx, n_batch=n_ctx, n_ubatch=512, n_seq_max=1, flash=-1, kv형식={"f16": 1, "q8_0": 8}[kv])
+    시작 = len(LM.로그)
+    lm = LM.라마(gguf, n_ctx=n_ctx, n_batch=n_ctx, n_ubatch=512, n_seq_max=1, flash=-1, kv형식={"f16": 1, "q8_0": 8}[kv], 전문가CPU=전문가CPU)
+    if 전문가CPU:                         # 2026-10-25 — MoE 의 전문가 행렬을 호스트 메모리에(llama-server 의 --cpu-moe — 12 GB 에 들지 않는 MoE)
+        print("llama.cpp 전문가 행렬을 호스트 메모리에:", sum("overridden" in l for l in LM.로그[시작:]), "텐서")
     print("llama.cpp 문맥:", " | ".join(l.strip() for l in lm.문맥로그.splitlines() if any(x in l for x in ("flash", "Flash", "n_ctx", "n_ubatch", "CUDA", "type_k"))))
     for i, ids in enumerate(토큰들):
         lm.지우기()
@@ -274,7 +278,7 @@ def main():
         입력(a[1], a[2], a[3], 글들, 긴)
     elif op == "라마":
         kv = a[a.index("--kv") + 1] if "--kv" in a else "f16"
-        라마(a[1], a[2], a[3], kv)
+        라마(a[1], a[2], a[3], kv, 전문가CPU="--전문가CPU" in a)
     elif op == "견주기":
         작업, 정밀 = a[1], a[2]
         if len(a) == 5 and "=" not in a[3] and "=" not in a[4]:    # 2단계 꼴: 견주기 <작업> <정밀> <F1> <결과.json>

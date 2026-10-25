@@ -128,6 +128,8 @@ def 엔진경우들():
     return [
         ("앱이 모르는 구조 gemma3 는 엔진이 정한다", [("general.architecture", "gemma3")], 낱말, "gemma3 구조는 받지 않는다 — 받는 구조: "),
         ("모르는 구조 이름도 엔진의 까닭", [("general.architecture", "no-such-arch")], 낱말, "no-such-arch 구조는 받지 않는다 — 받는 구조: "),
+        ("prism.hadamard(회전으로 접은 가중치)는 구조와 상관없이 받지 않는다", [("general.architecture", "gemma3"), ("prism.hadamard.block_size", 64)],
+         낱말, "prism.hadamard.block_size — 가중치를 회전으로 접은 GGUF"),
     ]
 
 

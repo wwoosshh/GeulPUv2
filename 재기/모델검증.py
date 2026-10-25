@@ -8,13 +8,16 @@
       [--port 44651] [--app-data <앱의 임시 데이터 폴더 — 기본 <work>/app-data>] [--geul <글(geul) 저장소>]
 
 단계(--stages, 기본은 모두 — 줄 것이 없는 단계는 '건너뜀'):
-  header    GGUF 의 메타데이터와 패키지한 앱의 모델 확인(/api/state 의 shape — 앱이 받지 않으면 여기서 멈춘다): 구조 · 형식 · 모양 ·
-            토크나이저 · 템플릿, 모듈 이름 · 커널 생성기 인자(앱/일.gl 의 모듈준비와 같은 규칙), 앱의 기본 모드(빠른 모드 — 8비트 KV ·
-            빠른 어텐션은 앱이 허용하는 모델만. F16 · BF16 · F32 파일은 정밀 — 앱의 precision_unquantized)
+  header    엔진의 모델 확인(이 저장소의 서버 --모델확인 — 엔진/모델확인.gl: 받는가 · 모듈 이름 · 커널 생성기 인자 · 정밀만 · 8비트 KV ·
+            빠른 어텐션 — 2026-10-25, 엔진이 받는 구조 모두), GGUF 의 메타데이터와 패키지한 앱의 모델 확인(/api/state 의 shape — 앱이
+            받지 않으면 여기서 멈춘다): 구조 · 형식 · 모양 · 토크나이저 · 템플릿, 앱의 기본 모드(빠른 모드 — 정밀만인 구조와 F16 · BF16 ·
+            F32 파일은 정밀 — 앱의 precision_unquantized)
   bits      앱이 이 모델에 쓰는 CUDA 모듈마다(정밀 --먼 · 빠른 모드, 허용되면 8비트 KV · 빠른 어텐션) 시험_7B 의 다섯 실행 경로.
             모델 파일이 6 GB 이하면 앱의 기본 모듈과 다른 끝(기본이 빠르면 정밀, 정밀이면 가장 빠른 모듈)으로 시험_긴문맥(문맥 32,768 ·
             기본은 --far 0,0 도) · 시험_추측
-  ref       CPU 참조(시험/참조7B.py — 시험_7B 의 모든 행 로짓과 불일치 0): bits 의 모듈마다(6 GB 넘는 모델은 앱의 기본만), 넷까지 함께
+  ref       CPU 참조(시험/참조7B.py · Qwen3.5 · MoE 는 시험/참조35.py · Gemma 4 는 시험/참조gemma4.py — 시험_7B 의 모든 행 로짓과
+            불일치 0): bits 의 모듈마다(6 GB 넘는 모델은 앱의 기본만), 넷까지 함께. 입력7B.py 의 토크나이저가 모르는 구조는 정한 무작위
+            토큰열로(시험_긴문맥 · 시험_추측 은 qwen2 · qwen3 · llama 만)
   quality   llama.cpp(f16 KV) 대비 다음 토큰 KL · 1위 일치(시험/품질.py — 재기/품질2b.sh 와 같은 텍스트 · 같은 기준): 앱의 기본 모드가
             판정 B′(텍스트마다 평균 KL 이 llama.cpp 의 2.5 배 이하 · 1위 일치가 0.5 %p 넘게 낮지 않음)를 넘는가. 다른 모드는 참고.
             작업 폴더의 디스크에 50 GB 가 비어 있어야 한다(로짓)
@@ -195,35 +198,41 @@ def 모델모양(meta, 텐서):
             "템플릿": bool(템플릿), "템플릿도구": "tools" in 템플릿, "생각켬끔": "enable_thinking" in 템플릿}
 
 
-def 모듈규칙(모):
-    """앱/모델보기.gl 의 모듈구조 · 모듈몸이름 · KV8됨 · F2B됨 과 같은 규칙"""
-    eps = 모["eps"]
-    if 모["구조"] == "qwen3":
-        구 = "qwen3"
-    elif 모["구조"] == "llama":
-        구 = "llamae6" if 0.00000099999 <= eps <= 0.00000100001 else "llama"
-    else:
-        구 = "qwen2e5" if 0.0000099999 <= eps <= 0.0000100001 else "qwen2"
-    짧은 = {"Q8_0": "Q8", "Q4_0": "Q4", "K": "K", "KI": "KI"}.get(모["형식글"], 모["형식글"])
-    모["모듈구조"] = 구
-    # 0.12.0 12-3c-2 — 헤드 크기(key_length — 없으면 너비 / 헤드, qwen3 은 128) · RoPE 차원(llama 의 rope.dimension_count — 없으면 헤드 크기)
-    hd = 128 if 모["구조"] == "qwen3" else (모.get("헤드크기") or (모["너비"] // 모["헤드"] if 모["헤드"] else 0))
-    rd = (모.get("RoPE") or hd) if 모["구조"] == "llama" else hd
-    머리 = "" if (hd, rd) == (128, 128) else (f"_h{hd}" if rd == hd else f"_h{hd}r{rd}")
-    모["모듈"] = f"{구}{짧은}_{모['너비']}x{모['헤드']}x{모['KV헤드']}x{모['확장폭']}x{모['어휘']}{머리}"
-    모["생성기인자"] = [f"{구}큰", 모["형식글"], str(모["너비"]), str(모["헤드"]), str(모["KV헤드"]), str(모["확장폭"]), str(모["어휘"])]
-    모["머리옵션"] = [] if (hd, rd) == (128, 128) else ["--헤드", str(hd), "--RoPE", str(rd)]
-    if "KV8" not in 모:
-        모["KV8"] = 모["형식글"] in ("K", "KI") and 모["헤드"] > 0 and 모["너비"] == 128 * 모["헤드"]
-    모["빠른어텐션"] = ("F2B" if 구 == "qwen3" else "F2") if 모["KV8"] else None
+def 엔진확인(서버, gguf):
+    """엔진의 모델 확인(서버 --모델확인 — 엔진/모델확인.gl): (JSON, None) 또는 (None, 엔진의 까닭)"""
+    r = subprocess.run([서버, "--모델확인", gguf], capture_output=True, stdin=subprocess.DEVNULL, timeout=600)
+    글 = (r.stdout + r.stderr).decode("utf-8", "replace").strip()
+    if r.returncode == 0:
+        for 줄 in reversed(r.stdout.decode("utf-8", "replace").splitlines()):
+            if 줄.startswith("{"):
+                return json.loads(줄), None
+    끝줄 = 글.splitlines()[-1] if 글 else f"종료 코드 {r.returncode}"
+    return None, 끝줄
+
+
+def 엔진규칙(모, 확인):
+    """2026-10-25 — 모듈 이름 · 커널 생성기 인자 · 할 수 있는 것은 엔진의 모델 확인(앱/일.gl 의 모듈준비 와 같은 것 — 엔진이 받는 구조
+    모두: qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 …)"""
+    모["모듈"] = 확인["module"]
+    모["형식글"] = 확인.get("quant") or 모["형식글"]
+    모["생성기인자"] = [str(x) for x in 확인["gen"]]
+    모["머리옵션"] = [str(x) for x in 확인.get("gen_opts") or []]          # 그 구조의 깃발(--헤드 · --RoPE · --MoE …)
+    모["정밀만"] = bool(확인.get("exact_only"))
+    모["먼됨"] = bool(확인.get("far_ok", True))
+    모["KV8"] = bool(확인.get("kv8_ok")) and not 모["정밀만"]
+    모["빠른어텐션"] = ("F2B" if 확인.get("f2b") else "F2") if 모["KV8"] and 확인.get("fast_attention_ok") else None
 
 
 def 변형들(모):
-    """앱이 이 모델에 쓰는 CUDA 모듈(앱/일.gl 의 모듈준비 — 정밀은 --먼): (이름, 모듈 이름, 생성기 옵션, 참조7B 옵션). 처음이 정밀,
-    마지막이 가장 빠른 모듈 — 앱의 기본은 기본변형"""
+    """앱이 이 모델에 쓰는 CUDA 모듈(앱/일.gl 의 모듈준비 — 정밀은 --먼, 그 구조가 받으면): (이름, 모듈 이름, 생성기 옵션, 참조 옵션).
+    처음이 정밀, 마지막이 가장 빠른 모듈 — 앱의 기본은 기본변형. 정밀만인 구조는 정밀 하나"""
     m = 모["모듈"]
-    h = 모.get("머리옵션", [])                  # 0.12.0 12-3c-2 — 헤드 크기 · RoPE 차원(128 이면 없음)
-    out = [("정밀", m + "_먼", ["--먼"] + h, []), ("F1", m + "_빠른", ["--빠른"] + h, ["--빠른"])]
+    h = 모.get("머리옵션", [])
+    먼 = ["--먼"] if 모.get("먼됨", True) else []
+    out = [("정밀", m + ("_먼" if 먼 else ""), 먼 + h, [])]
+    if 모.get("정밀만"):
+        return out
+    out.append(("F1", m + "_빠른", ["--빠른"] + h, ["--빠른"]))
     if 모["KV8"]:
         fa = 모["빠른어텐션"]
         out.append(("KV8", m + "_빠른_KV8", ["--빠른", "--KV8"] + h, ["--KV8"]))
@@ -232,15 +241,18 @@ def 변형들(모):
 
 
 def 기본변형(모):
-    """앱의 기본 모드(앱/일.gl — 모델계산설정): F16 · BF16 · F32 파일(W16)은 정밀(설정 precision_unquantized 의 기본 exact — 0.12.0),
-    그 밖에는 가장 빠른 모듈(설정 precision 의 기본 fast)"""
+    """앱의 기본 모드(앱/일.gl — 모델계산설정): F16 · BF16 · F32 파일(W16)과 정밀만인 구조는 정밀(설정 precision_unquantized 의 기본
+    exact — 0.12.0), 그 밖에는 가장 빠른 모듈(설정 precision 의 기본 fast)"""
     v = 변형들(모)
-    return v[0] if 모["형식글"] == "W16" else v[-1]
+    return v[0] if 모["형식글"] == "W16" or 모.get("정밀만") else v[-1]
+
+
+표준구조 = ("qwen2", "qwen3", "llama")               # 입력7B.py 의 토크나이저 · 시험_긴문맥 · 시험_추측 · 참조7B.py 가 아는 구조
 
 
 # ---- 빌드 · 모듈 ----
 도구들 = {"kgen": "커널/커널생성.gl", "ptxb": "백엔드/PTX/PTX.gl", "t7b": "엔진/시험_7B.gl", "tlong": "엔진/시험_긴문맥.gl",
-        "tspec": "엔진/시험_추측.gl", "tchat": "엔진/시험_채팅틀.gl", "ttok": "엔진/시험_토큰.gl"}
+        "tspec": "엔진/시험_추측.gl", "tchat": "엔진/시험_채팅틀.gl", "ttok": "엔진/시험_토큰.gl", "srv": "엔진/서버.gl"}
 단계도구 = {"bits": ["kgen", "ptxb", "t7b", "tlong", "tspec"], "quality": ["kgen", "ptxb", "t7b"], "template": ["tchat"], "tokenizer": ["ttok"]}
 
 
@@ -374,23 +386,32 @@ class 앱:
 
 
 # ---- 단계 ----
-def 단계헤더(gguf, 모, 앱하나):
+def 단계헤더(gguf, 모, 앱하나, 서버):
+    if 서버 is None:
+        판("header", "엔진의 모델 확인", False, "서버(엔진/서버.gl)를 빌드하지 못했다")
+        return False
+    확인, 까닭 = 엔진확인(서버, gguf)
+    if 확인 is None:
+        판("header", "엔진의 모델 확인", False, f"엔진이 받지 않는다 — {까닭}")
+        return False
+    엔진규칙(모, 확인)
+    판("header", "엔진의 모델 확인", True, f"{확인.get('arch')} · {확인.get('quant')} · 모듈 {확인.get('module')}"
+       f"{' · 정밀만' if 모['정밀만'] else ''}{' · Vulkan 못 함 — ' + 확인['vulkan_reason'] if 확인.get('vulkan_reason') else ''}")
     if 앱하나 is None:
-        판("header", "앱의 모델 확인", None, "--app 을 주지 않았다 — 도구가 GGUF 에서 읽은 모양으로 시험한다")
+        판("header", "앱의 모델 확인", None, "--app 을 주지 않았다 — 엔진의 확인과 GGUF 에서 읽은 모양으로 시험한다")
     else:
         sh = 앱하나.모델(gguf).get("shape") or {}
         if not sh.get("ok"):
             판("header", "앱의 모델 확인", False, f"앱이 받지 않는다 — {sh.get('reason')}")
             return False
+        # 도구가 GGUF 에서 읽지 못한 값(층마다의 배열 — Gemma 4 의 KV 헤드 등)은 견주지 않는다
         다름 = [f"{이름} 도구 {모[키]} · 앱 {sh.get(앱키)}" for 키, 앱키, 이름 in (("형식글", "quant", "형식"), ("너비", "width", "너비"),
                 ("헤드", "heads", "헤드"), ("KV헤드", "kv_heads", "KV 헤드"), ("확장폭", "ffn", "FFN"), ("어휘", "vocab", "어휘"))
-                if 모[키] != sh.get(앱키)]
-        모["KV8"] = bool(sh.get("kv8_ok"))
+                if 모[키] is not None and 모[키] != sh.get(앱키)]
         모["매개변수"] = sh.get("params") or 모["매개변수"]
         판("header", "앱의 모델 확인", not 다름, "; ".join(다름) or f"받음 — 사전 처리 {sh.get('pre') or '-'} · 문맥 {sh.get('context')}")
         if 다름:
             return False
-    모듈규칙(모)
     기본 = 기본변형(모)[0]
     판("header", "모델 모양", True, f"{모['구조']} · 너비 {모['너비']} · 헤드 {모['헤드']}/{모['KV헤드']} · FFN {모['확장폭']} · 어휘 {모['어휘']} · "
        f"{모['형식글']} · 토크나이저 {모['토큰모델']}/{모['토큰앞'] or '-'} · 템플릿 {'있음' if 모['템플릿'] else '없음(기본 ChatML)'}"
@@ -406,6 +427,14 @@ def 단계비트(gguf, 모, bin폴더, 모듈폴더, 출력, 라마):
             판("bits", "입력", None, "구조 llama 는 --tokenizer-llama(llama-tokenize)가 있어야 입력을 만든다")
             return []
         라마토큰 = ["--라마토큰", os.path.join(라마, "llama-tokenize" + EXE)]
+    elif 모["구조"] not in 표준구조:              # 2026-10-25 — 입력7B.py 의 토크나이저가 모르는 구조: 정한 무작위 토큰열(--토큰 — 비트 대조에는 충분)
+        import random
+        r = random.Random(24)
+        상한 = min(int(모["어휘"] or 32000), 150000)
+        토큰파일 = os.path.join(출력, "무작위토큰.json")
+        with open(토큰파일, "w", encoding="utf-8") as f:
+            json.dump({"토큰": [[r.randrange(상한) for _ in range(n)] for n in (24, 31, 19)]}, f)
+        라마토큰 = ["--토큰", 토큰파일]
     입력 = os.path.join(출력, "입력.bin")
     rc, 끝 = 돌리기(파이썬("시험/입력7B.py", gguf, 입력, *라마토큰), os.path.join(출력, "입력.txt"))
     if rc != 0:
@@ -426,6 +455,9 @@ def 단계비트(gguf, 모, bin폴더, 모듈폴더, 출력, 라마):
             길.append((이름, o, 참조옵션))
     if os.path.getsize(gguf) > 큰모델:
         판("bits", "시험_긴문맥 · 시험_추측", None, "모델 파일이 6 GB 를 넘는다 — 문맥 32,768 이 12 GB 에 들지 않는다")
+        return 길
+    if 모["구조"] not in 표준구조:
+        판("bits", "시험_긴문맥 · 시험_추측", None, f"구조 {모['구조']} 는 시험_긴문맥 · 시험_추측 이 아직 받지 않는다(그 구조의 시험으로)")
         return 길
     재기 = os.path.join(출력, "재기입력.bin")
     rc, 끝 = 돌리기(파이썬("시험/입력7B.py", gguf, 재기, "--재기", *라마토큰), os.path.join(출력, "재기입력.txt"))
@@ -471,8 +503,17 @@ def 참조시작(gguf, 모, 길, 출력):
     for 이름, o, 옵션 in 길:
         while sum(p.poll() is None for _, p, _ in 일들) >= 4:
             time.sleep(5)
+        결과 = os.path.join(출력, f"ref_{이름}.json")
+        if 모["구조"] in 표준구조:
+            cmd = 파이썬("시험/참조7B.py", gguf, o, 결과, *옵션)
+        elif 모["구조"] in ("qwen35", "qwen35moe"):    # 2026-10-25 — 구조의 CPU 참조(같은 '모두 0: True' 꼴)
+            cmd = 파이썬("시험/참조35.py", gguf, "--엔진", o, 결과, *[x for x in 옵션 if x == "--빠른"])
+        elif 모["구조"] == "gemma4":
+            cmd = 파이썬("시험/참조gemma4.py", gguf, "--엔진", o, 결과, "--입력", os.path.join(출력, "입력.bin"))
+        else:
+            판("ref", f"CPU 참조 {이름}", None, f"구조 {모['구조']} 의 CPU 참조를 이 도구가 아직 모른다")
+            continue
         f = open(os.path.join(출력, f"ref_{이름}.txt"), "wb")
-        cmd = 파이썬("시험/참조7B.py", gguf, o, os.path.join(출력, f"ref_{이름}.json"), *옵션)
         일들.append((이름, subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, cwd=ROOT), f))
     return 일들
 
@@ -482,7 +523,7 @@ def 참조기다림(일들, 출력):
         rc = p.wait()
         f.close()
         끝 = 꼬리(os.path.join(출력, f"ref_{이름}.txt"))
-        판("ref", f"참조7B {이름}(모든 행 로짓)", rc == 0 and "모두 0: True" in 끝, 끝)
+        판("ref", f"CPU 참조 {이름}(모든 행 로짓)", rc == 0 and "모두 0: True" in 끝, 끝)
 
 
 def 단계품질(gguf, 모, bin폴더, 모듈폴더, 출력, 품질라마, 위키):
@@ -494,6 +535,9 @@ def 단계품질(gguf, 모, bin폴더, 모듈폴더, 출력, 품질라마, 위�
 
 
 def 품질측정(gguf, 모, bin폴더, 모듈폴더, 출력, 품질라마, 위키, d):
+    if 모.get("정밀만"):
+        판("quality", "llama.cpp 대비", None, "정밀 모드만인 구조 — 빠른 모드의 품질 판정이 없다")
+        return
     if not os.path.exists(위키):
         판("quality", "llama.cpp 대비", None, f"wikitext-2 가 없다({위키} — --wiki)")
         return
@@ -510,8 +554,10 @@ def 품질측정(gguf, 모, bin폴더, 모듈폴더, 출력, 품질라마, 위�
     if rc != 0:
         판("quality", "입력", False, 끝)
         return
+    # 2026-10-25 — 12 GB 에 들지 않는 MoE 는 llama.cpp 의 전문가 행렬을 호스트 메모리에(시험/품질.py --전문가CPU — llama-server 의 --cpu-moe)
+    전문가 = ["--전문가CPU"] if "--MoE" in 모.get("머리옵션", []) and os.path.getsize(gguf) > 큰모델 else []
     for kv in (None, "q8_0"):
-        rc, 끝 = 돌리기(파이썬("시험/품질.py", "라마", gguf, 품질라마, 라, *(["--kv", kv] if kv else [])),
+        rc, 끝 = 돌리기(파이썬("시험/품질.py", "라마", gguf, 품질라마, 라, *(["--kv", kv] if kv else []), *전문가),
                        os.path.join(출력, f"품질_라마{kv or ''}.txt"))
         if rc != 0:
             판("quality", f"llama.cpp({kv or 'f16'} KV)", False, 끝)
@@ -765,7 +811,12 @@ def main():
     try:
         if a.app:
             앱하나 = 해보기("header", 앱, os.path.abspath(a.app), os.path.abspath(a.app_data or os.path.join(작업, "app-data")), a.port)
-        if (앱하나 is not None or not a.app) and 해보기("header", 단계헤더, gguf, 모, 앱하나):
+        # 2026-10-25 — 모듈 이름 · 커널 생성기 인자는 엔진의 모델 확인으로: 이 저장소의 서버를 먼저 빌드한다
+        틀림 = 빌드(os.path.abspath(a.geul), bin폴더, ["srv"])
+        if 틀림:
+            판("header", "서버 빌드(엔진의 모델 확인)", False, "; ".join(틀림))
+        서버 = None if 틀림 else os.path.join(bin폴더, "srv" + EXE)
+        if (앱하나 is not None or not a.app) and 해보기("header", 단계헤더, gguf, 모, 앱하나, 서버):
             with open(os.path.join(작업, "모양.json"), "w", encoding="utf-8", newline="\n") as f:
                 json.dump(모, f, ensure_ascii=False, indent=1)
             쓸도구 = sorted({x for 단계 in 할 for x in 단계도구.get(단계, [])})
