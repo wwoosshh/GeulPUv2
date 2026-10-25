@@ -9,7 +9,7 @@ trim_blocks · lstrip_blocks · loopcontrols, tojson = json.dumps(ensure_ascii=F
 풀어서(틀이 'arguments is string' 으로 글을 그대로 쓰면 글 그대로 — Qwen3), 틀이 system 말을 그리지 않으면(그려 보아 정한다 — Mistral
 v0.3) 맨 앞 system 말을 첫 user 말 앞에 '<system>\n\n' 으로. 맥락: bos_token · eos_token(GGUF 의 번호의 글), date_string '26 Jul 2024',
 --생각끔 이면 enable_thinking 거짓. tools 는 서버가 그 호출 꼴을 읽는 틀만(Qwen <tool_call> JSON · Llama 3 JSON · Qwen3.5 · Coder XML ·
-MiniCPM XML — 아니면 서버는 400 이라 참조도 오류). 출력: {경우 id: 그린 글 | {"error": 까닭}}. 대조는 시험/채팅틀대조.py(GPU 없이 —
+MiniCPM XML · 0.13.0 Gemma 4 의 <|tool_call>call: — 아니면 서버는 400 이라 참조도 오류). 출력: {경우 id: 그린 글 | {"error": 까닭}}. 대조는 시험/채팅틀대조.py(GPU 없이 —
 엔진/시험_채팅틀.gl) · 시험/도구틀.py(서버로).
 """
 import json
@@ -117,10 +117,12 @@ def 고치기(msgs, 인자글, 시스템받음):
 
 
 def 도구꼴(틀글, 앞꼴, 낱말):
-    """서버의 틀도구꼴 — 1 Qwen <tool_call> JSON · 2 Llama 3 JSON · 3 Qwen3.5 · Coder XML · 4 MiniCPM XML · 0 받지 않음"""
+    """서버의 틀도구꼴 — 1 Qwen <tool_call> JSON · 2 Llama 3 JSON · 3 Qwen3.5 · Coder XML · 4 MiniCPM XML · 5 Gemma 4(0.13.0) · 0 받지 않음"""
     낱 = set(낱말 or [])
     꼴 = 0
-    if "<function=" in 틀글 and "<parameter=" in 틀글:
+    if "<|tool_call>call:" in 틀글:
+        꼴 = 5
+    elif "<function=" in 틀글 and "<parameter=" in 틀글:
         꼴 = 3
     elif "<function name=" in 틀글 and "<param name=" in 틀글:
         꼴 = 4
@@ -131,6 +133,8 @@ def 도구꼴(틀글, 앞꼴, 낱말):
     if 꼴 in (1, 3) and not {"<tool_call>", "</tool_call>"} <= 낱:
         꼴 = 0
     if 꼴 == 4 and not {"<function", "</function>", "<param", "</param>"} <= 낱:
+        꼴 = 0
+    if 꼴 == 5 and not {"<|tool_call>", "<tool_call|>", '<|"|>'} <= 낱:
         꼴 = 0
     if "tools" not in 틀글:
         꼴 = 0

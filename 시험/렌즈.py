@@ -10,7 +10,8 @@
   1. 렌즈 요청(echo · max_tokens 0 · echo_from = 그 토큰)의 layer_lens 가 층 L 개 · 행(echo_from − 1) · 토큰이 맞는가.
   2. 마지막 층 = 같은 응답의 echo 값(로짓 해시 · 로그확률 · 엔트로피 · 상위 k) — 계약 5.3 의 2.
   3. 렌즈 요청의 echo 값 = 렌즈 없이 답 전체를 echo 로 매긴 값 — 덩이 · 길과 상관없이 같은 비트(렌즈 길은 넷 이하의 행도 계획 길).
-  4. 층마다 CPU 참조(시험/참조7B.py 의 렌즈행)와 로짓 해시 · 5.2 의 값(로그확률 · 엔트로피 · 상위 k)이 비트까지 같은가(--CPU없이 면 건너뜀).
+  4. 층마다 CPU 참조(시험/참조7B.py 의 렌즈행 — 0.13.0 gemma4 는 시험/참조gemma4.py, 소프트캡까지)와 로짓 해시 · 5.2 의 값(로그확률 ·
+     엔트로피 · 상위 k)이 비트까지 같은가(--CPU없이 면 건너뜀).
   5. 거절(400): echo 없음 · echo_from 이 프롬프트 끝 · top_k 21 · 틀린 형 · jacobian 이 참거짓이 아님. layer_lens 거짓이면 응답에 없다.
 #96 2단계 — --jlens(서버를 같은 J 파일로 띄웠을 때 — Jacobian lens, 계약 5.4):
   6. layer_lens: {"jacobian": true} 의 layer_lens = 1 의 layer_lens(J 를 묻는 길도 같은 비트), jacobian_lens 의 꼴(층 · 행 · 토큰 · J 파일의
@@ -142,21 +143,26 @@ def 돌리기(a):
 def CPU확인(결과, a, 적기):
     """4 — 층마다 CPU 참조(계약 5.3)와 로짓 해시 · 5.2 의 값이 비트까지 같은가. 결과의 프롬프트 · 답 · 스텝마다의 layer_lens 로"""
     import gguf읽기 as GR
-    import 참조7B as REF
     from repro_check import 행해시, 순위
-    if a.빠른 or a.KV8 or a.F2 or a.F2B:
+    gg = GR.GGUF(a.모델)
+    젬마 = gg.meta.get("general.architecture") == "gemma4"            # 0.13.0 — Gemma 4 의 계약 순전파(정밀만)
+    if 젬마:
+        import 참조gemma4 as REF
+    else:
+        import 참조7B as REF
+    if (a.빠른 or a.KV8 or a.F2 or a.F2B) and not 젬마:
         REF.선형자리수 = 1
     REF.C.KV8 = bool(a.KV8 or a.F2 or a.F2B)
     REF.C.F2 = bool(a.F2 or a.F2B)
     REF.C.F2B = bool(a.F2B)
     P, T = 결과["prompt_tokens"], 결과["tokens"]
-    gg = GR.GGUF(a.모델)
     행들 = [x["row"] for x in 결과["steps"]]
     t1 = time.time()
     print(f"CPU 참조로 행 {len(P) + len(T) - 1} 개 · 렌즈 행 {행들} 계산하는 중 …", flush=True)
-    _, _, 잔 = REF.앞으로(gg, [np.array(P + T[:-1], np.int64)], 말=False, 렌즈행=행들, 잔차=True)
+    덧 = {"행": [(0, 1)]} if 젬마 else {}                              # gemma4 — 끝 로짓은 행 하나만(렌즈는 잔차로)
+    _, _, 잔 = REF.앞으로(gg, [np.array(P + T[:-1], np.int64)], 말=False, 렌즈행=행들, 잔차=True, **덧)
     렌즈 = REF.층로짓(gg, 잔)
-    렌즈J = REF.층로짓(gg, 잔, JL.읽기(a.jlens)[0]) if getattr(a, "jlens", None) else None    # #96 2단계 — 같은 J 파일로(계약 5.4)
+    렌즈J = REF.층로짓(gg, 잔, JL.읽기(a.jlens)[0]) if getattr(a, "jlens", None) and not 젬마 else None    # #96 2단계 — 같은 J 파일로(계약 5.4)
     print(f"  ({time.time() - t1:.0f} 초)", flush=True)
 
     def 다른층들(zz, ll, c):

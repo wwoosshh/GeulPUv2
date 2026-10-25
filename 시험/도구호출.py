@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """GeulPUv2 ②단계 — 답에서 도구 호출을 읽는가(불러 둔 모델로, 온도 0). 바깥 꾸러미 없이 urllib 로.
 
-  python 시험/도구호출.py <주소 — 예: http://127.0.0.1:44639> [--생각끔] [--여럿]
+  python 시험/도구호출.py <주소 — 예: http://127.0.0.1:44639> [--생각끔 | --생각켬] [--여럿]
 
 보는 것: 흘림 아님 · 흘림이 같은 호출(이름 · 인자 JSON)과 같은 content · reasoning_content, finish_reason tool_calls, 인자가 맞는 JSON 객체,
 결과를 돌려주면 글로 답함, parallel_tool_calls 거짓이면 호출 하나, tool_choice none 이면 호출 없음, --여럿이면 호출 둘(Qwen — 모델에
-따라 하나일 수 있어 기록만). 끝 줄 "모두 맞음"이면 종료 0.
+따라 하나일 수 있어 기록만). --생각켬(0.13.0 — 틀의 기본이 생각 끔인 Gemma 4)은 enable_thinking 참. 끝 줄 "모두 맞음"이면 종료 0.
 """
 import json
 import sys
@@ -68,6 +68,8 @@ def main():
     기본 = {"temperature": 0, "max_tokens": 1024, "tools": [날씨]}
     if 생각끔:
         기본["chat_template_kwargs"] = {"enable_thinking": False}
+    if "--생각켬" in sys.argv:
+        기본["chat_template_kwargs"] = {"enable_thinking": True}
 
     def 본(이름, ok, 덧=""):
         print(f"{'맞음' if ok else '틀림'}  {이름}{(' — ' + 덧) if 덧 else ''}")

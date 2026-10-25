@@ -140,14 +140,13 @@ const DICT = {
   "최대 답변 길이(토큰)": "Max answer length (tokens)",
   "비워 두면 모델 기본값": "Leave empty for the model's default",
   "시스템 프롬프트": "System prompt",
-  "생각 과정 쓰기(Qwen3)": "Thinking (Qwen3)",
   "생성 설정": "Generation settings",
   "생성 설정 · 이 브라우저에 저장": "Generation settings · saved in this browser",
   "0이면 같은 질문에 늘 같은 답": "0 gives the same answer to the same question",
   "최대 답변 길이": "Max answer length",
   "토큰 · 추론 모델은 생각 과정도 포함": "Tokens · includes the thinking of reasoning models",
   "생각 과정 쓰기": "Thinking",
-  "Qwen3 · 끄면 생각 없이 바로 답합니다": "Qwen3 · off: answers directly without thinking",
+  "Qwen3 · Gemma 4 등 · 끄면 생각 없이 바로 답합니다": "Qwen3, Gemma 4 and others · off: answers directly without thinking",
   "<div class=\"codeblk\"><div class=\"ch\"><span>{}</span><button class=\"cp\" type=\"button\">{}<span>복사</span></button></div><pre><code>{}</code></pre></div>": "<div class=\"codeblk\"><div class=\"ch\"><span>{}</span><button class=\"cp\" type=\"button\">{}<span>Copy</span></button></div><pre><code>{}</code></pre></div>",
   "코드": "Code",
   "복사함": "Copied",
@@ -610,7 +609,7 @@ const DICT = {
   "Qwen3.5의 9B 모델입니다(4비트 k-양자화, 5.3 GB). 층 넷 가운데 셋이 선형 어텐션이라 긴 글에서도 KV 캐시가 작습니다. 빠른 모드는 0.13.0부터 됩니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-25).": "Qwen3.5's 9B model (4-bit k-quant, 5.3 GB). Three layers in four use linear attention, so the KV cache stays small on long text. Fast mode works from 0.13.0. It runs on CUDA (NVIDIA GPUs) only for now, without speculative decoding or the context store. This file was run on CUDA (RTX 4070 Ti) (2026-10-25).",
   "Qwen3.5의 4B 모델입니다(4비트 k-양자화, 2.6 GB). 층 넷 가운데 셋이 선형 어텐션이라 긴 글에서도 KV 캐시가 작습니다. 빠른 모드는 0.13.0부터 됩니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-25).": "Qwen3.5's 4B model (4-bit k-quant, 2.6 GB). Three layers in four use linear attention, so the KV cache stays small on long text. Fast mode works from 0.13.0. It runs on CUDA (NVIDIA GPUs) only for now, without speculative decoding or the context store. This file was run on CUDA (RTX 4070 Ti) (2026-10-25).",
   "가장 작은 Qwen3.5 모델입니다(0.8 GB). 그래픽 메모리가 아주 적은 PC에서도 실행되지만, 답의 질은 큰 모델보다 낮습니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24).": "The smallest Qwen3.5 model (0.8 GB). It runs on PCs with very little graphics memory, but its answers are weaker than a larger model's. It runs on CUDA (NVIDIA GPUs) only for now, without speculative decoding or the context store. This file was run on CUDA (RTX 4070 Ti) (2026-10-24).",
-  "Google의 Gemma 4 12B 대화 모델입니다(4비트 k-양자화, 6.6 GB). 0.13.0부터 실행됩니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 문맥 저장소 · 도구 호출은 쓰지 않습니다. 12 GB GPU에서 문맥은 약 7,300 토큰까지입니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-25).": "Google's Gemma 4 12B chat model (4-bit k-quant, 6.6 GB). It runs from 0.13.0. Only CUDA (NVIDIA GPUs) and Exact mode for now, without speculative decoding, the context store or tool calls. On a 12 GB GPU the context goes up to about 7,300 tokens. This file was run on CUDA (RTX 4070 Ti) (2026-10-25).",
+  "Google의 Gemma 4 12B 대화 모델입니다(4비트 k-양자화, 6.6 GB). 0.13.0부터 실행됩니다. 답하기 전에 생각 과정을 쓸 수 있고, 생성 설정에서 켜고 끕니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 12 GB GPU에서 문맥은 약 7,300 토큰까지입니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-10-25).": "Google's Gemma 4 12B chat model (4-bit k-quant, 6.6 GB). Runs from 0.13.0. It can write a thought process before answering, which you turn on and off in the generation settings. CUDA (NVIDIA GPU) and Exact mode only for now, without speculative decoding or the context store. On a 12 GB GPU the context goes up to about 7,300 tokens. This file was checked to run and to make tool calls on CUDA (RTX 4070 Ti) (2026-10-25).",
   "Qwen3.6의 MoE 모델입니다(35B — 전문가 256개 가운데 토큰마다 8개를 써서, 한 토큰에 쓰는 가중치는 약 3B). 그래픽 메모리에 들지 않는 전문가 가중치는 RAM(고정 메모리)에 두고 GPU가 PCIe로 바로 읽으며, 자주 쓰는 전문가를 그래픽 메모리로 옮깁니다 — 12 GB GPU에서는 RAM을 약 10.5 GB 씁니다. 아직 CUDA · 정밀 모드만 됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24).": "A Qwen3.6 MoE model (35B — it uses 8 of its 256 experts per token, so about 3B of weights per token). Expert weights that do not fit in graphics memory stay in RAM (pinned memory) and the GPU reads them directly over PCIe; frequently used experts are moved into graphics memory — on a 12 GB GPU it uses about 10.5 GB of RAM. CUDA and Exact mode only for now. This file was run on CUDA (RTX 4070 Ti) (2026-10-24).",
   "활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다": "8-bit activations (llama.cpp class) — faster prompts. Reproducible bit for bit with the same settings, but answers can differ from Exact",
   "바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다": "Switching reloads the loaded model in that mode",
@@ -2362,7 +2361,7 @@ $('#optbtn').addEventListener('click', e => {
   const temp = h('input', { type: 'number', min: '0', max: '2', step: '0.1', value: OPT.temp, 'aria-label': T('온도') });
   const max = h('input', { type: 'number', min: '16', max: '32768', step: '256', value: OPT.max, 'aria-label': T('최대 답변 길이(토큰)') });
   const sys = h('textarea', { rows: '4', placeholder: T('비워 두면 모델 기본값'), 'aria-label': T('시스템 프롬프트'), class: 'w100' }, OPT.system || '');
-  const think = h('input', { type: 'checkbox', 'aria-label': T('생각 과정 쓰기(Qwen3)'), onchange: () => { OPT.think = think.checked; store('geulpu.opt', OPT); } });
+  const think = h('input', { type: 'checkbox', 'aria-label': T('생각 과정 쓰기'), onchange: () => { OPT.think = think.checked; store('geulpu.opt', OPT); } });
   think.checked = OPT.think !== false;
   const comp = h('input', { type: 'checkbox', 'aria-label': T('긴 대화 자동 요약'), onchange: () => { OPT.compact = comp.checked; store('geulpu.opt', OPT); } });
   comp.checked = OPT.compact !== false;
@@ -2376,7 +2375,7 @@ $('#optbtn').addEventListener('click', e => {
     h('div', { class: 'eyebrow' }, T('생성 설정 · 이 브라우저에 저장')),
     h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('온도')), h('div', { class: 'small muted' }, T('0이면 같은 질문에 늘 같은 답'))), temp),
     h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('최대 답변 길이')), h('div', { class: 'small muted' }, T('토큰 · 추론 모델은 생각 과정도 포함'))), max),
-    h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('생각 과정 쓰기')), h('div', { class: 'small muted' }, T('Qwen3 · 끄면 생각 없이 바로 답합니다'))), h('label', { class: 'switch' }, think, h('i'))),
+    h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('생각 과정 쓰기')), h('div', { class: 'small muted' }, T('Qwen3 · Gemma 4 등 · 끄면 생각 없이 바로 답합니다'))), h('label', { class: 'switch' }, think, h('i'))),
     h('div', { class: 'lrow' }, h('div', null, h('div', { class: 'ink' }, T('긴 대화 자동 요약')), h('div', { class: 'small muted' }, T('문맥이 차면 앞의 대화를 요약해 이어 갑니다'))), h('label', { class: 'switch' }, comp, h('i'))),
     h('div', { class: 'col' }, h('div', { class: 'ink' }, T('시스템 프롬프트')), sys)), 'right');
 });
@@ -2610,11 +2609,24 @@ $('#msgs').addEventListener('click', async e => {
 // 교차검증 응답 64개를 토큰 번호로 풀어 보니 </think> 가 있는 40개 모두 첫 "\n\n\n" 이 바로 그 경계였다(다른 곳에 먼저 나온 것 0).
 // Qwen3 — 화면이 geulpu.special 로 <think> · </think> 를 글로 받으므로 토큰 경계(</think>, 151668) 그대로 나눈다. 생각 끔이면
 // 답이 <think> 없이 바로 온다(채팅 틀이 빈 생각을 프롬프트에 넣는다).
+// 0.13.0 — Gemma 4 의 생각 묶음은 <|channel>thought … <channel|>(채널 이름 'thought' 와 뒤의 빈칸은 머리). 생각을 끈 답 끝에 빈 채널
+// (<|channel>thought\n<channel|>)이 붙기도 하고 홀로 <channel|> 이 남기도 한다 — 답에서 뗀다(llama.cpp 의 gemma4 파서와 같다)
+function thinkHead(t) {           // 맨 앞의 생각 머리 [머리 길이, 닫는 표지] — 없으면 null
+  if (t.startsWith('<think>')) return [7, '</think>'];
+  if (t.startsWith('<|channel>')) {             // 흘림 중에 이름의 앞만 왔으면 그것도 머리
+    const r = t.slice(10), m = /^thought\s*/.exec(r);
+    return [10 + (m ? m[0].length : ('thought'.startsWith(r) ? r.length : 0)), '<channel|>'];
+  }
+  return null;
+}
+const dropChannels = s => (s.indexOf('<|channel>') < 0 && s.indexOf('<channel|>') < 0) ? s
+  : s.replace(/<\|channel>(thought)?\s*<channel\|>/g, '').replace(/<channel\|>/g, '').replace(/<\|channel>(t(h(o(u(g(ht?)?)?)?)?)?)?\s*$/, '');
 function splitThinkQwen3(t0, done) {
-  if (!t0.startsWith('<think>')) return { think: null, answer: t0 };
-  const t = t0.slice(7);
-  const k = t.indexOf('</think>');
-  if (k >= 0) return { think: t.slice(0, k).trim() || null, answer: t.slice(k + 8).replace(/^\s+/, '') };
+  const hd = thinkHead(t0);
+  if (!hd) return { think: null, answer: dropChannels(t0) };
+  const t = t0.slice(hd[0]);
+  const k = t.indexOf(hd[1]);
+  if (k >= 0) return { think: t.slice(0, k).trim() || null, answer: dropChannels(t.slice(k + hd[1].length)).replace(/^\s+/, '') };
   if (!done) return { think: t.trim(), answer: '', open: true };
   return { think: t.trim(), answer: '', unfinished: true };
 }
@@ -3049,9 +3061,11 @@ function r1Prompt(view, system) {
 // 생각을 뺀 답 — (나)의 글 기록
 const answerText = x => (x.template === 'qwen3' || x.template === 'deepseek-r1' ? splitThink(x, true).answer : String(x.content || ''));
 // 앞 답에서 요청에 실제로 가는 글 — 토큰 셈. 서버의 Qwen3 틀은 마지막 </think> 뒤만 보내고, </think> 가 없으면(생각 중에 끊김) 글 그대로
-// 보낸다(GGUF 의 chat_template 과 같다). R1 프롬프트는 splitThink 의 답(비면 그 답을 빼고)
+// 보낸다(GGUF 의 chat_template 과 같다). 0.13.0 — Gemma 4 의 틀은 <|channel> … <channel|> 묶음을 모두 빼고 앞뒤 빈칸을 뗀다(strip_thinking).
+// R1 프롬프트는 splitThink 의 답(비면 그 답을 빼고)
 function sentText(x) {
   const t = String(x.content || '');
+  if (x.template === 'qwen3' && t.indexOf('</think>') < 0 && t.indexOf('<|channel>') >= 0) return t.split('<channel|>').map(p => p.split('<|channel>')[0]).join('').trim();
   if (x.template === 'qwen3') { const e = t.lastIndexOf('</think>'); return e >= 0 ? t.slice(e + 8) : t; }
   return x.template === 'deepseek-r1' ? splitThink(x, true).answer : t;
 }
@@ -3172,7 +3186,8 @@ function sumClean(t, finish) {
   const e = t.lastIndexOf('</think>');
   if (e >= 0) t = t.slice(e + 8);
   else if (t.startsWith('<think>')) t = '';
-  t = t.trim();
+  else if (t.startsWith('<|channel>')) { const k = t.indexOf('<channel|>'); t = k >= 0 ? t.slice(k + 10) : ''; }   // 0.13.0 — Gemma 4
+  t = dropChannels(t).trim();
   const cut = finish === 'length';
   if (cut) { const k = t.lastIndexOf('\n'); if (k > t.length / 2) t = t.slice(0, k).trim(); }
   return { text: t, finish: finish || '', cut };
@@ -3441,7 +3456,7 @@ async function streamReply(asst, room, url, body, opt) {
           pieces++;
           asst.content += piece;
           if (tpl === 'deepseek-r1' && !asst.thinkMs && (asst.content.includes('</think>') || asst.content.includes('\n\n\n'))) asst.thinkMs = performance.now() - tFirst;
-          if (tpl === 'qwen3' && !asst.thinkMs && asst.content.startsWith('<think>') && asst.content.includes('</think>')) asst.thinkMs = performance.now() - tFirst;
+          if (tpl === 'qwen3' && !asst.thinkMs) { const hd = thinkHead(asst.content); if (hd && asst.content.indexOf(hd[1], hd[0]) >= 0) asst.thinkMs = performance.now() - tFirst; }
         }
         if (c && c.finish_reason) finish = c.finish_reason;
         if (j.usage) usage = j.usage;
