@@ -123,12 +123,12 @@ class 모델:
         if self.moe:
             self.전문가수, self.고름수 = k("expert_count"), k("expert_used_count")
         self.라우팅 = []                                            # MoE 층마다 고른 전문가 [행][k]
-        self.L, self.D = k("block_count"), k("embedding_length")
+        self.L, self.D = k("block_count") - m.get(구조 + ".nextn_predict_layers", 0), k("embedding_length")     # MTP 층은 본 계산에 없다
         self.H, self.Hkv, self.hd = k("attention.head_count"), k("attention.head_count_kv"), k("attention.key_length")
         assert k("attention.value_length") == self.hd
         self.eps = float(k("attention.layer_norm_rms_epsilon"))
         self.rot, self.theta = k("rope.dimension_count"), float(k("rope.freq_base"))
-        self.간격 = k("full_attention_interval")
+        self.간격 = m.get(구조 + ".full_attention_interval", 4)          # 없으면 llama.cpp 의 기본
         self.d, self.Hk, self.Hv = k("ssm.state_size"), k("ssm.group_count"), k("ssm.time_step_rank")
         self.합성곱 = k("ssm.conv_kernel")
         assert k("ssm.inner_size") == self.Hv * self.d and self.Hv % self.Hk == 0
