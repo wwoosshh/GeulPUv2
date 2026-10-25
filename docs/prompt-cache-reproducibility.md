@@ -15,7 +15,8 @@ data is on Zenodo: [doi:10.5281/zenodo.23631969](https://doi.org/10.5281/zenodo.
 
 ## Settings
 
-- **Harness**: commit `bc0551d`, unchanged, in the environment its repository pins (`uv.lock` — bfcl-eval 2026.3.23). BFCL v4
+- **Harness**: commit `bc0551d` (archived as [doi:10.5281/zenodo.23633821](https://doi.org/10.5281/zenodo.23633821)), unchanged, in
+  the environment its repository pins (`uv.lock` — bfcl-eval 2026.3.23). BFCL v4
   `multi_turn_base`, episodes 0–79, temperature 0. Each configuration runs in one server process, in two passes (`main`, then
   `repeat`); each pass runs the cache arm on (`cache_prompt: true`), then off. GeulPU is driven through the harness's llama.cpp
   backend: its server takes the same per-request `cache_prompt` field. Scoring and analysis are the study's
@@ -42,6 +43,9 @@ GeulPU):
 | GeulPU 0.11.0 defaults | 0 | 0 | 0 | not reported by 0.11.0 | 6 / 6 |
 | GeulPU matched | 0 | 0 | 0 | 6,750 / 0 | 6 / 6 |
 | GeulPU defaults again | 0 | 0 | 0 | 7,036 / 0 | 6 / 6 |
+
+Aditi Patodiya, the study's author, ran these files through the study's analysis code and obtained the same numbers
+(email, 25 October 2026).
 
 - **Positive control.** For the same llama.cpp build and model on an RTX 4090 the study reports 60 / 62 / 0
   (`analysis/revision_findings.json`, `table1/lcpp-qwen7b-q4km`). On this PC it gives 64 / 53 / 0, with the first divergence at
@@ -96,5 +100,5 @@ Then `--arm off`, and both again into `<out>/repeat`. Score each cell with
 ## Citing
 
 The study: Aditi Patodiya, arXiv:2609.04748, DOI 10.48550/arXiv.2609.04748 (BibTeX in the study repository's README); the harness at
-commit `bc0551d`. These runs: Sunghyeun Woo, Zenodo, doi:10.5281/zenodo.23631969. GeulPU: see [CITATION.cff](../CITATION.cff) (Zenodo
-concept DOI 10.5281/zenodo.23548056).
+commit `bc0551d`, doi:10.5281/zenodo.23633821. These runs: Sunghyeun Woo, Zenodo, doi:10.5281/zenodo.23631969. GeulPU: see
+[CITATION.cff](../CITATION.cff) (Zenodo concept DOI 10.5281/zenodo.23548056).
