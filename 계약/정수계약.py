@@ -1302,3 +1302,21 @@ def 전문가합(w, ys):
     for r in range(1, w.shape[1]):
         o = fma32(np.broadcast_to(w[:, r:r + 1], o.shape), ys[r], o)
     return o
+
+
+# ── #96 2단계 — Jacobian lens(계약 5.4): u = J x 를 배정밀도의 차례 합으로 ───────────────────────────────────────────────────────
+
+def J곱(J, x):
+    """계약 5.4 의 2 — u = J x. J [D′][D] 반실수(값 그대로 — 비정규수도), x [행][D] 짧은실수(규칙 R 의 입력 읽기) → u [행][D′] 짧은실수.
+    칸 i 마다 배정밀도 s ← +0 에서 j = 0 … D − 1 차례로 s ← s + J[i][j] · x_j — 곱은 정확(반실수 11 + 짧은실수 24 비트), 더하기마다
+    가까운 반올림, 곱해더하기 없음(numpy 는 곱을 따로 낸 뒤 더한다). 끝에 규칙 R 의 반올림 한 번(곱 과 같은 문턱 — 정확한 값 대신 s)."""
+    Jt = np.ascontiguousarray(np.asarray(J, np.float16).astype(np.float64).T)      # [D][D′] — 줄 j 가 열 j
+    xd = 버림(x).astype(np.float64)
+    if xd.ndim == 1:
+        xd = xd[None, :]
+    s = np.zeros((xd.shape[0], Jt.shape[1]), np.float64)
+    for j in range(Jt.shape[0]):
+        s += xd[:, j:j + 1] * Jt[j][None, :]
+    if not 비정규수버림:
+        return s.astype(f32)
+    return np.where(np.abs(s) < _문턱, np.copysign(0.0, s), s).astype(f32)

@@ -157,11 +157,26 @@ def 치우침(g, 이름, n):
     return g.풀기(이름) if 이름 in g.tensors else np.zeros(n, f32)
 
 
-def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None, 렌즈행=None):
+def 층로짓(g, 잔차, 렌즈J=None):
+    """계약 5.3 · 5.4 — 행마다 층마다 모은 잔차 [행][층][D](블록 l 의 출력 x_l)를 끝 로짓의 식으로 읽는다 → [행][층][어휘]. 렌즈J: J 파일의
+    {원천 층 l: J_l [D][D] 반실수}(5.4 — 그 층은 u_l = J_l x_l 을 읽는다, 끝 층 L − 1 과 없는 층은 x_l 그대로). 행끼리 따로라 값은 같다."""
+    R, NL, D = 잔차.shape
+    x = np.ascontiguousarray(np.asarray(잔차, f32).transpose(1, 0, 2)).reshape(NL * R, D)          # 층 l 의 행 q 는 l · R + q
+    for l, J in sorted((렌즈J or {}).items()):
+        if l < NL - 1:
+            x[l * R:(l + 1) * R] = C.J곱(J, x[l * R:(l + 1) * R])
+    hl = C.rms정규화(x, g.풀기("output_norm.weight"), 설정(g)["eps"])
+    wh = 가중(g, "output.weight" if "output.weight" in g.tensors else "token_embd.weight")
+    zl = 곱(hl, wh, np.zeros(wh[1].shape[0], f32))
+    return np.ascontiguousarray(zl.reshape(NL, R, -1).transpose(1, 0, 2))
+
+
+def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None, 렌즈행=None, 잔차=False):
     """정수 계약의 앞으로 — 토큰열들(경우마다 위치 0 부터)의 모든 행 로짓 [Σ 행][어휘]과 경우의 시작 행. 끝행만: 경우마다 끝 행의 로짓만
     [경우][어휘] (탐욕 생성 — 시험/참조생성.py; 행마다의 값은 같다). 얀: YaRN (배, 원래 길이)(계약 4.8) — 서버가 그 요청을 셈할 때 쓴
     배(재현 파일 · 실행 로그의 yarn). 없으면 늘이지 않는다(#23 — 긴 문맥의 서버가 낸 답을 늘이지 않은 RoPE 로 다시 셈해 '다름'이 났다).
-    렌즈행: 층 렌즈(계약 5.3, #96) — 이 행들(경우를 이은 행 번호)의 층마다 로짓 [행][층][어휘]을 셋째 값으로 함께 돌려준다."""
+    렌즈행: 층 렌즈(계약 5.3, #96) — 이 행들(경우를 이은 행 번호)의 층마다 로짓 [행][층][어휘]을 셋째 값으로 함께 돌려준다.
+    잔차: 셋째 값을 로짓 대신 그 행들의 층마다 잔차 x_l [행][층][D] 로 — 층로짓 으로 읽는다(logit lens 와 Jacobian lens 를 앞으로 한 번에)."""
     s_ = 설정(g)
     NL, NH, NKV, eps, θ = s_["층"], s_["머리"], s_["KV머리"], s_["eps"], s_["θ"]
     qwen3 = s_["구조"] == "qwen3"
@@ -243,10 +258,10 @@ def 앞으로(g, 경우, 말=True, 끝행만=False, 얀=None, 렌즈행=None):
     로짓 = 곱(h, wh, np.zeros(wh[1].shape[0], f32))
     if 렌즈행 is None:
         return 로짓, 시작
-    R = len(렌즈행)                            # 계약 5.3 — 끝 로짓과 같은 식(RMSNorm(output_norm) → 로짓 선형)을 층마다의 행에. 행끼리 따로라 값은 같다
-    hl = C.rms정규화(np.concatenate(렌즈들, 0), g.풀기("output_norm.weight"), eps)       # [층 · 행][D] — 층 l 의 행 q 는 l · R + q
-    zl = 곱(hl, wh, np.zeros(wh[1].shape[0], f32))
-    return 로짓, 시작, np.ascontiguousarray(zl.reshape(NL, R, -1).transpose(1, 0, 2))
+    잔 = np.ascontiguousarray(np.stack(렌즈들, 1))        # [행][층][D]
+    if 잔차:
+        return 로짓, 시작, 잔
+    return 로짓, 시작, 층로짓(g, 잔)                    # 계약 5.3 — 끝 로짓과 같은 식(RMSNorm(output_norm) → 로짓 선형)을 층마다의 행에
 
 
 def main():

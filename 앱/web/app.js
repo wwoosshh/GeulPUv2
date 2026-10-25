@@ -923,6 +923,11 @@ const DICT = {
   "이 토큰을 고른 자리의 계산을 층마다 끝의 출력으로 읽어, 그 층에서 멈췄다면 어떤 토큰을 냈을지 보입니다(logit lens — 정밀도 계약 5.3).": "Reads the computation at the position that chose this token at every layer with the final output, to show which token the model would have produced had it stopped at that layer (logit lens — precision contract 5.3).",
   "층마다 읽기": "Read every layer",
   "층마다 읽는 중…": "Reading every layer…",
+  "렌즈": "Lens",
+  "모델 옆의 J 파일({})로 Jacobian lens도 함께 읽습니다 — 층마다 원본 모델에서 맞춘 J로 끝 층의 바탕에 옮긴 뒤 읽습니다(정밀도 계약 5.4).": "The J file next to the model ({0}) also gives the Jacobian lens — every layer is moved into the final layer's basis with a J fitted on the original model, then read (precision contract 5.4).",
+  "모델 옆의 J 파일을 받지 않았습니다: {}": "The J file next to the model was not accepted: {0}",
+  "Jacobian lens: 모델 파일 옆에 <이름>.jlens.safetensors(도구/jlens_fit.py로 원본 모델에서 맞춘 J 파일)를 두고 모델을 다시 불러오면 함께 읽습니다.": "Jacobian lens: put <name>.jlens.safetensors (a J file fitted on the original model with 도구/jlens_fit.py) next to the model file and load the model again to read it as well.",
+  "Jacobian lens — 층마다 J 파일({} · 원천 층 {}개)의 J로 끝 층의 바탕에 옮긴 뒤 읽습니다(정밀도 계약 5.4). 마지막 층은 J 없이 읽어 logit lens와 같습니다.": "Jacobian lens — every layer is moved into the final layer's basis with the J of the J file ({0} · {1} source layers), then read (precision contract 5.4). The last layer is read without J and equals the logit lens.",
   "층": "Layer",
   "1위": "Top 1",
   "층 {}의 상위 {}개": "Top {1} at layer {0}",
@@ -5548,32 +5553,48 @@ function labStrip(an, toks, sel, onSel, label) {
 }
 // 걸음 하나 — 확률 · 순위 · 엔트로피 · 여유 · 로짓 해시, 대안 상위 k(막대). 갈래를 낼 수 있으면 대안마다 '여기서 분기'
 // #96 — 층 렌즈(logit lens, 계약 5.3): 걸음 i 의 토큰을 매긴 행(residual stream)을 층마다 끝의 로짓 계산으로 읽는다. 같은 모델로 · 같은 echo 길
+// #96 2단계 — 서버가 모델 옆의 J 파일을 열었으면 Jacobian lens(계약 5.4)도 같은 요청에서: { logit, jac }
 async function labLens(model, prompt, toks, i) {
   await labEnsureModel(model);
   const P = prompt.length;
+  const jac = !!(S.st && S.st.server.jlens_sha256);
   const j = await labApi('/v1/completions', {
     prompt: prompt.concat(toks.slice(0, i + 1)), echo: true, max_tokens: 0, logprobs: LAB_K, temperature: 0,
-    geulpu: { echo_from: P + i, logit_hash: true, layer_lens: true },
+    geulpu: { echo_from: P + i, logit_hash: true, layer_lens: jac ? { jacobian: true } : true },
   });
-  return j.geulpu.layer_lens;
+  return { logit: j.geulpu.layer_lens, jac: j.geulpu.jacobian_lens || null };
 }
 // 층 × (1위 토큰 · 확률, 고른 토큰의 확률 · 순위, 엔트로피) — 층을 누르면 그 층의 상위 k. 셈한 것은 an.lens[i] 에(한 번)
 function labLensBox(an, toks, i, ctx) {
   an.lens = an.lens || {};
-  const v = an.lens[i];
+  an.jlens = an.jlens || {};                          // #96 2단계 — 같은 걸음의 Jacobian lens(서버가 J 파일을 열었을 때)
+  const jv = an.jlens[i];
+  const view = jv && an.lensView !== 'logit' ? 'jac' : 'logit';
+  const v = view === 'jac' ? jv : an.lens[i];
   const rerender = () => document.querySelectorAll('.lab-detail-holder').forEach(x => x._render && x._render());
-  const head = h('div', { class: 'row g8 nowrap' }, h('span', { class: 'eyebrow' }, T('층 렌즈')), h('span', { class: 'grow' }),
+  const seg = jv ? h('div', { class: 'seg-ctl lens-seg', role: 'radiogroup', 'aria-label': T('렌즈'), onkeydown: radioKeys },
+    [['logit', 'logit lens'], ['jac', 'Jacobian lens']].map(([k, text]) => h('button', {
+      role: 'radio', class: view === k ? 'on' : '', 'aria-checked': view === k ? 'true' : 'false', tabindex: view === k ? '0' : '-1',
+      onclick: () => { if (view !== k) { an.lensView = k; rerender(); } },
+    }, text))) : null;
+  const head = h('div', { class: 'row g8 nowrap' }, h('span', { class: 'eyebrow' }, T('층 렌즈')), h('span', { class: 'grow' }), seg,
     v && v.layers ? h('span', { class: 'eyebrow mono' }, T`층 ${v.layers}개`) : null);
   if (!v || v.err) {
+    const sv = (S.st && S.st.server) || {};
     return h('div', { class: 'col g8' }, head,
       labNote(T('이 토큰을 고른 자리의 계산을 층마다 끝의 출력으로 읽어, 그 층에서 멈췄다면 어떤 토큰을 냈을지 보입니다(logit lens — 정밀도 계약 5.3).')),
+      sv.jlens_sha256 ? labNote(T`모델 옆의 J 파일(${sv.jlens_file})로 Jacobian lens도 함께 읽습니다 — 층마다 원본 모델에서 맞춘 J로 끝 층의 바탕에 옮긴 뒤 읽습니다(정밀도 계약 5.4).`)
+        : sv.jlens_reason ? h('p', { class: 'small m0 lens-err' }, T`모델 옆의 J 파일을 받지 않았습니다: ${sv.jlens_reason}`)
+        : labNote(T('Jacobian lens: 모델 파일 옆에 <이름>.jlens.safetensors(도구/jlens_fit.py로 원본 모델에서 맞춘 J 파일)를 두고 모델을 다시 불러오면 함께 읽습니다.')),
       v && v.err ? h('p', { class: 'small m0 lens-err' }, v.err) : null,
       h('div', null, h('button', {
         class: 'btn sm needs-conn', disabled: (LAB.busy || S.streaming) ? true : null,
         onclick: () => {
           an.lens[i] = { busy: true };
+          delete an.jlens[i];
           rerender();
-          labLens(ctx.model, an.prompt, toks, i).then(r => { an.lens[i] = r; }).catch(e => { an.lens[i] = { err: e.message }; }).finally(rerender);
+          labLens(ctx.model, an.prompt, toks, i).then(r => { an.lens[i] = r.logit; if (r.jac) an.jlens[i] = r.jac; else delete an.jlens[i]; })
+            .catch(e => { an.lens[i] = { err: e.message }; delete an.jlens[i]; }).finally(rerender);
         },
       }, I('layers', 's'), T('층마다 읽기'))));
   }
@@ -5602,6 +5623,7 @@ function labLensBox(an, toks, i, ctx) {
       h('span', { class: 'alt-p' }, pct(v.top_logprobs[l][q])), h('span', { class: 'alt-go' }, '')))));
   }
   return h('div', { class: 'col g8' }, head,
+    view === 'jac' ? labNote(T`Jacobian lens — 층마다 J 파일(${((S.st && S.st.server) || {}).jlens_file || '-'} · 원천 층 ${v.source_layers}개)의 J로 끝 층의 바탕에 옮긴 뒤 읽습니다(정밀도 계약 5.4). 마지막 층은 J 없이 읽어 logit lens와 같습니다.`) : null,
     labNote(stay < L ? T`고른 토큰은 층 ${stay}부터 1위로 끝까지 남습니다. 마지막 층(${L - 1})은 위의 확률과 같습니다(끝 출력).`
       : T`고른 토큰은 마지막 층에서도 1위가 아닙니다(샘플링). 마지막 층(${L - 1})은 위의 확률과 같습니다(끝 출력).`),
     h('div', { class: 'lens' }, rows));
@@ -6033,6 +6055,13 @@ function labCapsuleText(tid) {
   const lens = Object.keys(an.lens || {}).map(Number).filter(i => i >= o && an.lens[i] && an.lens[i].layers).sort((a, b) => a - b)
     .map(i => Object.assign({ step: i - o + 1 }, an.lens[i]));
   if (lens.length) cap.result.layer_lens = lens;
+  // #96 2단계 — 셈한 Jacobian lens(계약 5.4)와 그 J 파일의 SHA-256 — repro_check --jlens 가 같은 J 파일로 다시 셈해 견준다
+  const jl = Object.keys(an.jlens || {}).map(Number).filter(i => i >= o && an.jlens[i] && an.jlens[i].layers).sort((a, b) => a - b)
+    .map(i => Object.assign({ step: i - o + 1 }, an.jlens[i]));
+  if (jl.length) {
+    cap.result.jacobian_lens = jl;
+    cap.jlens = { sha256: jl[0].jlens_sha256, file: ((S.st && S.st.server) || {}).jlens_file || '' };
+  }
   const txt = '{\n' + Object.keys(cap).map(k => JSON.stringify(k) + ':' + JSON.stringify(cap[k])).join(',\n') + '\n}\n';
   return tr.req.temp > 0 ? txt.replace('"seed":"__SEED__"', '"seed":' + (tr.seed || '0')) : txt;
 }

@@ -16,19 +16,26 @@
      차례, 한 행의 셈이 다른 행과 상관없음
   10. Gemma 4 의 계약 4.12(0.12.0 12-3h): 상수, GeGLU · 소프트캡 대 계약 문장과 참값, 슬라이딩 윈도의 어텐션(창 ≥ 길이 = 창 없음, 창 밖의 키를
      바꿔도 같은 비트, 행 = 계약 문장대로 따로 접은 것)
+  11. Jacobian lens 의 계약 5.4(#96 2단계): J곱 대 계약 문장을 칸 하나씩 옮긴 배정밀도의 차례 합 + 정확한 유리수의 규칙 R 반올림(반실수의
+     비정규수 · −0 · 65504, 차례가 값을 바꾸는 상쇄, 2⁻¹²⁶ 문턱 둘레), J 파일(safetensors)의 쓰기 · 읽기와 명세대로 손으로 만든 파일, 거절
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
 마지막 줄 "계약 자체 시험: 모두 통과"(종료 0) 또는 "못 미침"(종료 1).
 """
+import json
+import math
 import os
+import struct
 import sys
+import tempfile
 from fractions import Fraction
 
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "계약"))
 import 정수계약 as C        # noqa: E402
+import jlens읽기 as JL      # noqa: E402
 
 f32 = np.float32
 실패 = []
@@ -821,6 +828,81 @@ def 시험_gemma4(r):
     확인("계약 4.12 — 슬라이딩 윈도의 행 = 계약 문장대로 따로 접은 것(보는 조각 · 묶음만, 첫 것이 처음 값)", 같음)
 
 
+def _J곱한칸(J행, x행):
+    """계약 5.4 의 2 를 칸 하나씩 — 파이썬 실수(배정밀도)로 s ← s + J · x 를 j 차례로(규칙 R 의 입력 읽기), 끝은 정확한 유리수에서 규칙 R."""
+    s = 0.0
+    for j in range(len(x행)):
+        xv = float(x행[j])
+        if 0 < abs(xv) < 2.0 ** -126:
+            xv = math.copysign(0.0, xv)
+        s = s + float(J행[j]) * xv
+    return 반올림R(Fraction(s), 영음수=math.copysign(1.0, s) < 0)
+
+
+def 시험_J곱(r):
+    D, Dp, R = 96, 12, 7
+    J = (r.standard_normal((Dp, D)) * 2.0 ** r.integers(-12, 8, (Dp, D))).astype(np.float16)
+    J[0, :6] = np.float16(2.0 ** -24)                             # 반실수의 비정규수
+    J[1, :4] = np.float16(-0.0)
+    J[2, :5] = np.float16(65504.0)
+    J[3, :] = 0
+    J[3, :3] = 1                                                    # 차례가 값을 바꾸는 상쇄: (2⁶⁰ + 1) − 2⁶⁰ = 0(정확한 합은 1)
+    J[4, :] = 0
+    J[4, 0], J[4, 1] = np.float16(2.0 ** -14), np.float16(2.0 ** -24)  # 2⁻¹²⁶ 문턱 둘레
+    x = 활성값(r, R, D)
+    x[5, :3] = [2.0 ** 60, 1.0, -(2.0 ** 60)]
+    x[6, :2] = [-(2.0 ** -112), 2.0 ** -126]                          # s = −(2⁻¹²⁶ − 2⁻¹⁵⁰) → 부호를 지킨 0(−0)
+    x[4, :2] = [2.0 ** -112, 2.0 ** -126]                             # s = 2⁻¹²⁶ + 2⁻¹⁵⁰ → 2⁻¹²⁶(같으면 짝수)
+    x[2, 5] = np.float32(1e-40)                                     # 짧은실수의 비정규수 입력 → 0 으로 읽는다
+    got = C.J곱(J, x)
+    want = np.array([[_J곱한칸(J[i], x[q]) for i in range(Dp)] for q in range(R)], f32)
+    d = 다른칸(got, want)
+    확인("Jacobian lens — J곱 대 계약 문장(칸 하나씩)", d == 0, f"{got.size} 개 중 다른 칸 {d}")
+    확인("Jacobian lens — 상쇄의 차례 · 문턱", got[5, 3] == 0 and got[6, 4] == 0 and np.signbit(got[6, 4]) and got[4, 4] == f32(2.0 ** -126),
+       f"{got[5, 3]!r} · {got[6, 4]!r} · {got[4, 4]!r}")
+    d = 다른칸(np.concatenate([C.J곱(J, x[q:q + 1]) for q in range(R)], 0), got)
+    확인("Jacobian lens — 행 하나씩 = 한 번에", d == 0, f"다른 칸 {d}")
+    x = 활성값(r, R, D)                                              # +0 인 블록이 있다(−0 은 +0 이 된다 — s 가 +0 에서 시작)
+    d = 다른칸(C.J곱(np.eye(D, dtype=np.float16), x), x)
+    확인("Jacobian lens — J = 단위행렬이면 u = x", d == 0, f"다른 칸 {d}")
+
+
+def 시험_J파일(r):
+    J = {l: (r.standard_normal((8, 8)) * 4).astype(np.float16) for l in (0, 3, 5)}
+    with tempfile.TemporaryDirectory() as 곳:
+        p = os.path.join(곳, "t.jlens.safetensors")
+        JL.쓰기(p, J, 7, {"fit": json.dumps({"tool": "시험"})})
+        J2, m = JL.읽기(p)
+        같음 = sorted(J2) == [0, 3, 5] and all(np.array_equal(J2[l].view(np.uint16), J[l].view(np.uint16)) for l in J)
+        확인("J 파일 — 쓰기 · 읽기", 같음 and m["format"] == JL.형식 and m["d_model"] == "8" and m["n_layers"] == "7" and
+           json.loads(m["fit"])["tool"] == "시험")
+
+        def 손(머리, 자료, 이름):                                    # 명세(safetensors)대로 손으로 만든 파일
+            h = json.dumps(머리).encode("utf-8")
+            h += b" " * (-len(h) % 8)
+            q = os.path.join(곳, 이름)
+            open(q, "wb").write(struct.pack("<Q", len(h)) + h + 자료)
+            return q
+        메 = {"format": "geulpu-jlens/1", "d_model": "2", "n_layers": "3"}
+        값 = np.array([[1, -2], [0.5, 65504]], np.float16)
+        J3, _ = JL.읽기(손({"__metadata__": 메, "J.1": {"dtype": "F16", "shape": [2, 2], "data_offsets": [0, 8]}}, 값.tobytes(), "손.st"))
+        확인("J 파일 — 손으로 만든 safetensors", sorted(J3) == [1] and np.array_equal(J3[1].view(np.uint16), 값.view(np.uint16)))
+        틀림들 = {"끝 층(L − 1)": ({"__metadata__": 메, "J.2": {"dtype": "F16", "shape": [2, 2], "data_offsets": [0, 8]}}, 값.tobytes()),
+                "F32": ({"__metadata__": 메, "J.1": {"dtype": "F32", "shape": [2, 2], "data_offsets": [0, 16]}}, 값.astype(np.float32).tobytes()),
+                "빈틈": ({"__metadata__": 메, "J.1": {"dtype": "F16", "shape": [2, 2], "data_offsets": [8, 16]}}, bytes(8) + 값.tobytes()),
+                "남는 바이트": ({"__metadata__": 메, "J.1": {"dtype": "F16", "shape": [2, 2], "data_offsets": [0, 8]}}, 값.tobytes() + bytes(8)),
+                "format 없음": ({"__metadata__": {"d_model": "2", "n_layers": "3"}, "J.1": {"dtype": "F16", "shape": [2, 2],
+                                                                                      "data_offsets": [0, 8]}}, 값.tobytes())}
+        못 = []
+        for 이름, (머리, 자료) in 틀림들.items():
+            try:
+                JL.읽기(손(머리, 자료, "틀림.st"))
+                못.append(이름)
+            except ValueError:
+                pass
+        확인("J 파일 — 틀린 파일의 거절", not 못, f"받아 버린 것 {못}" if 못 else f"{len(틀림들)} 가지")
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -837,6 +919,8 @@ def main():
     시험_GDN(r)
     시험_MoE(r)
     시험_gemma4(r)
+    시험_J곱(r)
+    시험_J파일(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
     return 0 if not 실패 else 1
 

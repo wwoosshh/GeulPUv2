@@ -981,3 +981,5 @@ table.data.dbg-table tbody tr.on td { background: var(--canvas-soft); }
   .dbg-vs { grid-template-columns: minmax(0, 1fr); }
   .dbg-msg { flex-direction: column; gap: 4px; }
 }
+.lens-seg { padding: 2px; }
+.lens-seg button { height: 22px; padding: 0 10px; font-size: 12px; }

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """#96 — 층 렌즈(logit lens, 계약 5.3)를 서버에 바로 묻고 견준다. 서버(또는 앱의 /v1)가 떠 있어야 한다 — GPU 줄에 서서.
 
-    python -I -X utf8 시험/렌즈.py <주소> <모델.gguf> [--빠른] [--KV8] [--F2] [--F2B] [--CPU없이] [--출력 결과.json]
-    python -I -X utf8 시험/렌즈.py CPU <결과.json> <모델.gguf> [--빠른] [--KV8] [--F2] [--F2B]   (4 만 — GPU 줄 밖에서, 저장한 결과로)
+    python -I -X utf8 시험/렌즈.py <주소> <모델.gguf> [--빠른] [--KV8] [--F2] [--F2B] [--jlens J파일] [--CPU없이] [--출력 결과.json]
+    python -I -X utf8 시험/렌즈.py CPU <결과.json> <모델.gguf> [--빠른] [--KV8] [--F2] [--F2B] [--jlens J파일]   (4 · 7 만 — GPU 줄 밖에서)
     python -I -X utf8 시험/렌즈.py 견주기 <결과 a.json> <결과 b.json>          (백엔드를 건너 — CUDA ↔ Vulkan, 정밀 모드)
 
 모드 깃발은 서버가 도는 계약(시험/참조7B.py 와 같은 뜻 — --F2 는 --빠른 · --KV8 을, --KV8 은 --빠른 을 함께 뜻한다). 한 질문의 탐욕 답
@@ -11,7 +11,11 @@
   2. 마지막 층 = 같은 응답의 echo 값(로짓 해시 · 로그확률 · 엔트로피 · 상위 k) — 계약 5.3 의 2.
   3. 렌즈 요청의 echo 값 = 렌즈 없이 답 전체를 echo 로 매긴 값 — 덩이 · 길과 상관없이 같은 비트(렌즈 길은 넷 이하의 행도 계획 길).
   4. 층마다 CPU 참조(시험/참조7B.py 의 렌즈행)와 로짓 해시 · 5.2 의 값(로그확률 · 엔트로피 · 상위 k)이 비트까지 같은가(--CPU없이 면 건너뜀).
-  5. 거절(400): echo 없음 · echo_from 이 프롬프트 끝 · top_k 21 · 틀린 형. layer_lens 거짓이면 응답에 없다.
+  5. 거절(400): echo 없음 · echo_from 이 프롬프트 끝 · top_k 21 · 틀린 형 · jacobian 이 참거짓이 아님. layer_lens 거짓이면 응답에 없다.
+#96 2단계 — --jlens(서버를 같은 J 파일로 띄웠을 때 — Jacobian lens, 계약 5.4):
+  6. layer_lens: {"jacobian": true} 의 layer_lens = 1 의 layer_lens(J 를 묻는 길도 같은 비트), jacobian_lens 의 꼴(층 · 행 · 토큰 · J 파일의
+     SHA-256 · 원천 층 수)과 마지막 층 = logit lens 의 마지막 층.
+  7. 층마다 CPU 참조(시험/참조7B.py 의 층로짓 — 같은 J)와 비트까지(--CPU없이 면 건너뜀).
 """
 import argparse
 import json
@@ -26,6 +30,7 @@ import numpy as np
 여기 = os.path.dirname(os.path.abspath(__file__))
 for _d in ("계약", "시험", "도구"):
     sys.path.insert(0, os.path.join(여기, "..", _d))
+import jlens읽기 as JL         # noqa: E402
 import 로그확률 as LP          # noqa: E402
 
 질문 = "질문: 대한민국의 수도는 어디인가? 답:"
@@ -92,7 +97,21 @@ def 돌리기(a):
                 "ids": eg["prompt_top_ids"][ef], "lps": eg["prompt_top_logprobs"][ef]}
         적기(f"s{i + 1} 렌즈 길의 echo = 답 전체의 echo", echo == 보통, "" if echo == 보통 else f"{echo} ≠ {보통}")
         렌즈들[i] = ll
-        결과["steps"].append({"step": i + 1, "row": ef - 1, "token": T[i], "layer_lens": ll, "echo": echo})
+        x = {"step": i + 1, "row": ef - 1, "token": T[i], "layer_lens": ll, "echo": echo}
+        if a.jlens:                                          # #96 2단계 — Jacobian lens(계약 5.4)
+            jj = 받기(a.주소, {"prompt": P + T[:i + 1], "echo": True, "max_tokens": 0, "logprobs": 위수, "temperature": 0,
+                               "geulpu": {"echo_from": ef, "logit_hash": True, "layer_lens": {"jacobian": True}}})
+            jg = jj["geulpu"]
+            jl = jg.get("jacobian_lens") or {}
+            적기(f"s{i + 1} J 길의 layer_lens = 1 의 layer_lens", jg.get("layer_lens") == ll)
+            적기(f"s{i + 1} jacobian_lens 꼴", jl.get("row") == ef - 1 and jl.get("token") == T[i] and jl.get("layers") == L
+                 and jl.get("jlens_sha256") == a.J해시 and jl.get("source_layers") == a.J층수
+                 and all(len(jl.get(c) or []) == L for c in ("token_logprobs", "entropy", "top_ids", "top_logprobs", "logit_hashes", "ranks")),
+                 f"layers {jl.get('layers')} · sha {str(jl.get('jlens_sha256'))[:12]} · source {jl.get('source_layers')}")
+            적기(f"s{i + 1} J 의 마지막 층 = logit lens 의 마지막 층", L > 0 and all((jl.get(c) or [None] * L)[L - 1] == ll[c][L - 1]
+                 for c in ("logit_hashes", "token_logprobs", "entropy", "top_ids", "top_logprobs", "ranks")))
+            x["jacobian_lens"] = jl
+        결과["steps"].append(x)
     if not a.CPU없이:
         CPU확인(결과, a, 적기)
     # 거절
@@ -103,7 +122,9 @@ def 돌리기(a):
                     ("top_k 21", {"prompt": 짧은, "echo": True, "max_tokens": 0, "logprobs": 위수,
                                   "geulpu": {"echo_from": len(P), "layer_lens": {"top_k": 21}}}),
                     ("틀린 형", {"prompt": 짧은, "echo": True, "max_tokens": 0, "logprobs": 위수,
-                                "geulpu": {"echo_from": len(P), "layer_lens": 3}})):
+                                "geulpu": {"echo_from": len(P), "layer_lens": 3}}),
+                    ("jacobian 의 형", {"prompt": 짧은, "echo": True, "max_tokens": 0, "logprobs": 위수,
+                                       "geulpu": {"echo_from": len(P), "layer_lens": {"jacobian": 1}}})):
         s, j = 묻기(a.주소, 몸)
         글 = ((j.get("error") or {}).get("message")) or ""
         적기(f"거절 — {이름}", s == 400 and "layer_lens" in 글, f"HTTP {s} {글[:80]}")
@@ -133,21 +154,31 @@ def CPU확인(결과, a, 적기):
     행들 = [x["row"] for x in 결과["steps"]]
     t1 = time.time()
     print(f"CPU 참조로 행 {len(P) + len(T) - 1} 개 · 렌즈 행 {행들} 계산하는 중 …", flush=True)
-    _, _, 렌즈 = REF.앞으로(gg, [np.array(P + T[:-1], np.int64)], 말=False, 렌즈행=행들)
+    _, _, 잔 = REF.앞으로(gg, [np.array(P + T[:-1], np.int64)], 말=False, 렌즈행=행들, 잔차=True)
+    렌즈 = REF.층로짓(gg, 잔)
+    렌즈J = REF.층로짓(gg, 잔, JL.읽기(a.jlens)[0]) if getattr(a, "jlens", None) else None    # #96 2단계 — 같은 J 파일로(계약 5.4)
     print(f"  ({time.time() - t1:.0f} 초)", flush=True)
-    for q, x in enumerate(결과["steps"]):
-        ll = x["layer_lens"]
-        다른층 = []
-        for l in range(렌즈[q].shape[0]):
-            z = 렌즈[q][l]
+
+    def 다른층들(zz, ll, c):
+        다른 = []
+        for l in range(zz.shape[0]):
+            z = zz[l]
             r = LP.로그확률행(z, 위수=len(ll["top_ids"][l]))
-            같음 = (행해시(z) == ll["logit_hashes"][l] and float(r["로그확률"][x["token"]]) == ll["token_logprobs"][l]
+            같음 = (행해시(z) == ll["logit_hashes"][l] and float(r["로그확률"][c]) == ll["token_logprobs"][l]
                     and float(r["H"]) == ll["entropy"][l] and [int(v) for v, _ in r["위"]] == ll["top_ids"][l]
                     and [float(v) for _, v in r["위"]] == ll["top_logprobs"][l]
-                    and ("ranks" not in ll or 순위(z, x["token"]) == ll["ranks"][l]))
+                    and ("ranks" not in ll or 순위(z, c) == ll["ranks"][l]))
             if not 같음:
-                다른층.append(l)
+                다른.append(l)
+        return 다른
+    for q, x in enumerate(결과["steps"]):
+        ll = x["layer_lens"]
+        다른층 = 다른층들(렌즈[q], ll, x["token"])
         적기(f"s{x['step']} 층마다 = CPU 참조", not 다른층 and 렌즈[q].shape[0] == ll["layers"], f"다른 층 {다른층[:8]}" if 다른층 else "")
+        if 렌즈J is not None and x.get("jacobian_lens"):
+            다른J = 다른층들(렌즈J[q], x["jacobian_lens"], x["token"])
+            적기(f"s{x['step']} Jacobian lens 층마다 = CPU 참조", not 다른J and 렌즈J[q].shape[0] == x["jacobian_lens"]["layers"],
+                 f"다른 층 {다른J[:8]}" if 다른J else "")
 
 
 def CPU만(argv):
@@ -156,6 +187,7 @@ def CPU만(argv):
     ap.add_argument("모델")
     for f in ("--빠른", "--KV8", "--F2", "--F2B"):
         ap.add_argument(f, action="store_true")
+    ap.add_argument("--jlens")
     a = ap.parse_args(argv)
     판정 = {}
 
@@ -173,6 +205,7 @@ def 견주기(pa, pb):
     같음 = a["tokens"] == b["tokens"] and len(a["steps"]) == len(b["steps"])
     for x, y in zip(a["steps"], b["steps"]):
         h = x["layer_lens"]["logit_hashes"] == y["layer_lens"]["logit_hashes"] and x["echo"] == y["echo"]
+        h = h and (x.get("jacobian_lens") or {}).get("logit_hashes") == (y.get("jacobian_lens") or {}).get("logit_hashes")    # #96 2단계
         print(f"스텝 {x['step']}: 층 {x['layer_lens']['layers']} 의 로짓 해시 · echo {'같음' if h else '다름'}", flush=True)
         같음 &= h
     print("모두 같음" if 같음 else "다른 곳이 있다", flush=True)
@@ -192,8 +225,13 @@ def main():
     ap.add_argument("모델")
     for f in ("--빠른", "--KV8", "--F2", "--F2B", "--CPU없이"):
         ap.add_argument(f, action="store_true")
+    ap.add_argument("--jlens", help="서버를 띄운 J 파일(계약 5.4) — Jacobian lens 도 견준다")
     ap.add_argument("--출력")
-    돌리기(ap.parse_args())
+    a = ap.parse_args()
+    if a.jlens:
+        J, _ = JL.읽기(a.jlens)
+        a.J해시, a.J층수 = JL.해시(a.jlens), len(J)
+    돌리기(a)
 
 
 if __name__ == "__main__":
