@@ -107,13 +107,24 @@ def main():
         띄우기("RoPEKV정수로256", (((H + 2 * HKV) * 8 + 31) // 32, n), 256,
               [(1, pq), (1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, pc or pcos), (1, ps or psin), (0, n), (0, H), (0, HKV), (0, 폭), (0, 시작), (0, 길이)])
 
-    def 어텐션(n, 시작, pqd, pqE, pkd, pkE, pvd, pvE, po, 길이=None):
+    def 어텐션(n, 시작, pqd, pqE, pkd, pkE, pvd, pvE, po, 길이=None, 텐서=False):
+        """프롬프트 판 — 텐서 = 거짓: 어텐션256묶음(옛 판), 참: 어텐션256텐서(2026-10-25 속도 S2 — 텐서 코어, 질의 32 블록) → 접기256"""
         길이 = 길이 or 최대길이
         묶음수_ = (길이 + 1023) // 1024
         p묶 = dr.할당(n * H * 묶음수_ * 260 * 4)
-        띄우기("어텐션256묶음", (H * 묶음수_, n), 256,
-              [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, 시작), (0, 길이)])
+        인자 = [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, 시작), (0, 길이)]
+        if 텐서:
+            띄우기("어텐션256텐서", (H * 묶음수_, (n + 31) // 32), 128, 인자)
+        else:
+            띄우기("어텐션256묶음", (H * 묶음수_, n), 256, 인자)
         띄우기("접기256", (H, n), 256, [(1, p묶), (1, po), (0, n), (0, H), (0, 시작), (0, 길이)])
+
+    def 값풀기(vt):
+        """값 캐시 [자리 2][KV머리][키 블록][d][32](키 κ 는 바이트 σ(κ) — 2026-10-25 속도 S2) → [자리 2][KV머리][위치][d]"""
+        κ = np.arange(32)
+        σ = (κ & 16) + ((κ & 7) >> 1) * 4 + ((κ >> 3) & 1) * 2 + (κ & 1)
+        x = vt[..., σ]
+        return x.transpose(0, 1, 2, 4, 3).reshape(2, HKV, -1, HD)
 
     def 조각어텐션(시작, pqd, pqE, pkd, pkE, pvd, pvE, po, 길이=None):
         """2026-10-25 속도 S1 — 생성 걸음(행 하나): 조각어텐션256 → 조각묶음256 → 접기256(엔진의 큰층띄움들35 와 같은 띄움)"""
@@ -142,7 +153,7 @@ def main():
     vD, vE_ = zip(*[C.자리로(x, 2) for x in vh])
     qdG = down(pqd, (2, T, H * HD), np.int8)
     kdG = down(pkd, (2, HKV, 최대길이, HD), np.int8)[:, :, :T]
-    vdG = down(pvd, (2, HKV, 최대길이, HD), np.int8)[:, :, :T]
+    vdG = 값풀기(down(pvd, (2, HKV, 최대길이 // 32, HD, 32), np.int8))[:, :, :T]
     다 = {"q · k 정규화": 다른칸(qnG, qn),
          "q 자리": 다른칸(qdG, qD.astype(np.int8)), "q 지수": 다른칸(down(pqE, (T, H * 8), np.int64), qE_),
          "키 자리": 다른칸(kdG, np.stack([np.stack([d[j] for d in kD]) for j in range(2)]).astype(np.int8)),
@@ -165,20 +176,30 @@ def main():
     결과["경우"].append({"경우": f"한 번에({T} 행)", "다른 칸": 다})
     print("한 번에:", 다, flush=True)
 
+    # ---- GPU: 한 번에 — 텐서 코어 판(어텐션256텐서, 2026-10-25 속도 S2) ----
+    po텐 = dr.할당(T * H * HD * 4)
+    어텐션(T, 0, pqd, pqE, pkd, pkE, pvd, pvE, po텐, 텐서=True)
+    dr.맞추기()
+    다텐 = {"어텐션 O / L": 다른칸(down(po텐, (T, H * HD)), o참)}
+    결과["경우"].append({"경우": f"한 번에({T} 행) — 텐서 코어 판", "다른 칸": 다텐})
+    print("한 번에 · 텐서:", 다텐, flush=True)
+
     # ---- GPU: 덩이 둘(앞 덩이의 키 · 값을 캐시에) ----
     pkd2, pkE2 = dr.할당(2 * HKV * 최대길이 * HD), dr.할당(HKV * 최대길이 * 8 * 8)
     pvd2, pvE2 = dr.할당(2 * HKV * 최대길이 * HD), dr.할당(HKV * 최대길이 * 8 * 8)
-    os_ = []
+    os_, os텐 = [], []
     for s0, s1 in ((0, T1), (T1, T)):
         n = s1 - s0
         pq2 = up(qkv[s0:s1])
         pqd2, pqE2 = dr.할당(2 * n * H * HD), dr.할당(n * H * 8 * 8)
         앞단(pq2, n, s0, pqd2, pqE2, pkd2, pkE2, pvd2, pvE2)
-        po2 = dr.할당(n * H * HD * 4)
+        po2, po2텐 = dr.할당(n * H * HD * 4), dr.할당(n * H * HD * 4)
         어텐션(n, s0, pqd2, pqE2, pkd2, pkE2, pvd2, pvE2, po2)
+        어텐션(n, s0, pqd2, pqE2, pkd2, pkE2, pvd2, pvE2, po2텐, 텐서=True)
         dr.맞추기()
         os_.append(down(po2, (n, H * HD)))
-    다2 = {"어텐션 O / L": 다른칸(np.concatenate(os_), o참)}
+        os텐.append(down(po2텐, (n, H * HD)))
+    다2 = {"어텐션 O / L": 다른칸(np.concatenate(os_), o참), "어텐션 O / L — 텐서 코어 판": 다른칸(np.concatenate(os텐), o참)}
     결과["경우"].append({"경우": f"덩이 둘({T1} · {T - T1} 행)", "다른 칸": 다2})
     print("덩이 둘:", 다2, flush=True)
 
@@ -215,6 +236,14 @@ def main():
         조각어텐션(p, pq1, pE1, pkd3, pkE3, pvd3, pvE3, po1, 길이2)
         dr.맞추기()
         다5[f"위치 {p}"] = 다른칸(down(po1, (H * HD,)), down(po옛, (H * HD,)))
+    # 2026-10-25 속도 S2 — 같은 긴 캐시에서 프롬프트 덩이(행 300 — 위치 4,000 …, 묶음 경계 4,096 을 넘는다)를 텐서 코어 판과 옛 판으로
+    n덩 = T2 - 4000
+    pq덩, pE덩 = up(np.ascontiguousarray(qd2G[:, 4000:T2])), up(np.ascontiguousarray(qE2G[4000:T2]))
+    po덩옛, po덩텐 = dr.할당(n덩 * H * HD * 4), dr.할당(n덩 * H * HD * 4)
+    어텐션(n덩, 4000, pq덩, pE덩, pkd3, pkE3, pvd3, pvE3, po덩옛, 길이2)
+    어텐션(n덩, 4000, pq덩, pE덩, pkd3, pkE3, pvd3, pvE3, po덩텐, 길이2, 텐서=True)
+    dr.맞추기()
+    다5[f"덩이 {n덩} 행(위치 4000 …) — 텐서 코어 판"] = 다른칸(down(po덩텐, (n덩, H * HD)), down(po덩옛, (n덩, H * HD)))
     결과["경우"].append({"경우": f"생성 걸음의 긴 위치(최대길이 {길이2} — 옛 판과)", "다른 칸": 다5})
     print("생성 걸음 · 긴 위치:", 다5, flush=True)
 
