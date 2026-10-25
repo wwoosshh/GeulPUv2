@@ -908,14 +908,14 @@ details.fold > :not(summary) { margin-top: 12px; }
 .alt-go { font-size: 11px; color: var(--mute); text-align: center; }
 /* #96 — 층 렌즈: 층 · 1위 토큰 · 확률 · 고른 토큰의 확률 · 순위 · 엔트로피(누르면 그 층의 상위 k) */
 .lens { display: flex; flex-direction: column; gap: 1px; }
-.lens-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 52px 60px 64px 52px; align-items: center; gap: 6px; min-height: 26px; padding: 0 4px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+.lens-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 76px 64px 64px 52px; align-items: center; gap: 6px; min-height: 26px; padding: 0 4px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 .lens-row:hover, .lens-row:focus-visible { background: var(--fill); outline: none; }
 .lens-row.lens-head { cursor: default; min-height: 22px; }
 .lens-row.lens-head:hover { background: none; }
 .lens-row > .mono { color: var(--mute); font: 400 12px/18px var(--font-mono); }
 .lens-row.top1 > .mono { color: var(--ink); }
 .lens-row.stay { box-shadow: inset 2px 0 0 var(--ink); }
-.lens-alts { margin: 2px 0 6px 34px; }
+.lens-alts { margin: 2px 0 6px 46px; }
 .lens-err { color: var(--err); }
 .icon-btn.sm { width: 28px; height: 28px; }
 .lab-vs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
