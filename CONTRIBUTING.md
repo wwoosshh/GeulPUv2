@@ -106,7 +106,9 @@ in [docs/versioning.md](docs/versioning.md).
 5. Run the quick check and open a pull request from a `release/X.Y.Z` branch with these changes. Merge it when CI is green.
 6. Tag the merged commit on `main` and push the tag: `git switch main`, `git pull --ff-only`, `git tag -a vX.Y.Z -m "GeulPU X.Y.Z"`,
    `git push origin vX.Y.Z`. The release workflow builds the zip, the wheel and `SHA256SUMS.txt` from the tagged commit and creates a
-   **draft** release.
+   **draft** release. Files that are not built from the repository — the Jacobian-lens J files named in the changelog with their
+   SHA-256 — are added to the draft by hand: check the file's SHA-256 against the changelog, `gh release upload vX.Y.Z <file>`, append
+   `<SHA-256>  <file>` to `SHA256SUMS.txt` and upload it again with `--clobber` (the PyPI workflow reads only the wheel's line).
 7. Download the draft's files, compare their SHA-256, install the wheel in a fresh virtual environment and run it.
 8. Publish: `gh release edit vX.Y.Z --draft=false --latest`. Publishing starts the PyPI workflow, which waits for approval in the `pypi`
    environment and uploads the same wheel.
