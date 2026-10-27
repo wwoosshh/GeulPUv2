@@ -1,0 +1,29 @@
+WSL(Ubuntu 24.04 · glibc 2.39)에서 같은 태그로 지은 SHA-256:
+  geulc        d07b4c7fbec2e69fdb5ff7b94c04308fef75c4a1d6f8a96f08cf1d74e1480d44
+  ptx-backend  4643c773874f28b5c50ebf5f6f43f9e1ea25ba6616f290e5800e5d962be599e1
+  kernel-gen   7a17804db2a135236ee0a707296427e8f3c1bb9c860c98bdd82d1e405f2beff2
+  server-cuda  f503ce58a80aac2f786fafa6b7771defeb70eedce91fd68c46274cef65415a5f
+  jaegi-kernel 7a148a0ed8f08ed5e11669dde9323350465577f0c643258b7735a305d25bf6e5
+이 서버:
+d07b4c7fbec2e69fdb5ff7b94c04308fef75c4a1d6f8a96f08cf1d74e1480d44  $W/geul-lang-v2/build/geulc
+4643c773874f28b5c50ebf5f6f43f9e1ea25ba6616f290e5800e5d962be599e1  $W/GeulPUv2/bin/ptx-backend
+7a17804db2a135236ee0a707296427e8f3c1bb9c860c98bdd82d1e405f2beff2  $W/GeulPUv2/bin/kernel-gen
+f503ce58a80aac2f786fafa6b7771defeb70eedce91fd68c46274cef65415a5f  $W/GeulPUv2/bin/server-cuda
+7a148a0ed8f08ed5e11669dde9323350465577f0c643258b7735a305d25bf6e5  $W/GeulPUv2/bin/jaegi-kernel
+-- geulc
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+   glibc 판: 
+-- ptx-backend
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+   glibc 판: 
+-- kernel-gen
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+   glibc 판: 
+-- server-cuda
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libcuda.so.1]
+   glibc 판: 
+-- jaegi-kernel
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libcuda.so.1]
+   glibc 판: 
