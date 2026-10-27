@@ -8,13 +8,7 @@
 포함 "제이슨.gl"
 포함 "파일.gl"
 
-외부 "nvcuda.dll" "cuInit" [중간정수 깃발을 장치C초기화]는 -> 중간정수.
-외부 "nvcuda.dll" "cuDeviceGetCount" [공허 참조 개수를 장치C개수]는 -> 중간정수.
-외부 "nvcuda.dll" "cuDeviceGet" [공허 참조 장치를 중간정수 번호를 장치C얻기]는 -> 중간정수.
-외부 "nvcuda.dll" "cuDeviceGetName" [공허 참조 버퍼를 중간정수 길이를 중간정수 장치를 장치C이름]는 -> 중간정수.
-외부 "nvcuda.dll" "cuDeviceTotalMem_v2" [공허 참조 바이트를 중간정수 장치를 장치C메모리]는 -> 중간정수.
-외부 "nvcuda.dll" "cuDeviceGetAttribute" [공허 참조 값을 중간정수 속성을 중간정수 장치를 장치C속성]는 -> 중간정수.
-외부 "nvcuda.dll" "cuDriverGetVersion" [공허 참조 판을 장치C드라이버판]는 -> 중간정수.
+포함 "장치C선언.gl"            (* 드라이버 API 일곱 — 윈도 nvcuda.dll, 리눅스 판(리눅스/장치C선언.gl)은 libcuda.so.1 *)
 
 [중간정수 장치를 중간정수 속성을 속성값]는 -> 정수 {
     중간정수 v = 0.

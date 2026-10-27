@@ -75,6 +75,21 @@ This page is for building GeulPU from source and finding your way around the cod
 4. **Linux**: the same sources build as ELF with the geul compiler's Linux target (they import only `libc.so.6` and `libcuda.so.1`).
    Tested under WSL2 Ubuntu 24.04 and natively on Ubuntu 22.04 (glibc 2.35) with an H100 NVL MIG instance — the commands and what
    came up (git on an NFS home) are in [h100.md](h100.md).
+   - The app: `bash 앱/꾸리기.sh <geul repo> [out dir]` builds the same folder as `앱\꾸리기.ps1` on Windows (`GeulPU`, `bin/` with
+     server-cuda · device-cuda · diag-cuda · kernel-gen · ptx-backend, `kernels/`, `web/`, `data/`, `version.json`) and
+     `GeulPU-<version>-linux-x64.tar.gz`. Start it with `./GeulPU --열지않음`; on a remote machine open the screen through SSH port
+     forwarding (`ssh -L 44544:127.0.0.1:44544 …`). The data folder is `~/GeulPU` (`--자료` · `GEULPU_HOME`). One check without the
+     screen: `./GeulPU --check pair [--quick]` (`r1` or `pair`; Korean `--검사 재현성|쌍 [--빠름]`) prints the result folder and zip and
+     exits with 0 when every problem matches the reference (1 different · 2 did not finish · 3 no GPU). Put the model files in the data
+     folder's `모델/` (symbolic links work).
+   - Everything the app needs from the OS sits in [앱/윈도.gl](../앱/윈도.gl); the Linux version, with the same function names, is
+     [앱/리눅스/윈도.gl](../앱/리눅스/윈도.gl) (libc — fork · execv · pthread · mmap; SHA-256 in geul). The app joins paths with `\` — the
+     Linux version turns it into `/` wherever it takes a path. Downloading (WinHTTP) is [앱/받기망.gl](../앱/받기망.gl); the Linux version
+     ([앱/리눅스/받기망.gl](../앱/리눅스/받기망.gl)) does not download yet — fetch the file yourself and add it with **Add model**. The device
+     check's CUDA declarations are in [엔진/장치C선언.gl](../엔진/장치C선언.gl) (Linux: libcuda.so.1).
+   - Not on Linux yet: downloads inside the app, Vulkan (AMD · Intel — #135), asking whether the store's drive is an HDD (the context
+     store's `auto` turns it on), flushing the store when the window closes. On SIGTERM · SIGHUP · SIGINT the manager sends SIGTERM to
+     the servers and tools it started and exits.
 
 ## Checks
 
