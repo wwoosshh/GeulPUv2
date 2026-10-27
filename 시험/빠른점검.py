@@ -238,8 +238,7 @@ def 빌드(글, 출력, 병렬):
     일들 = [("커널생성", os.path.join(ROOT, "커널", "커널생성.gl"))] + [(p, os.path.join(ROOT, "엔진", p + ".gl")) for p in 호스트프로그램들()]
     백엔드들 = [("ptx-backend", os.path.join(ROOT, "백엔드", "PTX", "PTX.gl")), ("spirv-backend", os.path.join(ROOT, "백엔드", "SPIRV", "SPIRV.gl"))]
     일들 += 백엔드들
-    if not 리눅스:
-        일들.append(("GeulPU", os.path.join(ROOT, "앱", "관리자.gl")))      # 36단계 — 앱의 관리자(윈도만: WinHTTP · CNG · 셸)
+    일들.append(("GeulPU", os.path.join(ROOT, "앱", "관리자.gl")))      # 36단계 — 앱의 관리자(리눅스는 앱/리눅스/윈도.gl · 받기망.gl)
 
     def 하나(일):
         이름, 소스 = 일
@@ -566,7 +565,8 @@ def 앱누수(출력):
 
 
 def 가져오기검사(출력):
-    """윈도: 실행기는 kernel32 · shell32 · nvcuda, 서버는 그에 ws2_32(28단계). 리눅스(29단계): 둘 다 libc.so.6 · libcuda.so.1 뿐."""
+    """윈도: 실행기는 kernel32 · shell32 · nvcuda, 서버는 그에 ws2_32(28단계). 리눅스(29단계): 둘 다 libc.so.6 · libcuda.so.1 뿐 —
+    앱의 관리자는 libc.so.6 만, 장치C · 진단은 libc.so.6 · libcuda.so.1 만."""
     허용 = {"kernel32.dll", "shell32.dll", "nvcuda.dll"}
     허용서버 = 허용 | {"ws2_32.dll"}
     if 리눅스:
@@ -583,15 +583,23 @@ def 가져오기검사(출력):
         return
     dll2 = sorted({d.lower() for d, _ in 가져오기표.가져오기(서버)})
     알림("서버의 가져오기 표", set(dll2) <= 허용서버, f"{dll2}")
-    if not 리눅스:
-        # 36단계 — 앱의 관리자는 윈도의 DLL 만(GPU DLL 은 관리자가 띄우는 서버 · 도구만)
-        허용앱 = {"kernel32.dll", "shell32.dll", "ws2_32.dll", "advapi32.dll", "bcrypt.dll", "winhttp.dll"}
-        앱 = os.path.join(출력, "GeulPU" + EXE)
-        if not os.path.exists(앱):
-            알림("앱 관리자의 가져오기 표", False, "GeulPU.exe 가 없다(빌드 실패)")
-            return
-        dll3 = sorted({d.lower() for d, _ in 가져오기표.가져오기(앱)})
-        알림("앱 관리자의 가져오기 표", set(dll3) <= 허용앱, f"{dll3}")
+    # 36단계 — 앱의 관리자는 체계의 라이브러리만(GPU 라이브러리는 관리자가 띄우는 서버 · 도구만). 리눅스는 libc.so.6 뿐
+    허용앱 = {"libc.so.6"} if 리눅스 else {"kernel32.dll", "shell32.dll", "ws2_32.dll", "advapi32.dll", "bcrypt.dll", "winhttp.dll"}
+    앱 = os.path.join(출력, "GeulPU" + EXE)
+    if not os.path.exists(앱):
+        알림("앱 관리자의 가져오기 표", False, f"{os.path.basename(앱)} 가 없다(빌드 실패)")
+        return
+    dll3 = sorted({d.lower() for d, _ in 가져오기표.가져오기(앱)})
+    알림("앱 관리자의 가져오기 표", set(dll3) <= 허용앱, f"{dll3}")
+    if 리눅스:
+        # 앱이 띄우는 장치 확인 · 진단도 리눅스의 라이브러리만(윈도 이름 nvcuda.dll 을 가져오면 뜨지 않는다)
+        for 이름 in ("장치C", "진단"):
+            도구 = os.path.join(출력, 이름)
+            if not os.path.exists(도구):
+                알림(f"{이름} 의 가져오기 표", False, f"{이름} 가 없다(빌드 실패)")
+                continue
+            dll4 = sorted({d.lower() for d, _ in 가져오기표.가져오기(도구)})
+            알림(f"{이름} 의 가져오기 표", set(dll4) <= 허용서버, f"{dll4}")
 
 
 def main():
