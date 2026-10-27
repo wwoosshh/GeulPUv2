@@ -94,6 +94,25 @@ EOF
 rm -rf "$TMP"
 if [ "$NOTAR" = 1 ]; then say "꾸림: $DIST"; exit 0; fi
 TGZ=GeulPU-$VER-linux-x64.tar.gz
-(cd "$OUT" && tar -czf "$TGZ" "GeulPU-$VER" && sha256sum "$TGZ" > SHA256SUMS.txt)
+# 권한은 파일 시스템과 상관없이 정한다(WSL 의 /mnt/* 에서는 모든 파일이 0777 로 보이고, 빌드한 실행 파일에 실행 권한이 없을 수도 있다):
+# 실행 파일(GeulPU · bin/*) 0755, 나머지 0644, 폴더 0755, 주인 0:0, 이름 차례. 휠(도구/pypi/휠만들기.py)이 이 권한을 그대로 옮긴다
+python3 - "$OUT" "GeulPU-$VER" "$TGZ" << 'EOF'
+import os, sys, tarfile
+out, top, tgz = sys.argv[1:4]
+def norm(ti):
+    ti.uid = ti.gid = 0
+    ti.uname = ti.gname = ""
+    rel = ti.name.split("/", 1)[1] if "/" in ti.name else ""
+    ti.mode = 0o755 if ti.isdir() or rel == "GeulPU" or rel.startswith("bin/") else 0o644
+    return ti
+with tarfile.open(os.path.join(out, tgz), "w:gz") as t:
+    for d, ds, fs in os.walk(os.path.join(out, top)):
+        ds.sort()
+        rel = os.path.relpath(d, out).replace(os.sep, "/")
+        t.add(d, arcname=rel, recursive=False, filter=norm)
+        for f in sorted(fs):
+            t.add(os.path.join(d, f), arcname=rel + "/" + f, recursive=False, filter=norm)
+EOF
+(cd "$OUT" && sha256sum "$TGZ" > SHA256SUMS.txt)
 say "꾸림: $OUT/$TGZ"
 cat "$OUT/SHA256SUMS.txt"
