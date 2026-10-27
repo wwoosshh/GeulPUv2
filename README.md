@@ -14,7 +14,7 @@ branch from any token, and compare models and quantizations request by request.
 [![Quick check](https://img.shields.io/github/actions/workflow/status/wwoosshh/GeulPUv2/ci.yml?branch=main&label=quick%20check)](https://github.com/wwoosshh/GeulPUv2/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23548056.svg)](https://doi.org/10.5281/zenodo.23548056)
-![Windows x64](https://img.shields.io/badge/platform-Windows%20x64-555)
+![Windows x64 | Linux x86-64](https://img.shields.io/badge/platform-Windows%20x64%20%7C%20Linux%20x86--64-555)
 ![CUDA | Vulkan](https://img.shields.io/badge/GPU-CUDA%20%7C%20Vulkan-555)
 
 [Install](#install) · [Features](#features) · [Debugger](#debugger) · [Benchmarks](#benchmarks) · [Docs](#documentation) ·
@@ -57,8 +57,9 @@ a token, a tool result, the quantization — and see the effect of that one chan
 
 ## Install
 
-Windows 10 or 11 (64-bit) with an NVIDIA RTX 30-series or newer card (CUDA), or another GPU with Vulkan 1.3 such as an AMD Radeon.
-Small models need 6 GB of graphics memory; 7B and 8B models need 8 GB (Q4_K_M) or 12 GB (Q8_0).
+Windows 10 or 11 (64-bit) with an NVIDIA RTX 30-series or newer card (CUDA), or another GPU with Vulkan 1.3 such as an AMD Radeon;
+from 0.13.0 also Linux x86-64 (glibc 2.34 or later) with an NVIDIA card. Small models need 6 GB of graphics memory; 7B and 8B models
+need 8 GB (Q4_K_M) or 12 GB (Q8_0).
 
 **With Python** — one command ([PyPI](https://pypi.org/project/geulpu/)):
 
@@ -71,6 +72,11 @@ geulpu                # opens http://127.0.0.1:44544 in your browser
 [latest release](https://github.com/wwoosshh/GeulPUv2/releases/latest), extract it and run `GeulPU.exe`. The executable is not
 code-signed: if Windows shows *Windows protected your PC*, choose **More info → Run anyway**. Release files are built from this
 repository by GitHub Actions, with their SHA-256 sums attached.
+
+**On Linux** — `pipx install geulpu` works the same way; without Python, extract `GeulPU-<version>-linux-x64.tar.gz` and run
+`./GeulPU`. The app prints its address instead of opening a browser (on a remote machine, forward the port first:
+`ssh -L 44544:127.0.0.1:44544 <host>`). Downloads inside the app and Vulkan are not on Linux yet: add GGUF files you already have
+with **Models → Add a GGUF file** ([On Linux](docs/user-guide.md#on-linux)).
 
 Then open **Models → Find models**, download a file marked *Recommended for this PC*, and start chatting. The first message builds
 kernels for your GPU (once per version, 10 seconds to a few minutes). The [user guide](docs/user-guide.md) walks through every screen.
@@ -183,8 +189,8 @@ Head sizes 64 · 96 · 128 are accepted, including models that apply RoPE to onl
 the server runs each model file's own chat template with a jinja interpreter that matches transformers byte for byte. Qwen2.5 (7B and
 larger) and Qwen3 take up to 131,072 tokens of context with YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan
 1.3 (verified on an AMD Radeon RX 9060 XT — on GPUs with 32 KB of shared memory, such as AMD's Windows driver, F16 · BF16 · F32 files
-don't run yet). Qwen3.5, Qwen3.6 MoE and Gemma 4 run on CUDA only for now. Releases are built for Windows x64; on Linux GeulPU builds
-from source (tested under WSL2). Not yet: other architectures (Phi, …), Gemma 4's E2B · E4B · 26B-A4B (MoE) · 31B, other
+don't run yet). Qwen3.5, Qwen3.6 MoE and Gemma 4 run on CUDA only for now. Releases are built for Windows x64 and Linux
+x86-64 (Linux: CUDA only — tested under WSL2 and on native Linux). Not yet: other architectures (Phi, …), Gemma 4's E2B · E4B · 26B-A4B (MoE) · 31B, other
 mixture-of-experts models (Mixtral, Qwen3-30B-A3B, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS (which runs on CUDA),
 macOS ([details — sizes, licenses, GPUs](docs/user-guide.md#supported-models)). The app's **Find models** browses the GGUF models on Hugging
 Face, shows only those GeulPU runs (the others on request, with the reason) and marks for each file whether it fits your graphics memory.

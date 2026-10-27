@@ -14,7 +14,7 @@
 [![Quick check](https://img.shields.io/github/actions/workflow/status/wwoosshh/GeulPUv2/ci.yml?branch=main&label=quick%20check)](https://github.com/wwoosshh/GeulPUv2/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23548056.svg)](https://doi.org/10.5281/zenodo.23548056)
-![Windows x64](https://img.shields.io/badge/platform-Windows%20x64-555)
+![Windows x64 | Linux x86-64](https://img.shields.io/badge/platform-Windows%20x64%20%7C%20Linux%20x86--64-555)
 ![CUDA | Vulkan](https://img.shields.io/badge/GPU-CUDA%20%7C%20Vulkan-555)
 
 [설치](#설치) · [기능](#기능) · [디버거](#디버거) · [벤치마크](#벤치마크) · [문서](#문서) · [기여](CONTRIBUTING.md) ·
@@ -56,8 +56,8 @@ GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Dis
 
 ## 설치
 
-Windows 10 · 11(64비트)과 NVIDIA RTX 30 시리즈 이상(CUDA), 또는 Vulkan 1.3을 지원하는 다른 GPU(AMD Radeon 등)가 필요합니다. 그래픽
-메모리는 작은 모델이 6 GB, 7B · 8B 모델이 8 GB(Q4_K_M) · 12 GB(Q8_0)부터입니다.
+Windows 10 · 11(64비트)과 NVIDIA RTX 30 시리즈 이상(CUDA), 또는 Vulkan 1.3을 지원하는 다른 GPU(AMD Radeon 등)가 필요합니다. 0.13.0부터는
+Linux x86-64(glibc 2.34 이상)와 NVIDIA 카드에서도 돕니다. 그래픽 메모리는 작은 모델이 6 GB, 7B · 8B 모델이 8 GB(Q4_K_M) · 12 GB(Q8_0)부터입니다.
 
 **파이썬이 있다면** — 명령 한 줄([PyPI](https://pypi.org/project/geulpu/)):
 
@@ -69,6 +69,10 @@ geulpu                # 브라우저에 http://127.0.0.1:44544 가 열립니다
 **파이썬 없이** — [최신 릴리스](https://github.com/wwoosshh/GeulPUv2/releases/latest)에서 `GeulPU-<버전>-windows-x64.zip`을 받아
 풀고 `GeulPU.exe`를 실행합니다. 코드 서명을 하지 않은 실행 파일이라 *Windows의 PC 보호* 창이 뜨면 **추가 정보 → 실행**을 누릅니다.
 릴리스 파일은 GitHub Actions가 이 저장소의 소스로 빌드하고, SHA-256 값을 함께 올립니다.
+
+**Linux** — `pipx install geulpu`도 똑같이 되고, 파이썬 없이는 `GeulPU-<버전>-linux-x64.tar.gz`를 풀어 `./GeulPU`를 실행합니다. 앱은
+브라우저를 띄우지 않고 주소를 알립니다(원격 서버면 먼저 포트를 넘깁니다: `ssh -L 44544:127.0.0.1:44544 <서버>`). 앱 안의 모델 받기와
+Vulkan은 Linux에 아직 없어, 가진 GGUF 파일을 **모델 → GGUF 파일 추가**로 넣습니다([Linux에서](사용안내.md#linux에서)).
 
 그다음 **모델 → 모델 찾기**에서 *이 PC에 추천* 표시가 붙은 파일을 받아 채팅을 시작합니다. 첫 메시지 때 이 GPU에 맞는 커널을 만듭니다
 (버전마다 한 번, 10초 ~ 몇 분). 화면마다의 자세한 안내는 [사용 안내](사용안내.md)에 있습니다.
@@ -176,8 +180,8 @@ GeulPU 가 직접 돌려 본 파일(앱의 **GeulPU 확인됨** — 앱에서 �
 헤드 크기 64 · 96 · 128 을 받고, RoPE 를 헤드의 일부에만 거는 모델도 받습니다. 미세조정 모델도 돕니다 — 서버가 모델 파일의 채팅 템플릿을
 그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기). Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다. GPU:
 NVIDIA RTX 30 시리즈 이상은 CUDA, 그 밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버처럼 공유 메모리가 32 KB인
-GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음). Qwen3.5 · Qwen3.6 MoE · Gemma 4 는 아직 CUDA 에서만 돕니다. 릴리스는 Windows x64용이고,
-Linux에서는 소스에서 빌드합니다(WSL2에서 시험). 아직 안 되는 것: 다른 구조(Phi 등), Gemma 4 의 E2B · E4B · 26B-A4B(MoE) · 31B, 다른 MoE
+GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음). Qwen3.5 · Qwen3.6 MoE · Gemma 4 는 아직 CUDA 에서만 돕니다. 릴리스는 Windows x64 · Linux
+x86-64용입니다(Linux는 CUDA만 — WSL2와 실제 Linux에서 시험). 아직 안 되는 것: 다른 구조(Phi 등), Gemma 4 의 E2B · E4B · 26B-A4B(MoE) · 31B, 다른 MoE
 모델(Mixtral · Qwen3-30B-A3B 등), 이미지 입력, Q2_K · Q3_K · IQ4_XS 밖의 IQ 형식(IQ4_XS 는 CUDA 에서), macOS
 ([자세히 — 크기 · 라이선스 · GPU 마다](사용안내.md#지원하는-모델)). 앱의 **모델 찾기**는 Hugging Face 의 GGUF 모델 가운데 GeulPU 에서 실행되는
 것을 보이고(실행 안 되는 것은 켜면 까닭과 함께), 파일마다 이 PC 의 그래픽 메모리에 맞는지 알려 줍니다.

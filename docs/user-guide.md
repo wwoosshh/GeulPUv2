@@ -16,8 +16,8 @@ makes it different, with the measurements. The [README](../README.md) has the ov
 
 | | |
 |---|---|
-| OS | Windows 10 or 11 (64-bit) |
-| GPU | NVIDIA RTX 30 series or newer runs on CUDA; other GPUs (AMD Radeon, …) run on Vulkan 1.3 |
+| OS | Windows 10 or 11 (64-bit), or from 0.13.0 Linux x86-64 with glibc 2.34 or later ([On Linux](#on-linux)) |
+| GPU | NVIDIA RTX 30 series or newer runs on CUDA; other GPUs (AMD Radeon, …) run on Vulkan 1.3 (Windows only) |
 | Graphics memory | From 6 GB (small models). 7B / 8B need 8 GB (Q4_K_M) or 12 GB (Q8_0); 14B needs 12 GB or more ([table below](#which-model-fits-your-pc)) |
 | Disk | About 5 MB for the app plus 2–9 GB per model |
 | Internet | Only to find and download models and to check for new versions |
@@ -38,12 +38,12 @@ geulpu                     # opens http://127.0.0.1:44544 in your browser
 
 - To update, quit the app, then run `pipx upgrade geulpu` (`uv tool upgrade geulpu`, `pip install -U geulpu`). The app shows the
   command when a new version is out.
-- Models, settings and results live in `%USERPROFILE%\GeulPU` as with the zip, so uninstalling the package (`pipx uninstall geulpu`)
-  keeps them.
+- Models, settings and results live in `%USERPROFILE%\GeulPU` (`~/GeulPU` on Linux) as with the zip, so uninstalling the package
+  (`pipx uninstall geulpu`) keeps them.
 - If the `geulpu` command is not found, run `python -m geulpu` (pip's per-user install may leave its scripts folder off PATH). pipx or
   uv is recommended.
 
-Steps 1–3 below install from the zip.
+Steps 1–3 below install from the zip; on Linux, see [On Linux](#on-linux).
 
 ### 1. Download
 
@@ -69,6 +69,22 @@ Double-click `GeulPU.exe`.
    built from this repository's source by GitHub Actions ([How it runs](#how-it-runs)).
 2. A black console window opens. That window *is* GeulPU — **closing it quits the app.**
 3. Your browser opens `http://127.0.0.1:44544`. If it does not, type that address into the address bar.
+
+### On Linux
+
+From 0.13.0 the releases page also has **`GeulPU-<version>-linux-x64.tar.gz`** — for x86-64 with an NVIDIA GPU and its driver, and glibc
+2.34 or later (Ubuntu 22.04 and newer) — and `pipx install geulpu` installs the same app (run it with `geulpu`).
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing    # optional: check the download
+tar xzf GeulPU-<version>-linux-x64.tar.gz
+cd GeulPU-<version> && ./GeulPU
+```
+
+- The app does not open a browser; it prints its address, `http://127.0.0.1:44544`. On a remote machine, forward the port first
+  (`ssh -L 44544:127.0.0.1:44544 <host>`) and open the address on your own computer.
+- Downloads inside the app and Vulkan are not on Linux yet. Add GGUF files you already have with **Models → Add a GGUF file**.
+- Models, settings and results live in `~/GeulPU` (or in the folder named by `GEULPU_HOME`).
 
 ## First steps
 
