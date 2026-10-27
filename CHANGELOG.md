@@ -6,7 +6,7 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
-## Unreleased
+## 0.13.0 — Gemma 4 · faster Qwen3.5 · layer lens and Jacobian lens · Linux (2026-10-28)
 
 ### Added
 
@@ -16,6 +16,117 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   `geulpu.prompt_tokens_cached`). The last prompt token is always computed, so a repeated prompt reports `prompt_tokens − 1`, and a
   request with `"cache_prompt": false` reports 0. Clients that check per request whether the prompt cache was used read it from the
   same field as with llama.cpp and OpenAI.
+- **Linux release files.** Releases now carry `GeulPU-<version>-linux-x64.tar.gz` (x86-64 · NVIDIA · glibc 2.34 or later), and the
+  `geulpu` package on PyPI installs on Linux too (`pipx install geulpu`, then `geulpu`), so Linux no longer needs a source build.
+  In-app downloads and Vulkan are not on Linux yet.
+- **A record on Linux and a datacenter GPU.** 0.12.1 was built from source and run on Ubuntu 22.04 with an H100 NVL MIG instance
+  (3g.47gb): it builds with the geul compiler and Python 3 alone, its kernel modules are byte-identical to Windows, and the generated
+  tokens of 24 conversations were all identical to an RTX 4070 Ti on Windows. The speed against llama.cpp b11900 and vLLM 0.32.0 over
+  the same HTTP requests, and scripts to measure again, are in docs/h100.md and 재기/H100/ (the Linux build is now tested under WSL2
+  and on native Linux).
+- **The release carries a J file (Jacobian lens) for Qwen3-0.6B.** `Qwen3-0.6B-Q8_0.jlens.safetensors` (56,626,912 bytes, SHA-256
+  `20f46104ff65671a8c03ee58c384fe2f01cc2a0b367d8e11955a212329ae4d38`). Put it, under this name, next to Qwen's official
+  `Qwen3-0.6B-Q8_0.gguf` and load the model: the research panel's layer lens then reads the Jacobian lens as well (for another quantized
+  file of the same model, rename it after that GGUF). Fit record (also in the file's `__metadata__`): original Qwen/Qwen3-0.6B (BF16,
+  revision c1899de289a04d12100db370d81485cdf75e47ca), jlens (anthropics/jacobian-lens 581d398613e5602a5af361e1c34d3a92ea82ba8e) through
+  `도구/jlens_fit.py`, torch 2.14.1+cu130 · transformers 5.20.2, 100 prompts from the first half of the wikitext-2 test split
+  (wiki.test.raw, SHA-256 173c87a5…, paragraphs joined to at least 1,200 characters, first 128 tokens), source layers 0–26 → target layer
+  27, first 16 positions skipped, 1,019 s on an RTX 4070 Ti. Checked file: Qwen's official Q8_0 (SHA-256 9465e63a…) — in layers 9–26 the
+  J-lens top-1 agreement with the original (BF16) is at least 93.8 % and at most 1.7 points below the logit lens's, which carries over
+  under the criterion set before measuring (2c in 문서/층렌즈.md). On low-bit files (Q4_K_M and the like) the per-layer top-1 agrees less
+  with the original.
+- **Qwen3.5 and Gemma 4 in Find models.** The app's model catalog adds Qwen3.5-0.8B (Q8_0, 0.8 GB), Qwen3.5-4B (Q4_K_M, 2.6 GB),
+  Qwen3.5-9B (Q4_K_M, 5.3 GB) and Gemma-4-12B-it (Q4_K_M, 6.6 GB) — unsloth's files, checked to run on CUDA (RTX 4070 Ti); not on
+  Vulkan yet.
+- **Tool calls and thinking for Gemma 4.** Gemma 4's own tool-call format (`<|tool_call>call:name{key:value,…}<tool_call|>`) is now
+  read and returned as OpenAI `tool_calls`, with the arguments turned into JSON by the same rules as llama.cpp (strings `<|"|>…<|"|>`,
+  numbers, true, false, null, objects and arrays). Its thinking block `<|channel>thought … <channel|>` comes as `reasoning_content` in
+  requests that send tools, and otherwise in front of the answer like other models (the channel markers and name are removed, as is the
+  empty channel that may follow an answer with thinking off — with `geulpu.special` the markers come as text). The app's 'Thinking'
+  switch now works for Gemma 4 and folds the thinking away when it is on.
+- **The Jacobian lens without a GPU.** `도구/repro_check.py --layer-lens 5,12 --jlens <model>.jlens.safetensors` moves the same steps'
+  rows into the final layer's basis with J_l fitted on the original model and reads them (Anthropic's Jacobian lens — contract 5.4).
+  `도구/jlens_fit.py` fits a J file with jlens on the original (Hugging Face) model. A J fitted on Qwen3-0.6B in BF16 was measured to
+  carry over to the GGUF Q8_0 file (top-1 agreement with the original of at least 93.9 % in layers 9–26).
+- **The Jacobian lens in the research panel.** Put `<name>.jlens.safetensors` (a J file fitted on the original model with
+  `도구/jlens_fit.py`) next to the model file and load the model; the step detail's layer lens then reads both the logit lens and the
+  Jacobian lens and switches between them (contract 5.4). What the position points at shows earlier in the layers than with the logit
+  lens. API: `geulpu.layer_lens: {"jacobian": true}` on a `/v1/completions` echo — response `geulpu.jacobian_lens`. Reproduction files
+  carry the computed Jacobian lens and the J file's SHA-256, and `repro_check --jlens` checks them bit for bit without a GPU.
+- **The layer lens (logit lens) without a GPU.** `도구/repro_check.py --layer-lens 5,12` reads, for the chosen steps of a capsule, the
+  row that scored the token at every layer with the final logit computation (contract 5.3), and shows the top-1 token, the chosen
+  token's probability and rank, the entropy and the top k per layer. The last layer is bit-identical to the final logits.
+- **Layer lens (logit lens) in the research panel.** In a step's details, 'Layer lens — Read every layer' reads the computation at the
+  position that chose the token at every layer with the final output (contract 5.3) and shows, per layer, the top-1 token and its
+  probability, the chosen token's probability and rank, and the entropy (click a layer for its top k). It shows at which layer an
+  answer forms and where a failure such as switching to another language starts. The API is `geulpu.layer_lens` on an echo request to
+  `/v1/completions`. Reproduction files carry the computed lens, and `도구/repro_check.py` checks it bit for bit without a GPU.
+  qwen2, qwen3, llama and gemma4 architectures (one GPU — for Gemma 4 the reading ends with the final logits' softcap; the CPU check of
+  reproduction files covers qwen2, qwen3 and llama).
+- **The app on Linux (built from source).** On Linux x86-64 with an NVIDIA GPU the app runs — the screen, device check, models, the
+  inference server and the benchmark's reproducibility check and file-pair reproducibility. `bash 앱/꾸리기.sh <geul repo>` packages it;
+  on a remote server open the screen through SSH port forwarding. New `GeulPU --check r1|pair [--quick]` (`--검사 재현성|쌍 [--빠름]`)
+  runs one check without the screen, prints the result folder and zip and exits with 0 when every problem matches the reference.
+  Downloads inside the app and Vulkan are not on Linux yet (put the model files in the data folder's model folder).
+- **The engine runs Gemma 4 12B (architecture gemma4).** Sliding-window layers (head 256, window 1,024) mixed with global-attention
+  layers (head 512, v = k, rope_freqs), GeGLU, post-attention/post-FFN norms, per-layer output scale and the final logit soft-cap
+  follow contract 4.12 and match the CPU reference bit for bit. k-quant (Q4_K_M etc.) and Q8_0 files, exact mode on CUDA only (no fast
+  mode, Vulkan, speculative decoding or context store yet). E2B/E4B (per-layer embeddings) and 26B-A4B (MoE) are rejected with a reason.
+- **Qwen3.8-27B and Qwen3.5 GGUFs with mixed formats.** Files that mix Q8_0 and k-quant matrices (the ggml-org Q4_K_M of Qwen3.8-27B keeps the
+  attention and GDN projections in Q8_0) and files whose ssm_alpha · ssm_beta are k-quants (lmstudio Q4_K_M) are now accepted. A
+  multi-token-prediction layer at the end of the file is skipped like llama.cpp does (the engine used to stop with "tensor not found").
+  Qwen3.8-27B does not fit a 12 GB card. Files with F32 β · α (bartowski) or IQ formats (unsloth UD) are not supported yet.
+- **Fast mode for Qwen3.5.** Qwen3.5 dense models (0.8B, 4B, 9B, …) can now run in fast mode (compute mode "fast" — the fast contract
+  F1 with one-digit activations in the linear layers); the app loads them in fast mode when that is the setting (the default). The 8-bit
+  KV cache and fast attention are not available for them yet, and Qwen3.6 MoE stays exact-only until its quality has been measured.
+
+### Changed
+
+- **The engine decides which models are accepted.** The app no longer keeps its own per-architecture rules; it asks the engine
+  (`server --모델확인`). Module names and capabilities (exact only, Vulkan, 8-bit KV cache, F2, …) are unchanged, and an unsupported
+  architecture now shows the engine's reason with the list of accepted architectures.
+- **Gemma 4 generation is 2.1–2.4× faster at long context.** Attention for up to four rows now computes key tiles in parallel and
+  merges them in order (same contract — output bits unchanged). On 12B (RTX 4070 Ti, exact mode), generation at about 1,800 and 3,600
+  tokens of context went from 54 and 48 ms per token to 22 ms per token; short chats from 22.7 to 21.4 ms per token.
+- **Gemma 4 prompt processing is 7–9× faster.** Attention for prompts (five rows or more) now runs on a tensor-core kernel (same
+  contract — logits and generated tokens are bit-identical). On 12B (RTX 4070 Ti, exact mode), time to first token for about 1,800 and
+  3,600 prompt tokens went from 5.45 and 15.4 s to 0.77 and 1.63 s.
+- **Gemma 4 generation is 7–8 % faster.** Small kernels (post-norm with residual and the next RMSNorm, GeGLU, the attention merge) now
+  fuse into one kernel that writes the next linear layer's input, and single-row matmuls use the decode-specific kernel (same contract —
+  output bits unchanged). On 12B (RTX 4070 Ti, exact mode), short chats went from 21.0 to 19.4 ms per token and about 1,800 tokens of
+  context from 22.1 to 20.4 ms per token.
+- **Gemma 4 fits a much longer context on the same GPU.** The sliding-window layers keep their KV cache in a ring buffer the size of
+  the window, and the shared KV cache holds only the global-attention layers at their own width (output bits unchanged). On 12B
+  (RTX 4070 Ti 12 GB, one slot) the context grows from 7,360 to 118,144 tokens — the KV cache per position drops from about 442 KB to
+  18 KB (the window layers' ring is a fixed 0.57 GB per slot). The server's slot cache can still roll back and reuse as far as the
+  ring holds (513 tokens with 512-row chunks).
+- **3× faster GDN recurrence for Qwen3.5.** The linear-attention (GDN) recurrence of Qwen3.5 and Qwen3.6 MoE now stages each 8-token chunk
+  in shared memory ahead of use and gives each thread two columns — the recurrence at a 2,048-token prompt drops from 64 to 20 ms, so such
+  prompts are 13–16 % faster on the 4B and 7–10 % on the 9B (fast mode: 4B 261 → 219 ms, 9B 386 → 348 ms). The output is bit-identical
+  (same contract, same order).
+- **Faster long-context generation for Qwen3.5.** From position 16,384 the decode attention of Qwen3.5 and Qwen3.6 MoE launches the
+  query heads that share a KV head as neighbouring blocks and prefetches the next chunk into L2 — generation after a 32,768-token prompt
+  is 7.5 % faster on the 4B and 4.5 % on the 9B (fast mode: 4B 78.0 → 83.8, 9B 54.3 → 56.8 tokens/s). Shorter contexts are unchanged,
+  and the output is bit-identical (same arithmetic, same order).
+- **Faster prompts for Qwen3.5.** The prompt (chunk) attention of Qwen3.5 and Qwen3.6 MoE now runs on int8 tensor cores — 28 times
+  shorter attention at a 2,048-token prompt, so such prompts are 3.9–4.6× faster on the 4B and 2.8–3.4× on the 9B (fast mode: 4B 1,207 →
+  263 ms, 9B 1,332 → 388 ms). The output is bit-identical (same contract, same order); the byte layout of the value cache changed (KV
+  hashes differ — the values do not).
+- **Faster generation for Qwen3.5.** For Qwen3.5 and Qwen3.6 MoE, the head-256 attention of a generation step is now split into
+  64-key tiles spread over the whole GPU — 16 times shorter per layer at depth 2,048, so generation is 32–53 % faster on the 4B (more at
+  deeper context) and 15–35 % faster on the 9B. The output is bit-identical (same contract, same order).
+
+### Fixed
+
+- **Speculative decoding state and rotated GGUF files.** Loading Qwen3.5 or Qwen3.6 MoE showed speculative decoding as on in the
+  server state (the server turns it off for those architectures); the app now shows the engine's value. GGUF files whose weights were
+  folded with a rotation (llama.cpp's `prism.hadamard.*`) give wrong values when run as is, so they are refused with the reason.
+- **RoPE table and kernel-choice memory at load time.** The server and the app build the RoPE table on a worker thread while loading,
+  but the loader read the model settings a second time meanwhile and briefly cleared rope_freqs, so models with rope_freqs could get a
+  table without them (the engine kept that table, and long prompts could give a different answer from one load to the next). The loader
+  no longer re-reads the settings while workers run, and a prebuilt table is used only when θ, rope_freqs and YaRN all match. K-quant
+  models of architectures with more than five matmul groups (Gemma 4, Qwen3.5, Qwen3.6) always discarded their remembered kernel
+  choices and re-tuned on every load; they now reuse them.
 
 ## 0.12.1 — Fix: the speed test and `geulpu.speculative` (2026-10-24)
 
