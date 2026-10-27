@@ -84,7 +84,8 @@ This page is for building GeulPU from source and finding your way around the cod
      folder's `모델/` (symbolic links work).
    - Everything the app needs from the OS sits in [앱/윈도.gl](../앱/윈도.gl); the Linux version, with the same function names, is
      [앱/리눅스/윈도.gl](../앱/리눅스/윈도.gl) (libc — fork · execv · pthread · mmap; SHA-256 in geul). The app joins paths with `\` — the
-     Linux version turns it into `/` wherever it takes a path. Downloading (WinHTTP) is [앱/받기망.gl](../앱/받기망.gl); the Linux version
+     Linux version turns it into `/` wherever it takes a path and in the paths it prints to the console (the screen still shows some
+     paths with `\`). Downloading (WinHTTP) is [앱/받기망.gl](../앱/받기망.gl); the Linux version
      ([앱/리눅스/받기망.gl](../앱/리눅스/받기망.gl)) does not download yet — fetch the file yourself and add it with **Add model**. The device
      check's CUDA declarations are in [엔진/장치C선언.gl](../엔진/장치C선언.gl) (Linux: libcuda.so.1).
    - Not on Linux yet: downloads inside the app, Vulkan (AMD · Intel — #135), asking whether the store's drive is an HDD (the context
