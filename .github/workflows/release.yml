@@ -1,6 +1,10 @@
-# GeulPU 릴리스(36단계) — 태그 v<판> 을 밀면 그 커밋의 소스에서 앱을 꾸려(앱/꾸리기.ps1 — 글 컴파일러 고정점 → 뒷단 · 서버 · 도구 · 관리자 ·
-# 진단 커널, 교차검증 기준의 빌드 해시와 견줌) zip · PyPI 휠(GeulPUv2 0.5.1 — 도구/pypi/휠만들기.py) · SHA256SUMS.txt 를 **초안**
-# 릴리스로 올린다. 공개는 사람이 한다(공개하면 pypi.yml 이 그 휠을 PyPI 에 올린다). 손으로 돌리면(workflow_dispatch) 아티팩트로만 남긴다.
+# GeulPU 릴리스(36단계) — 태그 v<판> 을 밀면 그 커밋의 소스에서 앱을 꾸려 **초안** 릴리스로 올린다. 공개는 사람이 한다(공개하면 pypi.yml
+# 이 그 휠들을 PyPI 에 올린다). 손으로 돌리면(workflow_dispatch) 아티팩트로만 남긴다.
+# - package(windows-latest): 앱/꾸리기.ps1(글 컴파일러 고정점 → 뒷단 · 서버 · 도구 · 관리자 · 진단 커널, 교차검증 기준의 빌드 해시와 견줌) →
+#   GeulPU-<판>-windows-x64.zip, PyPI 휠 geulpu-<판>-py3-none-win_amd64.whl(GeulPUv2 0.5.1 — 도구/pypi/휠만들기.py), SHA256SUMS.txt
+# - package-linux(ubuntu-24.04 — #132): 앱/꾸리기.sh → GeulPU-<판>-linux-x64.tar.gz, 휠 geulpu-<판>-py3-none-manylinux_2_34_x86_64.whl,
+#   SHA256SUMS.txt. 실행 파일은 판이 붙은 glibc 기호를 가져오지 않아 24.04 에서 만든 것이 22.04(glibc 2.35)에서도 돈다(문서/H100.md 의 1).
+# - release(태그일 때만): 두 아티팩트를 받아 SHA256SUMS 를 파일과 견주고 합쳐, 노트와 함께 초안을 만든다. 쓰기 권한은 이 작업에만.
 name: 릴리스
 on:
   push:
@@ -11,9 +15,9 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     permissions:
-      contents: write
+      contents: read
     steps:
-      # GHSA-4cgh — 토큰을 .git/config 에 남기지 않는다(빌드는 git 인증이 들지 않고, 토큰은 초안 릴리스 단계의 GH_TOKEN 에만)
+      # GHSA-4cgh — 토큰을 .git/config 에 남기지 않는다(빌드는 git 인증이 들지 않고, 토큰은 초안 릴리스 작업의 GH_TOKEN 에만)
       - name: GeulPU 받기
         uses: actions/checkout@v7
         with:
@@ -76,8 +80,92 @@ jobs:
             out/SHA256SUMS.txt
             out/GeulPU-*/version.json
             out/wheel/*.whl
-      - name: 초안 릴리스
+  package-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: GeulPU 받기
+        uses: actions/checkout@v7
+        with:
+          path: GeulPUv2
+          persist-credentials: false
+      - name: 글 저장소의 고정 커밋 읽기
+        id: geul
+        run: echo "sha=$(tr -d '\r\n ' < GeulPUv2/시험/글저장소커밋.txt)" >> "$GITHUB_OUTPUT"
+      - name: 글 저장소 받기(고정 판 — 시험/글저장소커밋.txt)
+        uses: actions/checkout@v7
+        with:
+          repository: wwoosshh/geul-lang
+          ref: ${{ steps.geul.outputs.sha }}
+          path: geul-lang-v2
+          persist-credentials: false
+      - name: 파이썬(글 컴파일러의 첫 빌드 — 참조 구현)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # GHSA-4cgh — 태그 이름은 env 로 받아 꼴을 본 뒤에 쓴다
+      - name: 판과 태그 견주기
         if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "태그 꼴이 아니다(v<MAJOR>.<MINOR>.<PATCH>): $TAG"; exit 1; }
+          VER=$(sed -n 's/.*앱판 = "\([^"]*\)".*/\1/p' GeulPUv2/앱/판.gl | head -1)
+          [ "v$VER" = "$TAG" ] || { echo "태그 $TAG 와 앱/판.gl 의 판 $VER 이 다르다"; exit 1; }
+      - name: 꾸리기
+        env:
+          PYTHONUTF8: "1"
+        run: bash GeulPUv2/앱/꾸리기.sh "$GITHUB_WORKSPACE/geul-lang-v2" "$GITHUB_WORKSPACE/out"
+      - name: 판이 붙은 glibc 기호가 없는가(#132 — 배포판마다 다시 빌드하지 않게)
+        run: |
+          VER=$(sed -n 's/.*앱판 = "\([^"]*\)".*/\1/p' GeulPUv2/앱/판.gl | head -1)
+          bad=0
+          for f in "out/GeulPU-$VER/GeulPU" out/GeulPU-$VER/bin/*; do
+            v=$(objdump -T "$f" | { grep -o 'GLIBC_[0-9.]*' || true; } | sort -u -V | tr '\n' ' ')
+            echo "$(basename "$f"): ${v:-(없음)}"
+            [ -z "$v" ] || bad=1
+          done
+          [ "$bad" = 0 ] || { echo "판이 붙은 glibc 기호를 가져오는 실행 파일이 있다 — 휠 태그 manylinux_2_34 와 맞지 않는다"; exit 1; }
+      - name: PyPI 휠
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          VER=$(sed -n 's/.*앱판 = "\([^"]*\)".*/\1/p' GeulPUv2/앱/판.gl | head -1)
+          python -X utf8 GeulPUv2/도구/pypi/휠만들기.py "out/GeulPU-$VER-linux-x64.tar.gz" out/wheel --sha256sums out/SHA256SUMS.txt --판 "$VER"
+          (cd out/wheel && sha256sum "geulpu-$VER-py3-none-manylinux_2_34_x86_64.whl") >> out/SHA256SUMS.txt
+          cat out/SHA256SUMS.txt
+      - name: 꾸린 것 올리기(아티팩트)
+        uses: actions/upload-artifact@v7
+        with:
+          name: geulpu-linux-x64
+          path: |
+            out/*.tar.gz
+            out/SHA256SUMS.txt
+            out/GeulPU-*/version.json
+            out/wheel/*.whl
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [package, package-linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: GeulPU 받기(노트의 CHANGELOG · 바뀐것)
+        uses: actions/checkout@v7
+        with:
+          path: GeulPUv2
+          persist-credentials: false
+      - name: 꾸린 것 받기
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+      - name: 초안 릴리스
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -86,6 +174,22 @@ jobs:
         run: |
           if ($env:TAG -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw "태그 꼴이 아니다(v<MAJOR>.<MINOR>.<PATCH>): $env:TAG" }
           $ver = $env:TAG.TrimStart('v')
+          $win = "dist/geulpu-windows-x64"; $lin = "dist/geulpu-linux-x64"
+          $files = @("$win/GeulPU-$ver-windows-x64.zip", "$win/wheel/geulpu-$ver-py3-none-win_amd64.whl",
+                     "$lin/GeulPU-$ver-linux-x64.tar.gz", "$lin/wheel/geulpu-$ver-py3-none-manylinux_2_34_x86_64.whl")
+          # 두 작업의 SHA256SUMS 를 합친다 — 줄마다 올릴 파일 하나와 맞아야 하고, 이름이 겹치거나 남는 줄이 없어야 한다
+          $sums = @(@(Get-Content "$win/SHA256SUMS.txt") + @(Get-Content "$lin/SHA256SUMS.txt") | Where-Object { $_.Trim() })
+          $names = @($sums | ForEach-Object { ($_ -split '\s+', 2)[1].TrimStart('*') })
+          if (@($names | Sort-Object -Unique).Count -ne $names.Count) { throw "SHA256SUMS 에 같은 이름이 둘 있다: $($names -join ', ')" }
+          if ($names.Count -ne $files.Count) { throw "SHA256SUMS 의 줄이 올릴 파일과 맞지 않는다: $($names -join ', ')" }
+          foreach ($f in $files) {
+            $n = Split-Path -Leaf $f
+            $line = @($sums | Where-Object { ($_ -split '\s+', 2)[1].TrimStart('*') -eq $n })
+            if ($line.Count -ne 1) { throw "SHA256SUMS 에 $n 이 한 줄로 있지 않다" }
+            $h = (Get-FileHash -Algorithm SHA256 -LiteralPath $f).Hash.ToLower()
+            if (($line[0] -split '\s+', 2)[0].ToLower() -ne $h) { throw "$n 의 SHA-256 이 SHA256SUMS 와 다르다" }
+          }
+          [IO.File]::WriteAllText("$env:RUNNER_TEMP/SHA256SUMS.txt", (($sums -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
           # 0.7.0 — 노트는 영어(CHANGELOG.md 의 '## <버전>' 절)가 먼저, 한국어(문서/바뀐것.md 의 같은 절)는 접어서. 상대 링크는 릴리스
           # 페이지에서 깨지므로 이 태그의 절대 주소로(파일이 있는 폴더 기준 — '../' 는 풀어서)
           $blob = "https://github.com/$env:REPO/blob/$env:TAG/"
@@ -105,13 +209,19 @@ jobs:
           $en = Section "CHANGELOG.md" ""
           $ko = Section "문서/바뀐것.md" "문서/"
           $notes = $en + "`n`n" +
-            "**Install** — with Python: ``pipx install geulpu`` (or ``uv tool install geulpu`` · ``pip install geulpu``), then run ``geulpu``. " +
-            "Without Python: unzip GeulPU-$ver-windows-x64.zip and run GeulPU.exe. To upgrade a Python install, quit the app and run " +
-            "``pipx upgrade geulpu``. Guide: [user guide]($($blob)docs/user-guide.md). SHA-256: SHA256SUMS.txt below, and version.json in " +
-            "the zip for every file.`n`n" +
+            "**Install** — with Python (Windows x64 or Linux x86-64): ``pipx install geulpu`` (or ``uv tool install geulpu`` · " +
+            "``pip install geulpu``), then run ``geulpu``. Without Python: on Windows unzip GeulPU-$ver-windows-x64.zip and run " +
+            "GeulPU.exe; on Linux extract GeulPU-$ver-linux-x64.tar.gz and run ``./GeulPU``, then open the address it prints (on a " +
+            "remote machine through SSH port forwarding). Linux needs an NVIDIA GPU with its driver and glibc 2.34 or later; the app " +
+            "does not download models there yet (add GGUF files with Add model), and Vulkan is Windows-only. To upgrade a Python " +
+            "install, quit the app and run ``pipx upgrade geulpu``. Guide: [user guide]($($blob)docs/user-guide.md). SHA-256: " +
+            "SHA256SUMS.txt below, and version.json in the zip or tar.gz for every file.`n`n" +
             "<details><summary>한국어</summary>`n`n" + $ko + "`n`n" +
-            "**설치** — 파이썬: ``pipx install geulpu``(또는 ``uv tool install geulpu`` · ``pip install geulpu``) 뒤 ``geulpu``. 파이썬 없이: " +
-            "GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행. 파이썬으로 깐 앱은 앱을 끈 뒤 ``pipx upgrade geulpu``. " +
+            "**설치** — 파이썬(Windows x64 · 리눅스 x86-64): ``pipx install geulpu``(또는 ``uv tool install geulpu`` · " +
+            "``pip install geulpu``) 뒤 ``geulpu``. 파이썬 없이: Windows 는 GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행, " +
+            "리눅스는 GeulPU-$ver-linux-x64.tar.gz 를 풀고 ``./GeulPU`` 를 실행한 뒤 알리는 주소를 연다(원격이면 SSH 포트 포워딩). " +
+            "리눅스는 NVIDIA GPU · 드라이버와 glibc 2.34 이상이 필요하고, 앱 안의 내려받기가 아직 없어 GGUF 파일을 '모델 추가'로 " +
+            "넣는다(Vulkan 은 Windows 만). 파이썬으로 깐 앱은 앱을 끈 뒤 ``pipx upgrade geulpu``. " +
             "안내: [사용안내.md]($($blob)사용안내.md).`n`n</details>`n"
           [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
-          gh release create $env:TAG --repo $env:REPO --draft --title "GeulPU $ver" --notes-file "$env:RUNNER_TEMP/notes.md" "out/GeulPU-$ver-windows-x64.zip" "out/SHA256SUMS.txt" "out/wheel/geulpu-$ver-py3-none-win_amd64.whl"
+          gh release create $env:TAG --repo $env:REPO --draft --title "GeulPU $ver" --notes-file "$env:RUNNER_TEMP/notes.md" @files "$env:RUNNER_TEMP/SHA256SUMS.txt"
