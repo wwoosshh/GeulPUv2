@@ -6,6 +6,20 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.14.1 — Fix: Vulkan memory on integrated GPUs (2026-10-28)
+
+### Fixed
+
+- **Loading a large model on an integrated GPU no longer stops with "Vulkan 오류 -4".** The Vulkan layer counted free graphics memory
+  as heap size minus its own allocations, so on integrated GPUs such as a laptop's Intel Arc 130V — whose heap is system memory shared
+  with Windows and other apps — it allocated more than was really there and lost the device. It now sizes the context from the driver's
+  budget (VK_EXT_memory_budget) minus current usage, and on integrated GPUs it stops an allocation that would still not fit with a
+  clear "graphics memory is short" message (needed and free amounts). When the device is lost anyway, it logs the allocated and free
+  memory and the last kernels it issued. The device check reports integrated GPUs and the memory available now, and the app uses that
+  value as the GPU's memory. With enough memory, replies are bit-identical.
+- **The cross-check's pinned Vulkan server hash follows the new Vulkan layer.** On the reference PC the Vulkan quick check
+  (cooperative-matrix 16x16x32 and base modules) matches; the CUDA server, the generator, the backends and the modules are unchanged.
+
 ## 0.14.0 — Coding agents: Anthropic and Responses APIs · tool_choice · tool-error detection and forms (2026-10-28)
 
 ### Added
