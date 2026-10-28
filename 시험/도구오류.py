@@ -25,6 +25,7 @@ KILO = "Kilo-Code/7.8.18 ai-sdk/provider-utils/4.0.27 runtime/bun/1.4.4"
 CLINE = "ai-sdk-openai-compatible/3.0.67 ai-sdk-provider-utils/5.0.58 bun/1.4.2"
 CODEX = "codex_exec/0.165.0 (Windows 10.0.26200; x86_64) xterm-256color (codex_exec; 0.165.0)"
 CLAUDE = "claude-cli/2.1.270 (external, claude-desktop, agent-sdk/0.3.308)"
+HTTPX = "python-httpx/0.27.2"
 
 
 def 대화(*결과들):
@@ -127,6 +128,54 @@ def 대화(*결과들):
                                               '{"error":{"type":"tool.execution","message":"Unable to write locked.txt"},"content":[]}'),
      "#2 모호(opencode) · #6 해없음(opencode)", "2; 2=ambiguous:opencode, 6=unrecoverable:opencode"),
     ("messages 가 없음", QWEN, None, "", None),
+    # 다른 클라이언트(모르는 User-Agent) — 표준 오류 글로 시작하면 실패(generic), 종류는 넓힌 낱말. 글은 각 출처(라이브러리 · SDK)의 꼴
+    ("다른 · Python TypeError(고침)", HTTPX, 대화("TypeError: search() got an unexpected keyword argument 'q'"),
+     "#2 고침(generic)", "1; 2=fixable:generic"),
+    ("다른 · requests 시간 초과(일시)", HTTPX, 대화("requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='api.example.com', port=443): "
+                                                "Read timed out. (read timeout=10)"), "#2 일시(generic)", None),
+    ("다른 · socket.timeout(일시)", HTTPX, 대화("socket.timeout: timed out"), "#2 일시(generic)", None),
+    ("다른 · MCP SDK 실행 오류 · 연결 끊김(일시)", HTTPX, 대화("Error executing tool fetch_page: ConnectionResetError(104, 'Connection reset by peer')"),
+     "#2 일시(generic)", None),
+    ("다른 · requests 503(일시)", HTTPX, 대화("503 Server Error: Service Unavailable for url: https://api.example.com/v1/items"),
+     "#2 일시(generic)", None),
+    ("다른 · httpx 401(해없음)", HTTPX, 대화("Client error '401 Unauthorized' for url 'https://api.example.com/v1/items'"),
+     "#2 해없음(generic)", None),
+    ("다른 · urllib 403(해없음)", HTTPX, 대화("HTTP Error 403: Forbidden"), "#2 해없음(generic)", None),
+    ("다른 · LangGraph 없는 도구(고침)", HTTPX, 대화("Error: get_weather is not a valid tool, try one of [search, calculator]."),
+     "#2 고침(generic)", None),
+    ("다른 · OpenAI Agents SDK 기본 글(일시)", HTTPX, 대화("An error occurred while running the tool. Please try again. Error: Connection refused"),
+     "#2 일시(generic)", None),
+    ("다른 · MCP TypeScript SDK(고침)", HTTPX, 대화("MCP error -32602: Tool lookup_user not found"), "#2 고침(generic)", None),
+    ("다른 · gRPC UNAVAILABLE(일시)", HTTPX, 대화("Error: 14 UNAVAILABLE: No connection established"), "#2 일시(generic)", None),
+    ("다른 · API 오류 JSON 429(일시)", HTTPX, 대화('{"error": {"code": 429, "message": "Too Many Requests"}}'), "#2 일시(generic)", None),
+    ("다른 · pydantic 검사(고침)", HTTPX, 대화("Error: 1 validation error for SearchArgs\nquery\n  Field required [type=missing]"),
+     "#2 고침(generic)", None),
+    ("다른 · 앞의 빈칸", HTTPX, 대화("\n  ValueError: Invalid params: limit must be positive"), "#2 고침(generic)", None),
+    ("다른 · 명령 시간 초과는 모호", HTTPX, 대화("Error: Command timed out after 120 seconds"), "#2 모호(generic)", None),
+    ("다른 · 종류 모름은 모호", HTTPX, 대화("Error: something went wrong"), "#2 모호(generic)", None),
+    ("다른 · not available 은 모호", HTTPX, 대화("RuntimeError: the service is not available"), "#2 모호(generic)", None),
+    ("다른 · Traceback(모호)", HTTPX, 대화("Traceback (most recent call last):\n  File \"t.py\", line 1, in <module>\nKeyError: 'x'"),
+     "#2 모호(generic)", None),
+    ("다른 · 표시 없는 클라이언트도 같음", None, 대화("TypeError: f() missing 1 required positional argument: 'x'"), "#2 고침(generic)", None),
+    # 다른 클라이언트 — 실패가 아닌 것
+    ("다른 · 성공 JSON 의 error null", HTTPX, 대화('{"error": null, "result": 5}'), "", None),
+    ("다른 · 빈 error 글", HTTPX, 대화('{"error": "", "result": 5}'), "", None),
+    ("다른 · Error rate 로 시작하는 성공", HTTPX, 대화("Error rate: 0.2% over the last hour"), "", None),
+    ("다른 · 낱말만 든 성공", HTTPX, 대화("The ValueError is raised when the input is negative."), "", None),
+    ("다른 · 숫자로 시작하는 성공", HTTPX, 대화("503 items found"), "", None),
+    ("다른 · 점으로 시작", HTTPX, 대화(".Error: hidden"), "", None),
+    # 명시 표시 — 모든 클라이언트
+    ("tool 메시지의 is_error(OpenAI 꼴)", HTTPX, 대화({"content": "connect ECONNREFUSED 127.0.0.1:9000", "is_error": True}),
+     "#2 일시(is_error)", None),
+    ("tool 메시지의 is_error 거짓", HTTPX, 대화({"content": "fine", "is_error": False}), "", None),
+    ("MCP isError JSON(고침)", HTTPX, 대화('{"content": [{"type": "text", "text": "Unknown tool: foo"}], "isError": true}'),
+     "#2 고침(mcp-iserror)", None),
+    ("MCP isError 거짓", HTTPX, 대화('{"content": [{"type": "text", "text": "ok"}], "isError": false}'), "", None),
+    # 정해진 에이전트는 넓히지 않음 — Qwen Code 셸 출력 안의 TypeError 는 스크립트의 오류다
+    ("qwen 셸 안의 TypeError 는 모호 그대로", QWEN, 대화("Command: python t.py\nDirectory: (root)\nOutput: TypeError: f() got an unexpected "
+                                                     "keyword argument 'x'\nError: (none)\nExit Code: 1\nSignal: (none)\n"
+                                                     "Process Group PGID: (none)"), "#2 모호(qwen-exit)", None),
+    ("codex 의 Error: 줄은 그대로(감지 안 함)", CODEX, 대화("Error: Connection refused"), "", None),
 ]
 
 # ===== 4b — 참조(errmsg2 세션.py · 자극.py 그대로) =====
@@ -235,10 +284,13 @@ for 꼴 in ("c1", "c2", "c3"):
                                                               '"content":[]}')], 꼴, None),
         (f"{꼴} 감지와 함께(Qwen 없는 파일 — 모호)", QWEN, [요청, 호출("c1", "read_file", {"file_path": "n.txt"}),
                                                    결과("c1", "File not found: n.txt")], 꼴, None),
+        (f"{꼴} 감지와 함께(다른 클라이언트 TypeError — 고침)", HTTPX, [요청, 호출("c1", "search", {"q": "x"}),
+                                                            결과("c1", "TypeError: search() got an unexpected keyword argument 'q'")], 꼴, None),
     ]
 꼴사례들.append(("off 는 바꾸지 않음", None, [요청, 호출("c1", "read_file", {"file_path": "a"}), 결과("c1", 권한)], "off", [(2, 3)]))
 # 감지와 함께 — 참조가 쓸 실패(엔진의 감지가 내야 할 것)
-답실패 = {"감지와 함께(OpenCode 쓸 수 없음)": [(2, 3)], "감지와 함께(Qwen 없는 파일 — 모호)": [(2, 4)]}
+답실패 = {"감지와 함께(OpenCode 쓸 수 없음)": [(2, 3)], "감지와 함께(Qwen 없는 파일 — 모호)": [(2, 4)],
+         "감지와 함께(다른 클라이언트 TypeError — 고침)": [(2, 2)]}
 
 
 def 꼴답(ms, 꼴, 실패들, 아이디):
