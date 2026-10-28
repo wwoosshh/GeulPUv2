@@ -40,6 +40,13 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   changed. When off, replies are bit-identical. The app now passes the agent's User-Agent to the inference server, so the
   per-agent error-text rules also apply to agents connected through the app's port.
 
+### Changed
+
+- **The cross-check's pinned server hashes follow the new servers.** On the reference PC the 32 problems give the same output as
+  the reference with the CUDA module, and the Vulkan quick check (cooperative-matrix 16x16x32 and base modules) matches; the
+  generator, the backends and the pinned modules are byte-identical. On the fresh-install path the same question to Qwen2.5-7B
+  Q4_K_M gives the same text and logit hashes as 0.13.0 (default, 16-bit KV and 8-bit KV).
+
 ## 0.13.0 — Gemma 4 · faster Qwen3.5 · layer lens and Jacobian lens · Linux (2026-10-28)
 
 ### Added
