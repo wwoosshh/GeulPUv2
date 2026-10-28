@@ -26,6 +26,46 @@ const DICT = {
   "닫기": "Close",
   "취소": "Cancel",
   "확인": "OK",
+  // 0.14.2 — 에이전트 화면 · 도구 오류 설정
+  "에이전트": "Agents",
+  "OpenAI 채팅 API": "OpenAI chat API",
+  "모르는 모델 이름이라고 알려도 그대로 동작합니다.": "It notes that it does not know the model name and carries on.",
+  "큰 모델을 권합니다 — 시험에서 7B 모델은 Codex의 도구를 잘 부르지 않았습니다.": "A larger model is recommended — in tests a 7B model rarely called Codex's tools.",
+  "작업 폴더를 먼저 고르세요": "Choose a working folder first",
+  "{}를 새 터미널 창에서 띄웠습니다": "Started {} in a new terminal window",
+  "동시 처리 1 · 문맥 131072로 다시 불러옵니다 — 그래픽 메모리에 맞지 않으면 엔진이 줄입니다": "Reloading with one concurrent chat and a 131072-token context — the engine shrinks it if it does not fit the graphics memory",
+  "불러온 모델이 없습니다 — 에이전트는 불러 둔 모델로 답합니다.": "No model is loaded — agents are answered by the loaded model.",
+  "모델 화면에서 모델을 먼저 추가하세요": "Add a model on the Models page first",
+  "문맥이 {} 토큰입니다 — 에이전트의 기본 지시문만 1만 ~ 1만 5천 토큰이라 32k 이상을 권합니다.": "The context is {} tokens — an agent's base instructions alone are 10,000–15,000 tokens, so 32k or more is recommended.",
+  "동시 처리 1을 권합니다 — 문맥이 더 들어갑니다.": "One concurrent chat is recommended — it leaves room for more context.",
+  "{}{}문맥 {} 토큰{}동시 처리 {}": "{}{}context {} tokens{}concurrent chats {}",
+  "에이전트에 맞게 다시 불러오기": "Reload for agents",
+  "작업 폴더": "Working folder",
+  "작업 폴더 찾아보기": "Browse for the working folder",
+  "설치되어 있지 않습니다": "Not installed",
+  "모델을 먼저 불러오세요": "Load a model first",
+  "명령 복사": "Copy commands",
+  "직접 실행하려면 PowerShell에 붙여 넣으세요": "To run it yourself, paste this into PowerShell",
+  "직접 실행하려면 터미널에 붙여 넣으세요": "To run it yourself, paste this into a terminal",
+  "VS Code의 {} 확장({}) 설정에 넣을 값입니다 — 앱이 띄울 수는 없습니다.": "Values for the settings of the {} extension ({}) in VS Code — the app cannot start it.",
+  "설치": "Install",
+  "VS Code 확장": "VS Code extension",
+  "설치 안 됨": "Not installed",
+  "설정 숨기기": "Hide settings",
+  "설정 보기": "Show settings",
+  "시작": "Start",
+  "코딩 에이전트를 골라 이 PC의 모델로 띄웁니다. 에이전트는 새 터미널 창에서 돌고, 파일을 고치거나 명령을 실행하기 전에는 에이전트가 직접 묻습니다. 설정은 그 실행에만 넘깁니다 — 에이전트의 설정 파일과 환경 변수는 바꾸지 않습니다.": "Pick a coding agent and start it with this PC's model. The agent runs in a new terminal window and asks you itself before it edits files or runs commands. The settings are passed to that run only — the agent's configuration files and your environment variables are not changed.",
+  "에이전트가 읽고 고칠 프로젝트 폴더입니다.": "The project folder the agent reads and edits.",
+  "도구 오류": "Tool errors",
+  "설정에서 바꾸기": "Change in Settings",
+  "지금의 꼴: {} — 에이전트가 보낸 실패한 도구 결과를 찾아 서버 기록과 답의 머리 칸(X-GeulPU-Tool-Errors)에 적습니다.": "Current form: {} — failed tool results that agents send are found and recorded in the server log and in the reply header (X-GeulPU-Tool-Errors).",
+  "아직 감지한 도구 오류가 없습니다": "No tool errors detected yet",
+  "도구 오류의 꼴": "Tool-error form",
+  "끔 — 찾아서 적기만(모델에 가는 글은 그대로)": "Off — detect and record only (the text sent to the model is unchanged)",
+  "C1 — 실패한 결과 끝에 안내 한 문장": "C1 — one guidance sentence at the end of the failed result",
+  "C2 — 실패한 호출을 지우고 실행기 알림": "C2 — remove the failed call and add a runtime notice",
+  "C3 — 결과를 두고 다음 사용자 차례에 알림": "C3 — keep the result and add the notice in the next user turn",
+  "코딩 에이전트가 받은 실패한 도구 결과를 오류 전달 연구에서 잰 꼴로 바꿔 모델에 보입니다(연구용). 끄면 찾아서 서버 기록과 답의 머리 칸에 적기만 하고, 답은 비트까지 그대로입니다. 다음에 모델을 불러올 때 적용": "Shows the failed tool results a coding agent received to the model in the forms measured in the error-delivery study (for research). When off, they are only detected and recorded in the server log and the reply header, and replies are bit-identical. Applied the next time a model is loaded",
   "GeulPU.exe와 연결이 끊겼습니다. 다시 연결하는 중… GeulPU.exe가 실행 중인지 확인하세요.": "Lost the connection to GeulPU.exe. Reconnecting… Make sure GeulPU.exe is running.",
   "추론 모델": "Reasoning model",
   "코드 모델": "Code model",
@@ -1498,6 +1538,7 @@ const IC = {
   cpu: '<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
   gear: '<path d="M19.15 10.08 L21.51 10.66 L21.51 13.34 L19.15 13.92 L18.41 15.70 L19.67 17.78 L17.78 19.67 L15.70 18.41 L13.92 19.15 L13.34 21.51 L10.66 21.51 L10.08 19.15 L8.30 18.41 L6.22 19.67 L4.33 17.78 L5.59 15.70 L4.85 13.92 L2.49 13.34 L2.49 10.66 L4.85 10.08 L5.59 8.30 L4.33 6.22 L6.22 4.33 L8.30 5.59 L10.08 4.85 L10.66 2.49 L13.34 2.49 L13.92 4.85 L15.70 5.59 L17.78 4.33 L19.67 6.22 L18.41 8.30 Z"/><circle cx="12" cy="12" r="3"/>',
   sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  term: '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.5l3 2.5-3 2.5M12.5 14.5h4.5"/>',   // 0.14.2 — 에이전트
   plus: '<path d="M12 5v14M5 12h14"/>',
   up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
@@ -1775,7 +1816,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 
 // ---------- 상태 ----------
 // streaming: 지금 흐르는 답 하나 — { roomId, msg, el(지금 그려진 요소), notice(불러오기 카드), ctrl, aborted, loading }
 // editing: 고치는 중인 사용자 메시지 { roomId, k } · jobHide: 닫은 '끝난 작업' 카드
-const S = { st: null, view: 'chat', rooms: [], roomId: null, streaming: null, editing: null, log: { job: 0, from: 0 }, results: null, resultsAt: 0, update: null, conn: true, setDirty: false, vk: null, benchModel: load('geulpu.benchModel', ''), catSel: {}, jobHide: load('geulpu.jobHide', '') };
+const S = { st: null, view: 'chat', rooms: [], roomId: null, streaming: null, editing: null, log: { job: 0, from: 0 }, results: null, resultsAt: 0, update: null, conn: true, setDirty: false, vk: null, benchModel: load('geulpu.benchModel', ''), catSel: {}, jobHide: load('geulpu.jobHide', ''), ag: null, agAt: 0, agOpen: null, agDir: load('geulpu.agentDir', '') };
 const streamingHere = () => !!(S.streaming && S.streaming.roomId === S.roomId);
 let failCount = 0;
 async function refresh() {
@@ -1811,6 +1852,7 @@ function renderAll() {
   else if (S.view === 'bench') renderBench();
   else if (S.view === 'debug') renderDebug();
   else if (S.view === 'device') renderDevice();
+  else if (S.view === 'agents') renderAgents();
   else if (S.view === 'settings') renderSettings();
   if (POP && POP.dataset.kind === 'dl') refreshDlPop();
   if (POPANCHOR && !POPANCHOR.isConnected) closePop();   // 다시 그려 기준 단추가 사라졌으면 판도 닫는다
@@ -1939,7 +1981,7 @@ function fitTag(f) {
 }
 
 // ---------- 레일 · 상태 막대 ----------
-const RAIL_ICON = { chat: 'chat', models: 'box', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
+const RAIL_ICON = { chat: 'chat', models: 'box', agents: 'term', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
 document.querySelectorAll('.rail-btn').forEach(b => {
   b.innerHTML = svg(RAIL_ICON[b.dataset.view], 'l') + `<span class="lbl" aria-hidden="true">${esc(b.getAttribute('aria-label'))}</span>`;
   b.addEventListener('click', () => show(b.dataset.view));
@@ -1959,6 +2001,7 @@ function show(view) {
   if (view === 'bench') loadResults(true);
   if (view === 'debug') DBG.listAt = 0;
   if (view === 'settings') { loadVk(); loadStore(true); }
+  if (view === 'agents') loadAgents(true);
   if (view === 'chat') { if (!same) renderMsgs(); setTimeout(() => { if (!$('#input').disabled) $('#input').focus(); }, 0); }
   try { sessionStorage.setItem('geulpu.view', view); } catch (_) { }
 }
@@ -4965,6 +5008,110 @@ async function renderDevice() {
   } catch (_) { }
 }
 
+// ---------- 에이전트(0.14.2) — 코딩 에이전트를 골라 이 PC의 모델로 띄운다(/api/agents · /api/agents/launch — 관리자의 에이전트.gl) ----------
+// 터미널 에이전트는 앱이 새 터미널 창에서 띄우고 그 실행에만 설정(환경 변수 · 명령줄)을 넘긴다 — 사용자의 설정 파일 · 환경 변수는 그대로.
+// 승인 묻기는 에이전트의 것 그대로. VS Code 확장(Cline · Kilo Code)은 넣을 값만 보여 준다.
+const AG_DOOR = { anthropic: () => 'Anthropic API', responses: () => 'Responses API', chat: () => T('OpenAI 채팅 API') };
+const AG_NOTE = {
+  claude: () => T('모르는 모델 이름이라고 알려도 그대로 동작합니다.'),
+  codex: () => T('큰 모델을 권합니다 — 시험에서 7B 모델은 Codex의 도구를 잘 부르지 않았습니다.'),
+};
+async function loadAgents(force) {
+  if (!force && S.agAt && Date.now() - S.agAt < 3000) return;
+  S.agAt = Date.now();
+  try { S.ag = await api('/api/agents'); if (S.view === 'agents') renderAgents(); } catch (_) { }
+}
+// 직접 실행할 때의 명령 — 윈도는 PowerShell, 리눅스는 bash
+function agShell(a, ag, dir) {
+  const win = ag.platform === 'windows';
+  const q = x => win ? "'" + String(x).replace(/'/g, "''") + "'" : "'" + String(x).replace(/'/g, "'\\''") + "'";
+  const lines = (a.env || []).map(([k, v]) => win ? `$env:${k} = ${q(v)}` : `export ${k}=${q(v)}`);
+  if (dir) lines.push(win ? `Set-Location -LiteralPath ${q(dir)}` : `cd ${q(dir)}`);
+  lines.push((a.exe + ' ' + (a.args || '')).trim());
+  return lines.join('\n');
+}
+async function agLaunch(a) {
+  const dir = (S.agDir || '').trim();
+  if (!dir) { toast(T('작업 폴더를 먼저 고르세요'), 'err'); return; }
+  try {
+    await api('/api/agents/launch', { agent: a.id, folder: dir });
+    toast(T`${a.name}를 새 터미널 창에서 띄웠습니다`);
+  } catch (e) { toast(TM(e.message), 'err'); }
+}
+async function agReload(id) {
+  try {
+    await api('/api/settings', { slots: 1, context: 131072 });
+    await api('/api/server/start', { model: id });
+    toast(T('동시 처리 1 · 문맥 131072로 다시 불러옵니다 — 그래픽 메모리에 맞지 않으면 엔진이 줄입니다'));
+    refresh();
+  } catch (e) { toast(TM(e.message), 'err'); }
+}
+function agDirSet(v) { S.agDir = v; store('geulpu.agentDir', v); renderAgents(); }
+function renderAgents() {
+  const ag = S.ag, st = S.st;
+  const page = $('#page-agents');
+  loadAgents(false);    // 모델 · 문맥 · 설치 · 최근 도구 오류는 3 초마다 다시 묻는다
+  if (!changed('agents', [ag, S.agDir, S.agOpen, st.server && st.server.state, (st.models || []).length])) return;
+  if (!ag) { put(page, pageHead(null, T('에이전트'), null), h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('불러오는 중…')))); return; }
+  const m = ag.model, dir = (S.agDir || '').trim();
+  // 모델
+  let modelBox;
+  if (!m.loaded) {
+    const ms = (st.models || []).filter(x => x.ok !== false);
+    const sel = h('select', { class: 'input', id: 'ag-model', 'aria-label': T('모델') }, ms.map(x => h('option', { value: x.id }, x.name || x.id)));
+    modelBox = h('div', { class: 'col' }, h('div', { class: 'sub bad' }, T('불러온 모델이 없습니다 — 에이전트는 불러 둔 모델로 답합니다.')),
+      ms.length ? h('div', { class: 'row' }, sel, h('button', { class: 'btn needs-conn', onclick: () => api('/api/server/start', { model: sel.value }).then(() => refresh()).catch(e => toast(TM(e.message), 'err')) }, T('불러오기')))
+        : h('div', { class: 'muted' }, T('모델 화면에서 모델을 먼저 추가하세요')));
+  } else {
+    const warn = [];
+    if (m.context < 32768) warn.push(T`문맥이 ${fmtNum(m.context)} 토큰입니다 — 에이전트의 기본 지시문만 1만 ~ 1만 5천 토큰이라 32k 이상을 권합니다.`);
+    if (m.slots > 1) warn.push(T('동시 처리 1을 권합니다 — 문맥이 더 들어갑니다.'));
+    modelBox = h('div', { class: 'col' }, h('div', { class: 'sub' }, T`${m.id}${NB}문맥 ${fmtNum(m.context)} 토큰${NB}동시 처리 ${m.slots}`),
+      ...warn.map(w => h('div', { class: 'sub bad' }, w)),
+      warn.length ? h('div', { class: 'row' }, h('button', { class: 'btn sm needs-conn', onclick: () => agReload(m.id) }, I('refresh', 's'), T('에이전트에 맞게 다시 불러오기'))) : null);
+  }
+  // 작업 폴더
+  const dirIn = h('input', { type: 'text', id: 'ag-dir', value: S.agDir || '', placeholder: ag.platform === 'windows' ? 'C:\\projects\\my-app' : '/home/me/my-app', 'aria-label': T('작업 폴더') });
+  dirIn.addEventListener('change', () => agDirSet(dirIn.value.trim()));
+  dirIn.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); dirIn.blur(); } });
+  const pick = h('button', { class: 'btn needs-conn', 'aria-label': T('작업 폴더 찾아보기'), onclick: () => browse(dirIn.value.trim() || (st.app && st.app.data_dir) || '', p => { dirIn.value = p; agDirSet(p); }) }, I('folder', 's'), T('찾아보기'));
+  // 에이전트
+  const items = ag.agents.map(a => {
+    const ext = !a.exe, inst = !!a.path, open = S.agOpen === a.id;
+    const can = !ext && inst && m.loaded && !!dir;
+    const why = ext ? null : !inst ? T('설치되어 있지 않습니다') : !m.loaded ? T('모델을 먼저 불러오세요') : !dir ? T('작업 폴더를 먼저 고르세요') : null;
+    const shellTxt = ext ? null : agShell(a, ag, dir);
+    const detail = !open ? null : ext
+      ? h('div', { class: 'ag-kv' }, a.fields.map(([k, v]) => h('div', { class: 'ag-kvrow' }, h('span', { class: 'muted' }, k), h('code', null, v),
+          h('button', { class: 'btn sm', onclick: () => copyText(v).then(ok => { if (ok) toast(T('복사했습니다')); }) }, I('copy', 's'), T('복사')))))
+      : h('div', { class: 'col mt8' }, h('pre', { class: 'log' }, shellTxt),
+          h('div', { class: 'row' }, h('button', { class: 'btn sm', onclick: () => copyText(shellTxt).then(ok => { if (ok) toast(T('복사했습니다')); }) }, I('copy', 's'), T('명령 복사')),
+            h('span', { class: 'muted' }, ag.platform === 'windows' ? T('직접 실행하려면 PowerShell에 붙여 넣으세요') : T('직접 실행하려면 터미널에 붙여 넣으세요'))));
+    return h('div', { class: 'item' },
+      h('div', { class: 'main' },
+        h('div', { class: 'title' }, h('span', { class: 'nm' }, a.name), h('span', { class: 'tag dim' }, AG_DOOR[a.door] ? AG_DOOR[a.door]() : a.door)),
+        AG_NOTE[a.id] ? h('div', { class: 'sub' }, AG_NOTE[a.id]()) : null,
+        ext ? h('div', { class: 'sub' }, T`VS Code의 ${a.name} 확장(${a.install}) 설정에 넣을 값입니다 — 앱이 띄울 수는 없습니다.`) : null,
+        !ext && !inst ? h('div', { class: 'sub' }, T('설치'), ': ', h('code', null, a.install)) : null,
+        detail),
+      h('div', { class: 'meta' },
+        ext ? h('span', { class: 'tag dim' }, T('VS Code 확장')) : inst ? h('span', { class: 'tag ok' }, I('check'), T('설치됨')) : h('span', { class: 'tag err' }, T('설치 안 됨')),
+        h('button', { class: 'btn sm', 'aria-expanded': open ? 'true' : 'false', onclick: () => { S.agOpen = open ? null : a.id; renderAgents(); } }, open ? T('설정 숨기기') : T('설정 보기')),
+        ext ? null : h('button', { class: 'btn sm primary needs-conn', disabled: can ? null : true, 'data-tip': why, onclick: () => agLaunch(a) }, I('play', 's'), T('시작'))));
+  });
+  const modeTxt = { off: T('끔'), c1: 'C1', c2: 'C2', c3: 'C3' }[ag.tool_errors_mode] || ag.tool_errors_mode;
+  put(page,
+    pageHead(null, T('에이전트'), T('코딩 에이전트를 골라 이 PC의 모델로 띄웁니다. 에이전트는 새 터미널 창에서 돌고, 파일을 고치거나 명령을 실행하기 전에는 에이전트가 직접 묻습니다. 설정은 그 실행에만 넘깁니다 — 에이전트의 설정 파일과 환경 변수는 바꾸지 않습니다.')),
+    h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('모델'))), modelBox),
+    h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('작업 폴더'))),
+      h('div', { class: 'row nowrap w100' }, dirIn, pick), h('div', { class: 'muted mt8' }, T('에이전트가 읽고 고칠 프로젝트 폴더입니다.'))),
+    h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('에이전트'))), h('div', { class: 'list' }, items)),
+    h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('도구 오류')),
+      h('button', { class: 'btn sm', onclick: () => show('settings') }, T('설정에서 바꾸기'))),
+      h('div', { class: 'sub' }, T`지금의 꼴: ${modeTxt} — 에이전트가 보낸 실패한 도구 결과를 찾아 서버 기록과 답의 머리 칸(X-GeulPU-Tool-Errors)에 적습니다.`),
+      ag.recent_tool_errors && ag.recent_tool_errors.length ? h('pre', { class: 'log mt8' }, ag.recent_tool_errors.join('\n')) : h('div', { class: 'muted mt8' }, T('아직 감지한 도구 오류가 없습니다'))));
+}
+
 // ---------- 설정(바꾸면 바로 저장) ----------
 // GeulPUv2 문맥 저장소 — 설정 · 실제로 켜는가(HDD) · 쓰는 양(/api/store). 설정 화면을 열 때와 바꾼 뒤
 async function loadStore(force) {
@@ -5008,6 +5155,7 @@ function saveSettings(note, recheck, delay, withDir, row) {
       kv8_cache: ((page.querySelector('#set-kv8') || {}).value || (S.st.settings.kv8_cache ? 'on' : 'off')) === 'on',   // GeulPUv2 ③b-2 — KV 캐시 8비트
       fast_attention: ((page.querySelector('#set-f2') || {}).value || (S.st.settings.fast_attention ? 'on' : 'off')) === 'on',   // GeulPUv2 빠른 어텐션(계약 F2)
       speculative: ((page.querySelector('#set-spec') || {}).value || (S.st.settings.speculative === false ? 'off' : 'on')) !== 'off',   // GeulPUv2 3단계 — 추측 디코딩
+      tool_errors: (page.querySelector('#set-terr') || {}).value || S.st.settings.tool_errors || 'off',   // 0.14.2 — 도구 오류의 꼴
     };
     if (withDir === true) body.models_dir = page.querySelector('#set-mdir').value.trim();
     // GeulPUv2 문맥 저장소 — 켬 · 크기 · 쓰기 방식은 늘, 위치는 그 칸이 바뀐 때만
@@ -5090,6 +5238,8 @@ function renderSettings(force) {
     [['on', T('켬 — 긴 프롬프트가 빨라집니다')], ['off', T('끔')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.fast_attention ? 'on' : 'off') ? true : null }, tx)));
   const specSel = h('select', { class: 'input', id: 'set-spec', 'aria-label': T('추측 디코딩'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-spec') },
     [['on', T('켬 — 답은 같고, 되풀이가 많은 답이 빨라집니다')], ['off', T('끔')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.speculative === false ? 'off' : 'on') ? true : null }, tx)));
+  const terrSel = h('select', { class: 'input', id: 'set-terr', 'aria-label': T('도구 오류의 꼴'), onchange: () => saveSettings(NEXT, false, 0, false, 'set-terr') },   // 0.14.2
+    [['off', T('끔 — 찾아서 적기만(모델에 가는 글은 그대로)')], ['c1', T('C1 — 실패한 결과 끝에 안내 한 문장')], ['c2', T('C2 — 실패한 호출을 지우고 실행기 알림')], ['c3', T('C3 — 결과를 두고 다음 사용자 차례에 알림')]].map(([v, tx]) => h('option', { value: v, selected: v === (s.tool_errors || 'off') ? true : null }, tx)));
   const defDir = (a.data_dir || '') + '모델\\';
   const mdir = h('input', { type: 'text', id: 'set-mdir', value: s.models_dir || '', placeholder: T('기본 폴더 사용'), 'aria-label': T('모델 폴더') });
   const commitDir = () => { if (mdir.value.trim() !== (s.models_dir || '')) saveSettings(T('저장했습니다 · 다음 실행부터 적용됩니다'), false, 0, true, 'set-mdir'); };
@@ -5132,7 +5282,8 @@ function renderSettings(force) {
         row(T('계산 방식 — F16 · BF16 · F32 파일'), T('양자화하지 않은 파일에 씁니다. 학습 직후의 파일을 시험하는 연구 용도라 기본은 정밀입니다 — 빠름은 활성값을 8비트로 줄여 프롬프트 처리가 빠르지만(CUDA), 이 파일들에서는 정밀과의 차이가 llama.cpp보다 큽니다. 다음에 모델을 불러올 때 적용'), prec16Sel, null, 'set-prec16'),
         row(T('KV 캐시 8비트'), T('빠름 · CUDA · k-양자화 모델(Q4_K_M 같은 파일)에서만 씁니다 — 그 밖에는 끔과 같습니다. 답의 비트는 16비트 KV 캐시와 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용'), kv8Sel, null, 'set-kv8'),
         row(T('빠른 어텐션'), T('KV 캐시 8비트를 켰을 때만 씁니다 — 그 밖에는 끔과 같습니다. Qwen3 계열 모델은 q 의 지수를 블록마다 두는 판(F2B)으로 씁니다. 긴 프롬프트(수만 토큰)의 어텐션이 빨라집니다. 답의 비트는 끔과 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용'), f2Sel, null, 'set-f2'),
-        row(T('추측 디코딩'), T('프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 스텝에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용'), specSel, null, 'set-spec')),
+        row(T('추측 디코딩'), T('프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 스텝에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용'), specSel, null, 'set-spec'),
+        row(T('도구 오류의 꼴'), T('코딩 에이전트가 받은 실패한 도구 결과를 오류 전달 연구에서 잰 꼴로 바꿔 모델에 보입니다(연구용). 끄면 찾아서 서버 기록과 답의 머리 칸에 적기만 하고, 답은 비트까지 그대로입니다. 다음에 모델을 불러올 때 적용'), terrSel, null, 'set-terr')),
       h('div', { class: 'sec mt16' }, T('프롬프트 캐시')),
       h('div', { class: 'set-group' },
         row(T('프롬프트 캐시'), T('긴 프롬프트의 KV 캐시를 SSD에 남겨, 같은 앞부분으로 시작하는 요청에서 다시 계산하지 않고 복원합니다 — 앱을 다시 켜거나 모델을 바꿨다 돌아와도. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다. 다음에 모델을 불러올 때 적용') + storeNow, storeSel, null, 'set-store'),
