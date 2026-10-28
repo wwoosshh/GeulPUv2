@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""에이전트 호환 4 단계 4a — 도구 오류 감지(엔진/도구오류.gl — 엔진/시험_도구오류.gl)를 GPU 없이 본다. 사례는 3 단계 녹화(에이전트 일곱이
-GeulPU 에 실제로 보낸 도구 결과)의 글 그대로이고, 손으로 단 답(메시지 번호 · 종류 · 규칙)과 견준다. 실패가 아닌 결과를 실패로 잡지 않는지
-(성공한 셸 · 출력 안의 'Error:' 줄 · 모르는 에이전트 · 표시 없는 같은 글)도 본다 — 감지는 정밀도가 먼저다.
+"""에이전트 호환 4 단계 — 도구 오류 층(엔진/도구오류.gl — 엔진/시험_도구오류.gl)을 GPU 없이 본다.
+
+4a 감지: 사례는 3 단계 녹화(에이전트 일곱이 GeulPU 에 실제로 보낸 도구 결과)의 글 그대로이고, 손으로 단 답(메시지 번호 · 종류 · 규칙)과
+견준다. 실패가 아닌 결과를 실패로 잡지 않는지(성공한 셸 · 출력 안의 'Error:' 줄 · 모르는 에이전트 · 표시 없는 같은 글)도 본다.
+4b 꼴: 결정 스텝의 실패를 C1 · C2 · C3 로 바꾼 messages 의 JSON 글이 참조(아래 참조꼴 — errmsg2 세션.py 의 꼴 · 붙이기 · 글뽑기 ·
+알림글과 자극.인자글을 그대로 옮긴 것, 실패가 여럿이면 차례로)의 json.dumps 글과 글자까지 같은가.
 
   python -I 시험/도구오류.py <시험_도구오류 실행 파일>
 
 끝 줄 "도구 오류 감지: 모두 맞음 (N 가지)"이면 종료 0, 아니면 1.
 """
+import copy
 import json
 import os
 import subprocess
@@ -125,6 +129,129 @@ def 대화(*결과들):
     ("messages 가 없음", QWEN, None, "", None),
 ]
 
+# ===== 4b — 참조(errmsg2 세션.py · 자극.py 그대로) =====
+안내 = {1: "This is a temporary failure. Retrying the same call is expected to succeed.",
+        2: "This call cannot succeed as written. The error says what to change; call the tool again with the corrected value.",
+        3: "This cannot be fixed by retrying or by changing the arguments. Tell the user what happened."}
+
+
+def 글뽑기(content):
+    if isinstance(content, str):
+        return content
+    return "\n".join(b.get("text", "") for b in content if isinstance(b, dict))
+
+
+def 인자글(args):
+    return ", ".join(f"{k}={v}" for k, v in args.items())
+
+
+def 알림글(이름, args, 오류, 종류):
+    return f"Note from the tool runtime: the last attempt called {이름} with {인자글(args)} and it failed with: {오류}\n{안내[종류]}"
+
+
+def 붙이기(msgs, k, 알림):
+    if k is None:
+        return msgs + [{"role": "user", "content": 알림}]
+    msgs[k] = dict(msgs[k], content=글뽑기(msgs[k]["content"]) + "\n\n" + 알림)
+    return msgs
+
+
+def 꼴하나(msgs, i, 조건, 종류):
+    """세션.꼴 — 오류는 그 tool 메시지의 내용(글로 편 것)"""
+    msgs = copy.deepcopy(msgs)
+    j = max(x for x in range(i) if msgs[x]["role"] == "assistant" and msgs[x].get("tool_calls"))
+    tc = next(c for c in msgs[j]["tool_calls"] if c["id"] == msgs[i]["tool_call_id"])
+    오류 = 글뽑기(msgs[i]["content"])
+    if 조건 == "c1":
+        msgs[i]["content"] = 오류 + "\n" + 안내[종류]
+        return msgs
+    알림 = 알림글(tc["function"]["name"], json.loads(tc["function"]["arguments"]), 오류, 종류)
+    뒤사용자 = next((x for x in range(i + 1, len(msgs)) if msgs[x]["role"] == "user"), None)
+    if 조건 == "c3":
+        return 붙이기(msgs, 뒤사용자, 알림)
+    del msgs[i]
+    msgs[j]["tool_calls"] = [c for c in msgs[j]["tool_calls"] if c["id"] != tc["id"]]
+    if not msgs[j]["tool_calls"] and not (msgs[j].get("content") or "").strip():
+        del msgs[j]
+    elif not msgs[j]["tool_calls"]:
+        del msgs[j]["tool_calls"]
+    return 붙이기(msgs, len(msgs) - 1 if msgs[-1]["role"] == "user" else None, 알림)
+
+
+def 참조꼴(msgs, 실패들, 조건):
+    """결정 스텝(마지막 assistant 뒤)의 실패 가운데 안내가 있는 종류(1 · 2 · 3)를 차례로 — (바꾼 수, messages)"""
+    끝a = max(x for x, m in enumerate(msgs) if m["role"] == "assistant")
+    고른 = [(msgs[i]["tool_call_id"], 종류) for i, 종류 in sorted(실패들) if i > 끝a and 종류 in 안내]
+    for tid, 종류 in 고른:
+        i = next(x for x, m in enumerate(msgs) if m["role"] == "tool" and m.get("tool_call_id") == tid)
+        msgs = 꼴하나(msgs, i, 조건, 종류)
+    return len(고른), msgs
+
+
+def 호출(cid, 이름, args, 글="", 날인자=None):
+    return {"role": "assistant", "content": 글, "tool_calls": [
+        {"id": cid, "type": "function", "function": {"name": 이름, "arguments": 날인자 or json.dumps(args, ensure_ascii=False)}}]}
+
+
+def 결과(cid, 내용):
+    return {"role": "tool", "tool_call_id": cid, "content": 내용}
+
+
+시스템 = {"role": "system", "content": "You are a coding agent."}
+요청 = {"role": "user", "content": "Fix the build."}
+알림차례 = {"role": "user", "content": [{"type": "text", "text": "<system-reminder>\nKeep going.\n</system-reminder>"}]}
+권한 = "Error: EACCES: permission denied, open 'E:\\x\\secret.txt'"
+병렬 = {"role": "assistant", "content": "", "tool_calls": [
+    {"id": "p1", "type": "function", "function": {"name": "read_file", "arguments": '{"file_path": "a.txt"}'}},
+    {"id": "p2", "type": "function", "function": {"name": "read_file", "arguments": '{"file_path": "b.txt"}'}}]}
+# 겹친 값 · 따옴표 · 역슬래시 · 한국어 · NBSP · ZWSP · 이모지 · -0 · 1e20 · 참거짓 · null(repr 꼴)
+겹인자 = ('{"command": ["bash", "-lc", "echo \'hi\' \\"x\\""], "opts": {"a": 1.5, "b": true, "c": null, '
+         '"d": "줄\\n바꿈\\\\탭\\t", "e": "it\'s", "f": "a\\u00a0b\\u200bc😀", "g": [1, -0, 1e20, 2.5e-7]}, "n": 3, "name": "이름"}')
+
+# (아이디, User-Agent, messages, 꼴, 실패 [(번호, 종류)] — None 이면 엔진의 감지 · 참조는 아래 '답실패')
+꼴사례들 = []
+for 꼴 in ("c1", "c2", "c3"):
+    꼴사례들 += [
+        (f"{꼴} 하나 · 끝이 tool", None, [시스템, 요청, 호출("c1", "read_file", {"file_path": "secret.txt"}), 결과("c1", 권한)], 꼴, [(3, 3)]),
+        (f"{꼴} 하나 · 끝에 reminder(조각 배열)", None,
+         [시스템, 요청, 호출("c1", "run_shell_command", {"command": "python check.py", "is_background": False}),
+          결과("c1", [{"type": "text", "text": "Command: python check.py\nExit Code: 1"}]), 알림차례], 꼴, [(3, 2)]),
+        (f"{꼴} 병렬 둘 다 실패 · 내용 없음", None, [시스템, 요청, 병렬, 결과("p1", 권한), 결과("p2", 권한)], 꼴, [(3, 3), (4, 3)]),
+        (f"{꼴} 병렬 하나만 실패", None, [시스템, 요청, 병렬, 결과("p1", "hello"), 결과("p2", 권한)], 꼴, [(4, 3)]),
+        (f"{꼴} assistant 에 글", None, [요청, 호출("c1", "fetch", {"url": "http://x"}, "Let me check."),
+                                       결과("c1", "connect ECONNRESET")], 꼴, [(2, 1)]),
+        (f"{꼴} 인자 repr", None, [요청, 호출("c1", "shell", None, 날인자=겹인자), 결과("c1", "Service Unavailable")], 꼴, [(2, 1)]),
+        (f"{꼴} 같은 열쇠 둘(뒤의 값)", None, [요청, 호출("c1", "f", None, 날인자='{"a": 1, "b": 2, "a": 3}'), 결과("c1", 권한)], 꼴, [(2, 3)]),
+        (f"{꼴} 병렬 둘 다 실패 · 끝에 reminder", None, [요청, 병렬, 결과("p1", 권한), 결과("p2", 권한), 알림차례], 꼴, [(2, 3), (3, 3)]),
+        (f"{꼴} 앞 턴의 실패는 그대로", None, [요청, 호출("c1", "read_file", {"file_path": "a"}), 결과("c1", 권한),
+                                         호출("c2", "read_file", {"file_path": "b"}), 결과("c2", 권한)], 꼴, [(2, 3), (4, 3)]),
+        (f"{꼴} assistant 의 content 가 null", None, [요청, dict(호출("c1", "read_file", {"file_path": "a"}), content=None), 결과("c1", 권한)],
+         꼴, [(2, 3)]),
+        (f"{꼴} 모호는 바꾸지 않음", None, [요청, 호출("c1", "read_file", {"file_path": "a"}), 결과("c1", "File not found: a")], 꼴, [(2, 4)]),
+        (f"{꼴} 호출 아이디를 못 찾음", None, [요청, 호출("c1", "read_file", {"file_path": "a"}), 결과("zz", 권한)], 꼴, [(2, 3)]),
+        (f"{꼴} 인자를 못 풂", None, [요청, 호출("c1", "read_file", None, 날인자="{not json"), 결과("c1", 권한)], 꼴, [(2, 3)]),
+        (f"{꼴} 감지와 함께(OpenCode 쓸 수 없음)", OPENCODE, [요청, 호출("c1", "write", {"path": "locked.txt", "content": "done"}),
+                                                     결과("c1", '{"error":{"type":"tool.execution","message":"Unable to write locked.txt"},'
+                                                              '"content":[]}')], 꼴, None),
+        (f"{꼴} 감지와 함께(Qwen 없는 파일 — 모호)", QWEN, [요청, 호출("c1", "read_file", {"file_path": "n.txt"}),
+                                                   결과("c1", "File not found: n.txt")], 꼴, None),
+    ]
+꼴사례들.append(("off 는 바꾸지 않음", None, [요청, 호출("c1", "read_file", {"file_path": "a"}), 결과("c1", 권한)], "off", [(2, 3)]))
+# 감지와 함께 — 참조가 쓸 실패(엔진의 감지가 내야 할 것)
+답실패 = {"감지와 함께(OpenCode 쓸 수 없음)": [(2, 3)], "감지와 함께(Qwen 없는 파일 — 모호)": [(2, 4)]}
+
+
+def 꼴답(ms, 꼴, 실패들, 아이디):
+    if 실패들 is None:
+        실패들 = 답실패[아이디.split(" ", 1)[1]]
+    if 꼴 not in ("c1", "c2", "c3"):
+        return 0, None
+    try:
+        n, 바뀐 = 참조꼴(ms, 실패들, 꼴)
+    except (StopIteration, ValueError, json.JSONDecodeError):
+        return 0, None                       # 참조가 못 하는 것(호출을 못 찾음 · 인자를 못 풂) — 엔진은 바꾸지 않는다
+    return n, (json.dumps(바뀐, ensure_ascii=False) if n else None)
+
 
 def main():
     exe = sys.argv[1]
@@ -132,7 +259,9 @@ def main():
         입력 = os.path.join(임시, "사례.json")
         출력 = os.path.join(임시, "출력.json")
         with open(입력, "w", encoding="utf-8", newline="\n") as f:
-            json.dump([{"id": a, "agent": ua, "messages": ms} for a, ua, ms, _, _ in 사례들], f, ensure_ascii=False)
+            json.dump([{"id": a, "agent": ua, "messages": ms} for a, ua, ms, _, _ in 사례들] +
+                      [dict({"id": "꼴 " + a, "agent": ua, "messages": ms, "form": 꼴}, **({"fail": 실} if 실 is not None else {}))
+                       for a, ua, ms, 꼴, 실 in 꼴사례들], f, ensure_ascii=False)
         r = subprocess.run([exe, 입력, 출력], capture_output=True)
         if r.returncode != 0:
             print(r.stdout.decode("utf-8", "replace") + r.stderr.decode("utf-8", "replace"))
@@ -149,10 +278,17 @@ def main():
         if not 맞음:
             틀림 += 1
             print(f"틀림  {아이디}\n      나온 {n!r}\n      답   log={로그!r} header={머리!r}")
+    for 아이디, _, ms, 꼴, 실 in 꼴사례들:
+        n = 나온.get("꼴 " + 아이디) or {}
+        답수, 답글 = 꼴답(ms, 꼴, 실, 아이디)
+        if n.get("changed") != 답수 or n.get("messages_text") != 답글:
+            틀림 += 1
+            print(f"틀림  꼴 {아이디}: 바꾼 수 {n.get('changed')} (답 {답수})\n      나온 {n.get('messages_text')!r}\n      답   {답글!r}")
+    모두 = len(사례들) + len(꼴사례들)
     if 틀림:
-        print(f"도구 오류 감지: 틀림 {틀림} / {len(사례들)}")
+        print(f"도구 오류 감지: 틀림 {틀림} / {모두}")
         return 1
-    print(f"도구 오류 감지: 모두 맞음 ({len(사례들)} 가지)")
+    print(f"도구 오류 감지: 모두 맞음 ({모두} 가지 — 감지 {len(사례들)} · 꼴 {len(꼴사례들)})")
     return 0
 
 
