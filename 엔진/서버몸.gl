@@ -44,7 +44,7 @@
     정수 초안낸, 정수 초안받은, 정수 추측걸음,
     정수목록 참조 시험초안,
     정수 도구꼴, 참거짓 한호출, 참거짓 도구중, 참거짓 라마정함, 참거짓 통째모음, 바이트열 참조 도구글, 바이트열 참조 호출들, 정수 호출수,
-    바이트열 참조 도구정의글, 정수 호출강제, 문자열 강제이름, 정수 문, 정수 앤블록, 참거짓 앤글열림,
+    바이트열 참조 도구정의글, 정수 호출강제, 문자열 강제이름, 정수 문, 정수 앤블록, 참거짓 앤글열림, 정수 리순번, 정수 리글시작,
     참거짓 생각뗌, 참거짓 생각중, 바이트열 참조 생각글, 정수 생각보낸, 참거짓 채널뗌, 참거짓 채널머리, 정수 채널본,
     참거짓 저장소씀, 정수 슬롯재사용, 정수 복사한, 정수 되살린, 실수 되살림ms,
     정수 깨진자리, 정수 깨진까닭, 정수 깨진앞토큰, 정수 깨진뒤토큰,
@@ -56,8 +56,9 @@
    (parallel_tool_calls 거짓 · Llama), 도구중 = Qwen 의 <tool_call> 안, 라마정함 · 통째모음 = Llama 의 답이 '{'(또는 <|python_tag|>)로
    시작해 통째로 모으는가, 도구글 = 모으는 호출의 글, 호출들 = 맺은 호출의 JSON(쉼표로 이음 — 온 응답), 호출수.
    에이전트 호환(문서/에이전트.md) — 호출강제 = tool_choice 의 0 auto · 1 required · 2 함수 지정(강제이름), 프롬프트 끝에 틀의 호출 여는 글을 넣는다.
-   문 = 요청이 들어온 문(0 OpenAI 채팅 · 완성, 1 Anthropic Messages — 답을 그 꼴로 쓴다), 앤블록 · 앤글열림 = Anthropic 흘림의 다음 블록 번호 ·
-   글 블록이 열려 있는가.
+   문 = 요청이 들어온 문(0 OpenAI 채팅 · 완성, 1 Anthropic Messages, 2 OpenAI Responses — 답을 그 꼴로 쓴다), 앤블록 · 앤글열림 = 흘림의
+   다음 블록 번호(Responses 는 output_index) · 글 블록(Responses 는 message 항목)이 열려 있는가, 리순번 · 리글시작 = Responses 흘림의
+   sequence_number · 열린 message 항목의 글이 글바이트에서 시작한 자리.
    생각뗌 = Qwen3 의 <think>…</think> 를 reasoning_content 로(도구 요청이고 geulpu.special 이 아닐 때), 생각중 · 생각글 · 생각보낸(흘림).
    0.13.0 — 도구꼴 5 Gemma 4(<|tool_call>call:이름{…}<tool_call|> — 젬마도구.gl), 생각 묶음이 <|channel>thought … <channel|> 인 틀(틀채널):
    채널뗌 = 생각을 떼지 않는 채팅(special 아님)에서도 채널 표지와 이름을 내용에 넣지 않는다, 채널머리 · 채널본 = <|channel> 뒤의 이름
@@ -1137,10 +1138,292 @@
     바이트열_해제(b).
 }
 
+(* ===== 에이전트 호환 2 단계 문 3 — OpenAI Responses(/v1/responses — Codex CLI). 상태 없이(store 거짓) =====
+   요청은 리바꾸기 가 OpenAI 채팅 꼴로 옮겨 같은 길로(문 2), 답은 Responses 꼴: 온 답 {"object":"response","status":…,"output":[message ·
+   function_call],"usage":…}, 흘림은 event: 줄이 있는 사건 — response.created · response.in_progress → (message 의 output_item.added ·
+   content_part.added · output_text.delta … · output_text.done · content_part.done · output_item.done | function_call 의 output_item.added ·
+   function_call_arguments.delta · function_call_arguments.done · output_item.done)… → response.completed(길이에 닿고 호출이 없으면
+   response.incomplete — 응답 객체에 id · usage 를 꼭 담는다: Codex 가 본다). 사건마다 sequence_number. 생각은 내지 않는다. 오류는 OpenAI 꼴 *)
+
+(* 사건 몸의 머리 {"type":형,"sequence_number":n — 부르는 쪽이 이어 쓰고 } 로 닫는다 *)
+[일감 참조 j를 바이트열 참조 b에 문자열 형을 리머리]는 {
+    날글넣기(b, "\{\"type\":\"").
+    날글넣기(b, 형).
+    날글넣기(b, "\",\"sequence_number\":").
+    제수쓰기(b, j→리순번).
+    j→리순번 += 1.
+}
+
+[일감 참조 j를 바이트열 참조 b에 정수 k를 리항목아이디넣기]는 {
+    날글넣기(b, "\"msg_geulpu-").
+    제수쓰기(b, j→번호).
+    날글넣기(b, "-").
+    제수쓰기(b, k).
+    날글넣기(b, "\"").
+}
+
+(* usage — input · output · total 과 캐시(input_tokens_details.cached_tokens) *)
+[일감 참조 j를 바이트열 참조 b에 리사용량넣기]는 {
+    정수 p = 정수목록_길이(j→프롬프트).
+    정수 g = 정수목록_길이(j→생성).
+    날글넣기(b, "\"usage\":\{\"input_tokens\":").
+    제수쓰기(b, p).
+    날글넣기(b, ",\"input_tokens_details\":\{\"cached_tokens\":").
+    제수쓰기(b, j→재사용).
+    날글넣기(b, "\},\"output_tokens\":").
+    제수쓰기(b, g).
+    날글넣기(b, ",\"output_tokens_details\":\{\"reasoning_tokens\":0\},\"total_tokens\":").
+    제수쓰기(b, p + g).
+    날글넣기(b, "\}").
+}
+
+(* function_call 항목 하나(호출 JSON p — OpenAI 꼴) — 상태 글(in_progress · completed), 인자를 넣는가 *)
+[제이슨 참조 p를 바이트열 참조 b에 문자열 상태를 참거짓 인자넣음을 리호출항목쓰기]는 {
+    제이슨 참조 fn = 제찾기(p, "function").
+    제이슨 참조 id = 제찾기(p, "id").
+    제이슨 참조 nm = 제찾기(fn, "name").
+    제이슨 참조 ag = 제찾기(fn, "arguments").
+    날글넣기(b, "\{\"type\":\"function_call\",\"id\":\"fc_").
+    바이트열_붙이기(b, id→글, id→글길이).
+    날글넣기(b, "\",\"call_id\":").
+    제글쓰기(b, id→글, id→글길이).
+    날글넣기(b, ",\"name\":").
+    제글쓰기(b, nm→글, nm→글길이).
+    날글넣기(b, ",\"arguments\":").
+    아닌 인자넣음이면 { 날글넣기(b, "\"\""). }
+    아니면 앤인자맞나(ag)이면 { 제글쓰기(b, ag→글, ag→글길이). }
+    아니면 { 날글넣기(b, "\"\{\}\""). }
+    날글넣기(b, ",\"status\":\"").
+    날글넣기(b, 상태).
+    날글넣기(b, "\"\}").
+}
+
+(* 응답 객체 — 끝 = 참이면 status · output(글 message 하나 + function_call 들) · usage 까지, 거짓이면 진행 중(output 빔) *)
+[일감 참조 j를 바이트열 참조 b에 정수 n을 참거짓 끝을 리응답쓰기]는 {
+    날글넣기(b, "\{\"id\":\"resp_geulpu-").
+    제수쓰기(b, j→번호).
+    날글넣기(b, "\",\"object\":\"response\",\"created_at\":").
+    제수쓰기(b, j→만든때).
+    아닌 끝이면 {
+        날글넣기(b, ",\"status\":\"in_progress\",\"model\":").
+        제글넣기(b, j→모델).
+        날글넣기(b, ",\"output\":[]\}").
+        반환.
+    }
+    (j→끝까닭 == 2 그리고 j→호출수 == 0)이면 { 날글넣기(b, ",\"status\":\"incomplete\",\"incomplete_details\":\{\"reason\":\"max_output_tokens\"\}"). }
+    아니면 { 날글넣기(b, ",\"status\":\"completed\""). }
+    날글넣기(b, ",\"model\":").
+    제글넣기(b, j→모델).
+    날글넣기(b, ",\"output\":[").
+    정수 쓴 = 0.
+    바이트열 참조 t = 바이트열_만들기().
+    다듬어넣기(t, 바이트열_자료(j→글바이트), 0, n).
+    바이트열_길이(t) > 0이면 {
+        날글넣기(b, "\{\"type\":\"message\",\"id\":").
+        리항목아이디넣기(j, b, 0).
+        날글넣기(b, ",\"status\":\"completed\",\"role\":\"assistant\",\"content\":[\{\"type\":\"output_text\",\"text\":").
+        제글쓰기(b, 바이트열_자료(t), 바이트열_길이(t)).
+        날글넣기(b, ",\"annotations\":[]\}]\}").
+        쓴 += 1.
+    }
+    바이트열_해제(t).
+    j→호출수 > 0이면 {
+        바이트열 참조 hb = 바이트열_만들기().
+        바이트열_넣기(hb, 91).
+        바이트열_붙이기(hb, 바이트열_자료(j→호출들), 바이트열_길이(j→호출들)).
+        바이트열_넣기(hb, 93).
+        제이슨 참조 arr = 제이슨풀기(바이트열_자료(hb), 바이트열_길이(hb)).
+        arr != 없음이면 {
+            반복 (정수 k는 0부터 제개수(arr) 전까지) {
+                제이슨 참조 p = 제자식(arr, k).
+                (글인가(제찾기(p, "id")) 그리고 글인가(제찾기(제찾기(p, "function"), "name")))이면 {
+                    쓴 > 0이면 { 바이트열_넣기(b, 44). }
+                    리호출항목쓰기(p, b, "completed", 참).
+                    쓴 += 1.
+                }
+            }
+            제놓기(arr).
+        }
+        바이트열_해제(hb).
+    }
+    날글넣기(b, "],").
+    리사용량넣기(j, b).
+    날글넣기(b, "\}").
+}
+
+(* 흘림의 시작 — response.created · response.in_progress *)
+[일감 참조 j를 연결 참조 c에 리시작]는 {
+    바이트열 참조 b = 바이트열_만들기().
+    리머리(j, b, "response.created").
+    날글넣기(b, ",\"response\":").
+    리응답쓰기(j, b, 0, 거짓).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.created", b).
+    b→길이 = 0.
+    리머리(j, b, "response.in_progress").
+    날글넣기(b, ",\"response\":").
+    리응답쓰기(j, b, 0, 거짓).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.in_progress", b).
+    바이트열_해제(b).
+}
+
+(* 사건 몸의 item_id · output_index(열린 항목) *)
+[일감 참조 j를 바이트열 참조 b에 리자리넣기]는 {
+    날글넣기(b, ",\"item_id\":").
+    리항목아이디넣기(j, b, j→앤블록).
+    날글넣기(b, ",\"output_index\":").
+    제수쓰기(b, j→앤블록).
+}
+
+(* 글 조각 s[a, e) — message 항목이 닫혀 있으면 연다(output_item.added · content_part.added) *)
+[일감 참조 j를 연결 참조 c에 문자열 s를 정수 a를 정수 e를 리글보내기]는 {
+    e <= a이면 { 반환. }
+    바이트열 참조 b = 바이트열_만들기().
+    아닌 j→앤글열림이면 {
+        리머리(j, b, "response.output_item.added").
+        날글넣기(b, ",\"output_index\":").
+        제수쓰기(b, j→앤블록).
+        날글넣기(b, ",\"item\":\{\"type\":\"message\",\"id\":").
+        리항목아이디넣기(j, b, j→앤블록).
+        날글넣기(b, ",\"status\":\"in_progress\",\"role\":\"assistant\",\"content\":[]\}\}").
+        앤사건보내기(c, "response.output_item.added", b).
+        b→길이 = 0.
+        리머리(j, b, "response.content_part.added").
+        리자리넣기(j, b).
+        날글넣기(b, ",\"content_index\":0,\"part\":\{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]\}\}").
+        앤사건보내기(c, "response.content_part.added", b).
+        b→길이 = 0.
+        j→앤글열림 = 참.
+        j→리글시작 = a.
+    }
+    리머리(j, b, "response.output_text.delta").
+    리자리넣기(j, b).
+    날글넣기(b, ",\"content_index\":0,\"delta\":").
+    바이트열 참조 t = 바이트열_만들기().
+    다듬어넣기(t, s, a, e).
+    제글쓰기(b, 바이트열_자료(t), 바이트열_길이(t)).
+    바이트열_해제(t).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.output_text.delta", b).
+    바이트열_해제(b).
+}
+
+(* 열린 message 항목을 닫는다 — 글은 글바이트[리글시작, 끝자리) *)
+[일감 참조 j를 연결 참조 c에 정수 끝자리를 리글닫기]는 {
+    아닌 j→앤글열림이면 { 반환. }
+    바이트열 참조 t = 바이트열_만들기().
+    끝자리 > j→리글시작이면 { 다듬어넣기(t, 바이트열_자료(j→글바이트), j→리글시작, 끝자리). }
+    바이트열 참조 b = 바이트열_만들기().
+    리머리(j, b, "response.output_text.done").
+    리자리넣기(j, b).
+    날글넣기(b, ",\"content_index\":0,\"text\":").
+    제글쓰기(b, 바이트열_자료(t), 바이트열_길이(t)).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.output_text.done", b).
+    b→길이 = 0.
+    리머리(j, b, "response.content_part.done").
+    리자리넣기(j, b).
+    날글넣기(b, ",\"content_index\":0,\"part\":\{\"type\":\"output_text\",\"text\":").
+    제글쓰기(b, 바이트열_자료(t), 바이트열_길이(t)).
+    날글넣기(b, ",\"annotations\":[]\}\}").
+    앤사건보내기(c, "response.content_part.done", b).
+    b→길이 = 0.
+    리머리(j, b, "response.output_item.done").
+    날글넣기(b, ",\"output_index\":").
+    제수쓰기(b, j→앤블록).
+    날글넣기(b, ",\"item\":\{\"type\":\"message\",\"id\":").
+    리항목아이디넣기(j, b, j→앤블록).
+    날글넣기(b, ",\"status\":\"completed\",\"role\":\"assistant\",\"content\":[\{\"type\":\"output_text\",\"text\":").
+    제글쓰기(b, 바이트열_자료(t), 바이트열_길이(t)).
+    날글넣기(b, ",\"annotations\":[]\}]\}\}").
+    앤사건보내기(c, "response.output_item.done", b).
+    바이트열_해제(b).
+    바이트열_해제(t).
+    j→앤글열림 = 거짓.
+    j→앤블록 += 1.
+}
+
+(* 맺은 호출 하나(호출들[시작 …]) — 열린 message 를 닫고 function_call 항목(added · arguments delta · arguments done · item done) *)
+[일감 참조 j를 연결 참조 c에 정수 시작을 리호출보내기]는 {
+    리글닫기(j, c, j→보낸).
+    문자열 hs = 바이트열_자료(j→호출들).
+    정수 hn = 바이트열_길이(j→호출들).
+    제이슨 참조 p = 제이슨풀기(hs + 시작, hn - 시작).
+    p == 없음이면 { 반환. }
+    제이슨 참조 id = 제찾기(p, "id").
+    제이슨 참조 ag = 제찾기(제찾기(p, "function"), "arguments").
+    (아닌 글인가(id) 또는 아닌 글인가(제찾기(제찾기(p, "function"), "name")))이면 {
+        제놓기(p).
+        반환.
+    }
+    바이트열 참조 b = 바이트열_만들기().
+    리머리(j, b, "response.output_item.added").
+    날글넣기(b, ",\"output_index\":").
+    제수쓰기(b, j→앤블록).
+    날글넣기(b, ",\"item\":").
+    리호출항목쓰기(p, b, "in_progress", 거짓).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.output_item.added", b).
+    b→길이 = 0.
+    바이트열 참조 aj = 바이트열_만들기().
+    앤인자맞나(ag)이면 { 제글쓰기(aj, ag→글, ag→글길이). } 아니면 { 날글넣기(aj, "\"\{\}\""). }
+    리머리(j, b, "response.function_call_arguments.delta").
+    날글넣기(b, ",\"item_id\":\"fc_").
+    바이트열_붙이기(b, id→글, id→글길이).
+    날글넣기(b, "\",\"output_index\":").
+    제수쓰기(b, j→앤블록).
+    날글넣기(b, ",\"delta\":").
+    바이트열_붙이기(b, 바이트열_자료(aj), 바이트열_길이(aj)).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.function_call_arguments.delta", b).
+    b→길이 = 0.
+    리머리(j, b, "response.function_call_arguments.done").
+    날글넣기(b, ",\"item_id\":\"fc_").
+    바이트열_붙이기(b, id→글, id→글길이).
+    날글넣기(b, "\",\"output_index\":").
+    제수쓰기(b, j→앤블록).
+    날글넣기(b, ",\"arguments\":").
+    바이트열_붙이기(b, 바이트열_자료(aj), 바이트열_길이(aj)).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.function_call_arguments.done", b).
+    b→길이 = 0.
+    리머리(j, b, "response.output_item.done").
+    날글넣기(b, ",\"output_index\":").
+    제수쓰기(b, j→앤블록).
+    날글넣기(b, ",\"item\":").
+    리호출항목쓰기(p, b, "completed", 참).
+    날글넣기(b, "\}").
+    앤사건보내기(c, "response.output_item.done", b).
+    바이트열_해제(b).
+    바이트열_해제(aj).
+    제놓기(p).
+    j→앤블록 += 1.
+}
+
+(* 흘림의 끝 — 남은 글을 보내고 열린 message 를 닫은 뒤 response.completed(· incomplete) *)
+[일감 참조 j를 연결 참조 c에 정수 n을 리끝보내기]는 {
+    (n > j→보낸)이면 { 리글보내기(j, c, 바이트열_자료(j→글바이트), j→보낸, n). }
+    리글닫기(j, c, n).
+    문자열 형 = "response.completed".
+    (j→끝까닭 == 2 그리고 j→호출수 == 0)이면 { 형 = "response.incomplete". }
+    바이트열 참조 b = 바이트열_만들기().
+    리머리(j, b, 형).
+    날글넣기(b, ",\"response\":").
+    리응답쓰기(j, b, n, 참).
+    날글넣기(b, "\}").
+    앤사건보내기(c, 형, b).
+    바이트열_해제(b).
+}
+
 (* 흘림 조각 하나: 글 조각(없음이면 빈 delta) · 끝까닭(없음이면 null) · role 을 넣는가 *)
 [일감 참조 j를 연결 참조 c에 문자열 s를 정수 a를 정수 e를 참거짓 끝을 참거짓 역할을 흘림사건]는 {
     j→문 == 1이면 {                                                     (* 에이전트 호환 — Anthropic: 글만(시작 · 끝은 앤시작 · 앤끝보내기) *)
         (아닌 끝 그리고 아닌 역할)이면 { 앤글보내기(j, c, s, a, e). }
+        반환.
+    }
+    j→문 == 2이면 {                                                     (* 에이전트 호환 — Responses: 글만(시작 · 끝은 리시작 · 리끝보내기) *)
+        (아닌 끝 그리고 아닌 역할)이면 { 리글보내기(j, c, s, a, e). }
         반환.
     }
     바이트열 참조 b = 바이트열_만들기().
@@ -1206,7 +1489,7 @@
 
 (* 생각(reasoning_content) 흘림 — 새로 모인 생각 글(끊긴 UTF-8 은 끝이 아니면 남긴다) *)
 [일감 참조 j를 참거짓 끝을 생각흘리기]는 {
-    j→문 == 1이면 { 반환. }                                             (* 에이전트 호환 — Anthropic 에는 생각을 내지 않는다 *)
+    j→문 != 0이면 { 반환. }                                             (* 에이전트 호환 — Anthropic · Responses 에는 생각을 내지 않는다 *)
     연결 참조 c = 연결찾기(j).
     c == 없음이면 { 반환. }
     문자열 s = 바이트열_자료(j→생각글).
@@ -1255,6 +1538,10 @@
     흘려보내기(j).
     j→문 == 1이면 {                                                     (* 에이전트 호환 — Anthropic 의 tool_use 블록 *)
         앤호출보내기(j, c, 시작).
+        반환.
+    }
+    j→문 == 2이면 {                                                     (* 에이전트 호환 — Responses 의 function_call 항목 *)
+        리호출보내기(j, c, 시작).
         반환.
     }
     바이트열 참조 b = 바이트열_만들기().
@@ -1809,6 +2096,21 @@
             아닌 c→이어씀이면 { c→닫을것 = 참. }
         }
         아니면 { 앤온답쓰기(j, c, n). }
+        c→일감 = 0.
+    }
+    아니면 (c != 없음 그리고 j→문 == 2)이면 {                           (* 에이전트 호환 — Responses 의 끝(흘림 · 온 답) *)
+        j→흘림이면 {
+            리끝보내기(j, c, n).
+            글보내기(c, "0\r\n\r\n").
+            c→흘림중 = 거짓.
+            아닌 c→이어씀이면 { c→닫을것 = 참. }
+        }
+        아니면 {
+            바이트열 참조 rb = 바이트열_만들기().
+            리응답쓰기(j, rb, n, 참).
+            응답쓰기(c, 200, "application/json", rb).
+            바이트열_해제(rb).
+        }
         c→일감 = 0.
     }
     아니면 c != 없음이면 {
@@ -3190,8 +3492,8 @@
     }
     (* ②단계 — 생각을 reasoning_content 로(tools 를 보낸 요청이고 special 이 아닐 때 — tool_choice none 이어도. 앱은 special 이라 그대로).
        0.12.0 12-G1b — Qwen3 만이 아니라 틀이 <think> 를 그리는 모델 모두 *)
-    (* 에이전트 호환 — Anthropic 문(문 1)은 도구가 없어도 뗀다(생각은 내지 않는다 — 글 답에 섞이지 않게) *)
-    ((도구읽기(r) != 없음 또는 j→문 == 1) 그리고 종류 == 0 그리고 (qwen3모델 또는 틀생각 또는 틀채널) 그리고 아닌 j→특수냄 그리고 생각시작번호 >= 0 그리고 생각끝번호 >= 0)이면 { j→생각뗌 = 참. }
+    (* 에이전트 호환 — Anthropic · Responses 문(문 1 · 2)은 도구가 없어도 뗀다(생각은 내지 않는다 — 글 답에 섞이지 않게) *)
+    ((도구읽기(r) != 없음 또는 j→문 != 0) 그리고 종류 == 0 그리고 (qwen3모델 또는 틀생각 또는 틀채널) 그리고 아닌 j→특수냄 그리고 생각시작번호 >= 0 그리고 생각끝번호 >= 0)이면 { j→생각뗌 = 참. }
     (* 0.13.0 — 생각 묶음이 채널인 틀(Gemma 4): 생각을 떼지 않는 채팅도 채널 표지 · 이름은 내용에 넣지 않는다(생각을 끈 답 끝의 빈 채널도) *)
     (종류 == 0 그리고 틀채널 그리고 아닌 j→특수냄 그리고 아닌 j→생각뗌)이면 { j→채널뗌 = 참. }
     (* 프롬프트 *)
@@ -3485,7 +3787,224 @@
     반환 없음.
 }
 
-(* 문 — 0 OpenAI(채팅 · 완성), 1 Anthropic Messages(몸은 앤바꾸기 가 옮긴 OpenAI 채팅 꼴 — 오류 · 답을 Anthropic 꼴로) *)
+(* ===== 에이전트 호환 2 단계 문 3 — OpenAI Responses 의 요청을 OpenAI 채팅 꼴의 JSON 글로 =====
+   instructions 와 input 안의 role developer · system 메시지는 맨 앞 system 하나로(Codex 는 기본 지시문을 첫 developer 메시지로 보낸다).
+   input 이 글이면 user 메시지 하나. 항목: message(user · assistant — 조각 input_text · output_text · text, 그림 · 파일은 자리 글),
+   function_call(call_id · name · arguments → 앞 assistant 메시지의 tool_calls 로 모은다 — 잇단 호출은 한 메시지), function_call_output
+   (→ tool 메시지), reasoning 등 다른 항목은 뗀다. tools 는 type function 만(web_search · custom · namespace · tool_search 등은 뺀다),
+   tool_choice 는 글(auto · none · required)이나 {type: function, name}, max_output_tokens → max_tokens. previous_response_id 는 400(상태
+   없음). reasoning.effort 의 none · minimal 은 틀의 생각 끔(chat_template_kwargs 를 주지 않았을 때) *)
+
+(* Responses 의 content(글 · 조각 배열)의 글 *)
+[제이슨 참조 v를 바이트열 참조 b에 리글모으기]는 {
+    v == 없음이면 { 반환. }
+    글인가(v)이면 {
+        바이트열_붙이기(b, v→글, v→글길이).
+        반환.
+    }
+    v→종류 != 5이면 { 반환. }
+    정수 쓴 = 0.
+    반복 (정수 k는 0부터 제개수(v) 전까지) {
+        제이슨 참조 x = 제자식(v, k).
+        제이슨 참조 ty = 제찾기(x, "type").
+        글인가(ty)이면 {
+            (문자열_같은가(ty→글, "input_text") 또는 문자열_같은가(ty→글, "output_text") 또는 문자열_같은가(ty→글, "text"))이면 {
+                제이슨 참조 tx = 제찾기(x, "text").
+                글인가(tx)이면 {
+                    쓴 > 0이면 { 날글넣기(b, "\n\n"). }
+                    바이트열_붙이기(b, tx→글, tx→글길이).
+                    쓴 += 1.
+                }
+            }
+            아니면 (문자열_같은가(ty→글, "input_image") 또는 문자열_같은가(ty→글, "input_file"))이면 {
+                쓴 > 0이면 { 날글넣기(b, "\n\n"). }
+                문자열_같은가(ty→글, "input_image")이면 { 날글넣기(b, "[image]"). } 아니면 { 날글넣기(b, "[file]"). }
+                쓴 += 1.
+            }
+        }
+    }
+}
+
+(* 항목의 종류 — type 이 없고 role 이 있으면 message *)
+[제이슨 참조 x를 리항목종류]는 -> 문자열 {
+    제이슨 참조 ty = 제찾기(x, "type").
+    글인가(ty)이면 { 반환 ty→글. }
+    글인가(제찾기(x, "role"))이면 { 반환 "message". }
+    반환 "".
+}
+
+(* 열린 assistant 메시지를 닫는다 *)
+[바이트열 참조 b에 정수 호출수를 리도움닫기]는 {
+    호출수 > 0이면 { 날글넣기(b, "]"). }
+    날글넣기(b, "\}").
+}
+
+(* Responses 요청 r → OpenAI 채팅 꼴의 JSON 글 b. 틀리면 까닭 *)
+[제이슨 참조 r를 바이트열 참조 b에 리바꾸기]는 -> 문자열 {
+    (r == 없음 또는 r→종류 != 6)이면 { 반환 "몸이 JSON 객체가 아니다". }
+    아닌 없는값인가(제찾기(r, "previous_response_id"))이면 { 반환 "previous_response_id 는 받지 않는다 — 상태 없이(store: false) input 에 대화를 모두 보낸다". }
+    제이슨 참조 inp = 제찾기(r, "input").
+    (inp == 없음 또는 (아닌 글인가(inp) 그리고 inp→종류 != 5))이면 { 반환 "input 은 글이나 항목 배열이어야 한다". }
+    날글넣기(b, "\{\"messages\":[").
+    정수 쓴 = 0.
+    바이트열 참조 sy = 바이트열_만들기().
+    리글모으기(제찾기(r, "instructions"), sy).
+    inp→종류 == 5이면 {
+        반복 (정수 k는 0부터 제개수(inp) 전까지) {
+            제이슨 참조 x = 제자식(inp, k).
+            제이슨 참조 ro = 제찾기(x, "role").
+            (문자열_같은가(리항목종류(x), "message") 그리고 글인가(ro) 그리고 (문자열_같은가(ro→글, "developer") 또는 문자열_같은가(ro→글, "system")))이면 {
+                바이트열_길이(sy) > 0이면 { 날글넣기(sy, "\n\n"). }
+                리글모으기(제찾기(x, "content"), sy).
+            }
+        }
+    }
+    바이트열_길이(sy) > 0이면 {
+        날글넣기(b, "\{\"role\":\"system\",\"content\":").
+        제글쓰기(b, 바이트열_자료(sy), 바이트열_길이(sy)).
+        날글넣기(b, "\}").
+        쓴 += 1.
+    }
+    바이트열_해제(sy).
+    글인가(inp)이면 {
+        쓴 > 0이면 { 바이트열_넣기(b, 44). }
+        날글넣기(b, "\{\"role\":\"user\",\"content\":").
+        제글쓰기(b, inp→글, inp→글길이).
+        날글넣기(b, "\}").
+        쓴 += 1.
+    }
+    아니면 {
+        참거짓 열린도움 = 거짓.
+        정수 도움호출 = 0.
+        반복 (정수 k2는 0부터 제개수(inp) 전까지) {
+            제이슨 참조 x = 제자식(inp, k2).
+            문자열 종 = 리항목종류(x).
+            제이슨 참조 ro = 제찾기(x, "role").
+            문자열 역 = "".
+            글인가(ro)이면 { 역 = ro→글. }
+            (문자열_같은가(종, "message") 그리고 문자열_같은가(역, "assistant"))이면 {
+                열린도움이면 { 리도움닫기(b, 도움호출). }
+                쓴 > 0이면 { 바이트열_넣기(b, 44). }
+                바이트열 참조 at = 바이트열_만들기().
+                리글모으기(제찾기(x, "content"), at).
+                날글넣기(b, "\{\"role\":\"assistant\",\"content\":").
+                바이트열_길이(at) > 0이면 { 제글쓰기(b, 바이트열_자료(at), 바이트열_길이(at)). } 아니면 { 날글넣기(b, "null"). }
+                바이트열_해제(at).
+                열린도움 = 참.
+                도움호출 = 0.
+                쓴 += 1.
+            }
+            아니면 문자열_같은가(종, "function_call")이면 {
+                아닌 열린도움이면 {
+                    쓴 > 0이면 { 바이트열_넣기(b, 44). }
+                    날글넣기(b, "\{\"role\":\"assistant\",\"content\":null").
+                    열린도움 = 참.
+                    도움호출 = 0.
+                    쓴 += 1.
+                }
+                도움호출 == 0이면 { 날글넣기(b, ",\"tool_calls\":["). } 아니면 { 바이트열_넣기(b, 44). }
+                날글넣기(b, "\{\"id\":").
+                제이슨 참조 cid = 제찾기(x, "call_id").
+                글인가(cid)이면 { 제글쓰기(b, cid→글, cid→글길이). } 아니면 { 날글넣기(b, "\"\""). }
+                날글넣기(b, ",\"type\":\"function\",\"function\":\{\"name\":").
+                제이슨 참조 fnm = 제찾기(x, "name").
+                글인가(fnm)이면 { 제글쓰기(b, fnm→글, fnm→글길이). } 아니면 { 날글넣기(b, "\"\""). }
+                날글넣기(b, ",\"arguments\":").
+                제이슨 참조 fag = 제찾기(x, "arguments").
+                글인가(fag)이면 { 제글쓰기(b, fag→글, fag→글길이). } 아니면 { 날글넣기(b, "\"\{\}\""). }
+                날글넣기(b, "\}\}").
+                도움호출 += 1.
+            }
+            아니면 문자열_같은가(종, "function_call_output")이면 {
+                열린도움이면 {
+                    리도움닫기(b, 도움호출).
+                    열린도움 = 거짓.
+                }
+                쓴 > 0이면 { 바이트열_넣기(b, 44). }
+                날글넣기(b, "\{\"role\":\"tool\",\"tool_call_id\":").
+                제이슨 참조 oid = 제찾기(x, "call_id").
+                글인가(oid)이면 { 제글쓰기(b, oid→글, oid→글길이). } 아니면 { 날글넣기(b, "\"\""). }
+                날글넣기(b, ",\"content\":").
+                바이트열 참조 ot = 바이트열_만들기().
+                리글모으기(제찾기(x, "output"), ot).
+                제글쓰기(b, 바이트열_자료(ot), 바이트열_길이(ot)).
+                바이트열_해제(ot).
+                날글넣기(b, "\}").
+                쓴 += 1.
+            }
+            아니면 (문자열_같은가(종, "message") 그리고 문자열_같은가(역, "user"))이면 {
+                열린도움이면 {
+                    리도움닫기(b, 도움호출).
+                    열린도움 = 거짓.
+                }
+                쓴 > 0이면 { 바이트열_넣기(b, 44). }
+                바이트열 참조 ux = 바이트열_만들기().
+                리글모으기(제찾기(x, "content"), ux).
+                날글넣기(b, "\{\"role\":\"user\",\"content\":").
+                제글쓰기(b, 바이트열_자료(ux), 바이트열_길이(ux)).
+                날글넣기(b, "\}").
+                바이트열_해제(ux).
+                쓴 += 1.
+            }
+        }
+        열린도움이면 { 리도움닫기(b, 도움호출). }
+    }
+    날글넣기(b, "]").
+    제이슨 참조 tl = 제찾기(r, "tools").
+    (tl != 없음 그리고 tl→종류 == 5)이면 {
+        정수 도 = 0.
+        반복 (정수 q는 0부터 제개수(tl) 전까지) {
+            제이슨 참조 x = 제자식(tl, q).
+            제이슨 참조 ty = 제찾기(x, "type").
+            제이슨 참조 nm = 제찾기(x, "name").
+            (글인가(ty) 그리고 문자열_같은가(ty→글, "function") 그리고 글인가(nm))이면 {
+                도 == 0이면 { 날글넣기(b, ",\"tools\":["). } 아니면 { 바이트열_넣기(b, 44). }
+                날글넣기(b, "\{\"type\":\"function\",\"function\":\{\"name\":").
+                제글쓰기(b, nm→글, nm→글길이).
+                제이슨 참조 ds = 제찾기(x, "description").
+                글인가(ds)이면 {
+                    날글넣기(b, ",\"description\":").
+                    제글쓰기(b, ds→글, ds→글길이).
+                }
+                날글넣기(b, ",\"parameters\":").
+                제이슨 참조 pa = 제찾기(x, "parameters").
+                (pa != 없음 그리고 pa→종류 == 6)이면 { 파이썬쓰기(b, pa, 0, 0). } 아니면 { 날글넣기(b, "\{\"type\": \"object\", \"properties\": \{\}\}"). }
+                날글넣기(b, "\}\}").
+                도 += 1.
+            }
+        }
+        도 > 0이면 { 날글넣기(b, "]"). }
+    }
+    제이슨 참조 tcv = 제찾기(r, "tool_choice").
+    글인가(tcv)이면 {
+        날글넣기(b, ",\"tool_choice\":").
+        제글쓰기(b, tcv→글, tcv→글길이).
+    }
+    아니면 (tcv != 없음 그리고 tcv→종류 == 6)이면 {
+        제이슨 참조 tcn = 제찾기(tcv, "name").
+        글인가(tcn)이면 {
+            날글넣기(b, ",\"tool_choice\":\{\"type\":\"function\",\"function\":\{\"name\":").
+            제글쓰기(b, tcn→글, tcn→글길이).
+            날글넣기(b, "\}\}").
+        }
+    }
+    앤칸옮기기(r 에서, b 에, "parallel_tool_calls" 를, "parallel_tool_calls" 로).
+    앤칸옮기기(r 에서, b 에, "max_output_tokens" 를, "max_tokens" 로).
+    앤칸옮기기(r 에서, b 에, "temperature" 를, "temperature" 로).
+    앤칸옮기기(r 에서, b 에, "top_p" 를, "top_p" 로).
+    앤칸옮기기(r 에서, b 에, "stream" 를, "stream" 로).
+    앤칸옮기기(r 에서, b 에, "model" 를, "model" 로).
+    앤칸옮기기(r 에서, b 에, "chat_template_kwargs" 를, "chat_template_kwargs" 로).
+    제이슨 참조 ef = 제찾기(제찾기(r, "reasoning"), "effort").
+    (글인가(ef) 그리고 (문자열_같은가(ef→글, "none") 또는 문자열_같은가(ef→글, "minimal")) 그리고 없는값인가(제찾기(r, "chat_template_kwargs")))이면 {
+        날글넣기(b, ",\"chat_template_kwargs\":\{\"enable_thinking\":false\}").
+    }
+    날글넣기(b, "\}").
+    반환 없음.
+}
+
+(* 문 — 0 OpenAI(채팅 · 완성), 1 Anthropic Messages, 2 OpenAI Responses(몸은 앤바꾸기 · 리바꾸기 가 옮긴 OpenAI 채팅 꼴 — 답을 그 문의 꼴로,
+   오류는 1 이면 Anthropic 꼴 · 아니면 OpenAI 꼴) *)
 [정수 연결번호를 문자열 몸을 정수 n을 정수 종류를 정수 문을 일감받기]는 {
     연결 참조 c = 연결들[연결번호] 으로 연결 참조.
     실수 요0 = 0.0.
@@ -3591,6 +4110,7 @@
         c→흘림중 = 참.
         흘림머리보내기(c).
         j→문 == 1이면 { 앤시작(j, c). }                                (* 에이전트 호환 — Anthropic 의 message_start *)
+        아니면 j→문 == 2이면 { 리시작(j, c). }                         (* 에이전트 호환 — Responses 의 response.created *)
         아니면 j→종류 == 0이면 { 흘림사건(j, c, 없음, 0, 0, 거짓, 참). }
     }
     정수목록_추가(줄, j 으로 정수).
@@ -3615,6 +4135,28 @@
     정수 bn = 바이트열_길이(b).
     바이트열_넣기(b, 0).
     일감받기(연결번호, 바이트열_자료(b), bn, 0, 1).
+    바이트열_해제(b).
+}
+
+(* 에이전트 호환 — POST /v1/responses: Responses 요청을 OpenAI 채팅 꼴로 옮겨 문 2 의 일감으로(오류는 OpenAI 꼴) *)
+[정수 연결번호를 문자열 몸을 정수 n을 리받기]는 {
+    연결 참조 c = 연결들[연결번호] 으로 연결 참조.
+    제이슨 참조 r = 제이슨풀기(몸, n).
+    r == 없음이면 {
+        잘못(c, 잇기2("JSON 을 읽을 수 없다: ", 제오류)).
+        반환.
+    }
+    바이트열 참조 b = 바이트열_만들기().
+    문자열 틀림 = 리바꾸기(r, b).
+    제놓기(r).
+    틀림 != 없음이면 {
+        바이트열_해제(b).
+        잘못(c, 틀림).
+        반환.
+    }
+    정수 bn = 바이트열_길이(b).
+    바이트열_넣기(b, 0).
+    일감받기(연결번호, 바이트열_자료(b), bn, 0, 2).
     바이트열_해제(b).
 }
 
@@ -3889,6 +4431,12 @@
     (길같음(길, "/v1/messages/count_tokens") 또는 길같음(길, "/messages/count_tokens"))이면 {
         아닌 보냄이면 { 앤오류(c, 405, "POST 만 받는다", "invalid_request_error"). 반환. }
         앤셈응답(c, 몸, 몸길이).
+        반환.
+    }
+    (* 에이전트 호환 2 단계 문 3 — OpenAI Responses(Codex CLI — 상태 없이) *)
+    (길같음(길, "/v1/responses") 또는 길같음(길, "/responses"))이면 {
+        아닌 보냄이면 { 오류응답(c, 405, "POST 만 받는다", "invalid_request_error"). 반환. }
+        리받기(연결번호, 몸, 몸길이).
         반환.
     }
     (* 38단계 — 토큰화 셋(vLLM 과 같은 꼴 — lm-evaluation-harness 의 원격 토크나이저가 이 길을 쓴다) *)
