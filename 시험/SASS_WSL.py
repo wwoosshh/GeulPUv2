@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """모듈의 PTX → SASS(sm_89)를 WSL Ubuntu-24.04 의 ptxas(CUDA 13.0 — 넘침 값이 CI 의 12.9 와 같다)로 만들어, 커널마다 레지스터 · 넘침을 센다.
-빠른점검.py 의 SASS() 와 같은 해석. 새 모듈 행의 시험/SASS넘침.txt 줄을 커밋 전에 얻으려고(윈도에는 ptxas 가 없다).
+모듈점검.py 의 SASS() 와 같은 해석. 새 모듈 행의 시험/SASS넘침.txt 줄을 커밋 전에 얻으려고(윈도에는 ptxas 가 없다).
 
   python -X utf8 시험/SASS_WSL.py <작업 폴더(F: 의 ASCII 경로)> <이름=PTX 경로> … [--커널 <커널 이름> …]
 출력: 모듈마다 커널 수 · 레지스터 최대 · 넘침 있는 커널, 그리고 SASS넘침.txt 꼴의 줄(모듈 | 커널 | 바이트).
