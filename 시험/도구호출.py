@@ -6,6 +6,8 @@
 보는 것: 흘림 아님 · 흘림이 같은 호출(이름 · 인자 JSON)과 같은 content · reasoning_content, finish_reason tool_calls, 인자가 맞는 JSON 객체,
 결과를 돌려주면 글로 답함, parallel_tool_calls 거짓이면 호출 하나, tool_choice none 이면 호출 없음, --여럿이면 호출 둘(Qwen — 모델에
 따라 하나일 수 있어 기록만). --생각켬(0.13.0 — 틀의 기본이 생각 끔인 Gemma 4)은 enable_thinking 참. 끝 줄 "모두 맞음"이면 종료 0.
+에이전트 호환(문서/에이전트.md): tool_choice required 는 도구와 상관없는 물음에도 호출(흘림 = 흘림 아님), 함수 지정은 그 이름의 호출,
+tools 에 없는 이름 · tools 없는 required 는 400.
 """
 import json
 import sys
@@ -13,6 +15,8 @@ import urllib.error
 import urllib.request
 
 날씨 = {"type": "function", "function": {"name": "get_weather", "description": "Get the current weather in a city.",
+        "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "City name"}}, "required": ["city"]}}}
+시각 = {"type": "function", "function": {"name": "get_time", "description": "Get the current local time in a city.",
         "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "City name"}}, "required": ["city"]}}}
 
 
@@ -109,9 +113,27 @@ def main():
     코드6, g = post(주소, dict(기본, messages=물음, tool_choice="none"))
     본("tool_choice none → 호출 없음", 코드6 == 200 and not 호출들(g) and g["choices"][0]["finish_reason"] != "tool_calls",
        str(g["choices"][0]["message"].get("content"))[:120] if 코드6 == 200 else str(g)[:200])
-    # 받지 않는 tool_choice
-    코드7, h = post(주소, dict(기본, messages=물음, tool_choice="required"))
-    본("tool_choice required → 400", 코드7 == 400, str(h)[:160])
+    # 에이전트 호환 — tool_choice required: 도구와 상관없는 물음에도 호출(흘림 = 흘림 아님)
+    인사 = [{"role": "user", "content": "Say hello in one word."}]
+    코드7, h = post(주소, dict(기본, messages=인사, tool_choice="required"))
+    코드8, h2 = post(주소, dict(기본, messages=인사, tool_choice="required", stream=True), 흘림=True)
+    본("tool_choice required → 호출(도구가 하나면 그 이름) · 호출 밖의 글 없음",
+       코드7 == 200 and len(호출들(h)) >= 1 and 호출들(h)[0][0] == "get_weather" and h["choices"][0]["finish_reason"] == "tool_calls"
+       and not (h["choices"][0]["message"].get("content") or "").strip(),
+       f"{호출들(h)} · content {str(h['choices'][0]['message'].get('content'))[:120]!r}" if 코드7 == 200 else str(h)[:200])
+    본("tool_choice required 흘림 = 흘림 아님", 코드8 == 200 and 코드7 == 200 and 호출들(h2) == 호출들(h), str(호출들(h2)) if 코드8 == 200 else str(h2)[:200])
+    코드7b, h3 = post(주소, dict(기본, messages=인사, tools=[날씨, 시각], tool_choice="required"))
+    print(f"기록  required · 도구 둘(이름은 모델이 고름): {호출들(h3) if 코드7b == 200 else h3} · "
+          f"content {str(h3['choices'][0]['message'].get('content'))[:80]!r}" if 코드7b == 200 else f"기록  required · 도구 둘: {h3}")
+    # 함수 지정 — 날씨를 묻지만 get_time 을 고르게 한다
+    고름 = {"type": "function", "function": {"name": "get_time"}}
+    코드9, k = post(주소, dict(기본, messages=물음, tools=[날씨, 시각], tool_choice=고름))
+    본("tool_choice 함수 지정 → 그 이름", 코드9 == 200 and len(호출들(k)) >= 1 and 호출들(k)[0][0] == "get_time", str(호출들(k)) if 코드9 == 200 else str(k)[:200])
+    코드10, m = post(주소, dict(기본, messages=물음, tool_choice={"type": "function", "function": {"name": "no_such_tool"}}))
+    본("tool_choice 없는 이름 → 400", 코드10 == 400, str(m)[:160])
+    없이 = {k2: v for k2, v in 기본.items() if k2 != "tools"}
+    코드11, n = post(주소, dict(없이, messages=물음, tool_choice="required"))
+    본("tools 없는 required → 400", 코드11 == 400, str(n)[:160])
     print("모두 맞음" if not 틀림 else f"틀림 {len(틀림)}: {틀림}")
     sys.exit(1 if 틀림 else 0)
 
