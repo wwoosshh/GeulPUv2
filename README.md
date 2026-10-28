@@ -50,8 +50,8 @@ a token, a tool result, the quantization — and see the effect of that one chan
   editing tasks *and* bit-identical; a prompt cache on the SSD that restores a coding agent's 15k-token prompt in
   0.3 s after a restart.
 - **Works with your tools.** OpenAI-compatible, Anthropic Messages and OpenAI Responses APIs with tool calling for coding agents
-  (tested with Qwen Code, OpenCode, Cline, Claude Code and Codex), log-probabilities, echo scoring and tokenization endpoints, and
-  lm-evaluation-harness support.
+  (tested with Qwen Code, OpenCode, Cline, Claude Code and Codex — the app's Agents page starts them with the loaded model),
+  log-probabilities, echo scoring and tokenization endpoints, and lm-evaluation-harness support.
 - **Small and self-contained.** A download of about 1.5 MB that runs on the graphics driver alone — no CUDA toolkit, Python or
   PyTorch. The engine, GPU kernels, server and app are written in [글(geul)](https://github.com/wwoosshh/geul-lang), a programming
   language with Korean keywords, and built by its own compiler.

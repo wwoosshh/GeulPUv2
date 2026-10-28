@@ -48,7 +48,8 @@ GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Dis
   0.76 ~ 0.97배, Llama-3.1-8B의 긴 세션은 0.48배까지). 추측 디코딩은 고쳐 쓰는
   작업에서 3.5 ~ 4배 빠르면서 출력이 비트까지 같고, SSD의 프롬프트 캐시는 앱을 다시 켠 뒤에도 코딩 에이전트의 15k 토큰 프롬프트를
   0.3초에 복원합니다.
-- **쓰던 도구와 함께.** 코딩 에이전트를 위한 도구 호출(Qwen Code · OpenCode · Cline · Claude Code · Codex로 시험), 로그확률 · echo
+- **쓰던 도구와 함께.** 코딩 에이전트를 위한 도구 호출(Qwen Code · OpenCode · Cline · Claude Code · Codex로 시험 — 앱의 에이전트 화면이
+  불러 둔 모델로 띄웁니다), 로그확률 · echo
   스코어링 · 토큰화 엔드포인트, lm-evaluation-harness를 지원하는 OpenAI 호환 API와 Anthropic Messages · OpenAI Responses API.
 - **작고, 따로 설치할 것이 없음.** 내려받는 크기는 약 1.5 MB이고, CUDA 툴킷 · Python · PyTorch 없이 그래픽 드라이버만으로 돕니다. 엔진 · GPU
   커널 · 서버 · 앱 모두 한국어 프로그래밍 언어 [글(geul)](https://github.com/wwoosshh/geul-lang)로 썼고, 글(geul)의 자체 컴파일러로

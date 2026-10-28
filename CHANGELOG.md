@@ -6,6 +6,19 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.14.2 — Start coding agents from the app (2026-10-28)
+
+### Added
+
+- **Start coding agents from the app.** On the new Agents page, pick Claude Code, Codex CLI, Qwen Code, OpenCode or Aider and a working
+  folder and press Start: the app opens a new terminal window with that agent attached to the loaded model. The settings (environment
+  variables and command-line options) are passed to that run only — the agent's configuration files and your environment variables are
+  not changed — and the agent still asks before it edits files or runs commands. The page shows whether each agent is installed (PATH)
+  with its install command, the commands to run it yourself (copy), the values for the Cline and Kilo Code VS Code extensions, context
+  and concurrency warnings ("Reload for agents") and recently detected tool errors. Settings gain "Tool-error form" (off, C1, C2, C3 —
+  off by default), and `HEAD /api/hello`, which Claude Code probes, now returns 200. On Linux the app shows the commands but does not open
+  a window yet.
+
 ## 0.14.1 — Fix: Vulkan memory on integrated GPUs (2026-10-28)
 
 ### Fixed
