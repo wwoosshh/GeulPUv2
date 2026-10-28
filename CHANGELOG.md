@@ -6,6 +6,47 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.14.0 — Coding agents: Anthropic and Responses APIs · tool_choice · tool-error detection and forms (2026-10-28)
+
+### Added
+
+- **`tool_choice` that forces a tool call.** `/v1/chat/completions` accepts `tool_choice: "required"` (any call) and a named
+  function (`{"type": "function", "function": {"name": …}}`). The server enforces it by placing the model template's call opening after
+  the generation prompt (after the template's thinking-off form), so the same request gives the same tokens and requests without this
+  field are unchanged. With a single tool, `required` also fixes the name; with several tools only the call is enforced and the model
+  picks the name. Qwen Code's side requests (session titles, summaries and others), which failed with 400, now work. MiniCPM's XML call
+  form is not supported yet (400).
+- **Anthropic Messages API (`/v1/messages`, `/v1/messages/count_tokens`).** Agents that speak the Anthropic format, such as Claude
+  Code, can now attach (`ANTHROPIC_BASE_URL=http://127.0.0.1:44544`). Requests run through the same chat template and engine (the same
+  request gives the same tokens); replies use Anthropic content blocks (text, tool_use), stop_reason and usage, and streaming emits
+  the message_start … message_stop events. Thinking is not returned. A prompt over the context limit is reported as
+  `prompt is too long`, so the agent compacts the conversation.
+- **OpenAI Responses API (`/v1/responses`, stateless).** Codex CLI, which only speaks the Responses API, can now attach (a provider with
+  `base_url = "http://127.0.0.1:44544/v1"` and `wire_api = "responses"`). Requests run through the same chat template and engine (the
+  same request gives the same tokens); replies carry output items (message, function_call) and usage, and streaming emits the
+  response.created … response.completed events. Hosted tools such as web_search are dropped, and `previous_response_id` (server-stored
+  conversations) is rejected with 400 — send the whole conversation with `store: false`. Thinking is not returned.
+- **Tool-error detection (first piece of agent-compatibility step 4).** When a conversation from an agent contains a failed tool
+  result, the server now finds it, classifies it (transient, fixable, unrecoverable or ambiguous) and records it in the server log
+  (`[n] 도구 오류 감지 …`) and in an `X-GeulPU-Tool-Errors` response header. Only reliable signals are used: Anthropic `is_error`,
+  Cline's `"success": false`, OpenCode's tool-error JSON, and the error text of Qwen Code, Codex, Kilo and OpenCode selected by
+  User-Agent. The text sent to the model is unchanged (replies are bit-identical).
+- **Tool-error forms (second piece of agent-compatibility step 4 — off by default).** With the request field
+  `geulpu_tool_errors` (`"off"`, `"c1"`, `"c2"`, `"c3"`) or the server option `--도구오류 c1|c2|c3`, a failed tool result the agent
+  just received (classified as transient, fixable or unrecoverable) is shown to the model in one of the forms measured in the
+  research — C1 appends one guidance sentence to the result, C2 removes the failed call and result and adds a runtime notice, C3
+  keeps the result and adds the notice in a following user turn. The text is the research's, byte for byte. All three APIs (OpenAI
+  chat, Anthropic, Responses) behave the same, and the `X-GeulPU-Tool-Errors` header reports the form and how many failures were
+  changed. When off, replies are bit-identical. The app now passes the agent's User-Agent to the inference server, so the
+  per-agent error-text rules also apply to agents connected through the app's port.
+
+### Changed
+
+- **The cross-check's pinned server hashes follow the new servers.** On the reference PC the 32 problems give the same output as
+  the reference with the CUDA module, and the Vulkan quick check (cooperative-matrix 16x16x32 and base modules) matches; the
+  generator, the backends and the pinned modules are byte-identical. On the fresh-install path the same question to Qwen2.5-7B
+  Q4_K_M gives the same text and logit hashes as 0.13.0 (default, 16-bit KV and 8-bit KV).
+
 ## 0.13.0 — Gemma 4 · faster Qwen3.5 · layer lens and Jacobian lens · Linux (2026-10-28)
 
 ### Added
