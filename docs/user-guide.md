@@ -332,7 +332,9 @@ print(r.choices[0].message.content)
   llama.cpp and vLLM do — `/tokenize` leaves it out with `"add_special_tokens": false`. Prompts given as token ids are used as they are.
 
 **Connecting a coding agent (tools)** — agents such as Qwen Code, OpenCode, Continue and Cline that call tools (read and write files, run
-commands) through an OpenAI-compatible API can connect.
+commands) through an OpenAI-compatible API can connect. From 0.14.0, agents that speak the Anthropic Messages API (`/v1/messages` —
+Claude Code) or the OpenAI Responses API (`/v1/responses` — Codex CLI) connect too. All three APIs run through the same chat template
+and engine, so the same request gives the same tokens (the two new APIs do not return thinking).
 
 - The address is `http://127.0.0.1:44544/v1`; any API key and any model name work (the model loaded in the app answers — load a model
   in the app before using the agent).
@@ -344,7 +346,9 @@ commands) through an OpenAI-compatible API can connect.
   Qwen2.5-Coder-14B wrapped its calls in `<tools>` instead of `<tool_call>`, so they were not read as calls (the prompts match the
   official template — this is the models' own behaviour).
 - In tests Qwen2.5-7B and Qwen3-8B finished the tasks; Llama 3.x sometimes repeated the same call after getting the tool result — Qwen is
-  recommended for agents. `tool_choice` accepts only `auto` (default) and `none`.
+  recommended for agents. `tool_choice` accepts `auto` (default) and `none`, and from 0.14.0 `required` (any call) and a named function
+  (`{"type": "function", "function": {"name": …}}`) — the server places the model template's call opening ahead, so the same request
+  gives the same tokens (MiniCPM's XML call form is not supported yet — 400).
 - **The bigger the context, the better.** An agent's base instructions alone are 10,000–15,000 tokens (Qwen Code: 14,501), and they
   grow as it works. Feature-level development (for example planning, reviewing, implementing and reporting a login feature) without
   compaction needs 100k tokens or more. Set concurrent chats to 1 and the context length per chat high (e.g. 131072) in Settings; the
@@ -368,6 +372,32 @@ commands) through an OpenAI-compatible API can connect.
   the agent can shorten the conversation itself. `max_model_len` in `/v1/models` is the current context.
 - Example (Qwen Code): set the environment variables `OPENAI_BASE_URL=http://127.0.0.1:44544/v1`, `OPENAI_API_KEY=geulpu` and
   `OPENAI_MODEL=qwen2.5-7b-instruct-q4_k_m`, then run `qwen` in your project folder.
+- Example (Claude Code — from 0.14.0): set `ANTHROPIC_BASE_URL=http://127.0.0.1:44544`, `ANTHROPIC_AUTH_TOKEN=geulpu`,
+  `ANTHROPIC_MODEL=geulpu-local` and `ANTHROPIC_DEFAULT_HAIKU_MODEL=geulpu-local`, then run `claude` in your project folder. Any model
+  name works (the model loaded in the app answers); Claude Code notes that it does not know the name and carries on.
+- Example (Codex CLI — from 0.14.0): put the lines below in `~/.codex/config.toml`, set `GEULPU_API_KEY` to anything and run `codex`.
+  Set `model_context_window` to the current context (`max_model_len` in `/v1/models`). The Responses API is served without state
+  (`previous_response_id` gets 400), so Codex sends the whole conversation, and hosted tools such as web_search are dropped. In tests a 7B
+  model rarely called Codex's tools — a larger model is recommended.
+
+  ```toml
+  model = "geulpu-local"
+  model_provider = "geulpu"
+  model_context_window = 131072
+
+  [model_providers.geulpu]
+  name = "GeulPU"
+  base_url = "http://127.0.0.1:44544/v1"
+  wire_api = "responses"
+  env_key = "GEULPU_API_KEY"
+  ```
+
+- **Tool errors (from 0.14.0).** When a conversation from an agent contains a failed tool result (a missing file, a failing command and
+  the like), the server finds it, classifies it (transient, fixable, unrecoverable or ambiguous) and records it in the server log
+  (`[n] 도구 오류 감지 …`) and in the `X-GeulPU-Tool-Errors` response header. The text sent to the model is unchanged. For research, to
+  show the failed result the agent just received in one of the forms measured in the error-delivery study (C1, C2, C3 —
+  [문서/에이전트.md](../문서/에이전트.md), Korean), add `"geulpu_tool_errors": "c3"` to the request (`"off"`, `"c1"`, `"c2"`, `"c3"` — off by
+  default; when you run the inference server directly, `--도구오류 c3` applies it to every request). When off, replies are bit-identical.
 
 **Log-probabilities · scoring · tokenization (for research)** — every value in the research panel is also available from the API.
 Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are bit-identical on any PC or GPU.
