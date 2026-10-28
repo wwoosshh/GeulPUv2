@@ -28,6 +28,7 @@ const DICT = {
   "확인": "OK",
   // 0.14.2 — 에이전트 화면 · 도구 오류 설정
   "에이전트": "Agents",
+  "모델|agent": "Model",
   "OpenAI 채팅 API": "OpenAI chat API",
   "모르는 모델 이름이라고 알려도 그대로 동작합니다.": "It notes that it does not know the model name and carries on.",
   "큰 모델을 권합니다 — 시험에서 7B 모델은 Codex의 도구를 잘 부르지 않았습니다.": "A larger model is recommended — in tests a 7B model rarely called Codex's tools.",
@@ -5102,7 +5103,7 @@ function renderAgents() {
   const modeTxt = { off: T('끔'), c1: 'C1', c2: 'C2', c3: 'C3' }[ag.tool_errors_mode] || ag.tool_errors_mode;
   put(page,
     pageHead(null, T('에이전트'), T('코딩 에이전트를 골라 이 PC의 모델로 띄웁니다. 에이전트는 새 터미널 창에서 돌고, 파일을 고치거나 명령을 실행하기 전에는 에이전트가 직접 묻습니다. 설정은 그 실행에만 넘깁니다 — 에이전트의 설정 파일과 환경 변수는 바꾸지 않습니다.')),
-    h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('모델'))), modelBox),
+    h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('모델', 'agent'))), modelBox),
     h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('작업 폴더'))),
       h('div', { class: 'row nowrap w100' }, dirIn, pick), h('div', { class: 'muted mt8' }, T('에이전트가 읽고 고칠 프로젝트 폴더입니다.'))),
     h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('에이전트'))), h('div', { class: 'list' }, items)),

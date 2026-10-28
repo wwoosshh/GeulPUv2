@@ -407,8 +407,9 @@ not open a window yet. The connection examples below are for setting an agent up
   the like), the server finds it, classifies it (transient, fixable, unrecoverable or ambiguous) and records it in the server log
   (`[n] 도구 오류 감지 …`) and in the `X-GeulPU-Tool-Errors` response header. The text sent to the model is unchanged. For research, to
   show the failed result the agent just received in one of the forms measured in the error-delivery study (C1, C2, C3 —
-  [문서/에이전트.md](../문서/에이전트.md), Korean), add `"geulpu_tool_errors": "c3"` to the request (`"off"`, `"c1"`, `"c2"`, `"c3"` — off by
-  default; when you run the inference server directly, `--도구오류 c3` applies it to every request). When off, replies are bit-identical.
+  [문서/에이전트.md](../문서/에이전트.md), Korean), choose **Tool-error form** in Settings (off, C1, C2, C3 — from 0.14.2, applied the
+  next time a model is loaded) or add `"geulpu_tool_errors": "c3"` to the request (`"off"`, `"c1"`, `"c2"`, `"c3"` — the request's value
+  wins; off by default). When off, replies are bit-identical. The Agents page lists recently detected tool errors.
 
 **Log-probabilities · scoring · tokenization (for research)** — every value in the research panel is also available from the API.
 Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are bit-identical on any PC or GPU.
