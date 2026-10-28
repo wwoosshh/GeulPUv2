@@ -9,6 +9,7 @@
 외부 "vulkan-1.dll" "vkGetPhysicalDeviceProperties2" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceProperties2]는 -> 중간정수.
 외부 "vulkan-1.dll" "vkGetPhysicalDeviceQueueFamilyProperties" [공허 참조 물리를 공허 참조 개수를 공허 참조 속성을 vkGetPhysicalDeviceQueueFamilyProperties]는 -> 중간정수.
 외부 "vulkan-1.dll" "vkGetPhysicalDeviceMemoryProperties" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceMemoryProperties]는 -> 중간정수.
+외부 "vulkan-1.dll" "vkGetPhysicalDeviceMemoryProperties2" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceMemoryProperties2]는 -> 중간정수.
 외부 "vulkan-1.dll" "vkGetPhysicalDeviceFeatures2" [공허 참조 물리를 공허 참조 기능을 vkGetPhysicalDeviceFeatures2]는 -> 중간정수.
 외부 "vulkan-1.dll" "vkGetInstanceProcAddr" [공허 참조 인스턴스를 문자열 이름을 vkGetInstanceProcAddr]는 -> 공허 참조.
 외부 "vulkan-1.dll" "vkCreateDevice" [공허 참조 물리를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 장치를 vkCreateDevice]는 -> 중간정수.
@@ -51,3 +52,6 @@
 외부 "vulkan-1.dll" "vkCmdResetQueryPool" [공허 참조 명령을 정수 풀을 중간정수 첫을 중간정수 개수를 vkCmdResetQueryPool]는 -> 중간정수.
 외부 "vulkan-1.dll" "vkCmdWriteTimestamp" [공허 참조 명령을 중간정수 단계를 정수 풀을 중간정수 번호를 vkCmdWriteTimestamp]는 -> 중간정수.
 외부 "vulkan-1.dll" "vkGetQueryPoolResults" [공허 참조 장치를 정수 풀을 중간정수 첫을 중간정수 개수를 정수 크기를 공허 참조 자료를 정수 걸음을 중간정수 깃발을 vkGetQueryPoolResults]는 -> 중간정수.
+
+(* 0.14.1 — 내장 GPU 에 예산 확장(VK_EXT_memory_budget)이 없을 때 남은 실제 메모리(MEMORYSTATUSEX)로 막는다 — 벌칸쿠다.gl 의 벌실메모리남음 *)
+외부 "kernel32.dll" "GlobalMemoryStatusEx" [공허 참조 칸을 벌메모리상태]는 -> 중간정수.
