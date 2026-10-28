@@ -336,6 +336,17 @@ commands) through an OpenAI-compatible API can connect. From 0.14.0, agents that
 Claude Code) or the OpenAI Responses API (`/v1/responses` — Codex CLI) connect too. All three APIs run through the same chat template
 and engine, so the same request gives the same tokens (the two new APIs do not return thinking).
 
+**Starting an agent from the app (from 0.14.2)** — on the **Agents** page (left rail), pick an agent and a working folder and press
+**Start**: the app opens a new terminal window with that agent attached to the loaded model (Claude Code, Codex CLI, Qwen Code, OpenCode,
+Aider). The settings are passed to that run only, so the agent's configuration files and your environment variables stay as they are,
+and the agent itself asks before it edits files or runs commands. For an agent that is not installed the page shows its install
+command; **Show settings** shows the commands to run it yourself (PowerShell). For Cline and Kilo Code (VS Code extensions) it shows the
+values to enter in the extension's settings. With a context below 32k or more than one concurrent chat it suggests **Reload for agents**
+(one concurrent chat, context 131072 — the engine shrinks it to fit the graphics memory). On Linux the app shows the commands but does
+not open a window yet. The connection examples below are for setting an agent up by hand.
+
+![Agents page — the model, the working folder and, for each agent, whether it is installed and a Start button](img/agents-en.png)
+
 - The address is `http://127.0.0.1:44544/v1`; any API key and any model name work (the model loaded in the app answers — load a model
   in the app before using the agent).
 - Models that take tools: those whose chat template renders tools and whose call format is one of the five GeulPU reads (Qwen's
@@ -396,8 +407,9 @@ and engine, so the same request gives the same tokens (the two new APIs do not r
   the like), the server finds it, classifies it (transient, fixable, unrecoverable or ambiguous) and records it in the server log
   (`[n] 도구 오류 감지 …`) and in the `X-GeulPU-Tool-Errors` response header. The text sent to the model is unchanged. For research, to
   show the failed result the agent just received in one of the forms measured in the error-delivery study (C1, C2, C3 —
-  [문서/에이전트.md](../문서/에이전트.md), Korean), add `"geulpu_tool_errors": "c3"` to the request (`"off"`, `"c1"`, `"c2"`, `"c3"` — off by
-  default; when you run the inference server directly, `--도구오류 c3` applies it to every request). When off, replies are bit-identical.
+  [문서/에이전트.md](../문서/에이전트.md), Korean), choose **Tool-error form** in Settings (off, C1, C2, C3 — from 0.14.2, applied the
+  next time a model is loaded) or add `"geulpu_tool_errors": "c3"` to the request (`"off"`, `"c1"`, `"c2"`, `"c3"` — the request's value
+  wins; off by default). When off, replies are bit-identical. The Agents page lists recently detected tool errors.
 
 **Log-probabilities · scoring · tokenization (for research)** — every value in the research panel is also available from the API.
 Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are bit-identical on any PC or GPU.

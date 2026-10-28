@@ -983,3 +983,8 @@ table.data.dbg-table tbody tr.on td { background: var(--canvas-soft); }
 }
 .lens-seg { padding: 2px; }
 .lens-seg button { height: 22px; padding: 0 10px; font-size: 12px; }
+
+/* 0.14.2 — 에이전트 화면: VS Code 확장에 넣을 값(이름 · 값 · 복사) */
+.ag-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 8px 12px; align-items: center; margin-top: 8px; }
+.ag-kvrow { display: contents; }
+.ag-kvrow code { overflow-wrap: anywhere; }
