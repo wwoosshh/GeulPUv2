@@ -418,6 +418,15 @@ Defaults when a request omits a field are those of llama-server: T 0.8, K 40, P 
 returns it in `geulpu.seed`, so the response can be reproduced. The order differs from llama.cpp, which applies top-k, top-p and min-p
 to the temperature-1 distribution and the temperature last. This contract applies the temperature first (the Hugging Face order).
 
+**Inside a tool call (0.15.0).** When the request has tools and the reply has opened a Qwen-style tool call (`<tool_call>` …
+`</tool_call>`, JSON or XML), special tokens (GGUF types 3 and 4 — control and user-defined) are removed from the candidates, except the
+closing `</tool_call>` and the tokens that end generation. Greedy decoding picks the largest z among the remaining indices (the smaller
+index on ties); otherwise steps 1–9 above run on the row with the removed tokens' z set to −∞ (same seed and step). Outside a call, and
+at steps inside a call where the chosen token is not a removed one, nothing changes. Why: when the model picks a special token such as
+`<|im_start|>` in the middle of a call (at a rare token), the call is cut and cannot be parsed (real-use evaluation — Qwen3-32B gave it
+28 % at the '켬' of a path). llama.cpp prevents the same with its tool-call grammar. The engine writes one server log line whenever it
+removes a token.
+
 ### 5.2 Log-probabilities (stage 38 — the server, [`문서/38단계.md`](https://github.com/wwoosshh/GeulPU/blob/main/문서/38단계.md))
 
 Log-probabilities (`logprobs`, `top_logprobs` and the scores of `echo`) are computed from one row of logits z (the V float32 values the
