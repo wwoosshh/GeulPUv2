@@ -6,6 +6,26 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.15.0 — Unbroken tool calls · wider tool-error detection (2026-10-29)
+
+### Added
+
+- **Tool-error correction now covers other clients.** Tool results from clients outside the known agents (Qwen Code · Codex · OpenCode ·
+  Kilo · Cline) — custom agents, LangChain, the OpenAI Agents SDK, MCP clients — are detected when they start with a standard error text
+  (Python exceptions, HTTP status, MCP, API error JSON) and classified as timeouts, wrong arguments, unknown tools or missing permissions.
+  The `is_error` field on tool messages and MCP `isError` are read too. Known agents behave as before.
+
+### Fixed
+
+- **Qwen tool calls with doubled braces are parsed.** When a GGUF chat template shows the tool-call example as `{{"name": …}}`
+  (the Qwen2.5-7B-Instruct Q8_0 GGUF), the model copies the doubled braces and the reply came back as plain text instead of a tool call.
+  The extra braces are now skipped and the call is parsed, as llama.cpp does.
+- **Tool calls are no longer cut off midway.** While the model wrote a Qwen-style tool call (`<tool_call>` … `</tool_call>`), picking a
+  special token such as `<|im_start|>` cut the call, the reply came back as plain text, and the agent took it as its final answer and
+  stopped (Qwen3-32B, at a rare Hangul character in a path). Inside a call such tokens are now skipped and the next candidate is used,
+  the same effect as llama.cpp's tool-call grammar. **Output change** — only for requests where a special token was picked inside a call;
+  every other reply stays the same bit for bit.
+
 ## 0.14.2 — Start coding agents from the app (2026-10-28)
 
 ### Added
