@@ -1,0 +1,2 @@
+(* 재기선언.gl 의 리눅스 판 — 같은 함수를 libcuda.so.1 에서 *)
+외부 "libcuda.so.1" "cuFuncGetName" [공허 참조 이름을 공허 참조 함수를 cuFuncGetName]는 -> 중간정수.
