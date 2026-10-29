@@ -409,7 +409,13 @@ not open a window yet. The connection examples below are for setting an agent up
   show the failed result the agent just received in one of the forms measured in the error-delivery study (C1, C2, C3 —
   [문서/에이전트.md](../문서/에이전트.md), Korean), choose **Tool-error form** in Settings (off, C1, C2, C3 — from 0.14.2, applied the
   next time a model is loaded) or add `"geulpu_tool_errors": "c3"` to the request (`"off"`, `"c1"`, `"c2"`, `"c3"` — the request's value
-  wins; off by default). When off, replies are bit-identical. The Agents page lists recently detected tool errors.
+  wins; off by default). When off, replies are bit-identical. The Agents page lists recently detected tool errors. From 0.15.0, tool
+  results from clients outside the known agents (custom agents, LangChain, the OpenAI Agents SDK, MCP clients) are detected too when they
+  start with a standard error text or carry `is_error` / MCP `isError`.
+- **Unbroken tool calls (from 0.15.0).** While the model writes a Qwen-style tool call (`<tool_call>` … `</tool_call>`), a special token
+  such as `<|im_start|>` is skipped and the next candidate is used, so the call comes out whole (the same effect as llama.cpp's tool-call
+  grammar — contract section 5). Only such requests reply differently from 0.14; every other reply is bit-identical. Each skip writes one
+  server log line.
 
 **Log-probabilities · scoring · tokenization (for research)** — every value in the research panel is also available from the API.
 Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are bit-identical on any PC or GPU.

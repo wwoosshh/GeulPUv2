@@ -8,8 +8,8 @@ authors:
     affiliation: "Chungwoon University"
     alias: "wwoosshh"
     website: "https://github.com/wwoosshh"
-version: "0.14.2"
-date-released: "2026-10-28"
+version: "0.15.0"
+date-released: "2026-10-29"
 doi: "10.5281/zenodo.23548056"
 license: MIT
 repository-code: "https://github.com/wwoosshh/GeulPUv2"
