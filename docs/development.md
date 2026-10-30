@@ -99,14 +99,17 @@ This page is for building GeulPU from source and finding your way around the cod
 - **Quick check on every push** — GitHub Actions, a Windows and an Ubuntu runner, no GPU and no model files, 2–3 minutes (about 20 when it
   regenerates the modules) ([`시험/빠른점검.py`](../시험/빠른점검.py); the same command runs locally: `python -X utf8 시험/빠른점검.py --글 ../geul-lang-v2`). The geul
   compiler is a CPU program, so everything up to PTX and SPIR-V can be produced without a GPU: the check builds the geul compiler at
-  the pinned geul release and, with it, both backends ([`백엔드/`](../백엔드/)), the generator and every engine program, regenerates the 22 kernel modules (Qwen2 ·
-  Qwen3 · Llama shapes and formats, shared-32, one-digit and fast-contract variants) from scratch and compares source, PTX and SPIR-V byte for byte
-  with [`시험/모듈해시.txt`](../시험/모듈해시.txt), assembles every module to SASS for sm_89 with NVIDIA `ptxas` (a checker only) and fails on
+  the pinned geul release and, with it, both backends ([`백엔드/`](../백엔드/)), the generator and every engine program, regenerates every kernel module listed in
+  [`시험/모듈해시.txt`](../시험/모듈해시.txt) (per architecture, shape, format and mode) from scratch and compares source, PTX and SPIR-V byte
+  for byte with that table, assembles every module to SASS for sm_89 with NVIDIA `ptxas` (a checker only) and fails on
   new or larger register spills ([`시험/SASS넘침.txt`](../시험/SASS넘침.txt)), runs the contract's CPU self-tests
   ([`시험/계약자체.py`](../시험/계약자체.py)), checks that the tile tables agree between the generator and the engine, and checks the DLL
   import tables of the runner, the server and the app manager. The module and SASS steps ([`시험/모듈점검.py`](../시험/모듈점검.py)) run
   only on commits that change what defines the modules (`커널/`, `백엔드/`, the hash and spill tables, the pinned geul commit, that script
-  or `ci.yml`); other commits skip them.
+  or `ci.yml`); other commits skip them. When they run, they compare against the commit CI compared with (the PR's base or the previous
+  push — `--기준커밋`): if nothing that defines the backends changed (`백엔드/`, `엔진/파일.gl`, the pinned geul commit, that script and
+  `ci.yml`), every module's source is still regenerated and compared, but PTX, SPIR-V and SASS are produced only for the modules whose
+  source, hash row or spill lines changed.
 - **GPU tests** (by hand): end-to-end bit comparisons against the CPU reference ([`시험/참조7B.py`](../시험/참조7B.py)) and the server
   regression tests ([`시험/서버28.py`](../시험/서버28.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)). The scripts that produced each
   research stage's verdicts are in [GeulPU's `공식실행/`](https://github.com/wwoosshh/GeulPU/tree/main/공식실행).
