@@ -6,6 +6,10 @@ CI(.github/workflows/ci.yml)는 모듈을 정하는 파일(커널/ · 백엔드/
 시험/글저장소커밋.txt)과 이 파일 · ci.yml 이 앞 커밋과 같으면 이 둘을 건너뛴다(빠른점검 --모듈없이). 그래서 이 둘의 코드는 빠른점검.py 와
 따로 둔다 — 빠른점검.py 의 다른 단계를 고친 커밋이 모듈 · SASS(러너에서 15 ~ 20 분)를 다시 돌지 않게. 해시 · 돌리기도 같은 까닭으로 여기에
 따로 있다(이 파일만 보면 두 단계가 정해진다). 결과 줄은 빠른점검.py 의 알림으로 낸다.
+바뀐 모듈만(--기준커밋 — CI 는 견준 커밋을 준다): 뒷단을 정하는 것(뒷단입력 — 백엔드/ · 엔진/파일.gl · 엔진/리눅스/파일.gl ·
+시험/글저장소커밋.txt · 이 파일 · ci.yml)이 그 커밋과 같으면, 모든 모듈의 소스는 처음부터 만들어 견주되(뜻하지 않은 바뀜은 소스에서 걸린다)
+소스 해시 · 해시 행 · 넘침 줄이 그 커밋과 모두 같은 모듈은 PTX · SPIR-V · SASS 를 건너뛴다 — PTX · SPIR-V 는 소스와 뒷단만으로, SASS 는
+PTX 와 ptxas(ci.yml 의 고정 판)만으로 정해지고, 그 커밋의 값은 그 커밋의 CI 가 본 것이다. 뒷단을 정하는 것이 하나라도 바뀌었으면 모두 본다.
 """
 import hashlib
 import os
@@ -37,9 +41,10 @@ def 돌리기(명령, 기록, 환경=None, 폴더=None):
     return r.returncode, " / ".join(꼬리)
 
 
-def 모듈표읽기():
+def 표글풀기(글):
+    """시험/모듈해시.txt 의 글 → [(이름, 인자 목록, 소스, PTX, SPIR-V)]"""
     줄들 = []
-    for 줄 in open(os.path.join(ROOT, "시험", "모듈해시.txt"), encoding="utf-8"):
+    for 줄 in 글.splitlines():
         if 줄.strip() and not 줄.startswith("#"):
             칸 = [x.strip() for x in 줄.split("|")]
             이름, 인자, gl, ptx = 칸[:4]
@@ -47,11 +52,66 @@ def 모듈표읽기():
     return 줄들
 
 
-def 모듈(글, 출력, 병렬, 갱신, 알림):
+def 모듈표읽기():
+    return 표글풀기(open(os.path.join(ROOT, "시험", "모듈해시.txt"), encoding="utf-8").read())
+
+
+def 넘침글풀기(글):
+    """시험/SASS넘침.txt 의 글 → {모듈: {커널: 넘침 바이트}}"""
+    넘침 = {}
+    for 줄 in 글.splitlines():
+        if 줄.strip() and not 줄.startswith("#"):
+            m_, k_, v_ = [x.strip() for x in 줄.split("|")]
+            넘침.setdefault(m_, {})[k_] = int(v_)
+    return 넘침
+
+
+def 넘침표읽기():
+    넘침파일 = os.path.join(ROOT, "시험", "SASS넘침.txt")
+    return 넘침글풀기(open(넘침파일, encoding="utf-8").read()) if os.path.exists(넘침파일) else {}
+
+
+# 뒷단(PTX · SPIR-V)과 이 점검을 정하는 것 — 기준 커밋과 하나라도 다르면 바뀐 모듈만 보지 않고 모두 본다
+뒷단입력 = ["백엔드", "엔진/파일.gl", "엔진/리눅스/파일.gl", "시험/글저장소커밋.txt", "시험/모듈점검.py", ".github/workflows/ci.yml"]
+
+
+def 기준읽기(기준커밋):
+    """바뀐 모듈만 볼 수 있으면 (기준 커밋의 모듈 행 {이름: 행}, 넘침 {모듈: {커널: 바이트}}, 까닭), 아니면 (None, None, 까닭)."""
+    def git(*인자):
+        return subprocess.run(["git", *인자], cwd=ROOT, capture_output=True, stdin=subprocess.DEVNULL)
+    if not 기준커밋:
+        return None, None, "기준 커밋을 주지 않음"
+    if git("cat-file", "-e", 기준커밋 + "^{commit}").returncode != 0:
+        return None, None, f"기준 커밋 {기준커밋} 이 없다"
+    r = git("diff", "--quiet", 기준커밋, "--", *뒷단입력)          # 작업 트리와 — 고치고 커밋하지 않은 것도
+    if r.returncode != 0:
+        바뀐 = git("diff", "--name-only", 기준커밋, "--", *뒷단입력).stdout.decode("utf-8", "replace").split()
+        return None, None, f"뒷단을 정하는 것이 기준과 다르다 — {' · '.join(바뀐) or r.stderr.decode('utf-8', 'replace').strip()}"
+    해시글 = git("show", f"{기준커밋}:시험/모듈해시.txt")
+    넘침글 = git("show", f"{기준커밋}:시험/SASS넘침.txt")
+    if 해시글.returncode != 0:
+        return None, None, "기준 커밋에 시험/모듈해시.txt 가 없다"
+    행 = {x[0]: x for x in 표글풀기(해시글.stdout.decode("utf-8"))}
+    넘침 = 넘침글풀기(넘침글.stdout.decode("utf-8")) if 넘침글.returncode == 0 else {}
+    return 행, 넘침, f"뒷단을 정하는 것이 기준 {기준커밋[:12]} 과 같다"
+
+
+def 모듈(글, 출력, 병렬, 갱신, 알림, 기준커밋=""):
+    """5. 모듈을 만들어 견준다. 돌려주는 것: PTX · SPIR-V 를 건너뛴 모듈의 이름들(SASS 도 건너뛴다)."""
     생성기 = os.path.join(출력, "커널생성" + EXE)
     뒷단 = os.path.join(출력, "ptx-backend" + EXE)         # 빠른점검.py 의 빌드()가 백엔드/ 에서 만든 것
     뒷단V = os.path.join(출력, "spirv-backend" + EXE)
     표 = 모듈표읽기()
+    기준행, 기준넘침, 까닭 = 기준읽기(기준커밋) if 기준커밋 else (None, None, "")
+    지금넘침 = 넘침표읽기()
+    if 기준커밋:
+        print(f"모듈: {'바뀐 모듈만 PTX · SPIR-V · SASS 까지' if 기준행 is not None else '모두'} — {까닭}", flush=True)
+
+    def 건너뛸까(항목, gl해시):
+        """소스 · 해시 행 · 넘침 줄이 기준 커밋과 모두 같다 — 그 커밋의 CI 가 본 PTX · SPIR-V · SASS 가 그대로다"""
+        이름 = 항목[0]
+        return (기준행 is not None and 기준행.get(이름) == 항목 and gl해시 == 항목[2] and
+                지금넘침.get(이름, {}) == 기준넘침.get(이름, {}))
 
     def 하나(항목):
         이름, 인자 = 항목[0], 항목[1]
@@ -68,23 +128,28 @@ def 모듈(글, 출력, 병렬, 갱신, 알림):
         자리, 깃발 = 인자[:i], 인자[i:]
         rc, 꼬리 = 돌리기([생성기] + 자리 + [gl] + 깃발, os.path.join(출력, f"생성_{이름}.txt"))
         if rc != 0 or not os.path.exists(gl):
-            return 이름, None, None, None, f"생성 실패: {꼬리}", 0.0
+            return 이름, None, None, None, f"생성 실패: {꼬리}", 0.0, False
+        gl해시 = 해시(gl)
+        if 건너뛸까(항목, gl해시):
+            return 이름, gl해시, 항목[3], 항목[4], "", time.time() - t0, True
         rc, 꼬리 = 돌리기([뒷단, gl, "-o", ptx], os.path.join(출력, f"PTX_{이름}.txt"))
         if rc != 0 or not os.path.exists(ptx):
-            return 이름, 해시(gl), None, None, f"PTX 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0
+            return 이름, gl해시, None, None, f"PTX 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0, False
         if "--MoE" in 인자:                 # 0.12.0 12-3g-2 — MoE 의 판(원자 더하기)은 CUDA 만: SPIR-V 칸은 "-"
-            return 이름, 해시(gl), 해시(ptx), "-", "", time.time() - t0
+            return 이름, gl해시, 해시(ptx), "-", "", time.time() - t0, False
         rc, 꼬리 = 돌리기([뒷단V, gl, "-o", spvs], os.path.join(출력, f"SPIRV_{이름}.txt"))
         if rc != 0 or not os.path.exists(spvs):
-            return 이름, 해시(gl), 해시(ptx), None, f"SPIR-V 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0
-        return 이름, 해시(gl), 해시(ptx), 해시(spvs), "", time.time() - t0
+            return 이름, gl해시, 해시(ptx), None, f"SPIR-V 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0, False
+        return 이름, gl해시, 해시(ptx), 해시(spvs), "", time.time() - t0, False
     with ThreadPoolExecutor(병렬) as ex:
         결과 = list(ex.map(하나, 표))
     새줄 = []
-    for (이름, 인자, 옛gl, 옛ptx, 옛spv), (_, gl, ptx, spv, 오류, 초) in zip(표, 결과):
+    for (이름, 인자, 옛gl, 옛ptx, 옛spv), (_, gl, ptx, spv, 오류, 초, 건너뜀) in zip(표, 결과):
         새줄.append(f"{이름} | {' '.join(인자)} | {gl or '?'} | {ptx or '?'} | {spv or '?'}")
         if 오류:
             알림(f"모듈 {이름}", False, 오류)
+        elif 건너뜀:
+            알림(f"모듈 {이름}", True, f"소스 같음 · 행이 기준 그대로 — PTX · SPIR-V 건너뜀 ({초:.0f} 초)")
         elif 갱신:
             알림(f"모듈 {이름}", True, f"해시를 새로 적음 ({초:.0f} 초)")
         else:
@@ -100,6 +165,10 @@ def 모듈(글, 출력, 병렬, 갱신, 알림):
     if 갱신 and all(not r[4] for r in 결과):
         open(os.path.join(ROOT, "시험", "모듈해시.txt"), "w", encoding="utf-8", newline="\n").write(내용)
         print("시험/모듈해시.txt 를 새 해시로 고쳤다", flush=True)
+    건너뛴 = {r[0] for r in 결과 if r[6]}
+    if 기준커밋:
+        print(f"모듈: {len(표)} 개 가운데 PTX · SPIR-V 를 만든 것 {len(표) - len(건너뛴)} 개 · 건너뛴 것 {len(건너뛴)} 개", flush=True)
+    return 건너뛴
 
 
 def 커널이름(기호):
@@ -112,23 +181,21 @@ def 커널이름(기호):
     return 기호
 
 
-def SASS(출력, ptxas, 병렬, 갱신, 알림):
+def SASS(출력, ptxas, 병렬, 갱신, 알림, 건너뛴=frozenset()):
     """7. PTX → SASS(sm_89) — NVIDIA ptxas 로(검사에만 — 엔진은 드라이버가 PTX 를 그대로 받는다). 커널마다 레지스터 · 넘침(spill) 바이트를
     SASS_<모듈>.txt 에 적는다. ptxas 가 받지 않거나, 시험/SASS넘침.txt(지금 넘치는 커널과 바이트)에 없는 커널이 넘치거나 더 많이 넘치면 못 미침
-    — 레지스터 넘침은 GPU 없이 보이는 성능 회귀다. 일부러 바꿨다면 --넘침갱신."""
+    — 레지스터 넘침은 GPU 없이 보이는 성능 회귀다. 일부러 바꿨다면 --넘침갱신. 건너뛴(모듈 단계가 PTX 를 만들지 않은 — 기준 커밋과 같은)
+    모듈은 ptxas 를 돌리지 않고 넘침 줄을 그대로 둔다."""
     표 = 모듈표읽기()
     넘침파일 = os.path.join(ROOT, "시험", "SASS넘침.txt")
-    넘침기준 = {}
-    if os.path.exists(넘침파일):
-        for 줄 in open(넘침파일, encoding="utf-8"):
-            if 줄.strip() and not 줄.startswith("#"):
-                m_, k_, v_ = [x.strip() for x in 줄.split("|")]
-                넘침기준.setdefault(m_, {})[k_] = int(v_)
+    넘침기준 = 넘침표읽기()
     새줄 = []
 
     def 하나(항목):
         이름 = 항목[0]
         t0 = time.time()
+        if 이름 in 건너뛴:
+            return 이름, 0, None, 0.0
         if not os.path.exists(os.path.join(출력, 이름 + ".ptx")):
             # 모듈 생성 · PTX 가 이미 못 미침으로 적혔다 — 여기서 멈추지 않고 그 모듈만 못 미침으로 적어 요약까지 간다
             return 이름, -1, "PTX 가 없다 — 위의 [모듈 " + 이름 + "] 줄(생성 또는 PTX 실패)", 0.0
@@ -143,6 +210,10 @@ def SASS(출력, ptxas, 병렬, 갱신, 알림):
     with ThreadPoolExecutor(병렬) as ex:
         결과 = list(ex.map(하나, 표))
     for 이름, rc, 글, 초 in 결과:
+        if 글 is None:
+            새줄.extend(f"{이름} | {k} | {v}" for k, v in sorted(넘침기준.get(이름, {}).items()))
+            알림(f"SASS {이름}", True, "PTX 를 다시 만들지 않음(기준 커밋과 같음) — 넘침 줄은 그대로")
+            continue
         커널들 = []
         지금 = None
         for 줄 in 글.splitlines():
