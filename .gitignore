@@ -9,6 +9,7 @@
 !도구/유니코드범주.py
 !도구/사전처리표.py
 !도구/jlens_fit.py
+!도구/same_bits.py
 __pycache__/
 *.pyc
 *.임시
