@@ -44,16 +44,18 @@
    "quants": [
     "Q8_0",
     "K",
+    "IQ4_XS",
     "W16"
    ]
   },
   {
    "name": "qwen35moe",
-   "vulkan_reason": "Qwen3.5는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
-   "exact_only": false,
+   "vulkan_reason": "MoE 모델(Qwen3.5 · 3.6 MoE)은 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
+   "exact_only": true,
    "quants": [
     "Q8_0",
     "K",
+    "IQ4_XS",
     "W16"
    ]
   },
@@ -3527,7 +3529,8 @@
     "NeoHorse-1-9B-GSQ-RCO-IQ3_XXS.gguf",
     "NeoHorse-1-9B-GSQ-RCO-IQ4_XS.gguf"
    ],
-   "expect": "quant"
+   "expect": "accepted",
+   "메모": "조사(main bb673cb)는 quant 였으나 형식 섞임 C(#170)부터 qwen35 가 IQ4_XS 파일을 받는다 — 엔진의 형식 규칙으로 판단, 머리 확인은 하지 않음"
   },
   {
    "id": "zerofata/G4-LuneLight-31B-GGUF",
