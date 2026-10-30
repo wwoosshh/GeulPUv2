@@ -256,6 +256,17 @@ GeulPU는 연구에서 나왔습니다 — 40단계에 걸쳐 단계마다 측�
 버전은 [버전 규칙](문서/버전규칙.md)을 따릅니다: 호환되지 않는 변경은 MAJOR, 기능 추가는 MINOR, 버그 수정은 PATCH. 보안 문제는
 [SECURITY.md](SECURITY.md).
 
+## 코드 서명 정책 (Code signing policy)
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+(무료 코드 서명은 SignPath.io가, 인증서는 SignPath Foundation이 제공합니다.)
+
+- **팀 역할**: 우성현([wwoosshh](https://github.com/wwoosshh)) — 작성자 · 검토자 · 승인자.
+- **서명하는 것**: Windows 릴리스 zip의 `GeulPU.exe`. 이 저장소의 태그 커밋에서 GitHub Actions가 만듭니다
+  ([`.github/workflows/release.yml`](.github/workflows/release.yml)). `bin/`의 엔진 실행 파일은 서명하지 않아, 그 SHA-256을 재현성 기준
+  (`교차검증/expected.json`)과 그대로 견줄 수 있습니다. 릴리스마다 서명 요청을 손으로 승인한 뒤에만 서명합니다.
+- **개인정보 처리 방침**: [PRIVACY.md](PRIVACY.md).
+
 ## 인용
 
 연구에 GeulPU를 쓰셨다면 인용해 주세요 — GitHub의 **Cite this repository** 단추가 [CITATION.cff](CITATION.cff)를 읽습니다.

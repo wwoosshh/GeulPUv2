@@ -269,6 +269,17 @@ Bug reports, reproducibility reports, hardware results and pull requests are wel
 [CONTRIBUTING.md](CONTRIBUTING.md). Versions follow the [versioning rules](docs/versioning.md): MAJOR for incompatible changes, MINOR
 for features, PATCH for fixes. Security problems: [SECURITY.md](SECURITY.md).
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- **Team roles**: Sunghyeun Woo ([wwoosshh](https://github.com/wwoosshh)) — author, reviewer and approver.
+- **What is signed**: `GeulPU.exe` in the Windows release zip, built by GitHub Actions from the tagged commit of this repository
+  ([`.github/workflows/release.yml`](.github/workflows/release.yml)). The engine binaries in `bin/` are not signed, so their SHA-256
+  sums stay comparable with the reproducibility reference (`교차검증/expected.json`). Every release is signed only after a manual
+  approval of the signing request.
+- **Privacy policy**: [PRIVACY.md](PRIVACY.md).
+
 ## Citation
 
 If you use GeulPU in research, please cite it — GitHub's **Cite this repository** button reads [CITATION.cff](CITATION.cff).

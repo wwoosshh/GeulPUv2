@@ -90,6 +90,12 @@ $progs = @(
     @('커널/커널생성.gl', (Join-Path $Bin 'kernel-gen.exe'), 'kernel-gen')
 )
 foreach ($p in $progs) { Say ('빌드: ' + $p[0]); Run $Comp @($p[0], '-o', $p[1]) $Root $p[2] }
+# 코드 서명 정책(README 의 Code signing policy) — 서명할 GeulPU.exe 에 제품 이름 · 버전 정보(VS_VERSIONINFO)를 넣는다(앱/버전정보.py). bin\ 의
+# 실행 파일은 그대로다(교차검증이 그 빌드 해시를 기준과 견준다). version.json · zip · SHA256SUMS 보다 앞이라 해시가 이 파일을 가리킨다
+$pyv = Get-Command python -ErrorAction SilentlyContinue
+if (-not $pyv) { Fail '파이썬이 없습니다 (앱/버전정보.py — GeulPU.exe 의 버전 정보)' }
+Say '버전 정보(GeulPU.exe)...'
+Run $pyv.Source @('-X', 'utf8', '앱/버전정보.py', (Join-Path $Dist 'GeulPU.exe'), '--판', $Ver) $Root 'version-info'
 Say '진단 커널(PTX · SPIR-V)...'
 $K = Join-Path $Dist 'kernels'
 Run (Join-Path $Bin 'ptx-backend.exe') @('커널/진단.gl', '-o', (Join-Path $K 'diag.ptx')) $Root 'kernel-diag-ptx'
