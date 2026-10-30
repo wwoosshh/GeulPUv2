@@ -215,13 +215,14 @@ jobs:
             "remote machine through SSH port forwarding). Linux needs an NVIDIA GPU with its driver and glibc 2.34 or later; the app " +
             "does not download models there yet (add GGUF files with Add model), and Vulkan is Windows-only. To upgrade a Python " +
             "install, quit the app and run ``pipx upgrade geulpu``. Guide: [user guide]($($blob)docs/user-guide.md). SHA-256: " +
-            "SHA256SUMS.txt below, and version.json in the zip or tar.gz for every file.`n`n" +
+            "SHA256SUMS.txt below, and version.json in the zip or tar.gz for every file. " +
+            "Code signing policy: [README]($($blob)README.md#code-signing-policy).`n`n" +
             "<details><summary>한국어</summary>`n`n" + $ko + "`n`n" +
             "**설치** — 파이썬(Windows x64 · 리눅스 x86-64): ``pipx install geulpu``(또는 ``uv tool install geulpu`` · " +
             "``pip install geulpu``) 뒤 ``geulpu``. 파이썬 없이: Windows 는 GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행, " +
             "리눅스는 GeulPU-$ver-linux-x64.tar.gz 를 풀고 ``./GeulPU`` 를 실행한 뒤 알리는 주소를 연다(원격이면 SSH 포트 포워딩). " +
             "리눅스는 NVIDIA GPU · 드라이버와 glibc 2.34 이상이 필요하고, 앱 안의 내려받기가 아직 없어 GGUF 파일을 '모델 추가'로 " +
             "넣는다(Vulkan 은 Windows 만). 파이썬으로 깐 앱은 앱을 끈 뒤 ``pipx upgrade geulpu``. " +
-            "안내: [사용안내.md]($($blob)사용안내.md).`n`n</details>`n"
+            "안내: [사용안내.md]($($blob)사용안내.md). 코드 서명 정책(Code signing policy): [README]($($blob)README.md#code-signing-policy).`n`n</details>`n"
           [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes, (New-Object System.Text.UTF8Encoding($false)))
           gh release create $env:TAG --repo $env:REPO --draft --title "GeulPU $ver" --notes-file "$env:RUNNER_TEMP/notes.md" @files "$env:RUNNER_TEMP/SHA256SUMS.txt"
