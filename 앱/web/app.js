@@ -356,14 +356,28 @@ const DICT = {
   "폴더 경로": "Folder path",
   "모델 폴더 고르기": "Choose the model folder",
   "받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.": "Choose where downloaded models go. Applies from the next start.",
-  "GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), qwen35 구조(Qwen3.5), qwen35moe 구조(Qwen3.6-35B-A3B 같은 MoE), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the qwen2 architecture (Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B and up), the qwen3 architecture (Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), the qwen35 architecture (Qwen3.5), the qwen35moe architecture (MoE such as Qwen3.6-35B-A3B) and the llama architecture (Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5). Support is checked as soon as you add a file.",
+  "GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the architectures the engine accepts (qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B and others). Support is checked as soon as you add a file.",
   "이동": "Go",
   "이 폴더 선택": "Choose this folder",
   "구조 정보 없음": "No architecture info",
   "{} · 미지원 구조": "{} · unsupported architecture",
   "대화용 모델 아님": "Not a chat model",
   "이미지 생성용 텍스트 인코더 · 임베딩 · 음성처럼 채팅에 쓰는 모델이 아닙니다.": "Not a model for chat — e.g. a text encoder for image generation, an embedding or a speech model.",
-  "GeulPU에서 실행됨": "Runs in GeulPU",
+  "실행 가능": "Should run",
+  "구조 · 형식 · 크기 규칙으로 판단했습니다. 파일을 고르면 받기 전에 앞부분을 받아 실행되는지 확인합니다.": "Judged by architecture, format and size rules. When you pick a file, GeulPU fetches its start to check that it runs before downloading.",
+  "확인 필요": "Needs a check",
+  "Hugging Face가 이 저장소의 구조를 투영기(mmproj) 파일로 읽었습니다. 모델 파일은 받기 전에 앞부분을 받아 실행되는지 확인합니다.": "Hugging Face read this repository's architecture from a projector (mmproj) file. GeulPU fetches the start of the model file to check that it runs before downloading.",
+  "Gemma 4 E2B · E4B — 아직 미지원": "Gemma 4 E2B · E4B — not supported yet",
+  "층마다 따로 쓰는 임베딩(PLE)이 있는 Gemma 4 E2B · E4B 파일은 엔진이 아직 받지 않습니다.": "Gemma 4 E2B · E4B files, which have per-layer embeddings (PLE), are not accepted by the engine yet.",
+  "Gemma 4 26B-A4B(MoE) — 아직 미지원": "Gemma 4 26B-A4B (MoE) — not supported yet",
+  "전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.": "Mixture-of-experts Gemma 4 files are not accepted by the engine yet.",
+  "Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Gemma 4 31B has not been run in GeulPU yet. GeulPU fetches the start of the file to check that it runs before downloading.",
+  "분할 파일만 있음": "Split files only",
+  "여러 조각으로 나뉜 파일만 있습니다. llama.cpp의 llama-gguf-split --merge로 합친 파일만 받습니다.": "Only files split into several parts. GeulPU takes a single file merged with llama.cpp's llama-gguf-split --merge.",
+  "받는 형식의 파일 없음": "No file in a supported format",
+  "파일 이름에 형식(Q4_K_M · Q8_0 등)이 없어 받을 수 있는지 모릅니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "The file names carry no format (Q4_K_M, Q8_0, …), so it is unknown whether they can be loaded. GeulPU fetches the start of the file to check that it runs before downloading.",
+  "이 저장소의 파일 형식({})은 아직 미지원입니다.": "The file formats in this repository ({}) are not supported yet.",
+  "unsloth의 UD 파일은 이름의 형식 안에 다른 형식이 섞여 있을 수 있어, 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "unsloth's UD files can mix other formats inside the one in the name, so GeulPU fetches the start of the file to check that it runs before downloading.",
   "이 크기는 아직 미지원": "Size not supported yet",
   "크기 확인 필요": "Size needs a check",
   "흔한 Qwen3 크기(0.6B · 1.7B · 4B · 8B · 14B · 32B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Not a common Qwen3 size (0.6B · 1.7B · 4B · 8B · 14B · 32B). GeulPU fetches the start of the file to check that it runs before downloading.",
@@ -387,7 +401,7 @@ const DICT = {
   "모델 이름으로 좁히기": "Filter by model name",
   "검색어 지우기": "Clear the search",
   "실행 안 되는 모델도 보기": "Also show models that don't run",
-  "끄면 GeulPU에서 실행되는 구조(qwen2 · qwen3 · llama)와 크기만 보입니다": "When off, only architectures (qwen2 · qwen3 · llama) and sizes that GeulPU runs are shown",
+  "끄면 GeulPU 엔진이 받는 구조 · 형식의 저장소만 보입니다(확인이 필요한 것은 표시가 붙습니다)": "When off, only repositories whose architecture and formats the GeulPU engine accepts are shown (those that need a check are marked)",
   "정렬": "Sort",
   "GeulPU 확인됨": "Verified by GeulPU",
   "GeulPU에서 실제로 돌려 본 파일이 있는 저장소만": "Only repositories with a file GeulPU has actually run",
@@ -408,7 +422,6 @@ const DICT = {
   "더 보기": "Load more",
   "{} 기반": "based on {}",
   "GeulPU에서 실제로 돌려 본 파일이 있습니다": "Has a file GeulPU has actually run",
-  "실행됨": "Runs",
   "구조 알 수 없음": "Unknown architecture",
   "최근 30일 다운로드": "Downloads in the last 30 days",
   "업데이트": "Updated",
@@ -418,7 +431,6 @@ const DICT = {
   "{} 구조": "{} architecture",
   "매개변수 {}": "{} parameters",
   "문맥 최대 {}": "context up to {}",
-  "GeulPU에서 실행되는 구조": "Architecture GeulPU runs",
   "최근 30일": "last 30 days",
   "누적 다운로드": "All-time downloads",
   "이 저장소의 구조({})는 아직 GeulPU 엔진에 없습니다. 정보는 볼 수 있지만 받을 수 없습니다.": "This repository's architecture ({}) isn't in the GeulPU engine yet. You can read the details but not download it.",
@@ -4057,7 +4069,7 @@ async function browse(path, pick) {
   const go = () => browse(inp.value.trim(), pick);
   inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
   modal(h('div', null, h('h2', null, pick ? T('모델 폴더 고르기') : T('GGUF 파일 추가')),
-    h('p', { class: 'small muted m0 mb12' }, pick ? T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.') : T('GeulPU는 qwen2 구조(Qwen2.5 · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, 1.5B 이상), qwen3 구조(Qwen3 0.6B · 1.7B · 4B · 8B · 14B · 32B), qwen35 구조(Qwen3.5), qwen35moe 구조(Qwen3.6-35B-A3B 같은 MoE), llama 구조(Llama 3.1 8B · Llama 3.2 3B · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
+    h('p', { class: 'small muted m0 mb12' }, pick ? T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.') : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
     h('div', { class: 'fs-path' }, inp, h('button', { class: 'btn', onclick: go }, T('이동'))), list),
     [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('닫기')),
       pick ? h('button', { class: 'btn primary', disabled: j.path ? null : true, onclick: () => { closeModal(); pick(j.path); } }, T('이 폴더 선택')) : null].filter(Boolean), false, '.fs-item');
@@ -4103,21 +4115,56 @@ const fdNonChat = m => {
   const pipe = m && m.cardData && m.cardData.pipeline_tag;
   return (pipe && NONCHAT.includes(pipe)) || ((m && m.tags) || []).some(t => NONCHAT.includes(t)) || /text[-_ ]?encoder|embedding|reranker|[-_]tts\b/i.test((m && m.id) || '');
 };
+// 저장소의 모델 GGUF 파일 이름(Hugging Face 목록의 siblings — 크기 없이). 투영기(mmproj) · imatrix · LoRA · 낱말표 · MTP 초안(mtp-…)은 모델 파일이
+// 아니다(이름 끝의 -mtp 는 MTP 머리를 품은 모델 파일이라 남긴다)
+const fdSplit = f => /-\d{5}-of-\d{5}\.gguf$/i.test(f);
+const fdGgufFiles = m => ((m && m.siblings) || []).map(s => s.rfilename || '').filter(f => /\.gguf$/i.test(f) && !/mmproj|imatrix|-lora\.gguf$|-vocab\.gguf$|(^|\/)mtp-/i.test(f));
+// unsloth 의 UD 파일(UD-Q4_K_XL 등) — 이름의 형식 안에 다른 형식(IQ3_S 등)이 섞여 있을 수 있어 머리를 봐야 안다
+const fdUD = f => /(^|[-_.])UD[-_]/i.test(f.split('/').pop());
+// 받을 수 없는 까닭이 정해진 갈래(흐리게 · 받기 단추 없음) — 아래 fdSupport 의 k
+const fdHard = k => k === 'arch' || k === 'size' || k === 'task' || k === 'variant' || k === 'quant' || k === 'split';
+// 저장소의 표시 — Hugging Face 의 메타데이터(구조 · 매개변수 수 · 파일 이름)로만 판단한다. 'ok'(실행 가능)는 규칙의 판단이지 돌려 본 것이 아니고,
+// 'check'(확인 필요)는 규칙으로 모르는 것 — 파일을 고르면 받기 전에 머리(앞 몇 MB)를 받아 엔진에 묻는다(hfCheckFile). 돌려 본 저장소는 fdChecked.
+// 2026-10-30 — 트렌딩 상위 50 의 '실행됨' 23 개 가운데 14 개가 실제로는 받지 못하는 저장소였다(형식 · Gemma 4 변형 · 분할 파일) → 파일 이름과
+// Gemma 4 의 변형을 본다(시험/찾기표시.py 가 조사의 200 저장소로 이 함수를 본다)
 function fdSupport(m) {
   const g = (m && m.gguf) || {};
   const a = g.architecture, p = g.total || 0;
+  const files = fdGgufFiles(m);
   if (!a) return { k: 'unknown', t: T('구조 정보 없음') };
+  // Hugging Face 는 저장소의 첫 GGUF 파일에서 구조를 읽는다 — 투영기(mmproj)가 앞서면 clip. 모델 파일이 따로 있으면 받기 전 확인으로
+  if (a === 'clip' && files.length) return { k: 'check', t: T('확인 필요'), why: T('Hugging Face가 이 저장소의 구조를 투영기(mmproj) 파일로 읽었습니다. 모델 파일은 받기 전에 앞부분을 받아 실행되는지 확인합니다.') };
   if (!archOk(a)) return { k: 'arch', t: T`${a} · 미지원 구조` };
   if (fdNonChat(m)) return { k: 'task', t: T('대화용 모델 아님'), why: T('이미지 생성용 텍스트 인코더 · 임베딩 · 음성처럼 채팅에 쓰는 모델이 아닙니다.') };
+  // 0.13.0 — Gemma 4 는 12B 의 꼴만: E2B · E4B(층마다 따로 쓰는 임베딩 — 매개변수 4.6B · 7.5B)와 26B-A4B(MoE — 25B)는 엔진이 받지 않는다
+  // (구조/gemma4/가중치.gl 의 설정읽기), 31B(30.7B)는 돌려 본 적이 없다
+  if (a === 'gemma4' && p) {
+    if (p < 10e9) return { k: 'variant', t: T('Gemma 4 E2B · E4B — 아직 미지원'), why: T('층마다 따로 쓰는 임베딩(PLE)이 있는 Gemma 4 E2B · E4B 파일은 엔진이 아직 받지 않습니다.') };
+    if (p > 20e9 && p < 28e9) return { k: 'variant', t: T('Gemma 4 26B-A4B(MoE) — 아직 미지원'), why: T('전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.') };
+  }
+  // 파일 이름 — 받는 형식의 파일이 하나는 있어야 한다(분할 파일 · IQ2 · Q3_K · 독자 형식만 있는 저장소는 받을 것이 없다)
+  if (files.length) {
+    const whole = files.filter(f => !fdSplit(f));
+    if (!whole.length) return { k: 'split', t: T('분할 파일만 있음'), why: T('여러 조각으로 나뉜 파일만 있습니다. llama.cpp의 llama-gguf-split --merge로 합친 파일만 받습니다.') };
+    const known = whole.filter(f => quantFromName(f));      // 이름에 형식이 있는 파일 — 없으면(독자 이름) 머리를 봐야 안다
+    if (!known.length) return { k: 'check', t: T('확인 필요'), why: T('파일 이름에 형식(Q4_K_M · Q8_0 등)이 없어 받을 수 있는지 모릅니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
+    const okf = known.filter(f => quantOkFor(quantFromName(f), a));
+    if (!okf.length) {
+      const seen = [...new Set(known.map(f => quantFromName(f)))].slice(0, 5).join(' · ');
+      return { k: 'quant', t: T('받는 형식의 파일 없음'), why: T`이 저장소의 파일 형식(${seen})은 아직 미지원입니다.` };
+    }
+    if (!okf.some(f => !fdUD(f))) return { k: 'check', t: T('확인 필요'), why: T('unsloth의 UD 파일은 이름의 형식 안에 다른 형식이 섞여 있을 수 있어, 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
+  }
+  if (a === 'gemma4' && p >= 28e9) return { k: 'check', t: T('확인 필요'), why: T('Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   if (a === 'llama') {
-    if (inRange(p, L3OK) || fdChecked(m.id)) return { k: 'ok', t: T('GeulPU에서 실행됨') };
+    if (inRange(p, L3OK) || fdChecked(m.id)) return { k: 'ok', t: T('실행 가능') };
     return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Llama 3 · Mistral 크기(3B · 7~8B · 70B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   }
   if (a === 'qwen3') {
-    if (inRange(p, Q3OK)) return { k: 'ok', t: T('GeulPU에서 실행됨') };
+    if (inRange(p, Q3OK)) return { k: 'ok', t: T('실행 가능') };
     return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Qwen3 크기(0.6B · 1.7B · 4B · 8B · 14B · 32B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   }
-  return { k: 'ok', t: T('GeulPU에서 실행됨') };
+  return { k: 'ok', t: T('실행 가능') };
 }
 const fmtParams = p => (p >= 1e9 ? (p / 1e9).toFixed(p >= 1e10 ? 0 : 1) + 'B' : Math.round(p / 1e6) + 'M');
 // 수는 만 · 억으로(55.5만 · 1.2억)
@@ -4160,7 +4207,8 @@ const fdFits = p => { const f = fitOf({ size: fdEst(p), params: fmtParams(p), id
 const FD_SORTS = [['trendingScore', T('요즘 뜨는'), T('Hugging Face의 트렌드 점수 순')], ['downloads', T('인기'), T('최근 30일 다운로드가 많은 순')],
   ['likes', T('좋아요'), T('좋아요가 많은 순')], ['lastModified', T('최근 업데이트'), T('최근에 고친 저장소 순')]];
 const FD_SIZES = [['all', T('모든 크기')], ['s', '~4B'], ['m', '4~10B'], ['l', '10~20B'], ['xl', '20B~']];
-const FD_EXPAND = ['gguf', 'downloads', 'likes', 'lastModified', 'cardData', 'trendingScore', 'author', 'createdAt', 'tags'].map(x => 'expand[]=' + x).join('&');
+// siblings(파일 이름) — 받는 형식의 파일이 있는 저장소인가를 목록에서 바로 본다(fdSupport)
+const FD_EXPAND = ['gguf', 'downloads', 'likes', 'lastModified', 'cardData', 'trendingScore', 'author', 'createdAt', 'tags', 'siblings'].map(x => 'expand[]=' + x).join('&');
 const FD = {
   el: null, bar: null, sum: null, list: null, more: null, scroll: null, det: null, y: [0, 0],
   // only: GeulPU 에서 실행되는 것만 — 늘 켠 채로 시작한다(실행 안 되는 모델도 보기는 그때그때 켠다 — 저장하지 않음)
@@ -4231,7 +4279,7 @@ function fdBar() {
     const all = h('input', { type: 'checkbox', role: 'switch', 'data-fk': 'fd-all', 'aria-label': T('실행 안 되는 모델도 보기'),
       onchange: () => { FD.only = !all.checked; fdBar(); fdReload(); } });
     all.checked = !FD.only;
-    const allSw = h('label', { class: 'fd-toggle', 'data-tip': T('끄면 GeulPU에서 실행되는 구조(qwen2 · qwen3 · llama)와 크기만 보입니다'), 'data-tip-pos': 'bottom' },
+    const allSw = h('label', { class: 'fd-toggle', 'data-tip': T('끄면 GeulPU 엔진이 받는 구조 · 형식의 저장소만 보입니다(확인이 필요한 것은 표시가 붙습니다)'), 'data-tip-pos': 'bottom' },
       h('span', { class: 'switch' }, all, h('i')), h('span', null, T('실행 안 되는 모델도 보기')));
     put(FD.bar,
       h('div', { class: 'fd-line' },
@@ -4253,8 +4301,11 @@ function fdSearch(q) { if (q === FD.q) return; FD.q = q; fdReload(); }
 function fdReload() {
   FD.seq++;
   FD.items = []; FD.seen = new Set(); FD.done = false; FD.err = ''; FD.busy = false; FD.dry = 0;
+  // 목록 하나 — 'GeulPU 에서 실행되는 것만'도 Hugging Face 의 꼬리표로 거르지 않고(꼬리표에는 구조 이름이 거의 없다 — 2026-10-30 조사에서
+  // 190 저장소 가운데 149 개가 그랬다. 꼬리표 qwen2 · qwen3 · llama · mistral 로 묻던 때는 올라가는 저장소의 90 % 가 기본 목록에 없었다)
+  // 저장소마다의 gguf.architecture · 파일 이름으로 거른다(fdPass → fdSupport)
   const base = `${HFHOST}/api/models?filter=gguf&sort=${FD.sort}&direction=-1&limit=100&${FD_EXPAND}${FD.q ? '&search=' + encodeURIComponent(FD.q) : ''}`;
-  FD.srcs = FD.checked ? [] : (FD.only ? ['qwen2', 'qwen3', 'llama', 'mistral'].map(t => base + '&filter=' + t) : [base]).map(u => ({ next: u, buf: [] }));
+  FD.srcs = FD.checked ? [] : [{ next: base, buf: [] }];
   fdDrawList();
   FD.scroll.scrollTop = FD.y[0] = 0;
   fdMore();
@@ -4262,7 +4313,7 @@ function fdReload() {
 const fdKey = m => (FD.sort === 'lastModified' ? Date.parse(m.lastModified || '') || 0 : Number(m[FD.sort]) || 0);
 function fdPass(m) {
   const sup = fdSupport(m);
-  if (FD.only && sup.k !== 'ok') return false;
+  if (FD.only && sup.k !== 'ok' && sup.k !== 'check') return false;      // 확인이 필요한 것(크기 · UD 파일 · Gemma 4 31B …)은 표시를 붙여 보인다
   const p = (m.gguf && m.gguf.total) || 0;
   if (FD.size !== 'all') {
     if (!p) return false;
@@ -4368,10 +4419,10 @@ function fdRow(m) {
   const base = asList(m.cardData && m.cardData.base_model);
   const by = [m.author || m.id.split('/')[0], base.length ? T`${base[0].split('/').pop()} 기반` : null].filter(Boolean).join(NB);
   const badge = fdChecked(m.id) ? h('span', { class: 'tag', 'data-tip': T('GeulPU에서 실제로 돌려 본 파일이 있습니다'), 'data-tip-pos': 'top' }, I('shield'), T('GeulPU 확인됨'))
-    : sup.k === 'ok' ? (FD.only ? null : h('span', { class: 'tag' }, I('check'), T('실행됨')))
+    : sup.k === 'ok' ? (FD.only ? null : h('span', { class: 'tag', 'data-tip': T('구조 · 형식 · 크기 규칙으로 판단했습니다. 파일을 고르면 받기 전에 앞부분을 받아 실행되는지 확인합니다.'), 'data-tip-pos': 'top' }, I('check'), T('실행 가능')))
       : h('span', { class: 'tag dim', 'data-tip': sup.why || null, 'data-tip-pos': 'top' }, sup.k === 'unknown' ? T('구조 알 수 없음') : sup.t);
   return h('button', {
-    class: 'fd-row' + (FD.sel === m.id ? ' on' : '') + (sup.k === 'arch' || sup.k === 'size' || sup.k === 'task' ? ' dim' : ''), 'data-repo': m.id, 'data-fk': 'fd:' + m.id,
+    class: 'fd-row' + (FD.sel === m.id ? ' on' : '') + (fdHard(sup.k) ? ' dim' : ''), 'data-repo': m.id, 'data-fk': 'fd:' + m.id,
     'aria-current': FD.sel === m.id ? 'true' : null, onclick: () => fdSelect(m.id),
   },
     h('span', { class: 'main' },
@@ -4454,14 +4505,15 @@ function fdDetail(repo) {
     h('div', { class: 'fd-badges' },
       fdChecked(repo) ? h('span', { class: 'tag' }, I('shield'), T('GeulPU 확인됨')) : null,
       rec ? h('span', { class: 'tag' }, I('star'), T('이 PC 추천')) : null,
-      sup.k === 'ok' ? h('span', { class: 'tag' }, I('check'), T('GeulPU에서 실행되는 구조')) : h('span', { class: 'tag dim' }, I('alert'), sup.k === 'unknown' ? T('구조 정보 없음') : sup.t),
+      sup.k === 'ok' ? h('span', { class: 'tag', 'data-tip': T('구조 · 형식 · 크기 규칙으로 판단했습니다. 파일을 고르면 받기 전에 앞부분을 받아 실행되는지 확인합니다.'), 'data-tip-pos': 'top' }, I('check'), T('실행 가능'))
+        : h('span', { class: 'tag dim' }, I(fdHard(sup.k) ? 'alert' : 'info'), sup.k === 'unknown' ? T('구조 정보 없음') : sup.t),
       lic ? h('span', { class: 'tag dim caps' }, lic) : null));
   const stats = h('div', { class: 'fd-stats' },
     cell(T('다운로드', 'list'), fmtCount(m.downloads), T('최근 30일')),
     cell(T('누적 다운로드'), m.downloadsAllTime != null ? fmtCount(m.downloadsAllTime) : '-'),
     cell(T('좋아요'), fmtCount(m.likes)),
     cell(T('업데이트'), fmtAgo(m.lastModified), m.lastModified ? fmtDate(m.lastModified) : null));
-  const hard = sup.k === 'arch' || sup.k === 'size' || sup.k === 'task';
+  const hard = fdHard(sup.k);
   const note = sup.k === 'ok' ? null
     : h('div', { class: 'note-line' + (hard ? ' err' : '') }, I(hard ? 'alert' : 'info', 's'), h('span', null,
       sup.k === 'arch' ? T`이 저장소의 구조(${g.architecture})는 아직 GeulPU 엔진에 없습니다. 정보는 볼 수 있지만 받을 수 없습니다.`
@@ -4494,7 +4546,7 @@ function fdDetail(repo) {
 }
 // 이 PC 에 가장 맞는 파일 — 받는 형식 가운데 메모리에 넉넉히 맞는 것 중 Q4_K_M → 가장 큰 것, 없으면 빠듯한 것 중 가장 작은 것
 function fdBest(rows, sup, m) {
-  if (sup.k === 'arch' || sup.k === 'size' || sup.k === 'task') return null;
+  if (fdHard(sup.k)) return null;
   const a = fdArch(m);
   const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOkFor(q, a) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
   const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: cudaArch(a) ? 'cuda' : devicesOfQuant(q), moe: a === 'qwen35moe' }); };
@@ -4526,6 +4578,7 @@ function fdFileRow(repo, f, sup, best, m) {
   if (sup.k === 'arch') why = T('지원하지 않는 구조');
   else if (sup.k === 'size') why = T('아직 미지원 크기');
   else if (sup.k === 'task') why = T('대화용 모델이 아님');
+  else if (sup.k === 'variant') why = sup.t;
   else if (split) why = T('여러 조각으로 나뉜 파일 — 합친 파일만 받습니다');
   else if (q && !quantOkFor(q, a)) why = T`${q} 형식은 아직 미지원`;
   else if (!q) why = T('양자화 형식을 알 수 없는 파일');
