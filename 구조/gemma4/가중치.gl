@@ -208,6 +208,15 @@
         젬마형식확인(g, 층이름(l2, "ffn_gate.weight")).
         젬마형식확인(g, 층이름(l2, "ffn_up.weight")).
         젬마형식확인(g, 층이름(l2, "ffn_down.weight")).
+        (* 2026-10-30 형식 섞임 A(문서/형식섞임.md) — k-양자화끼리도 짝은 같은 형식(K층깔기젬마 · K층깔기 가 불러올 때 멈추던 것을 여기서) *)
+        K모델이면 {
+            정수 fq = K텐서형식(g, 층이름(l2, "attn_q.weight")).
+            정수 fk = K텐서형식(g, 층이름(l2, "attn_k.weight")).
+            fq != fk이면 { 파일에_쓰기(표준오류(), "층 %lld: q · k 의 형식이 다르다(%lld · %lld)\n", l2, fq, fk). 1로 종료하다. }
+            K텐서형식(g, 층이름(l2, "ffn_gate.weight")) != K텐서형식(g, 층이름(l2, "ffn_up.weight"))이면 {
+                파일에_쓰기(표준오류(), "층 %lld: gate · up 의 형식이 다르다\n", l2). 1로 종료하다.
+            }
+        }
     }
     젬마형식확인(g, "token_embd.weight").
     텐서있음(g, "output.weight")이면 { 젬마형식확인(g, "output.weight"). }
