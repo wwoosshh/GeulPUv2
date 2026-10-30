@@ -1125,7 +1125,7 @@
 [판기억열쇠]는 -> 문자열 {
     중간정수 드판 = 0.
     cuDriverGetVersion(&드판).
-    반환 서식글("기기 %s · 연산능력 %lld.%lld · SM %lld · L2 %lld · 메모리 %lld kHz %lld 비트 · CUDA %lld · 모듈 %lld %s · 레지스터 %lld · 모델 %lld %lld %lld %lld %lld %lld · 최대행 %lld · 층 %lld-%lld · 고르기 32-1",
+    반환 서식글("기기 %s · 연산능력 %lld.%lld · SM %lld · L2 %lld · 메모리 %lld kHz %lld 비트 · CUDA %lld · 모듈 %lld %s · 레지스터 %lld · 모델 %lld %lld %lld %lld %lld %lld · 최대행 %lld · 층 %lld-%lld · 고르기 32-2",
                 장치이름(), 장치속성(75), 장치속성(76), 장치속성(16), 장치속성(38), 장치속성(36), 장치속성(37), 드판 으로 정수,
                 모듈길이, 십육진16(모듈섞기), 판레지스터합(), 층수, 너비, 확장폭, 어휘수, 가중형식, K모델 으로 정수, 최대행, 층시작, 조각층끝()).
 }
