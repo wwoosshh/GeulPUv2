@@ -219,17 +219,24 @@
            q · k · v 는 모두 Q8_0 이거나 모두 k-양자화, gate · up 도 그렇다 *)
         고전35 = 초기할당(종류35수 * 층수 을, 8).
         반복 (정수 l는 0부터 층수 전까지) {
-            참거짓 g8 = 행렬형식35(g, l, FFN이름35("ffn_gate.weight")) == GGUF_Q8_0.
-            참거짓 u8 = 행렬형식35(g, l, FFN이름35("ffn_up.weight")) == GGUF_Q8_0.
+            정수 fg = 행렬형식35(g, l, FFN이름35("ffn_gate.weight")).
+            정수 fu = 행렬형식35(g, l, FFN이름35("ffn_up.weight")).
+            참거짓 g8 = fg == GGUF_Q8_0.
+            참거짓 u8 = fu == GGUF_Q8_0.
             ((g8 그리고 아닌 u8) 또는 (아닌 g8 그리고 u8))이면 { 섞임35(l, "ffn_gate · ffn_up"). }
+            (* 2026-10-30 형식 섞임 A — k-양자화끼리도 짝은 같은 형식(K층깔기35 가 불러올 때 멈추던 것을 여기서) *)
+            (아닌 g8 그리고 fg != fu)이면 { 파일에_쓰기(표준오류(), "층 %lld: gate · up 의 형식이 다르다\n", l). 1로 종료하다. }
             g8이면 { 고전35[2 * 층수 + l] = 1. }
             행렬형식35(g, l, FFN이름35("ffn_down.weight")) == GGUF_Q8_0이면 { 고전35[3 * 층수 + l] = 1. }
             어텐션층인가(l)이면 {
-                참거짓 q8 = 행렬형식35(g, l, "attn_q.weight") == GGUF_Q8_0.
-                참거짓 k8 = 행렬형식35(g, l, "attn_k.weight") == GGUF_Q8_0.
+                정수 fq = 행렬형식35(g, l, "attn_q.weight").
+                정수 fk = 행렬형식35(g, l, "attn_k.weight").
+                참거짓 q8 = fq == GGUF_Q8_0.
+                참거짓 k8 = fk == GGUF_Q8_0.
                 참거짓 v8 = 행렬형식35(g, l, "attn_v.weight") == GGUF_Q8_0.
                 (q8 그리고 k8 그리고 v8)이면 { 고전35[0 * 층수 + l] = 1. }
                 아니면 (q8 또는 k8 또는 v8)이면 { 섞임35(l, "attn_q · attn_k · attn_v"). }
+                아니면 fq != fk이면 { 파일에_쓰기(표준오류(), "층 %lld: q · k 의 형식이 다르다(%lld · %lld)\n", l, fq, fk). 1로 종료하다. }
                 행렬형식35(g, l, "attn_output.weight") == GGUF_Q8_0이면 { 고전35[1 * 층수 + l] = 1. }
             }
             아니면 {
@@ -241,6 +248,34 @@
             }
         }
     }
+    (* 2026-10-30 형식 섞임 A — Q8_0 의 길: 층의 행렬은 모두 Q8_0(층줄35 의 Q8줄들형식 이 불러올 때 멈추던 것을 여기서 — 낱말표 · 출력은 위,
+       MoE 의 전문가 · 라우터는 설정읽기MoE · MoE모양확인) *)
+    아닌 K모델이면 {
+        반복 (정수 l2는 0부터 층수 전까지) {
+            Q8행렬확인35(g, l2, FFN이름35("ffn_gate.weight")).
+            Q8행렬확인35(g, l2, FFN이름35("ffn_up.weight")).
+            Q8행렬확인35(g, l2, FFN이름35("ffn_down.weight")).
+            어텐션층인가(l2)이면 {
+                Q8행렬확인35(g, l2, "attn_q.weight").
+                Q8행렬확인35(g, l2, "attn_k.weight").
+                Q8행렬확인35(g, l2, "attn_v.weight").
+                Q8행렬확인35(g, l2, "attn_output.weight").
+            }
+            아니면 {
+                Q8행렬확인35(g, l2, "attn_qkv.weight").
+                Q8행렬확인35(g, l2, "ssm_out.weight").
+                Q8행렬확인35(g, l2, "attn_gate.weight").
+                Q8행렬확인35(g, l2, "ssm_beta.weight").
+                Q8행렬확인35(g, l2, "ssm_alpha.weight").
+            }
+        }
+    }
+}
+
+[GGUF 참조 g를 정수 l를 문자열 꼬리를 Q8행렬확인35]는 {
+    문자열 이름 = 층이름(l, 꼬리).
+    정수 f = 정수목록_값(g→텐서형식, 텐서찾기(g, 이름)).
+    f != GGUF_Q8_0이면 { 파일에_쓰기(표준오류(), "%s: 형식 %lld — 이 행렬의 형식(%lld)과 같아야 한다(Q8_0 · Q4_0)\n", 이름, f, GGUF_Q8_0). 1로 종료하다. }
 }
 
 (* 0.12.0 12-3f-1 · 2026-10-25 — k-양자화 파일의 층 행렬 하나의 형식: Q8_0(고전 판) · Q4_K · Q5_K · Q6_K *)
