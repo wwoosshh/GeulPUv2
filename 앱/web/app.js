@@ -4077,8 +4077,15 @@ const archOk = a => { const l = engArchs(); return l ? l.some(x => x.name === a)
 // 0.12.0 12-3g-4 — 아직 CUDA 만 도는 구조(Qwen3.5 · MoE), 저장소의 구조
 const cudaArch = a => { const l = engArchs(); return l ? l.some(x => x.name === a && !!x.vulkan_reason) : (a === 'qwen35' || a === 'qwen35moe'); };
 const fdArch = m => (m && m.gguf && m.gguf.architecture) || '';
-// Qwen3.5 · MoE 는 Q8_0 · k-양자화(Q4_K · Q5_K · Q6_K)만(IQ4_XS · Q4_0 · F16 · BF16 · F32 는 아직)
-const quantOkFor = (q, a) => quantOk(q) && (!cudaArch(a) || /^(Q8_0|Q[456]_K(_[SM])?)$/.test(q));
+// 2026-10-30 형식 섞임 B — 구조가 받는 형식은 엔진의 것(서버 --구조들 의 quants: Q8_0 · Q4_0 · K · IQ4_XS · W16 — 파일 이름의 형식을 그 갈래로).
+// 엔진의 목록이 없으면(엔진을 띄우지 못함 · 옛 엔진) 예전 규칙 — CUDA 만 도는 구조(Qwen3.5 · MoE · Gemma 4)는 Q8_0 · k-양자화 셋
+const quantFamily = q => /^Q[456]_K(_[SM])?$/.test(q) ? 'K' : /^(F16|BF16|F32)$/.test(q) ? 'W16' : q;
+const quantOkFor = (q, a) => {
+  if (!quantOk(q)) return false;
+  const l = engArchs(), d = l && l.find(x => x.name === a);
+  if (d && Array.isArray(d.quants)) return d.quants.includes(quantFamily(q));
+  return !cudaArch(a) || /^(Q8_0|Q[456]_K(_[SM])?)$/.test(q);
+};
 // 크기로 어림하는 지원 여부(확인은 받기 전에 GGUF 머리로) — 매개변수 수(미세조정도 바탕과 같고, 출력을 따로 둔 변환은 낱말표만큼 크다).
 // Qwen3: 0.6B · 1.7B · 4B · 8B · 14B · 32B 는 실행(1.0.0 1-6a — 질의 폭이 너비와 다른 0.6B · 4B · 32B 도), 그 밖의 크기는 받기 전 확인.
 // Qwen2: 0.12.0 12-3d-2 — 헤드 크기 64 인 작은 것(0.5B 등)도 실행
