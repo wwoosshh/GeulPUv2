@@ -1,6 +1,8 @@
-"""시험의 CUDA 드라이버 — GeulPU 의 엔진/글gpt2.py(연구용 파이썬 엔진)에서 드라이버만 떼어 왔다(GeulPUv2 2단계). nvcuda.dll 만 쓴다.
+"""시험의 CUDA 드라이버 — GeulPU 의 엔진/글gpt2.py(연구용 파이썬 엔진)에서 드라이버만 떼어 왔다(GeulPUv2 2단계). Windows 는 nvcuda.dll,
+리눅스는 libcuda.so.1(재기/줄하나재기.py 를 데이터센터 GPU 에서).
 커널 단위 비트 시험(판23 · 판26 · 머리128 · 줄128)이 글 생성기가 낸 PTX 모듈을 올려 커널을 띄우는 데 쓴다."""
 import ctypes
+import os
 
 import numpy as np
 
@@ -9,7 +11,7 @@ c_u64, c_i64, c_uint = ctypes.c_uint64, ctypes.c_int64, ctypes.c_uint
 
 class 드라이버:
     def __init__(self):
-        cu = ctypes.WinDLL("nvcuda.dll")
+        cu = ctypes.WinDLL("nvcuda.dll") if os.name == "nt" else ctypes.CDLL("libcuda.so.1")
         cu.cuMemAlloc_v2.argtypes = [ctypes.POINTER(c_u64), ctypes.c_size_t]
         cu.cuMemcpyHtoD_v2.argtypes = [c_u64, ctypes.c_void_p, ctypes.c_size_t]
         cu.cuMemcpyDtoH_v2.argtypes = [ctypes.c_void_p, c_u64, ctypes.c_size_t]
