@@ -71,10 +71,17 @@ This page is for building GeulPU from source and finding your way around the cod
    빌드/글/커널생성.exe qwen2큰 K 3584 28 4 18944 152064 빌드/글/qwen2K_3584x28x4x18944x152064.gl     # Qwen2.5-7B k-quant module
    빌드/글/ptx-backend.exe 빌드/글/qwen2K_3584x28x4x18944x152064.gl -o 빌드/글/qwen2K_3584x28x4x18944x152064.ptx
    빌드/글/서버.exe model.gguf --슬롯 4 --문맥 4096 --포트 8080
+   빌드/글/서버.exe model.gguf --slots 4 --ctx 4096 --port 8080          # the same command — English names are aliases (#137)
    ```
+   The server, the kernel generator, the runner and GeulPU accept English aliases for their options (`--port` · `--slots` · `--ctx` ·
+   `--fast` · `--exact` · `qwen2` …), and `--help` lists both names. The Korean names remain canonical (the app uses them); either name
+   gives byte-identical modules and results (quick check 6b — [시험/명령줄별칭.py](../시험/명령줄별칭.py)).
 4. **Linux**: the same sources build as ELF with the geul compiler's Linux target (they import only `libc.so.6` and `libcuda.so.1`).
    Tested under WSL2 Ubuntu 24.04 and natively on Ubuntu 22.04 (glibc 2.35) with an H100 NVL MIG instance — the commands and what
    came up (git on an NFS home) are in [h100.md](h100.md).
+   - On a terminal that cannot show Korean (SSH, JupyterHub), [build-linux.sh](../build-linux.sh) is the one ASCII entry point:
+     `bash build-linux.sh [geul repo] [out dir]` clones the geul repository at the pinned commit if it is missing, builds the compiler
+     as `geulc`, and builds `ptx-backend` · `kernel-gen` · `server-cuda` · `runner-cuda` under ASCII names (#137 — it does not build the app).
    - The app: `bash 앱/꾸리기.sh <geul repo> [out dir]` builds the same folder as `앱\꾸리기.ps1` on Windows (`GeulPU`, `bin/` with
      server-cuda · device-cuda · diag-cuda · kernel-gen · ptx-backend, `kernels/`, `web/`, `data/`, `version.json`) and
      `GeulPU-<version>-linux-x64.tar.gz`. Start it with `./GeulPU --열지않음`; on a remote machine open the screen through SSH port
