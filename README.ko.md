@@ -65,15 +65,16 @@ Linux x86-64(glibc 2.34 이상)와 NVIDIA 카드에서도 돕니다. 그래픽 �
 ```powershell
 pipx install geulpu   # 또는 uv tool install geulpu · pip install geulpu
 geulpu                # 브라우저에 http://127.0.0.1:44544 가 열립니다
+geulpu --hf Qwen/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf   # 또는 Hugging Face 의 GGUF 하나를 받아 바로 불러오기
 ```
 
 **파이썬 없이** — [최신 릴리스](https://github.com/wwoosshh/GeulPUv2/releases/latest)에서 `GeulPU-<버전>-windows-x64.zip`을 받아
-풀고 `GeulPU.exe`를 실행합니다. 코드 서명을 하지 않은 실행 파일이라 *Windows의 PC 보호* 창이 뜨면 **추가 정보 → 실행**을 누릅니다.
-릴리스 파일은 GitHub Actions가 이 저장소의 소스로 빌드하고, SHA-256 값을 함께 올립니다.
+풀고 `GeulPU.exe`를 실행합니다. 코드 서명을 하지 않은 실행 파일이라 *Windows의 PC 보호* 창이 뜨면 **추가 정보 → 실행**을 누릅니다
+(`pipx` · `uv`로 설치하면 이 창이 뜨지 않습니다). 릴리스 파일은 GitHub Actions가 이 저장소의 소스로 빌드하고, SHA-256 값을 함께 올립니다.
 
 **Linux** — `pipx install geulpu`도 똑같이 되고, 파이썬 없이는 `GeulPU-<버전>-linux-x64.tar.gz`를 풀어 `./GeulPU`를 실행합니다. 앱은
-브라우저를 띄우지 않고 주소를 알립니다(원격 서버면 먼저 포트를 넘깁니다: `ssh -L 44544:127.0.0.1:44544 <서버>`). 앱 안의 모델 받기와
-Vulkan은 Linux에 아직 없어, 가진 GGUF 파일을 **모델 → GGUF 파일 추가**로 넣습니다([Linux에서](사용안내.md#linux에서)).
+브라우저를 띄우지 않고 주소를 알립니다(원격 서버면 먼저 포트를 넘깁니다: `ssh -L 44544:127.0.0.1:44544 <서버>`). 앱 안의 모델 받기는
+시스템의 `curl`로 하고, Vulkan은 Linux에 아직 없습니다([Linux에서](사용안내.md#linux에서)).
 
 그다음 **모델 → 모델 찾기**에서 *이 PC에 추천* 표시가 붙은 파일을 받아 채팅을 시작합니다. 첫 메시지 때 이 GPU에 맞는 커널을 만듭니다
 (버전마다 한 번, 10초 ~ 몇 분). 화면마다의 자세한 안내는 [사용 안내](사용안내.md)에 있습니다.
@@ -164,8 +165,8 @@ GGUF 파일 하나를 받습니다(여러 조각이면 llama.cpp 의 `llama-gguf
 | `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen(0.5B 이상) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS(CUDA) · F16 · BF16 · F32 | CUDA · Vulkan, 정밀 · 빠름 |
 | `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B(14B는 합성 모델로 모양 확인, 32B는 0.6B · 4B와 같은 길로 불러옴) | 같음 | 같음 |
 | `llama` | Llama 3.1 · 3.2 Instruct(3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | 같음 | 같음 |
-| `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B(0.13.0 부터 — ggml-org · lmstudio 의 Q4_K_M) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K(0.13.0 부터 행렬마다 섞인 파일도) | CUDA, 정밀 · 빠름(빠름은 0.13.0 부터) |
-| `qwen35moe` | Qwen3.6-35B-A3B(MoE — 그래픽 메모리에 들지 않는 전문가는 RAM 에) | Q4_K_M(전문가 Q4_K · Q5_K · Q6_K 또는 Q8_0) | CUDA, 정밀 |
+| `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B(0.13.0 부터 — ggml-org · lmstudio 의 Q4_K_M) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K, 0.16.0 부터 IQ4_XS · F16 · BF16 · F32 도(행렬마다 섞인 파일도) | CUDA, 정밀 · 빠름(빠름은 0.13.0 부터) |
+| `qwen35moe` | Qwen3.6-35B-A3B(MoE — 그래픽 메모리에 들지 않는 전문가는 RAM 에) | Q4_K_M(전문가 Q4_K · Q5_K · Q6_K 또는 Q8_0), 0.16.0 부터 IQ4_XS · 16비트 행렬도 | CUDA, 정밀 |
 | `gemma4` | Gemma 4 12B instruct(0.13.0 부터) | 행렬이 모두 k-양자화(Q4_K_M 등)이거나 모두 Q8_0 인 파일 | CUDA, 정밀 |
 
 GeulPU 가 직접 돌려 본 파일(앱의 **GeulPU 확인됨** — 앱에서 받으면 바로 씁니다)을 그래픽 메모리로 나누면:
@@ -254,18 +255,7 @@ GeulPU는 연구에서 나왔습니다 — 40단계에 걸쳐 단계마다 측�
 
 버그 · 재현성 문제 · 하드웨어 결과 보고와 풀 리퀘스트를 한국어 · 영어 모두 환영합니다 — [CONTRIBUTING.md](CONTRIBUTING.md)(영어).
 버전은 [버전 규칙](문서/버전규칙.md)을 따릅니다: 호환되지 않는 변경은 MAJOR, 기능 추가는 MINOR, 버그 수정은 PATCH. 보안 문제는
-[SECURITY.md](SECURITY.md).
-
-## 코드 서명 정책 (Code signing policy)
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-(무료 코드 서명은 SignPath.io가, 인증서는 SignPath Foundation이 제공합니다.)
-
-- **팀 역할**: 우성현([wwoosshh](https://github.com/wwoosshh)) — 작성자 · 검토자 · 승인자.
-- **서명하는 것**: Windows 릴리스 zip의 `GeulPU.exe`. 이 저장소의 태그 커밋에서 GitHub Actions가 만듭니다
-  ([`.github/workflows/release.yml`](.github/workflows/release.yml)). `bin/`의 엔진 실행 파일은 서명하지 않아, 그 SHA-256을 재현성 기준
-  (`교차검증/expected.json`)과 그대로 견줄 수 있습니다. 릴리스마다 서명 요청을 손으로 승인한 뒤에만 서명합니다.
-- **개인정보 처리 방침**: [PRIVACY.md](PRIVACY.md).
+[SECURITY.md](SECURITY.md). 앱이 망으로 보내는 것과 디스크에 남기는 것은 [PRIVACY.md](PRIVACY.md).
 
 ## 인용
 

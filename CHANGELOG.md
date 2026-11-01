@@ -6,6 +6,96 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.16.0 — Concurrent Qwen3.5 requests · more GGUF files · one-line install (2026-11-02)
+
+### Added
+
+- **English aliases for command-line options, and `--help`** ([#137](https://github.com/wwoosshh/GeulPUv2/issues/137)). The server
+  (`--host` · `--port` · `--slots` · `--ctx` · `--chunk` · `--name` · `--log-dir` · `--no-spec` · `--store` · `--store-size` ·
+  `--model-hash` · `--contract exact|fast` · `--store-write all|evict|off` · `--tool-errors` · `--model-check` · `--header-only` ·
+  `--archs` and others), the kernel generator (architecture names `qwen2` · `qwen3` · `llama` · `qwen35` · `gemma4` …, `--fast` ·
+  `--exact` · `--shared32` · `--coop` · `--head` and others), the terminal runner and GeulPU (`--port` · `--data` · `--no-open`) take
+  English names as aliases of the Korean ones. The Korean names stay, and either name gives byte-identical results. `--help` lists
+  both. For terminals that cannot show Korean (SSH, JupyterHub), `build-linux.sh` clones the geul repository, builds the compiler as
+  `geulc` and builds `ptx-backend` · `kernel-gen` · `server-cuda` · `runner-cuda` under ASCII names.
+- **`GeulPU --hf <repo>/<file>.gguf` — download one GGUF from Hugging Face and load it (one-line install).** For example
+  `GeulPU --hf Qwen/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf` (a pasted huggingface.co file URL works too). It takes the same path as the
+  app's finder → check → download → load: it asks for the size and SHA-256, downloads the head and checks it with the GGUF header and the
+  engine, adds the file to the list, downloads it, verifies the SHA-256 and loads the model. Progress is printed to the console, and the
+  app shows the same download and job. If GeulPU is already running, that instance does the work (`POST /api/hf/pull`). This is the
+  one-liner for listing GeulPU in Hugging Face's "Use this model" menu (huggingface.js local-apps). After `pipx install geulpu`:
+  `geulpu --hf …`.
+- **Downloads in the Linux app.** The Linux app now downloads models itself — the screen's download, the Hugging Face finder's check,
+  and `GeulPU --hf <repo>/<file>.gguf`. It works as on Windows: the file goes to `.part`, a pause resumes where it stopped (Range), a
+  dropped connection is retried up to five times, and the SHA-256 is verified before the model is added. HTTPS is done by the system's
+  curl (proxies from environment variables such as `https_proxy`); without curl the app says to install it.
+- **The same request alone and inside a batch — `도구/same_bits.py`.** Sends the same request (temperature 0, fixed seed) to any
+  OpenAI-compatible server — GeulPU, llama.cpp, vLLM, SGLang, Ollama — first alone, then concurrently with seven other prompts, five
+  rounds, and checks whether the tokens and per-token log-probabilities match the first answer. Standard library only. On this PC
+  (RTX 4070 Ti, Qwen2.5-7B Q4_K_M) llama.cpp b11721 matched itself 5/5 alone but changed its log-probabilities in 5/5 batched rounds
+  and forked the answer once at token 66; GeulPU 0.15.0 gave the same bits in all ten answers
+  ([docs/same-bits.md](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/same-bits.md)).
+- **Version information in the executable, and a privacy policy.** The Windows `GeulPU.exe` now carries a product name, version,
+  description and license (VS_VERSIONINFO), shown in Explorer's Properties (`앱/버전정보.py`, at packaging). The repository gains a privacy
+  policy (`PRIVACY.md` — everything the app sends and stores). The engine binaries in `bin/` are unchanged (the cross-check compares their
+  build hashes).
+- **Files whose q · k · v formats differ.** The attention q, k and v matrices may each use a different k-quant-path format (Q4_K ·
+  Q5_K · Q6_K · IQ4_XS · F16 · BF16 · F32), for every architecture. Runs of equal formats form one segment, so output bits are
+  unchanged. This runs files such as bartowski's Qwen3.5-9B Q4_K_M, whose attention layers quantize q and k differently. The kernel
+  variant memory format changed, so the first load of a model re-measures its kernel variants once.
+- **IQ4_XS matrices in Qwen3.5 / Qwen3.6 files (CUDA).** Qwen3.5-family files (qwen35 · qwen35moe) may now hold IQ4_XS matrices,
+  per tensor, through the KI module like the other architectures (CUDA only for now). This runs llama.cpp's IQ4_XS files and k-quant
+  files with IQ4_XS mixed in, such as unsloth's UD builds (for example Qwen3.5-9B UD-Q4_K_XL). Files whose gate and up (or q · k · v)
+  formats differ within one matmul, and files holding IQ4_NL · Q3_K · IQ3 · IQ2, are still refused.
+- **16-bit matrices in Qwen3.5 / Qwen3.6 files (F16 · BF16 · F32).** Qwen3.5-family files (qwen35 · qwen35moe) may now hold 16-bit
+  matrices, each converted to 16-bit block weights as in contract 1.3. This runs k-quant files whose output weight is BF16 (such as
+  DavidAU's NEO · MAX builds), files whose β · α (`ssm_beta` · `ssm_alpha`) are F16 or F32 (such as unsloth's Qwen3.6-35B-A3B UD and
+  Qwen3.6-27B), and 16-bit-only files (F16 · BF16). The app's model finder takes the formats each architecture accepts from the
+  engine.
+
+### Changed
+
+- **The Qwen3.5 family reuses more of the prompt cache.** The inference engine keeps a snapshot of the GDN state just before the
+  last prompt row, so a request that diverges before the end of the slot (a next turn that renders the previous answer differently,
+  or the same prompt sent again) resumes there instead of recomputing from token 0. Output bits are unchanged. On an RTX 4070 Ti,
+  resending a 3,000-token Qwen3.5-4B prompt cuts the first token from 351 to 9 ms, and a next request that diverges inside the
+  previous answer from 360 to 29 ms. Each slot uses one more GDN state of GPU memory (about 53 MB for 4B and 9B, 157 MB for 27B).
+- **The Qwen3.5 family computes concurrent requests together.** When several requests are generating, the inference engine runs
+  their decode step at once: matrix multiplications gather the rows of all requests and read the weights once, and attention and
+  the GDN state also run as one launch over all requests, each row on its own slot's state. Before, requests were computed one
+  after another, so total throughput did not grow with concurrency. Output bits are unchanged (the same as a request sent alone).
+  On an RTX 4070 Ti, eight concurrent Qwen3.5-4B Q4_K_M requests generate 615 tokens/s in total instead of 117 (two: 220,
+  four: 377).
+- **Faster k-quant decoding (CUDA).** The one-row GEMV kernels (`정수줄하나_*`) issue fewer instructions per stage (output bits
+  unchanged). On an H100 NVL MIG instance the decode step (depth 1,024) is 30% shorter for Llama-3.3-70B Q4_K_M and 27% for
+  Llama-3.1-8B Q4_K_M; on an RTX 4070 Ti it is about 2% shorter.
+- **Faster Qwen3.5 decoding.** The decode step's k-quant matmuls now run on the one-row GEMV kernels (output bits unchanged). On an
+  H100 NVL MIG instance the Qwen3.5-27B Q4_K_M decode step is 33–35% shorter (9B: 30–31%), and on an RTX 4070 Ti the Qwen3.5-9B
+  step is 2.5–2.8% shorter.
+
+### Fixed
+
+- **Fixed false "Runs" labels in Find models.** Find models labelled repositories "Runs" from Hugging Face metadata alone, and in the
+  trending top 50, 14 of the 23 so labelled could not be downloaded at all (no file in a supported format, the Gemma 4 E2B · E4B ·
+  26B-A4B variants, or split files only). It now also reads the repository's file names (supported formats, split parts, unsloth's
+  UD files) and the Gemma 4 variant (parameter count): what the rules know is "Should run", what they cannot know is "Needs a check"
+  (picking a file fetches its start and asks the engine before downloading), and what cannot be loaded says why. The default list
+  ("only those that run") no longer asks Hugging Face for the tags qwen2 · qwen3 · llama · mistral — Hugging Face's tags rarely
+  carry the architecture, so Qwen3.5 · Qwen3.6 · Gemma 4 repositories never appeared in it — but filters each repository by its
+  architecture and files, and shows "Needs a check" repositories with that mark. The quick check runs the labelling rules on the
+  200 trending repositories of the 2026-10-30 survey (시험/찾기표시.py — the old rules gave 31 false "Runs", the new rules 0).
+- **The app accepts file formats as the engine does.** The app's model check leaves weight formats (mixes of Q8_0, k-quants and
+  16-bit) to the engine's model check, so files the engine loads but the app's stricter rules refused — for example ggml-org's
+  Qwen3.8-27B Q4_K_M (Q8_0 matrices inside a k-quant file) — are accepted. The engine's model check now refuses, with the reason,
+  files that used to pass the check and stop during loading (layers whose q · k or gate · up formats differ, F32 β · α in Qwen3.5
+  MoE files, and so on).
+- **The first Qwen3.5 and Gemma 4 requests no longer wait for kernel plan measurement.** The inference engine now picks the
+  plans of every matrix multiplication the layers use when it loads the model, and keeps them in the plan memory. Before, the
+  plans of the Qwen3.5 GDN projections (Q8_0 files), β · α (k-quant files), Q8_0 matrices inside k-quant files, the MoE router and
+  the Gemma 4 full-attention layers (Q8_0 files) were measured on first use of each row bucket (70–100 ms each), again after every
+  server start. Output bits are unchanged. The plan memory format changed (고르기 32-3), so plans are measured once more on the
+  first start.
+
 ## 0.15.0 — Unbroken tool calls · wider tool-error detection (2026-10-29)
 
 ### Added
