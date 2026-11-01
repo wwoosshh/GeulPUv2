@@ -62,7 +62,8 @@ def chat(url, prompt, max_tokens, seed, timeout):
         except (urllib.error.URLError, OSError, ValueError) as e:
             return {"error": str(e), "ms": (time.time() - t0) * 1000}
     ch = (j.get("choices") or [{}])[0]
-    text = ((ch.get("message") or {}).get("content")) or ""
+    msg = ch.get("message") or {}
+    text = msg.get("content") or msg.get("reasoning_content") or ""      # llama.cpp puts a thinking model's reasoning in reasoning_content
     content = ((ch.get("logprobs") or {}).get("content")) or []
     tokens = [c.get("token", "") for c in content]
     lps = [c.get("logprob") for c in content]
@@ -105,7 +106,7 @@ def show(label, same, fork, dmax, pair, ans, unit):
     if fork is None and dmax:
         at = f" — same tokens, log-probabilities differ (max |Δ| {dmax:.3g})"
         d = ""
-    return f"  {label:<14} DIFFERENT{at}{d}"
+    return f"  {label:<14} DIFFERENT{at}{d} ({ans['ms']:.0f} ms)"
 
 
 def main():

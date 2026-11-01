@@ -67,17 +67,18 @@ need 8 GB (Q4_K_M) or 12 GB (Q8_0).
 ```powershell
 pipx install geulpu   # or: uv tool install geulpu · pip install geulpu
 geulpu                # opens http://127.0.0.1:44544 in your browser
+geulpu --hf Qwen/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf   # or: download one GGUF from Hugging Face and load it
 ```
 
 **Without Python** — download `GeulPU-<version>-windows-x64.zip` from the
 [latest release](https://github.com/wwoosshh/GeulPUv2/releases/latest), extract it and run `GeulPU.exe`. The executable is not
-code-signed: if Windows shows *Windows protected your PC*, choose **More info → Run anyway**. Release files are built from this
-repository by GitHub Actions, with their SHA-256 sums attached.
+code-signed: if Windows shows *Windows protected your PC*, choose **More info → Run anyway** (installing with `pipx` or `uv` avoids
+this prompt). Release files are built from this repository by GitHub Actions, with their SHA-256 sums attached.
 
 **On Linux** — `pipx install geulpu` works the same way; without Python, extract `GeulPU-<version>-linux-x64.tar.gz` and run
 `./GeulPU`. The app prints its address instead of opening a browser (on a remote machine, forward the port first:
-`ssh -L 44544:127.0.0.1:44544 <host>`). Downloads inside the app and Vulkan are not on Linux yet: add GGUF files you already have
-with **Models → Add a GGUF file** ([On Linux](docs/user-guide.md#on-linux)).
+`ssh -L 44544:127.0.0.1:44544 <host>`). Downloads inside the app use the system's `curl`; Vulkan is not on Linux yet
+([On Linux](docs/user-guide.md#on-linux)).
 
 Then open **Models → Find models**, download a file marked *Recommended for this PC*, and start chatting. The first message builds
 kernels for your GPU (once per version, 10 seconds to a few minutes). The [user guide](docs/user-guide.md) walks through every screen.
@@ -172,8 +173,8 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 | `qwen2` | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen (0.5B and larger) | Q8_0 · Q4_0 · Q4_K_M · Q5_K_M · Q6_K · IQ4_XS (CUDA) · F16 · BF16 · F32 | CUDA · Vulkan, Exact · Fast |
 | `qwen3` | Qwen3 0.6B · 1.7B · 4B · 8B (14B checked on a synthetic model; 32B loads the same way as 0.6B · 4B) | same | same |
 | `llama` | Llama 3.1 · 3.2 Instruct (3B · 8B) · Mistral 7B Instruct v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 | same | same |
-| `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B (from 0.13.0 — the ggml-org and lmstudio Q4_K_M files) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K (from 0.13.0 also files that mix them from matrix to matrix) | CUDA, Exact · Fast (Fast from 0.13.0) |
-| `qwen35moe` | Qwen3.6-35B-A3B (MoE — experts that do not fit in graphics memory stay in RAM) | Q4_K_M (experts Q4_K · Q5_K · Q6_K or Q8_0) | CUDA, Exact |
+| `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B (from 0.13.0 — the ggml-org and lmstudio Q4_K_M files) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K, from 0.16.0 also IQ4_XS · F16 · BF16 · F32 (files may mix them from matrix to matrix) | CUDA, Exact · Fast (Fast from 0.13.0) |
+| `qwen35moe` | Qwen3.6-35B-A3B (MoE — experts that do not fit in graphics memory stay in RAM) | Q4_K_M (experts Q4_K · Q5_K · Q6_K or Q8_0), from 0.16.0 also IQ4_XS and 16-bit matrices | CUDA, Exact |
 | `gemma4` | Gemma 4 12B instruct (from 0.13.0) | files whose matrices are all k-quants (Q4_K_M, …) or all Q8_0 | CUDA, Exact |
 
 Files GeulPU has run itself (**Verified by GeulPU** in the app — download them there and they are ready), by graphics memory:
@@ -267,18 +268,8 @@ shows what losing less costs.*
 
 Bug reports, reproducibility reports, hardware results and pull requests are welcome, in English or Korean — see
 [CONTRIBUTING.md](CONTRIBUTING.md). Versions follow the [versioning rules](docs/versioning.md): MAJOR for incompatible changes, MINOR
-for features, PATCH for fixes. Security problems: [SECURITY.md](SECURITY.md).
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-- **Team roles**: Sunghyeun Woo ([wwoosshh](https://github.com/wwoosshh)) — author, reviewer and approver.
-- **What is signed**: `GeulPU.exe` in the Windows release zip, built by GitHub Actions from the tagged commit of this repository
-  ([`.github/workflows/release.yml`](.github/workflows/release.yml)). The engine binaries in `bin/` are not signed, so their SHA-256
-  sums stay comparable with the reproducibility reference (`교차검증/expected.json`). Every release is signed only after a manual
-  approval of the signing request.
-- **Privacy policy**: [PRIVACY.md](PRIVACY.md).
+for features, PATCH for fixes. Security problems: [SECURITY.md](SECURITY.md). What the app sends over the network and keeps on
+disk: [PRIVACY.md](PRIVACY.md).
 
 ## Citation
 

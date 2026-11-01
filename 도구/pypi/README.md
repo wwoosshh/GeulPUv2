@@ -22,7 +22,10 @@ geulpu                     # opens http://127.0.0.1:44544 in your browser
 - Needs an NVIDIA RTX 30 series or newer (CUDA), or another GPU with Vulkan 1.3 (AMD Radeon, ...), and an up-to-date graphics driver.
 - Models, the kernels built for your GPU, results and settings live in `%USERPROFILE%\GeulPU` (set `GEULPU_HOME` to move it).
   Uninstalling the package leaves that folder alone.
-- Options: `geulpu --포트 44600` (port), `geulpu --자료 D:\GeulPU` (data folder), `geulpu --열지않음` (don't open the browser).
+- Options: `geulpu --port 44600`, `geulpu --data D:\GeulPU` (data folder), `geulpu --no-open` (don't open the browser) — the Korean
+  names (`--포트` · `--자료` · `--열지않음`) work too; `geulpu --help` lists them.
+- One line from Hugging Face: `geulpu --hf Qwen/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf` downloads that GGUF, checks its SHA-256 and
+  loads it (a pasted huggingface.co file URL works too).
 - Update: `pipx upgrade geulpu` (or `pip install -U geulpu`) after quitting the app. The app tells you when a newer version is out.
 - The first chat with a model builds kernels for your GPU (once per version).
 
@@ -36,8 +39,7 @@ geulpu                     # prints http://127.0.0.1:44544 — open it in a brow
 - Needs an NVIDIA GPU and its driver (the app uses `libcuda.so.1`; no CUDA toolkit) and glibc 2.34 or later (Ubuntu 22.04,
   Debian 12, RHEL 9 or newer). Vulkan (AMD, Intel) is Windows-only for now.
 - On a remote machine, open the screen through SSH port forwarding: `ssh -L 44544:127.0.0.1:44544 <host>`.
-- Data lives in `~/GeulPU` (set `GEULPU_HOME` to move it). The app does not download models on Linux yet: download the GGUF files
-  yourself and add them with **Add model** (or put them in `~/GeulPU/모델`).
+- Data lives in `~/GeulPU` (set `GEULPU_HOME` to move it). Downloads inside the app and `geulpu --hf` use the system's `curl`.
 - One check without the screen: `geulpu --check pair --quick` (exit code 0 when every problem matches the reference PC).
 
 ## 설치 · 실행 (한국어)
@@ -51,8 +53,10 @@ geulpu                     # 브라우저에 http://127.0.0.1:44544 가 열립�
 업데이트는 앱을 끈 뒤 `pipx upgrade geulpu`(또는 `pip install -U geulpu`). 한국어 안내: [사용안내.md](https://github.com/wwoosshh/GeulPUv2/blob/main/사용안내.md).
 
 리눅스(x86-64 · NVIDIA): 같은 명령으로 깔고 `geulpu` 가 알리는 주소를 브라우저로 엽니다(원격이면 SSH 포트 포워딩). NVIDIA 드라이버와
-glibc 2.34 이상(Ubuntu 22.04 · Debian 12 · RHEL 9 부터)이 필요합니다. 자료 폴더는 `~/GeulPU` 이고, 리눅스에서는 앱 안의 내려받기가 아직
-없어 GGUF 파일을 따로 받아 '모델 추가'로 넣습니다. 화면 없이 검사 하나: `geulpu --검사 쌍 --빠름`.
+glibc 2.34 이상(Ubuntu 22.04 · Debian 12 · RHEL 9 부터)이 필요합니다. 자료 폴더는 `~/GeulPU` 이고, 앱 안의 내려받기와 `geulpu --hf` 는
+시스템의 `curl` 로 합니다. 화면 없이 검사 하나: `geulpu --검사 쌍 --빠름`.
+
+Hugging Face 의 GGUF 하나를 한 줄로: `geulpu --hf Qwen/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf` — 받고, SHA-256 을 확인하고, 불러옵니다.
 
 ## Links
 

@@ -83,7 +83,8 @@ cd GeulPU-<version> && ./GeulPU
 
 - The app does not open a browser; it prints its address, `http://127.0.0.1:44544`. On a remote machine, forward the port first
   (`ssh -L 44544:127.0.0.1:44544 <host>`) and open the address on your own computer.
-- Downloads inside the app and Vulkan are not on Linux yet. Add GGUF files you already have with **Models → Add a GGUF file**.
+- Downloads inside the app (and `geulpu --hf`) use the system's `curl` — install it if your distribution lacks it. Vulkan is not on
+  Linux yet. GGUF files you already have can be added with **Models → Add a GGUF file**.
 - Models, settings and results live in `~/GeulPU` (or in the folder named by `GEULPU_HOME`).
 
 ## First steps
