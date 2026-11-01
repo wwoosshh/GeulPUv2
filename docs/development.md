@@ -93,9 +93,10 @@ This page is for building GeulPU from source and finding your way around the cod
      [앱/리눅스/윈도.gl](../앱/리눅스/윈도.gl) (libc — fork · execv · pthread · mmap; SHA-256 in geul). The app joins paths with `\` — the
      Linux version turns it into `/` wherever it takes a path and in the paths it prints to the console (the screen still shows some
      paths with `\`). Downloading (WinHTTP) is [앱/받기망.gl](../앱/받기망.gl); the Linux version
-     ([앱/리눅스/받기망.gl](../앱/리눅스/받기망.gl)) does not download yet — fetch the file yourself and add it with **Add model**. The device
-     check's CUDA declarations are in [엔진/장치C선언.gl](../엔진/장치C선언.gl) (Linux: libcuda.so.1).
-   - Not on Linux yet: downloads inside the app, Vulkan (AMD · Intel — #135), asking whether the store's drive is an HDD (the context
+     ([앱/리눅스/받기망.gl](../앱/리눅스/받기망.gl)) runs curl from PATH as a child process (resume with `-C -`, the head with `-r`, curl's exit
+     code and the HTTP code mapped to the same reasons as on Windows). The device check's CUDA declarations are in
+     [엔진/장치C선언.gl](../엔진/장치C선언.gl) (Linux: libcuda.so.1).
+   - Not on Linux yet: Vulkan (AMD · Intel — #135), asking whether the store's drive is an HDD (the context
      store's `auto` turns it on), flushing the store when the window closes. On SIGTERM · SIGHUP · SIGINT the manager sends SIGTERM to
      the servers and tools it started and exits.
 
