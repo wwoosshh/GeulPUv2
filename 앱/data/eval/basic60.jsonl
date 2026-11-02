@@ -1,0 +1,60 @@
+{"id": "chat-01", "category": "chat", "messages": [{"role": "user", "content": "Can you suggest a quick vegetarian dinner I can make in 20 minutes?"}]}
+{"id": "chat-02", "category": "chat", "messages": [{"role": "user", "content": "주말에 혼자 갈 만한 조용한 취미를 세 가지 추천해 주세요."}]}
+{"id": "chat-03", "category": "chat", "messages": [{"role": "system", "content": "You are a concise assistant."}, {"role": "user", "content": "I have a job interview tomorrow. Any last-minute tips?"}]}
+{"id": "chat-04", "category": "chat", "messages": [{"role": "user", "content": "I'm planning a trip to Busan."}, {"role": "assistant", "content": "That sounds great! How many days will you stay?"}, {"role": "user", "content": "Three days. What should I see?"}]}
+{"id": "chat-05", "category": "chat", "messages": [{"role": "user", "content": "Write a polite email declining a meeting invitation because of a schedule conflict."}]}
+{"id": "chat-06", "category": "chat", "messages": [{"role": "user", "content": "친구 생일 선물로 3만 원 안쪽에서 무엇이 좋을까요?"}]}
+{"id": "chat-07", "category": "chat", "messages": [{"role": "user", "content": "How can I stay focused when working from home?"}]}
+{"id": "chat-08", "category": "chat", "messages": [{"role": "system", "content": "당신은 친절한 생활 도우미입니다."}, {"role": "user", "content": "아침에 일찍 일어나는 습관을 만드는 방법을 알려 주세요."}]}
+{"id": "chat-09", "category": "chat", "messages": [{"role": "user", "content": "Give me a short motivational message for someone starting to learn the piano."}]}
+{"id": "chat-10", "category": "chat", "messages": [{"role": "user", "content": "회의록을 깔끔하게 정리하는 방법을 알려 주세요."}]}
+{"id": "knowledge-01", "category": "knowledge", "messages": [{"role": "user", "content": "Why is the sky blue? Explain in simple terms."}]}
+{"id": "knowledge-02", "category": "knowledge", "messages": [{"role": "user", "content": "광합성이 무엇인지 중학생에게 설명하듯 알려 주세요."}]}
+{"id": "knowledge-03", "category": "knowledge", "messages": [{"role": "user", "content": "What causes the seasons on Earth?"}]}
+{"id": "knowledge-04", "category": "knowledge", "messages": [{"role": "user", "content": "What is the difference between a virus and a bacterium?"}]}
+{"id": "knowledge-05", "category": "knowledge", "messages": [{"role": "user", "content": "한글이 어떻게 만들어졌는지 간단히 설명해 주세요."}]}
+{"id": "knowledge-06", "category": "knowledge", "messages": [{"role": "user", "content": "Explain how a transistor works in a few sentences."}]}
+{"id": "knowledge-07", "category": "knowledge", "messages": [{"role": "user", "content": "What is inflation, and why do central banks raise interest rates?"}]}
+{"id": "knowledge-08", "category": "knowledge", "messages": [{"role": "user", "content": "블랙홀은 어떻게 만들어지나요?"}]}
+{"id": "knowledge-09", "category": "knowledge", "messages": [{"role": "user", "content": "Describe the water cycle."}]}
+{"id": "knowledge-10", "category": "knowledge", "messages": [{"role": "user", "content": "What is the main idea of evolution by natural selection?"}]}
+{"id": "code-01", "category": "code", "messages": [{"role": "user", "content": "Write a Python function that checks whether a string is a palindrome, ignoring case and spaces."}]}
+{"id": "code-02", "category": "code", "messages": [{"role": "user", "content": "자바스크립트에서 배열의 중복을 제거하는 방법을 코드로 보여 주세요."}]}
+{"id": "code-03", "category": "code", "messages": [{"role": "user", "content": "Explain what this code does: print(sum(x*x for x in range(10)))"}]}
+{"id": "code-04", "category": "code", "messages": [{"role": "user", "content": "Write a SQL query to find the second highest salary from a table employees(id, salary)."}]}
+{"id": "code-05", "category": "code", "messages": [{"role": "user", "content": "다음 파이썬 코드의 버그를 고쳐 주세요:\n\ndef add_item(item, items=[]):\n    items.append(item)\n    return items"}]}
+{"id": "code-06", "category": "code", "messages": [{"role": "user", "content": "Write a bash one-liner that counts the lines in all .py files under the current directory."}]}
+{"id": "code-07", "category": "code", "messages": [{"role": "user", "content": "What is the time complexity of binary search, and why?"}]}
+{"id": "code-08", "category": "code", "messages": [{"role": "user", "content": "C 언어에서 포인터와 배열의 차이를 예제로 설명해 주세요."}]}
+{"id": "code-09", "category": "code", "messages": [{"role": "user", "content": "Write a Rust function that returns the largest number in a slice of i32."}]}
+{"id": "code-10", "category": "code", "messages": [{"role": "user", "content": "Convert this Python loop to a list comprehension:\n\nresult = []\nfor x in data:\n    if x > 0:\n        result.append(x * 2)"}]}
+{"id": "math-01", "category": "math", "messages": [{"role": "user", "content": "A train travels 180 km in 2.5 hours. What is its average speed in km/h? Show your work."}]}
+{"id": "math-02", "category": "math", "messages": [{"role": "user", "content": "사과 12개를 3명이 똑같이 나누고 각자 2개씩 먹으면 모두 몇 개가 남나요?"}]}
+{"id": "math-03", "category": "math", "messages": [{"role": "user", "content": "Solve for x: 3x + 7 = 22."}]}
+{"id": "math-04", "category": "math", "messages": [{"role": "user", "content": "What is 15% of 240?"}]}
+{"id": "math-05", "category": "math", "messages": [{"role": "user", "content": "한 변이 6 cm 인 정사각형의 넓이와 둘레를 구하세요."}]}
+{"id": "math-06", "category": "math", "messages": [{"role": "user", "content": "If a shirt costs $40 after a 20% discount, what was the original price?"}]}
+{"id": "math-07", "category": "math", "messages": [{"role": "user", "content": "1부터 100까지 짝수의 합은 얼마인가요?"}]}
+{"id": "math-08", "category": "math", "messages": [{"role": "user", "content": "A rectangle has a perimeter of 30 and a length of 9. What is its width?"}]}
+{"id": "math-09", "category": "math", "messages": [{"role": "user", "content": "Simplify the fraction 84/126."}]}
+{"id": "math-10", "category": "math", "messages": [{"role": "user", "content": "어떤 수에 4를 곱하고 5를 빼면 31이 됩니다. 그 수는 무엇인가요?"}]}
+{"id": "tool_call-01", "category": "tool_call", "messages": [{"role": "user", "content": "What's the weather like in Tokyo right now?"}], "tools": [{"type": "function", "function": {"name": "get_weather", "description": "Get the current weather for a city.", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "City name"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}}, "required": ["city"]}}}]}
+{"id": "tool_call-02", "category": "tool_call", "messages": [{"role": "user", "content": "서울 날씨를 섭씨로 알려 줘."}], "tools": [{"type": "function", "function": {"name": "get_weather", "description": "Get the current weather for a city.", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "City name"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}}, "required": ["city"]}}}]}
+{"id": "tool_call-03", "category": "tool_call", "messages": [{"role": "user", "content": "Find the file that mentions 'database password' in my project."}], "tools": [{"type": "function", "function": {"name": "search_files", "description": "Search text inside files of the user's project.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "path": {"type": "string", "description": "Folder to search (default: project root)"}}, "required": ["query"]}}}]}
+{"id": "tool_call-04", "category": "tool_call", "messages": [{"role": "user", "content": "2026-11-03 오후 3시에 '팀 회의' 일정을 만들어 줘."}], "tools": [{"type": "function", "function": {"name": "create_event", "description": "Create a calendar event.", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "date": {"type": "string", "description": "YYYY-MM-DD"}, "time": {"type": "string", "description": "HH:MM, 24-hour"}}, "required": ["title", "date"]}}}]}
+{"id": "tool_call-05", "category": "tool_call", "messages": [{"role": "user", "content": "Convert 250 US dollars to Korean won."}], "tools": [{"type": "function", "function": {"name": "convert_currency", "description": "Convert an amount between currencies.", "parameters": {"type": "object", "properties": {"amount": {"type": "number"}, "from": {"type": "string", "description": "ISO code"}, "to": {"type": "string", "description": "ISO code"}}, "required": ["amount", "from", "to"]}}}]}
+{"id": "tool_call-06", "category": "tool_call", "messages": [{"role": "user", "content": "Send a message to Alex saying I'll be 10 minutes late."}], "tools": [{"type": "function", "function": {"name": "send_message", "description": "Send a chat message to a contact.", "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "text": {"type": "string"}}, "required": ["to", "text"]}}}]}
+{"id": "tool_call-07", "category": "tool_call", "messages": [{"role": "user", "content": "부산과 제주 가운데 지금 더 따뜻한 곳은 어디야?"}], "tools": [{"type": "function", "function": {"name": "get_weather", "description": "Get the current weather for a city.", "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "City name"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}}, "required": ["city"]}}}]}
+{"id": "tool_call-08", "category": "tool_call", "messages": [{"role": "user", "content": "Schedule a dentist appointment on 2026-11-20 at 10:30."}], "tools": [{"type": "function", "function": {"name": "create_event", "description": "Create a calendar event.", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "date": {"type": "string", "description": "YYYY-MM-DD"}, "time": {"type": "string", "description": "HH:MM, 24-hour"}}, "required": ["title", "date"]}}}]}
+{"id": "tool_call-09", "category": "tool_call", "messages": [{"role": "user", "content": "How much is 100 euros in Japanese yen?"}], "tools": [{"type": "function", "function": {"name": "convert_currency", "description": "Convert an amount between currencies.", "parameters": {"type": "object", "properties": {"amount": {"type": "number"}, "from": {"type": "string", "description": "ISO code"}, "to": {"type": "string", "description": "ISO code"}}, "required": ["amount", "from", "to"]}}}]}
+{"id": "tool_call-10", "category": "tool_call", "messages": [{"role": "user", "content": "Look for TODO comments in the src folder."}], "tools": [{"type": "function", "function": {"name": "search_files", "description": "Search text inside files of the user's project.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "path": {"type": "string", "description": "Folder to search (default: project root)"}}, "required": ["query"]}}}]}
+{"id": "korean-01", "category": "korean", "messages": [{"role": "user", "content": "다음 문장을 존댓말로 바꿔 주세요: 내일 회의 시간 좀 알려 줘."}]}
+{"id": "korean-02", "category": "korean", "messages": [{"role": "user", "content": "'시간은 금이다'라는 속담의 뜻과 비슷한 영어 표현을 알려 주세요."}]}
+{"id": "korean-03", "category": "korean", "messages": [{"role": "user", "content": "한국의 사계절을 각각 한 문장으로 묘사해 주세요."}]}
+{"id": "korean-04", "category": "korean", "messages": [{"role": "user", "content": "김치찌개 끓이는 법을 단계별로 설명해 주세요."}]}
+{"id": "korean-05", "category": "korean", "messages": [{"role": "user", "content": "다음 글을 세 줄로 요약해 주세요: 인공지능은 데이터를 바탕으로 패턴을 배우고, 그 패턴으로 새로운 입력에 대한 답을 만든다. 최근에는 언어 모델이 글쓰기와 번역, 코드 작성까지 돕는다. 하지만 학습 데이터의 편향과 잘못된 정보는 여전히 해결해야 할 문제다."}]}
+{"id": "korean-06", "category": "korean", "messages": [{"role": "user", "content": "띄어쓰기를 바르게 고쳐 주세요: 오늘저녁에친구랑영화를보러갈거야."}]}
+{"id": "korean-07", "category": "korean", "messages": [{"role": "user", "content": "'바람'이라는 단어로 짧은 시를 지어 주세요."}]}
+{"id": "korean-08", "category": "korean", "messages": [{"role": "user", "content": "한국어 조사 '은/는'과 '이/가'의 차이를 예문으로 설명해 주세요."}]}
+{"id": "korean-09", "category": "korean", "messages": [{"role": "user", "content": "외국인 친구에게 '정'이라는 한국어 단어를 설명해 주세요."}]}
+{"id": "korean-10", "category": "korean", "messages": [{"role": "user", "content": "다음 영어 문장을 자연스러운 한국어로 번역해 주세요: The early bird catches the worm, but the second mouse gets the cheese."}]}

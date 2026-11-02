@@ -52,7 +52,7 @@ COMP=$TMP/geulc
 
 DIST=$OUT/GeulPU-$VER
 rm -rf "$DIST"
-mkdir -p "$DIST/bin" "$DIST/kernels" "$DIST/web" "$DIST/data/crosscheck/pair"
+mkdir -p "$DIST/bin" "$DIST/kernels" "$DIST/web" "$DIST/data/crosscheck/pair" "$DIST/data/eval"
 say "빌드..."
 run ptx-backend "$ROOT" "$COMP" 백엔드/PTX/PTX.gl -o "$DIST/bin/ptx-backend"
 run app "$ROOT" "$COMP" 앱/관리자.gl -o "$DIST/GeulPU"
@@ -66,6 +66,7 @@ cp -r "$HERE/web/." "$DIST/web/"
 cp "$HERE/data/models.json" "$DIST/data/"
 cp "$ROOT/교차검증/expected.json" "$ROOT/교차검증/requests.json" "$DIST/data/crosscheck/"
 for f in models.json requests.json expected.json; do cp "$ROOT/교차검증/쌍/$f" "$DIST/data/crosscheck/pair/"; done
+cp "$HERE"/data/eval/* "$DIST/data/eval/"                       # 모델 평가 — 내장 데이터
 cp "$ROOT/LICENSE" "$DIST/"
 cp "$HERE/읽어보기.txt" "$DIST/README.txt"
 

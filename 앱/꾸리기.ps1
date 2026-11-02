@@ -74,7 +74,7 @@ else {
 # ---- 2. 빌드 ----
 $Dist = Join-Path $Out ('GeulPU-' + $Ver)
 if (Test-Path -LiteralPath $Dist) { Remove-Item -LiteralPath $Dist -Recurse -Force }
-foreach ($d in @('bin', 'kernels', 'web', 'data', 'data\crosscheck', 'data\crosscheck\pair')) { New-Item -ItemType Directory -Path (Join-Path $Dist $d) -Force | Out-Null }
+foreach ($d in @('bin', 'kernels', 'web', 'data', 'data\crosscheck', 'data\crosscheck\pair', 'data\eval')) { New-Item -ItemType Directory -Path (Join-Path $Dist $d) -Force | Out-Null }
 $Bin = Join-Path $Dist 'bin'
 Say 'PTX · SPIR-V 백엔드...'
 Run $Comp @('백엔드/PTX/PTX.gl', '-o', (Join-Path $Bin 'ptx-backend.exe')) $Root 'ptx-backend'           # 이 저장소의 백엔드 (앞단은 GEUL_ROOT 의 self/)
@@ -113,6 +113,8 @@ Copy-Item -LiteralPath (Join-Path $Root '교차검증\requests.json') -Destinati
 foreach ($f in @('models.json', 'requests.json', 'expected.json')) {
     Copy-Item -LiteralPath (Join-Path $Root ('교차검증\쌍\' + $f)) -Destination (Join-Path $Dist 'data\crosscheck\pair')
 }
+# 모델 평가(문서/모델평가.md) — 내장 데이터(앱/data/eval)
+Copy-Item -Path (Join-Path $Here 'data\eval\*') -Destination (Join-Path $Dist 'data\eval')
 Copy-Item -LiteralPath (Join-Path $Root 'LICENSE') -Destination $Dist
 Copy-Item -LiteralPath (Join-Path $Here '읽어보기.txt') -Destination (Join-Path $Dist 'README.txt')
 
