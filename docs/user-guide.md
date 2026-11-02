@@ -1,7 +1,7 @@
 # GeulPU user guide
 
 **[한국어](../사용안내.md)** · [README](../README.md) · [debugger guide](debugger-guide.md) · [research panel guide](research-guide.md) ·
-[development](development.md) · [glossary](glossary.md)
+[model evaluation guide](model-evaluation-guide.md) · [development](development.md) · [glossary](glossary.md)
 
 Everything about installing and using GeulPU — the app, its settings, the OpenAI-compatible API and the supported models — and what
 makes it different, with the measurements. The [README](../README.md) has the overview; building from source is in
@@ -304,17 +304,23 @@ model's work: a reference model (best a BF16 or F16 file) and the GGUF files to 
   executables and conversion scripts (a fixed release, SHA-256 checked) and installs the conversion packages into an app-only Python
   virtual environment made with your Python (3.10 or later). The converted file becomes the reference model; quantized files become
   versions that keep their settings.
-- **GGUF conversion check** — compares the GGUF's chat template · EOS · BOS · special tokens · tokenizer with the original model's
-  small files, and fixes metadata problems as a new version (tensors are copied byte for byte).
+- **GGUF conversion check** — compares the GGUF's chat template · EOS · BOS · special tokens · tokenizer · hyperparameters (settings)
+  with the original model's small files, and fixes metadata problems as a new version (tensors are copied byte for byte). Folders saved
+  with transformers 5 convert too (from 0.18.0).
 - **Run evaluation** — both models score the reference model's answers token by token (KL divergence · top-1 agreement) and answer with
   their own chat templates (answers that differ · the first diverging step · finish reasons). Data with answers is graded too
   (accuracy with a 95 % interval): built-in `tasks40`, `gsm8k` (GSM8K test) and `mmlu-pro-500` (MMLU-Pro test), or your own JSONL.
   Rerunning with the same files and settings gives bit-identical results, so a before/after comparison shows only what you changed.
+  With a baseline model (before fine-tuning) it also counts what the fine-tune learned and forgot (from 0.18.0).
 - **Compare with the original model** — feeds the reference model's answers to the original (transformers) model and compares every
   position: near 0 means the conversion and the engine reproduce the original model.
-- **Improve** — makes trial files with one matrix group (or a third of the layers) at a higher type, measures how much each lowers
-  the KL divergence and how much the file grows, and remakes the version with the groups you choose.
+- **Improve** — makes trial files with one matrix group (or a third of the layers) at a higher type, measures how much each improves
+  the KL divergence (and the accuracy, with graded data) and how much the file grows, and remakes the version with the groups you
+  choose.
+- **Result table · Compare workspaces** — see the versions in one table and a size and quality chart, export them as CSV, and line up
+  two fine-tunes type by type (from 0.18.0).
 
+New to it? Start with the [model evaluation guide](model-evaluation-guide.md) — it follows one fine-tuned model through a full round.
 The plan and the measurements behind these screens are in [문서/모델평가.md](../문서/모델평가.md) (Korean).
 
 ### Use it from other programs (OpenAI-compatible API)

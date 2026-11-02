@@ -42,8 +42,8 @@ GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Dis
 - **로컬 모델을 위한 디버거.** 실행을 기록하고, 비트까지 재생하고, 마진이 작은 스텝을 찾고, 어느 토큰이나 고친 요청에서 분기하고,
   두 실행을 요청마다 비교합니다 — 앱 화면에서도, 스크립트에서도.
 - **GGUF 파일을 위한 모델 평가.** Hugging Face 폴더에서 GGUF 를 만들고, 변환을 원래 파일 · 원래 모델(transformers)과 견주고, 버전을 기준
-  모델과 비교하고 답을 채점하고(내장 GSM8K · MMLU-Pro), 어느 행렬 무리를 높은 정밀도로 둘지 잽니다 — 모든 결과는 다시 재도 비트까지
-  같습니다(0.17.0 부터).
+  모델과 비교하고 답을 채점하고(내장 GSM8K · MMLU-Pro), 미세조정 전 모델 대비 배운 것 · 잊은 것을 세고, 어느 행렬 무리를 높은 정밀도로
+  둘지 잽니다 — 모든 결과는 다시 재도 비트까지 같습니다(0.17.0 부터 — [모델 평가 안내서](모델평가안내.md)가 한 바퀴를 따라갑니다).
 - **연구 패널.** 채팅의 답마다 토큰의 확률 · 순위 · 상위 10 대안 · 엔트로피 · 마진을 보고, 분기 · 비교 · 점수 매기기 · 내보내기 ·
   재현 파일 확인을 합니다. 0.13.0 부터는 답이 몇 번째 층에서 생기는지도 봅니다 — 층마다 읽는 logit lens 와, 원본(PyTorch) 모델에서 맞춘
   J 파일로 읽는 Jacobian lens.
@@ -215,6 +215,7 @@ PTX(NVIDIA)나 SPIR-V(Vulkan)로 바꿉니다. 추론 서버는 그 커널을 �
 | 사용 안내 — 설치 · 모델 · 채팅 · 설정 · API · 문제 해결 | [사용안내.md](사용안내.md) | [docs/user-guide.md](docs/user-guide.md) |
 | 디버거 안내서 | [디버거안내.md](디버거안내.md) | [docs/debugger-guide.md](docs/debugger-guide.md) |
 | 연구 패널 안내서 | [연구자안내.md](연구자안내.md) | [docs/research-guide.md](docs/research-guide.md) |
+| 모델 평가 안내서 — GGUF 만들기 · 확인 · 고치기 | [모델평가안내.md](모델평가안내.md) | [docs/model-evaluation-guide.md](docs/model-evaluation-guide.md) |
 | 정밀도 계약 | [계약/계약.md](계약/계약.md) | [계약/contract.md](계약/contract.md) |
 | 개발 — 소스에서 빌드 · 구조 · 점검 | [문서/개발.md](문서/개발.md) | [docs/development.md](docs/development.md) |
 | 바뀐 것 · 버전 규칙 | [바뀐것.md](문서/바뀐것.md) · [버전규칙.md](문서/버전규칙.md) | [CHANGELOG.md](CHANGELOG.md) · [docs/versioning.md](docs/versioning.md) |
