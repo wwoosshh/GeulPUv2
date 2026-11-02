@@ -42,6 +42,10 @@ const EVAL_DICT = {
   "llama.cpp {} 실행 파일 — {}": "llama.cpp {} executables — {}",
   "도구 — llama.cpp {} · 파이썬 {} · torch {} · transformers {}": "Tools — llama.cpp {} · Python {} · torch {} · transformers {}",
   "도구 준비": "Set up tools",
+  "transformers {} 환경 — transformers 5로 저장한 모델 폴더용(torch는 위의 것을 함께 씀)": "transformers {} environment — for model folders saved with transformers 5 (shares torch with the one above)",
+  "약 30 MB(설치하면 200 MB 안쪽)": "About 30 MB (under 200 MB installed)",
+  "도구 — llama.cpp {} · 파이썬 {} · torch {} · transformers {} · {}": "Tools — llama.cpp {} · Python {} · torch {} · transformers {} · {}",
+  "transformers 5로 저장한 모델 폴더를 변환하려면 도구 준비를 다시 하세요 — transformers 5 환경을 더합니다(약 30 MB).": "To convert model folders saved with transformers 5, set up the tools again — this adds a transformers 5 environment (about 30 MB).",
   "받고 설치": "Download and install",
   "변환 {}": "Converted {}",
   "변환 스크립트(convert_hf_to_gguf.py 등) {}개": "{0} conversion script {0|file|files} (convert_hf_to_gguf.py and others)",
@@ -184,6 +188,19 @@ const EVAL_DICT = {
   "어휘 {}개 중 {}개의 번호 · 글이 GGUF와 다릅니다 — 다시 변환해야 합니다.": "{1} of {0} vocabulary entries differ in the GGUF — convert again.",
   "병합이 다릅니다(원래 {}개 · GGUF {}개, 다른 것 {}개) — 다시 변환해야 합니다.": "The merges differ (original {} · GGUF {}, {} different) — convert again.",
   "토크나이저 종류 {}는 비교하지 않습니다(BPE만).": "Tokenizer type {} is not compared (BPE only).",
+  "설정 — 하이퍼파라미터": "Settings — hyperparameters",
+  "config.json의 하이퍼파라미터 {}개가 GGUF와 같습니다.": "All {} hyperparameters in config.json match the GGUF.",
+  "config.json의 하이퍼파라미터 {}개 중 {}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).": "{1} of {0} hyperparameters in config.json differ in the GGUF — convert again (this cannot be fixed in the metadata).",
+  "config.json과 GGUF({})에서 견줄 하이퍼파라미터를 찾지 못했습니다.": "No hyperparameters to compare were found in config.json and the GGUF ({}).",
+  "원래 모델 폴더에 config.json이 없습니다.": "The original model folder has no config.json.",
+  "하이퍼파라미터 {}개": "{0} {0|hyperparameter|hyperparameters}",
+  "원래 {} · GGUF {}": "original {} · GGUF {}",
+  "config.json — transformers {}로 저장": "config.json — saved with transformers {}",
+  "설정 — 하이퍼파라미터 {}개가 config.json · transformers · GGUF에서 같습니다": "Settings — {} hyperparameters match in config.json · transformers · GGUF",
+  "GGUF의 하이퍼파라미터가 원래 모델의 설정과 다릅니다 — {}. 다시 변환해야 합니다.": "The GGUF's hyperparameters differ from the original model's settings — {}. Convert again.",
+  "설정 — 기준값을 만든 GGUF를 찾지 못해 견주지 않았습니다": "Settings — not compared (the GGUF that made the reference values was not found)",
+  "기준 모델이 16비트인데 KL이 10⁻³보다 큽니다 — 변환이나 원래 모델 폴더의 설정이 다를 수 있습니다. 변환 검증을 보세요.": "The reference model is 16-bit but the KL is above 10⁻³ — the conversion or the original model folder's settings may differ. See the conversion check.",
+  "기준 모델이 16비트면 바르게 변환했을 때 KL은 10⁻³보다 훨씬 작습니다(이 PC의 측정 3.5 × 10⁻⁶ ~ 1.0 × 10⁻⁴ — 답이 확실할수록 작음).": "With a 16-bit reference model, a correct conversion gives a KL far below 10⁻³ (measured on this PC: 3.5 × 10⁻⁶ to 1.0 × 10⁻⁴ — smaller when the answers are more certain).",
   "대화 경우 {}개": "{0} conversation {0|case|cases}",
   "{}바이트부터 다름 · GGUF {} · 원래 {}바이트": "differs from byte {} · GGUF {} · original {} bytes",
   "오류: {}": "Error: {}",
@@ -455,6 +472,26 @@ TMX.push(
   [/패키지를 확인하는 중/g, 'Checking the packages'],
   [/설치한 패키지를 불러오지 못했습니다: /g, 'Could not import the installed packages: '],
   [/GGUF 만들기 도구 준비 — llama\.cpp (\S+) · 파이썬 (\S+) · torch (\S+) · transformers (\S+)/g, 'GGUF making tools ready — llama.cpp $1 · Python $2 · torch $3 · transformers $4'],
+  // #196 — transformers 5 환경 · 폴더를 저장한 판으로 환경 고르기 · 설정 견주기
+  [/transformers (\S+) 환경 — 이미 있음\((.+?)\)/g, 'transformers $1 environment — already there ($2)'],
+  [/transformers (\S+) 환경을 만드는 중\(transformers 5 로 저장한 모델용\)/g, 'Creating the transformers $1 environment (for models saved with transformers 5)'],
+  [/첫 가상 환경의 파이썬을 찾지 못했습니다/g, "Could not find the first virtual environment's Python"],
+  [/첫 가상 환경의 site-packages 를 찾지 못했습니다/g, "Could not find the first virtual environment's site-packages"],
+  [/transformers 5 환경의 site-packages 를 찾지 못했습니다/g, "Could not find the transformers 5 environment's site-packages"],
+  [/transformers 5 환경의 패키지를 불러오지 못했습니다\(작업 기록을 보세요\)/g, 'Could not import the packages of the transformers 5 environment (see the run log)'],
+  [/transformers (\S+) 환경 — /g, 'transformers $1 environment — '],
+  [/이 모델 폴더는 transformers (\S+) 로 저장했습니다 — 지금 도구의 환경\(transformers (\S+)\)은 그 형식을 바르게 읽지 못합니다\. '도구 준비'를 다시 누르면 transformers 5 환경을 더합니다/g, "This model folder was saved with transformers $1 — the current tool environment (transformers $2) cannot read that format correctly. Press 'Set up tools' again to add a transformers 5 environment"],
+  [/변환 환경 — transformers (\S+)\(원래 모델 폴더는 transformers (\S+) 로 저장\)/g, 'Conversion environment — transformers $1 (the original model folder was saved with transformers $2)'],
+  [/변환 환경 — transformers (\S+)/g, 'Conversion environment — transformers $1'],
+  [/견주기 환경 — transformers (\S+)\(원래 모델 폴더는 transformers (\S+) 로 저장\)/g, 'Comparison environment — transformers $1 (the original model folder was saved with transformers $2)'],
+  [/견주기 환경 — transformers (\S+)/g, 'Comparison environment — transformers $1'],
+  [/변환하지 못했습니다\(convert_hf_to_gguf\.py\): (.*) — 작업 기록에 자세히/g, 'Could not convert (convert_hf_to_gguf.py): $1 — details in the run log'],
+  [/원래 모델과 견주지 못했습니다\(orig_compare\.py\): /g, 'Could not compare with the original model (orig_compare.py): '],
+  [/transformers (\S+) 가 원래 모델의 설정을 config\.json 과 다르게 읽었습니다 — (.+?)\. 이 폴더는 transformers (\S+) 로 저장했습니다 — 저장한 큰 판의 transformers 로 견주어야 합니다\(KL 을 내지 않고 멈춤\)/g, 'transformers $1 read the original model settings differently from config.json — $2. This folder was saved with transformers $3 — compare with the same major version of transformers (stopped without a KL)'],
+  [/ · GGUF 의 하이퍼파라미터가 원래 모델의 설정과 다릅니다/g, " · the GGUF's hyperparameters differ from the original model's settings"],
+  [/설정 — 하이퍼파라미터 (\d+)개 · GGUF 가 원래 모델과 다름/g, 'Settings — $1 hyperparameters · the GGUF differs from the original model'],
+  [/설정 — 하이퍼파라미터 (\d+)개 · 같음/g, 'Settings — $1 hyperparameters · same'],
+  [/설정 — 기준값을 만든 GGUF 를 찾지 못해 견주지 않음/g, 'Settings — not compared (the GGUF that made the reference values was not found)'],
   [/(\S+) — 끝 코드 (-?\d+)\. 기록의 끝:/g, '$1 — exit code $2. End of the log:'],
   [/자료 폴더의 경로에 ASCII 가 아닌 글자가 있어 llama\.cpp 의 도구를 쓸 수 없습니다 — ASCII 경로의 자료 폴더\(--자료\)로 실행하세요/g, "The data folder path has non-ASCII characters, so llama.cpp's tools cannot use it — run with a data folder on an ASCII path (--자료)"],
   [/자료 폴더의 경로에 ASCII 가 아닌 글자가 있어 llama\.cpp 의 도구를 쓸 수 없습니다/g, "The data folder path has non-ASCII characters, so llama.cpp's tools cannot use it"],
@@ -470,6 +507,7 @@ TMX.push(
   [/행렬별 형식은 양자화 형식과 함께 씁니다/g, 'Per-matrix types need a quantization type'],
   [/원래 모델 폴더\(Hugging Face 형식 — config\.json 과 가중치가 있는 폴더\)를 정하세요/g, 'Choose the original model folder (Hugging Face format — the folder with config.json and the weights)'],
   [/원래 모델 폴더에 config\.json 이 없습니다/g, 'The original model folder has no config.json'],
+  [/원래 모델 폴더에 가중치 파일\(\.safetensors · \.bin\)이 없습니다/g, 'The original model folder has no weight files (.safetensors · .bin)'],
   [/GGUF 만들기 도구가 준비되지 않았습니다 — '도구 준비'를 먼저 누르세요/g, "The GGUF making tools are not set up — press 'Set up tools' first"],
   [/imatrix 에 쓸 파일이 없습니다/g, 'The file for the imatrix does not exist'],
   [/변환하는 중 — (.+?) → (\S+)/g, 'Converting — $1 → $2'],
@@ -501,6 +539,7 @@ TMX.push(
   // 2-3 — 원래 모델과 견주기(원래비교일 · data/orig_compare.py)
   [/원래 모델에 기준 모델의 답을 넣어 견주는 중\(transformers · CPU · (\S+)\)/g, "Feeding the reference model's answers to the original model (transformers · CPU · $1)"],
   [/원래 모델과 견주기 — 위치 (\d+) · KL (\S+) · top-1 ([\d.]+) %/g, 'Compared with the original model — $1 positions · KL $2 · top-1 $3 %'],
+  [/원래 모델을 읽었다 — (\S+) · transformers (\S+) · ([\d.]+) 초/g, 'Loaded the original model — $1 · transformers $2 · $3 s'],
   [/원래 모델을 읽었다 — (\S+) · ([\d.]+) 초/g, 'Loaded the original model — $1 · $2 s'],
   [/(\d+)\/(\d+) (\S+) — 위치 (\d+) · KL (\S+)/g, '$1/$2 $3 — $4 positions · KL $5'],
   [/원래 모델과 견줌 — 대화 (\d+) · 위치 (\d+) · KL (\S+) · top-1 ([\d.]+) %/g, 'Compared with the original model — $1 conversations · $2 positions · KL $3 · top-1 $4 %'],
@@ -783,7 +822,9 @@ async function evRun(w) {
 // ---------- 2-2 변환 검증 ----------
 const evCaseName = n => ({ basic: T('사용자 메시지 하나'), system: T('시스템 메시지'), multi: T('여러 턴'), tools: T('도구 정의 · 호출 · 결과'),
   no_prompt: T('생성 프롬프트 없이'), think_off: T('생각 끔'), think_on: T('생각 켬') })[n] || n;
-const evCheckTitle = id => ({ chat_template: T('채팅 템플릿'), eos: 'EOS', bos: 'BOS', special_tokens: T('특수 토큰'), tokenizer: T('토크나이저') })[id] || id;
+const evCheckTitle = id => ({ chat_template: T('채팅 템플릿'), eos: 'EOS', bos: 'BOS', special_tokens: T('특수 토큰'), tokenizer: T('토크나이저'),
+  hparams: T('설정 — 하이퍼파라미터') })[id] || id;
+const evHp = x => (typeof x === 'number' && isFinite(x) ? String(+x.toPrecision(7)) : '-');   // 하이퍼파라미터 값(GGUF 의 f32 를 7 자리로)
 const evCheckTag = st => ({ pass: h('span', { class: 'tag ok' }, I('check'), T('통과')), problem: h('span', { class: 'tag err' }, I('alert'), T('문제')),
   check: h('span', { class: 'tag acc' }, I('info'), T('확인 필요')), skip: h('span', { class: 'tag dim' }, T('건너뜀')) })[st] || h('span', { class: 'tag' }, st);
 const evTokTxt = t => (t ? `${t.text !== undefined ? t.text : '?'}(${t.id})` : '-');
@@ -813,6 +854,12 @@ function evCheckLine(it) {
     if (c === 'mismatch') return T`특수 토큰 ${it.count}개 중 ${it.mismatched}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).`;
     return T('원래 모델 폴더에 tokenizer.json이 없습니다.');
   }
+  if (it.id === 'hparams') {
+    if (c === 'same') return T`config.json의 하이퍼파라미터 ${it.count}개가 GGUF와 같습니다.`;
+    if (c === 'differs') return T`config.json의 하이퍼파라미터 ${it.count}개 중 ${it.mismatched}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).`;
+    if (c === 'no_rows') return T`config.json과 GGUF(${it.architecture || '?'})에서 견줄 하이퍼파라미터를 찾지 못했습니다.`;
+    return T('원래 모델 폴더에 config.json이 없습니다.');
+  }
   if (c === 'same') return T`어휘 ${fmtNum(it.vocab)}개와 병합 ${fmtNum(it.merges)}개가 GGUF와 같습니다.`;
   if (c === 'vocab_differs') return T`어휘 ${fmtNum(it.vocab)}개 중 ${fmtNum(it.vocab_mismatched)}개의 번호 · 글이 GGUF와 다릅니다 — 다시 변환해야 합니다.`;
   if (c === 'merges_differs') return T`병합이 다릅니다(원래 ${fmtNum(it.merges)}개 · GGUF ${fmtNum(it.gguf_merges)}개, 다른 것 ${fmtNum(it.merges_mismatched)}개) — 다시 변환해야 합니다.`;
@@ -828,6 +875,12 @@ function evCheckDetails(it) {
         d.same ? null : h('div', { class: 'dbg-vs' },
           h('div', null, h('div', { class: 'eyebrow' }, 'GGUF'), h('pre', { class: 'dbg-ans sm mono' }, d.gguf_error ? T`오류: ${d.gguf_error}` : tokShow(d.gguf || ''))),
           h('div', null, h('div', { class: 'eyebrow' }, T('원래 모델')), h('pre', { class: 'dbg-ans sm mono' }, d.original_error ? T`오류: ${d.original_error}` : tokShow(d.original || ''))))))));
+  }
+  if (it.id === 'hparams' && Array.isArray(it.rows) && it.rows.length) {
+    return h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T`하이퍼파라미터 ${it.rows.length}개`),
+      h('div', { class: 'col g4 mt8 small' }, it.saved_with ? h('div', { class: 'muted' }, T`config.json — transformers ${it.saved_with}로 저장`) : null,
+        it.rows.map(r => h('div', { class: 'row g8 wrap' }, r.same ? h('span', { class: 'tag ok' }, T('같음')) : h('span', { class: 'tag err' }, T('다름')),
+          h('span', { class: 'mono' }, `${r.key} · ${r.config}`), h('span', { class: 'muted' }, T`원래 ${evHp(r.original)} · GGUF ${evHp(r.gguf)}`)))));
   }
   const ex = it.examples || [];
   if (!ex.length) return null;
@@ -912,7 +965,8 @@ function evToolsSetup() {
     h('div', { class: 'list ev-chks' },
       row(T`llama.cpp ${t.tag} 실행 파일 — ${b.file}`, evMB(b.size), 'github.com/ggml-org/llama.cpp · MIT'),
       row(T`변환 스크립트(convert_hf_to_gguf.py 등) ${c.files}개`, evMB(c.bytes), 'raw.githubusercontent.com/ggml-org/llama.cpp · MIT'),
-      row(T`파이썬 패키지 — ${c.torch}(CPU) · transformers 등`, T('약 150 ~ 250 MB(설치하면 1 GB 안쪽)'), 'pypi.org · download.pytorch.org')),
+      row(T`파이썬 패키지 — ${c.torch}(CPU) · transformers 등`, T('약 150 ~ 250 MB(설치하면 1 GB 안쪽)'), 'pypi.org · download.pytorch.org'),
+      c.transformers5 ? row(T`transformers ${c.transformers5} 환경 — transformers 5로 저장한 모델 폴더용(torch는 위의 것을 함께 씀)`, T('약 30 MB(설치하면 200 MB 안쪽)'), 'pypi.org') : null),
     h('p', { class: 'small muted m0' }, cands.length ? T`파이썬은 이 PC의 것으로 앱 전용 가상 환경만 만듭니다 — 찾은 파이썬: ${cands.join(', ')}`
       : T('이 PC에서 파이썬을 찾지 못했습니다 — python.org에서 파이썬 3.10 이상을 설치하거나(설치할 때 Add python.exe to PATH), 아래에 경로를 적으세요.')),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('파이썬 경로(고름)')), py)),
@@ -922,7 +976,7 @@ function evToolsSetup() {
 function evMadeLine(s) {
   if (!s) return '';
   const tool = s.llama_cpp ? `llama.cpp ${s.llama_cpp}` : null;
-  if (s.step === 'convert') return [T`변환 ${String(s.outtype || '').toUpperCase()}`, tool].filter(Boolean).join(NB);
+  if (s.step === 'convert') return [T`변환 ${String(s.outtype || '').toUpperCase()}`, tool, s.transformers ? `transformers ${s.transformers}` : null].filter(Boolean).join(NB);
   if (s.step === 'quantize') return [s.type, s.imatrix ? `imatrix ${s.imatrix.file || ''}`.trim() : null,
     (s.tensor_types || []).length ? T`행렬별 ${s.tensor_types.join(', ')}` : null, tool].filter(Boolean).join(NB);
   return '';
@@ -943,7 +997,13 @@ function evMakeCard(w, busy) {
   if (t === undefined) tools = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
   else if (t.error) tools = h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(t.error)));
   else if (!t.ascii_ok) tools = h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('자료 폴더의 경로에 ASCII가 아닌 글자가 있어 llama.cpp의 도구를 쓸 수 없습니다 — ASCII 경로의 자료 폴더로 실행하세요.')));
-  else if (st) tools = h('div', { class: 'small muted' }, T`도구 — llama.cpp ${st.llama_cpp.tag} · 파이썬 ${st.python.version} · torch ${st.python.torch} · transformers ${st.python.transformers}`);
+  else if (st) tools = h('div', { class: 'col g8' },
+    h('div', { class: 'small muted' }, st.python5 ? T`도구 — llama.cpp ${st.llama_cpp.tag} · 파이썬 ${st.python.version} · torch ${st.python.torch} · transformers ${st.python.transformers} · ${st.python5.transformers}`
+      : T`도구 — llama.cpp ${st.llama_cpp.tag} · 파이썬 ${st.python.version} · torch ${st.python.torch} · transformers ${st.python.transformers}`),
+    // #196 — transformers 5 로 저장한 폴더는 transformers 5 환경이 읽는다(앱의 목록에 있는데 아직 받지 않았으면)
+    !st.python5 && t.convert && t.convert.transformers5 ? h('div', { class: 'row g12 wrap' },
+      h('span', { class: 'small muted grow' }, T('transformers 5로 저장한 모델 폴더를 변환하려면 도구 준비를 다시 하세요 — transformers 5 환경을 더합니다(약 30 MB).')),
+      h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev-tools5', disabled: busy ? true : null, onclick: evToolsSetup }, I('download', 's'), T('도구 준비'))) : null);
   else tools = h('div', { class: 'row g12 wrap' }, h('span', { class: 'small muted grow' }, T('GGUF를 만들려면 먼저 도구를 받습니다 — llama.cpp의 실행 파일 · 변환 스크립트 · 파이썬 패키지.')),
     h('button', { class: 'btn sm primary needs-conn', 'data-fk': 'ev-tools', disabled: busy ? true : null, onclick: evToolsSetup }, I('download', 's'), T('도구 준비')));
   const run = async () => {
@@ -1073,6 +1133,16 @@ function evImproveCard(w, busy) {
     table);
 }
 // ---------- 2-3 원래 모델과 견주기 ----------
+// 설정 견주기(orig_compare.py 의 config_check) — config.json · transformers 가 읽은 값 · 기준 모델의 GGUF
+function evOrigCfgLine(cc) {
+  const rows = cc.rows || [];
+  if (cc.status === 'same') return h('div', { class: 'small muted' }, T`설정 — 하이퍼파라미터 ${rows.length}개가 config.json · transformers · GGUF에서 같습니다`);
+  if (cc.status === 'gguf_differs') {
+    const bad = rows.filter(r => !r.same).map(r => `${r.key} ${evHp(r.config !== null && r.config !== undefined ? r.config : r.transformers)} · GGUF ${evHp(r.gguf)}`).join(', ');
+    return h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T`GGUF의 하이퍼파라미터가 원래 모델의 설정과 다릅니다 — ${bad}. 다시 변환해야 합니다.`));
+  }
+  return h('div', { class: 'small muted' }, T('설정 — 기준값을 만든 GGUF를 찾지 못해 견주지 않았습니다'));
+}
 // 결과의 기준값(GGUF 기준 모델의 답 · 상위 K)을 원래 모델(transformers)에 같은 토큰으로 넣는다 — 변환 · 엔진이 원래 모델을 얼마나 그대로 옮겼나
 function evOrigCard(w, dir) {
   evToolsNeed();
@@ -1099,9 +1169,18 @@ function evOrigCard(w, dir) {
   };
   let body = null;
   if (O === undefined) body = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
-  else if (!O.missing && !O.error) body = h('div', { class: 'col g4' },
-    h('div', null, T`KL divergence ${evKL(O.kl_mean)} · top-1 일치율 ${evPct(O.top1)} · 위치 ${fmtNum(O.positions || 0)}개 · 대화 ${O.conversations}개`),
-    h('div', { class: 'small muted' }, T`답 토큰의 로그확률 차(절댓값 평균) ${evNum(O.answer_logprob_abs_mean, 6)} · 가장 큰 KL ${evKL(O.kl_max)} · ${O.dtype} · transformers ${O.transformers} · ${String(O.finished || '').replace('T', ' ').slice(0, 16)}`));
+  else if (!O.missing && !O.error) {
+    // #196 — 16비트 기준 모델의 바른 변환은 이 PC 에서 KL 3.5×10⁻⁶ ~ 1.0×10⁻⁴(답이 확실할수록 작다), rope 를 잘못 읽은 것은 1.5×10⁻² —
+    // 10⁻³ 을 넘으면 짚는다
+    const big16 = O.reference_16bit === true && typeof O.kl_mean === 'number' && O.kl_mean > 1e-3;
+    body = h('div', { class: 'col g4' },
+      h('div', null, T`KL divergence ${evKL(O.kl_mean)} · top-1 일치율 ${evPct(O.top1)} · 위치 ${fmtNum(O.positions || 0)}개 · 대화 ${O.conversations}개`),
+      h('div', { class: 'small muted' }, T`답 토큰의 로그확률 차(절댓값 평균) ${evNum(O.answer_logprob_abs_mean, 6)} · 가장 큰 KL ${evKL(O.kl_max)} · ${O.dtype} · transformers ${O.transformers} · ${String(O.finished || '').replace('T', ' ').slice(0, 16)}`),
+      O.config_check ? evOrigCfgLine(O.config_check) : null,
+      O.reference_16bit !== true ? null : big16
+        ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('기준 모델이 16비트인데 KL이 10⁻³보다 큽니다 — 변환이나 원래 모델 폴더의 설정이 다를 수 있습니다. 변환 검증을 보세요.')))
+        : h('div', { class: 'small muted' }, T('기준 모델이 16비트면 바르게 변환했을 때 KL은 10⁻³보다 훨씬 작습니다(이 PC의 측정 3.5 × 10⁻⁶ ~ 1.0 × 10⁻⁴ — 답이 확실할수록 작음).')));
+  }
   return h('div', { class: 'card col g12' },
     h('div', { class: 'row' }, h('span', { class: 'sec' }, T('원래 모델과 견주기')), h('span', { class: 'grow' }),
       h('span', { class: 'small muted' }, T('transformers · CPU — GGUF 만들기의 파이썬 환경'))),
