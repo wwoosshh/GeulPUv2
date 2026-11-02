@@ -56,6 +56,53 @@ const EVAL_DICT = {
   "작업 공간": "Workspaces",
   "작업 공간|one": "Workspace",
   "채팅 템플릿": "Chat template",
+  "사용자 메시지 하나": "One user message",
+  "시스템 메시지": "System message",
+  "여러 턴": "Several turns",
+  "도구 정의 · 호출 · 결과": "Tool definition · call · result",
+  "생성 프롬프트 없이": "Without the generation prompt",
+  "생각 끔": "Thinking off",
+  "생각 켬": "Thinking on",
+  "특수 토큰": "Special tokens",
+  "토크나이저": "Tokenizer",
+  "통과": "Pass",
+  "대화 경우 {}개를 두 템플릿으로 그린 글이 바이트까지 같습니다": "The {} conversation cases render byte-identically with both templates",
+  " — 템플릿의 글은 다르지만 그린 결과는 같습니다.": " — the template text differs but the rendered result is the same.",
+  "대화 경우 {}개 중 {}개에서 그린 글이 원래 모델과 다릅니다 — 모델이 학습 때와 다른 프롬프트를 받습니다.": "{1} of {0} conversation cases render differently from the original model — the model gets a different prompt from the one it was trained on.",
+  "GGUF에 채팅 템플릿이 없습니다 — 런타임이 기본 템플릿(ChatML)을 씁니다.": "The GGUF has no chat template — runtimes fall back to a default template (ChatML).",
+  "원래 모델의 템플릿을 해석기가 풀지 못해 비교하지 못했습니다: {}": "The interpreter could not parse the original model's template, so it was not compared: {}",
+  "원래 모델 폴더에 채팅 템플릿(chat_template.jinja · tokenizer_config.json)이 없습니다.": "The original model folder has no chat template (chat_template.jinja · tokenizer_config.json).",
+  "GGUF의 EOS {}가 원래 모델의 끝 토큰입니다.": "The GGUF's EOS {} is an end token of the original model.",
+  "GGUF의 EOS {}가 원래 모델의 끝 토큰({})이 아닙니다 — 다른 런타임에서 답이 끝나지 않을 수 있습니다.": "The GGUF's EOS {} is not an end token of the original model ({}) — answers may not stop in other runtimes.",
+  "GGUF에 EOS 토큰이 없습니다 — 원래 모델의 끝 토큰은 {}입니다.": "The GGUF has no EOS token — the original model's end tokens are {}.",
+  "원래 모델 폴더에 끝 토큰 정보(generation_config.json · tokenizer_config.json)가 없습니다.": "The original model folder has no end-token information (generation_config.json · tokenizer_config.json).",
+  "add_bos_token이 원래 모델과 같습니다({}).": "add_bos_token matches the original model ({}).",
+  "add_bos_token이 GGUF {} · 원래 모델 {}로 다릅니다 — 프롬프트 앞에 BOS가 붙는지가 달라집니다.": "add_bos_token differs — GGUF {} · original model {} — so whether a BOS is put in front of the prompt changes.",
+  "원래 모델 폴더에 tokenizer_config.json이 없습니다.": "The original model folder has no tokenizer_config.json.",
+  "특수 토큰 {}개가 같은 번호 · 글로 있습니다.": "All {} special tokens are present with the same IDs and text.",
+  "특수 토큰 {}개 중 {}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).": "{1} of {0} special tokens differ in the GGUF — convert again (this cannot be fixed in the metadata).",
+  "원래 모델 폴더에 tokenizer.json이 없습니다.": "The original model folder has no tokenizer.json.",
+  "어휘 {}개와 병합 {}개가 GGUF와 같습니다.": "The {} vocabulary entries and {} merges match the GGUF.",
+  "어휘 {}개 중 {}개의 번호 · 글이 GGUF와 다릅니다 — 다시 변환해야 합니다.": "{1} of {0} vocabulary entries differ in the GGUF — convert again.",
+  "병합이 다릅니다(원래 {}개 · GGUF {}개, 다른 것 {}개) — 다시 변환해야 합니다.": "The merges differ (original {} · GGUF {}, {} different) — convert again.",
+  "토크나이저 종류 {}는 비교하지 않습니다(BPE만).": "Tokenizer type {} is not compared (BPE only).",
+  "대화 경우 {}개": "{0} conversation {0|case|cases}",
+  "{}바이트부터 다름 · GGUF {} · 원래 {}바이트": "differs from byte {} · GGUF {} · original {} bytes",
+  "오류: {}": "Error: {}",
+  "원래 모델": "Original model",
+  "예 {}개": "{0} {0|example|examples}",
+  "고친 버전 만들기": "Create fixed version",
+  "{}에서 메타데이터만 바꾼 새 버전을 만듭니다 — 바꾸는 키: {}. 새 파일이 모델 폴더에 쓰입니다({}).": "Creates a new version from {} with only the metadata changed — keys: {}. A new file is written to the model folder ({}).",
+  "원래 모델 폴더": "Original model folder",
+  "원래 모델 폴더를 정하세요": "Choose the original model folder",
+  "{}는 아직 검사하지 않았습니다.": "{} has not been checked yet.",
+  "{} · {} · 문제 {} · 확인 필요 {} · 통과 {}": "{0} · {1} · {2} {2|problem|problems} · {3} to check · {4} passed",
+  "고친 버전 만들기({})": "Create fixed version ({})",
+  "이것만 고치기": "Fix only this",
+  "원래 모델(Hugging Face 형식)의 작은 파일과 견줍니다 — 가중치는 읽지 않습니다": "Compares with the original model's small files (Hugging Face format) — the weights are not read",
+  "원래 모델 폴더(tokenizer_config.json · tokenizer.json · generation_config.json이 있는 폴더)": "Original model folder (with tokenizer_config.json · tokenizer.json · generation_config.json)",
+  "검사할 버전": "Version to check",
+  "검사": "Check",
   "(키 없음)": "(no key)",
   "바뀐 것이 없습니다": "Nothing changed",
   "메타데이터 고치기 — {}": "Fix metadata — {}",
@@ -283,6 +330,13 @@ TMX.push(
   [/키 이름은 1 ~ 256 바이트/g, 'Key names are 1–256 bytes'],
   [/바꿀 수 있는 형은 글 · 정수 · bool 뿐입니다/g, 'Only string, integer and bool values can be changed'],
   [/(\S+) 의 형이 파일과 다릅니다\(글 · 정수 · bool 사이에서는 바꾸지 않습니다\)/g, '$1 has a different type in the file (string, integer and bool are not converted)'],
+  // 2-2 — 변환 검증(평가검증일)
+  [/원래 모델의 파일과 GGUF 의 머리를 견주는 중/g, 'Comparing the original model files with the GGUF header'],
+  [/GGUF 변환 검증 — (\S+) · 문제 (\d+) · 확인 필요 (\d+) · 통과 (\d+)/g, 'GGUF conversion check — $1 · $2 problems · $3 to check · $4 passed'],
+  [/원래 모델 폴더를 정하세요\(Hugging Face 형식 — tokenizer_config\.json 이 있는 폴더\)/g, 'Choose the original model folder (Hugging Face format — the folder with tokenizer_config.json)'],
+  [/원래 모델 폴더가 없습니다: /g, 'The original model folder does not exist: '],
+  [/GGUF 파일을 열 수 없습니다/g, 'Cannot open the GGUF file'],
+  [/변환 검증 보고서가 없습니다/g, 'No conversion check report'],
   [/파일을 열 수 없습니다/g, 'Cannot open the file'],
 );
 
@@ -290,7 +344,7 @@ TMX.push(
 const EV = {
   list: null, listSig: '', at: 0, loading: false, err: '',
   sel: load('geulpu.ev.sel', ''), view: 'ws', dir: '', item: -1, cmpA: '', cmpB: '',
-  res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0,
+  res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0, checks: {}, checkV: '', origDir: {},
 };
 const EVF = new Set();   // 받는 중인 것
 const evEnc = encodeURIComponent;
@@ -341,6 +395,14 @@ function evNeed(w) {
     evFetch('cmp', `${w.id}/${EV.cmpA}/${EV.cmpB}`, `/api/eval/compare?workspace=${evEnc(w.id)}&a=${evEnc(EV.cmpA)}&b=${evEnc(EV.cmpB)}`);
     res(EV.cmpA); res(EV.cmpB);
   }
+}
+// 2-2 — 버전의 마지막 변환 검증 보고서(없으면 {missing: true})
+function evCheckNeed(w, vid) {
+  const key = `${w.id}/${vid}`;
+  if (EV.checks[key] !== undefined || EVF.has('chk' + key)) return;
+  EVF.add('chk' + key);
+  api(`/api/eval/check?workspace=${evEnc(w.id)}&version=${evEnc(vid)}`).then(r => { EV.checks[key] = r; }, () => { EV.checks[key] = { missing: true }; })
+    .finally(() => { EVF.delete('chk' + key); EV.tick++; renderEval(); });
 }
 function evGo(view, o) {
   Object.assign(EV, { view }, o || {});
@@ -519,6 +581,110 @@ async function evRun(w) {
     refresh();
   } catch (e) { toast(e.message, 'err'); }
 }
+// ---------- 2-2 변환 검증 ----------
+const evCaseName = n => ({ basic: T('사용자 메시지 하나'), system: T('시스템 메시지'), multi: T('여러 턴'), tools: T('도구 정의 · 호출 · 결과'),
+  no_prompt: T('생성 프롬프트 없이'), think_off: T('생각 끔'), think_on: T('생각 켬') })[n] || n;
+const evCheckTitle = id => ({ chat_template: T('채팅 템플릿'), eos: 'EOS', bos: 'BOS', special_tokens: T('특수 토큰'), tokenizer: T('토크나이저') })[id] || id;
+const evCheckTag = st => ({ pass: h('span', { class: 'tag ok' }, I('check'), T('통과')), problem: h('span', { class: 'tag err' }, I('alert'), T('문제')),
+  check: h('span', { class: 'tag acc' }, I('info'), T('확인 필요')), skip: h('span', { class: 'tag dim' }, T('건너뜀')) })[st] || h('span', { class: 'tag' }, st);
+const evTokTxt = t => (t ? `${t.text !== undefined ? t.text : '?'}(${t.id})` : '-');
+function evCheckLine(it) {
+  const c = it.code;
+  if (it.id === 'chat_template') {
+    if (c === 'same') return T`대화 경우 ${it.cases}개를 두 템플릿으로 그린 글이 바이트까지 같습니다` + (it.same_text ? '.' : T(' — 템플릿의 글은 다르지만 그린 결과는 같습니다.'));
+    if (c === 'differs') return T`대화 경우 ${it.cases}개 중 ${it.differ}개에서 그린 글이 원래 모델과 다릅니다 — 모델이 학습 때와 다른 프롬프트를 받습니다.`;
+    if (c === 'gguf_missing') return T('GGUF에 채팅 템플릿이 없습니다 — 런타임이 기본 템플릿(ChatML)을 씁니다.');
+    if (c === 'original_error') return T`원래 모델의 템플릿을 해석기가 풀지 못해 비교하지 못했습니다: ${it.original_error || ''}`;
+    return T('원래 모델 폴더에 채팅 템플릿(chat_template.jinja · tokenizer_config.json)이 없습니다.');
+  }
+  if (it.id === 'eos') {
+    const o = (it.original || []).map(evTokTxt).join(', ');
+    if (c === 'in_original') return T`GGUF의 EOS ${evTokTxt(it.gguf)}가 원래 모델의 끝 토큰입니다.`;
+    if (c === 'not_in_original') return T`GGUF의 EOS ${evTokTxt(it.gguf)}가 원래 모델의 끝 토큰(${o})이 아닙니다 — 다른 런타임에서 답이 끝나지 않을 수 있습니다.`;
+    if (c === 'gguf_missing') return T`GGUF에 EOS 토큰이 없습니다 — 원래 모델의 끝 토큰은 ${o}입니다.`;
+    return T('원래 모델 폴더에 끝 토큰 정보(generation_config.json · tokenizer_config.json)가 없습니다.');
+  }
+  if (it.id === 'bos') {
+    if (c === 'same') return T`add_bos_token이 원래 모델과 같습니다(${String(it.gguf_add_bos)}).`;
+    if (c === 'add_bos_differs') return T`add_bos_token이 GGUF ${String(it.gguf_add_bos)} · 원래 모델 ${String(it.original_add_bos)}로 다릅니다 — 프롬프트 앞에 BOS가 붙는지가 달라집니다.`;
+    return T('원래 모델 폴더에 tokenizer_config.json이 없습니다.');
+  }
+  if (it.id === 'special_tokens') {
+    if (c === 'all_match') return T`특수 토큰 ${it.count}개가 같은 번호 · 글로 있습니다.`;
+    if (c === 'mismatch') return T`특수 토큰 ${it.count}개 중 ${it.mismatched}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).`;
+    return T('원래 모델 폴더에 tokenizer.json이 없습니다.');
+  }
+  if (c === 'same') return T`어휘 ${fmtNum(it.vocab)}개와 병합 ${fmtNum(it.merges)}개가 GGUF와 같습니다.`;
+  if (c === 'vocab_differs') return T`어휘 ${fmtNum(it.vocab)}개 중 ${fmtNum(it.vocab_mismatched)}개의 번호 · 글이 GGUF와 다릅니다 — 다시 변환해야 합니다.`;
+  if (c === 'merges_differs') return T`병합이 다릅니다(원래 ${fmtNum(it.merges)}개 · GGUF ${fmtNum(it.gguf_merges)}개, 다른 것 ${fmtNum(it.merges_mismatched)}개) — 다시 변환해야 합니다.`;
+  if (c === 'type_not_compared') return T`토크나이저 종류 ${it.original_type || '?'}는 비교하지 않습니다(BPE만).`;
+  return T('원래 모델 폴더에 tokenizer.json이 없습니다.');
+}
+function evCheckDetails(it) {
+  if (it.id === 'chat_template' && Array.isArray(it.details)) {
+    return h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T`대화 경우 ${it.details.length}개`),
+      h('div', { class: 'col g8 mt8' }, it.details.map(d => h('div', { class: 'col g4' },
+        h('div', { class: 'row g8 small' }, d.same ? h('span', { class: 'tag ok' }, T('같음')) : h('span', { class: 'tag err' }, T('다름')), h('span', { class: 'ink' }, evCaseName(d.name)),
+          d.same ? null : h('span', { class: 'muted' }, T`${d.at}바이트부터 다름 · GGUF ${d.gguf_len} · 원래 ${d.original_len}바이트`)),
+        d.same ? null : h('div', { class: 'dbg-vs' },
+          h('div', null, h('div', { class: 'eyebrow' }, 'GGUF'), h('pre', { class: 'dbg-ans sm mono' }, d.gguf_error ? T`오류: ${d.gguf_error}` : tokShow(d.gguf || ''))),
+          h('div', null, h('div', { class: 'eyebrow' }, T('원래 모델')), h('pre', { class: 'dbg-ans sm mono' }, d.original_error ? T`오류: ${d.original_error}` : tokShow(d.original || ''))))))));
+  }
+  const ex = it.examples || [];
+  if (!ex.length) return null;
+  return h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T`예 ${ex.length}개`),
+    h('div', { class: 'col g4 mt8 small mono' }, ex.map(e => h('div', null, `${e.id}: ${JSON.stringify(e.original)} → GGUF ${e.gguf !== undefined ? JSON.stringify(e.gguf) : '-'}${e.gguf_type !== undefined ? ` (type ${e.gguf_type})` : ''}`))));
+}
+async function evApplyFix(w, vid, changes) {
+  const v = w.versions.find(x => x.id === vid);
+  const keys = [...new Set(changes.map(c => c.key))].join(', ');
+  if (!(await confirmBox(T('고친 버전 만들기'), h('p', { class: 'muted m0' }, T`${vid}에서 메타데이터만 바꾼 새 버전을 만듭니다 — 바꾸는 키: ${keys}. 새 파일이 모델 폴더에 쓰입니다(${fmtBytes(v ? v.size : 0)}).`), T('만들기')))) return;
+  try { await api('/api/eval/fix', { workspace: w.id, from: vid, changes }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+function evCheckCard(w, busy) {
+  if (!w.versions.length) return null;
+  const vid = EV.checkV && w.versions.some(v => v.id === EV.checkV) ? EV.checkV : (w.current || w.versions[0].id);
+  evCheckNeed(w, vid);
+  const R = EV.checks[`${w.id}/${vid}`];
+  const dirv = EV.origDir[w.id] !== undefined ? EV.origDir[w.id] : ((w.original && w.original.dir) || '');
+  const dir = h('input', { class: 'input mono', type: 'text', value: dirv, placeholder: 'C:\\models\\my-finetune', 'data-fk': 'ev-orig', 'aria-label': T('원래 모델 폴더'),
+    oninput: ev => { EV.origDir[w.id] = ev.target.value; } });
+  const run = async () => {
+    const d = dir.value.trim();
+    if (!d) { toast(T('원래 모델 폴더를 정하세요')); return; }
+    try { await api('/api/eval/check', { workspace: w.id, version: vid, original_dir: d }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    catch (e) { toast(e.message, 'err'); }
+  };
+  let body;
+  if (R === undefined) body = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
+  else if (R.missing) body = h('p', { class: 'small muted m0' }, T`${vid}는 아직 검사하지 않았습니다.`);
+  else {
+    const its = R.items || [];
+    const fixes = its.filter(it => it.fix && Array.isArray(it.fix.changes)).flatMap(it => it.fix.changes);
+    const n = st => its.filter(it => it.status === st).length;
+    body = h('div', { class: 'col g12' },
+      h('div', { class: 'row g8 small' }, h('span', { class: 'muted' }, T`${R.version} · ${String(R.finished || '').slice(0, 16)} · 문제 ${n('problem')} · 확인 필요 ${n('check')} · 통과 ${n('pass')}`),
+        h('span', { class: 'grow' }),
+        fixes.length ? h('button', { class: 'btn sm primary needs-conn', disabled: busy ? true : null, onclick: () => evApplyFix(w, vid, fixes) }, I('edit', 's'), T`고친 버전 만들기(${fixes.length})`) : null),
+      h('div', { class: 'list ev-chks' }, its.map(it => h('div', { class: 'ev-chk' },
+        h('div', { class: 'row g8' }, evCheckTag(it.status), h('span', { class: 'ink' }, evCheckTitle(it.id)), h('span', { class: 'grow' }),
+          it.fix ? h('button', { class: 'btn sm needs-conn', disabled: busy ? true : null, onclick: () => evApplyFix(w, vid, it.fix.changes) }, T('이것만 고치기')) : null),
+        h('div', { class: 'small' }, evCheckLine(it)),
+        evCheckDetails(it)))));
+  }
+  return h('div', { class: 'card col g16' },
+    h('div', { class: 'row' }, h('span', { class: 'sec' }, T('GGUF 변환 검증')), h('span', { class: 'grow' }),
+      h('span', { class: 'small muted' }, T('원래 모델(Hugging Face 형식)의 작은 파일과 견줍니다 — 가중치는 읽지 않습니다'))),
+    h('div', { class: 'ev-form' },
+      h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(tokenizer_config.json · tokenizer.json · generation_config.json이 있는 폴더)')), dir),
+      h('div', { class: 'row g12' },
+        h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('검사할 버전')),
+          h('select', { class: 'input', 'data-fk': 'ev-chkv', onchange: ev => { EV.checkV = ev.target.value; renderEval(true); } },
+            w.versions.map(v => h('option', { value: v.id, selected: v.id === vid ? true : null }, `${v.id} · ${v.file}`)))),
+        h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-chk', disabled: busy ? true : null, onclick: run }, I('shield', 's'), busy ? T('다른 작업 실행 중') : T('검사'))))),
+    body);
+}
 function evRunCard(w, busy) {
   const o = evOpts(w);
   const ds = (EV.list && EV.list.data) || [];
@@ -576,7 +742,7 @@ function evVerdict(r) {
 }
 
 // ---------- 화면 ----------
-const EV_JOBS = ['eval', 'fix'];
+const EV_JOBS = ['eval', 'fix', 'check'];
 const evJobOf = () => { const j = S.st && S.st.job; return j && EV_JOBS.includes(j.kind) && (j.state === 'running' || jobKey(j) !== S.jobHide) ? j : null; };
 function evJobCard(j) {
   const tone = { running: 'acc', done: 'ok', failed: 'err', cancelled: 'dim' }[j.state] || '';
@@ -719,7 +885,7 @@ function evWsView(w) {
           h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}`)));
     }))
       : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('아직 결과가 없습니다')), h('div', null, T('위에서 평가를 실행하면 여기에 쌓입니다.'))));
-  return h('div', { class: 'col g24' }, head, state, versions, evRunCard(w, busy), results);
+  return h('div', { class: 'col g24' }, head, state, versions, evCheckCard(w, busy), evRunCard(w, busy), results);
 }
 
 // 결과 — 판정 · 지표 · 처음 갈라진 스텝 · 끝난 까닭 · 분야 · 대화
@@ -968,7 +1134,7 @@ function renderEval(force) {
   if (!page || !S.st || S.view !== 'eval') return;
   const j = S.st.job;
   const js = j && EV_JOBS.includes(j.kind) ? `${j.id}:${j.state}` : '';
-  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; }                   // 평가 작업이 시작 · 끝나면 목록을 다시
+  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; EV.checks = {}; }   // 평가 작업이 시작 · 끝나면 목록 · 검증 보고서를 다시
   const running = !!(j && EV_JOBS.includes(j.kind) && j.state === 'running');
   if (!EV.loading && Date.now() - EV.at > (running ? 3000 : 20000)) evLoad();
   const w = evWs(EV.sel);
