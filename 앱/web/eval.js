@@ -87,6 +87,24 @@ const EVAL_DICT = {
   "transformers · CPU — GGUF 만들기의 파이썬 환경": "transformers · CPU — the Make GGUF Python environment",
   "기준 모델(GGUF)의 답을 원래 모델에 같은 토큰으로 넣어 위치마다 견줍니다. 0에 가까우면 변환과 엔진이 원래 모델을 그대로 옮긴 것이고, 버전들의 KL은 그 위에 더해진 차이입니다.": "Feeds the reference model's (GGUF) answers to the original model token by token and compares every position. Near 0 means conversion and engine reproduce the original model; the versions' KL is the difference added on top.",
   "견주기": "Compare",
+  // 4-2 — 개선
+  "개선 — 행렬 무리마다 되돌려 측정": "Improve — measure each matrix group restored",
+  "개선 측정": "Improvement measurement",
+  "고른 무리로 만들기": "Make with the chosen groups",
+  "고른 무리를 되돌릴 형식으로 바꿔 기준 버전과 같은 형식 · imatrix로 다시 만들고, 기준 버전과 함께 같은 데이터로 평가합니다.": "Remakes the base version's type and imatrix with the chosen groups at the restore type, then evaluates it with the base version on the same data.",
+  "기준 대비": "vs base",
+  "기준 버전": "Base version",
+  "되돌릴 형식": "Restore type",
+  "마지막 측정 — 기준 {}({}) · KL {} · 되돌릴 형식 {} · 데이터 {} · 답 {}토큰 · {}": "Last measurement — base {} ({}) · KL {} · restore type {} · data {} · answers {} tokens · {}",
+  "무리 하나만 높은 형식으로 바꾼 시험 파일을 같은 데이터로 잽니다": "Measures trial files with one group at a higher type on the same data",
+  "무리": "Group",
+  "무리를 하나 이상 고르세요": "Choose at least one group",
+  "시험 {}개쯤 — 시험마다 파일을 만들고 평가합니다(0.6B에서 시험 하나에 20초쯤, 큰 모델은 더 오래). 시험 파일은 잰 뒤 지웁니다.": "About {} trials — each makes a file and evaluates it (about 20 s per trial for a 0.6B model, longer for bigger models). Trial files are deleted after measuring.",
+  "측정": "Measure",
+  "측정하려면 GGUF 만들기에서 도구 준비를 먼저 하세요.": "To measure, first set up tools in Make GGUF.",
+  "층의 세 토막도 잰다": "Also measure the three layer thirds",
+  "1 MB 당": "Per MB",
+  "미리 고른 것 — 행렬 무리 가운데 KL을 5 % 넘게 줄인 것을 1 MB 당 줄임이 큰 차례로 셋. 무리마다 잰 줄임은 더해지지 않습니다 — 만든 뒤의 평가가 실제 값입니다.": "Preselected — the three matrix groups that cut the KL by more than 5 %, in order of reduction per MB. The measured reductions do not add up — the evaluation after making gives the real value.",
   "원래 모델과 견주려면 작업 공간의 GGUF 만들기에서 도구 준비를 먼저 하세요(파이썬 · transformers).": "To compare with the original model, first set up tools in the workspace's Make GGUF (Python · transformers).",
   "대화 {}개": "{0} {0|conversation|conversations}",
   "대화 {}개 — 원본 {}개 중 분야마다 고르게": "{0} {0|conversation|conversations} — chosen evenly by category from {1}",
@@ -493,6 +511,23 @@ TMX.push(
   [/원래 모델과 견주지 못했습니다\(orig_compare\.py — 작업 기록을 보세요\)/g, 'Could not compare with the original model (orig_compare.py — see the run log)'],
   [/원래 모델과 견준 값이 없습니다/g, 'No comparison with the original model yet'],
   [/결과를 쓰지 못했습니다/g, 'Could not write the result'],
+  // 4-2 — 개선 측정(개선일) · 만든 뒤 이어서 평가
+  [/되돌릴 형식은 q6_k · q5_k · bf16 · f16 중 하나입니다/g, 'The restore type is one of q6_k · q5_k · bf16 · f16'],
+  [/기준 버전은 GGUF 만들기로 양자화한 버전이어야 합니다\(만든 설정이 있어야 함\)/g, 'The base version must be one quantized with Make GGUF (it needs its settings)'],
+  [/기준 버전의 양자화 형식을 읽지 못했습니다/g, "Could not read the base version's quantization type"],
+  [/기준 버전의 imatrix 파일이 없습니다: /g, "The base version's imatrix file is missing: "],
+  [/개선 측정 — 기준 버전 (\S+)\((\S+)\) · 되돌릴 형식 (\S+) · 시험 (\d+) 개 · 데이터 (\S+) · 답 (\d+) 토큰/g, 'Improvement measurement — base version $1 ($2) · restore type $3 · $4 trials · data $5 · answers $6 tokens'],
+  [/시험 파일을 만드는 중 — (.+?)\((\d+)\/(\d+)\)/g, 'Making trial files — $1 ($2/$3)'],
+  [/\[(.+?)\] 시험 파일을 만들지 못했습니다 — 건너뜀/g, '[$1] Could not make the trial file — skipped'],
+  [/시험을 평가하지 못했습니다: /g, 'Could not evaluate the trials: '],
+  [/개선 측정 — (\S+) 기준 · 시험 (\d+) 개 · 가장 크게 줄인 것 (.+?)\(KL (\S+) → (\S+), −([\d.]+) %\)/g, 'Improvement measurement — base $1 · $2 trials · largest reduction $3 (KL $4 → $5, −$6 %)'],
+  [/개선 측정 — (\S+) 기준 · 시험 (\d+) 개 · KL 을 줄인 시험이 없습니다/g, 'Improvement measurement — base $1 · $2 trials · no trial reduced the KL'],
+  [/평가하지 못했습니다\(작업 기록 참고\)/g, 'Could not evaluate (see the run log)'],
+  [/\[(.+?)\] 바뀐 행렬이 없습니다\(기준 버전과 같은 크기\) — 건너뜀/g, '[$1] No matrix changed (same size as the base version) — skipped'],
+  [/바뀐 행렬이 없습니다\(기준 버전과 같은 크기\)/g, 'No matrix changed (same size as the base version)'],
+  [/시험 파일을 만들지 못했습니다/g, 'Could not make the trial file'],
+  [/개선 측정 보고서가 없습니다/g, 'No improvement measurement yet'],
+  [/ · 이어서 평가 못 함: /g, ' · follow-up evaluation failed: '],
   [/엔진이 받지 않는 파일입니다/g, 'The engine does not support this file'],
   [/파일을 열 수 없습니다/g, 'Cannot open the file'],
 );
@@ -504,6 +539,7 @@ const EV = {
   res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0, checks: {}, checkV: '', origDir: {},
   tools: undefined, mk: {},   // 4-1 — GGUF 만들기 도구(/api/eval/tools) · 작업 공간마다 만들기 양식
   orig: {}, origDt: 'float32',   // 2-3 — 결과마다 원래 모델과 견준 값(/api/eval/original) · 계산 형식
+  imp: {}, impo: {},   // 4-2 — 작업 공간마다 마지막 개선 측정 보고서(/api/eval/improve) · 측정 양식 · 고른 무리
 };
 const EVF = new Set();   // 받는 중인 것
 const evEnc = encodeURIComponent;
@@ -948,6 +984,94 @@ function evMakeCard(w, busy) {
     h('div', null, h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-make', disabled: busy || !st ? true : null, onclick: run },
       I('play', 's'), busy ? T('다른 작업 실행 중') : T('만들기', 'make'))));
 }
+// ---------- 4-2 개선 — 행렬 무리마다 되돌려 측정 ----------
+function evImpNeed(w) {
+  if (EV.imp[w.id] !== undefined || EVF.has('imp' + w.id)) return;
+  EVF.add('imp' + w.id);
+  api(`/api/eval/improve?workspace=${evEnc(w.id)}`).then(r => { EV.imp[w.id] = r; }, () => { EV.imp[w.id] = { missing: true }; })
+    .finally(() => { EVF.delete('imp' + w.id); EV.tick++; renderEval(); });
+}
+function evImproveCard(w, busy) {
+  const qv = w.versions.filter(v => v.made && v.made.kind === 'quantize' && v.made.settings);
+  if (!w.reference.model || !qv.length) return null;
+  evToolsNeed();
+  evImpNeed(w);
+  const t = EV.tools, st = t && !t.error ? t.state : null;
+  const o = EV.impo[w.id] || (EV.impo[w.id] = { base: '', data: 'basic60', max: 64, restore: 'q6_k', ranges: true, pick: null, pickFor: '' });
+  if (!qv.some(v => v.id === o.base)) o.base = (qv.find(v => v.id === w.current) || qv[qv.length - 1]).id;
+  const ds = ((EV.list && EV.list.data) || []).filter(d => d.kind === 'chat');
+  const R = EV.imp[w.id];
+  const rep = R && !R.missing && !R.error && R.base ? R : null;
+  const seg = h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': T('되돌릴 형식') }, [['q6_k', 'Q6_K'], ['q5_k', 'Q5_K'], ['bf16', 'BF16']].map(([v, l]) => h('button', {
+    class: o.restore === v ? 'on' : '', role: 'radio', 'aria-checked': o.restore === v ? 'true' : 'false', 'data-fk': 'ev-imp-r-' + v,
+    onclick: () => { o.restore = v; renderEval(true); } }, l)));
+  const run = async () => {
+    try { await api('/api/eval/improve', { workspace: w.id, base: o.base, data: o.data, max_tokens: o.max, restore: o.restore, layer_ranges: o.ranges }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    catch (e) { toast(e.message, 'err'); }
+  };
+  let table = null;
+  if (rep) {
+    const bk = rep.base.kl_mean;
+    const rows = (rep.rows || []).map(r => {
+      const d = typeof r.kl_mean === 'number' && r.kl_mean >= 0 && bk > 0 ? (bk - r.kl_mean) / bk : null;
+      const ds = typeof r.size === 'number' && rep.base.size ? r.size - rep.base.size : null;
+      return Object.assign({}, r, { d, ds, eff: d !== null && ds > 0 ? (d * 100) / (ds / 1048576) : null });   // 1 MB 당 KL 을 줄인 몫(%)
+    });
+    const sorted = [...rows].sort((a, b) => (b.d === null ? -9 : b.d) - (a.d === null ? -9 : a.d));
+    // 미리 고르기 — 행렬 무리(층 토막은 행렬 무리와 겹친다) 가운데 5 % 넘게 줄인 것을 1 MB 당 줄임이 큰 차례로 셋
+    if (!o.pick || o.pickFor !== rep.finished) {
+      o.pick = new Set(rows.filter(r => !r.error && r.d !== null && r.d >= 0.05 && r.eff !== null && !/^blk /.test(r.name)).sort((a, b) => b.eff - a.eff).slice(0, 3).map(r => r.name));
+      o.pickFor = rep.finished;
+    }
+    const make = async () => {
+      const sel = rows.filter(r => o.pick.has(r.name));
+      if (!sel.length) { toast(T('무리를 하나 이상 고르세요')); return; }
+      const tt = [].concat(...sel.map(r => r.tensor_types || []), rep.base.tensor_types || []);
+      try {
+        await api('/api/eval/make', { workspace: w.id, from: 'ref', quants: [rep.base.type], imatrix: rep.base.imatrix ? { mode: 'file', path: rep.base.imatrix } : { mode: 'none' },
+          tensor_types: tt, based_on: rep.base.version, then_eval: { data: rep.data, max_tokens: rep.max_tokens, versions: [rep.base.version] } });
+        S.jobHide = ''; EV.at = 0; resetSig(); refresh();
+      } catch (e) { toast(e.message, 'err'); }
+    };
+    table = h('div', { class: 'col g8' },
+      h('div', { class: 'small muted' }, T`마지막 측정 — 기준 ${rep.base.version}(${rep.base.type}) · KL ${evKL(bk)} · 되돌릴 형식 ${String(rep.restore).toUpperCase()} · 데이터 ${rep.data} · 답 ${rep.max_tokens}토큰 · ${String(rep.finished || '').replace('T', ' ').slice(0, 16)}`),
+      h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+        h('thead', null, h('tr', null, h('th', null, ''), h('th', null, T('무리')), h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, T('기준 대비')), h('th', { class: 'r' }, T('크기')),
+          h('th', { class: 'r' }, T('1 MB 당')))),
+        h('tbody', null, sorted.map(r => h('tr', null,
+          h('td', null, r.error ? null : h('input', { type: 'checkbox', 'aria-label': r.name, 'data-fk': 'ev-imp-p-' + r.name, checked: o.pick.has(r.name) ? true : null,
+            onchange: ev => { if (ev.target.checked) o.pick.add(r.name); else o.pick.delete(r.name); } })),
+          h('td', { class: 'mono small' }, r.name),
+          r.error ? h('td', { class: 'small err', colspan: '4' }, TM(r.error)) : [
+            h('td', { class: 'r num small' }, evKL(r.kl_mean)),
+            h('td', { class: 'r num small' }, r.d === null ? '-' : `${r.d >= 0 ? '−' : '+'}${Math.abs(r.d * 100).toFixed(1)}%`),
+            h('td', { class: 'r num small' }, r.ds === null ? '-' : `${r.ds >= 0 ? '+' : '−'}${fmtBytes(Math.abs(r.ds))}`),
+            h('td', { class: 'r num small' }, r.eff === null ? '-' : `${r.eff >= 0 ? '−' : '+'}${Math.abs(r.eff).toFixed(2)}%`)]))))),
+      h('p', { class: 'small muted m0' }, T('미리 고른 것 — 행렬 무리 가운데 KL을 5 % 넘게 줄인 것을 1 MB 당 줄임이 큰 차례로 셋. 무리마다 잰 줄임은 더해지지 않습니다 — 만든 뒤의 평가가 실제 값입니다.')),
+      h('div', { class: 'row g12 wrap' }, h('span', { class: 'small muted grow' }, T('고른 무리를 되돌릴 형식으로 바꿔 기준 버전과 같은 형식 · imatrix로 다시 만들고, 기준 버전과 함께 같은 데이터로 평가합니다.')),
+        h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-imp-make', disabled: busy || !st ? true : null, onclick: make }, I('play', 's'), T('고른 무리로 만들기'))));
+  }
+  const n = 8 + (o.ranges ? 3 : 0);
+  return h('div', { class: 'card col g16' },
+    h('div', { class: 'row' }, h('span', { class: 'sec' }, T('개선 — 행렬 무리마다 되돌려 측정')), h('span', { class: 'grow' }),
+      h('span', { class: 'small muted' }, T('무리 하나만 높은 형식으로 바꾼 시험 파일을 같은 데이터로 잽니다'))),
+    st ? null : h('div', { class: 'small muted' }, T('측정하려면 GGUF 만들기에서 도구 준비를 먼저 하세요.')),
+    h('div', { class: 'ev-form' },
+      h('div', { class: 'row g12 wrap' },
+        h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('기준 버전')),
+          h('select', { class: 'input', 'data-fk': 'ev-imp-base', onchange: ev => { o.base = ev.target.value; } }, qv.map(v => h('option', { value: v.id, selected: v.id === o.base ? true : null }, `${v.id} · ${v.file}`)))),
+        h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('데이터')),
+          h('select', { class: 'input', 'data-fk': 'ev-imp-data', onchange: ev => { o.data = ev.target.value; } }, ds.map(d => h('option', { value: d.name, selected: d.name === o.data ? true : null }, d.name)))),
+        h('label', { class: 'col g4 ev-num' }, h('span', { class: 'small muted' }, T('답의 최대 토큰')),
+          h('input', { class: 'input num', type: 'number', min: 8, max: 1024, value: o.max, 'data-fk': 'ev-imp-max',
+            onchange: ev => { const x = Math.round(+ev.target.value); o.max = Math.min(1024, Math.max(8, isFinite(x) ? x : 64)); ev.target.value = o.max; } }))),
+      h('div', { class: 'row g16 wrap' }, h('div', { class: 'col g4' }, h('span', { class: 'small muted' }, T('되돌릴 형식')), seg),
+        h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-imp-ranges', checked: o.ranges ? true : null, onchange: ev => { o.ranges = ev.target.checked; renderEval(true); } }), T('층의 세 토막도 잰다')))),
+    h('div', { class: 'row g12 wrap' },
+      h('button', { class: 'btn needs-conn', 'data-fk': 'ev-imp-run', disabled: busy || !st ? true : null, onclick: run }, I('gauge', 's'), busy ? T('다른 작업 실행 중') : T('측정')),
+      h('span', { class: 'small muted grow' }, T`시험 ${n}개쯤 — 시험마다 파일을 만들고 평가합니다(0.6B에서 시험 하나에 20초쯤, 큰 모델은 더 오래). 시험 파일은 잰 뒤 지웁니다.`)),
+    table);
+}
 // ---------- 2-3 원래 모델과 견주기 ----------
 // 결과의 기준값(GGUF 기준 모델의 답 · 상위 K)을 원래 모델(transformers)에 같은 토큰으로 넣는다 — 변환 · 엔진이 원래 모델을 얼마나 그대로 옮겼나
 function evOrigCard(w, dir) {
@@ -1055,7 +1179,7 @@ function evVerdict(r) {
 }
 
 // ---------- 화면 ----------
-const EV_JOBS = ['eval', 'fix', 'check', 'tools', 'make', 'orig'];
+const EV_JOBS = ['eval', 'fix', 'check', 'tools', 'make', 'orig', 'improve'];
 const evJobOf = () => { const j = S.st && S.st.job; return j && EV_JOBS.includes(j.kind) && (j.state === 'running' || jobKey(j) !== S.jobHide) ? j : null; };
 function evJobCard(j) {
   const tone = { running: 'acc', done: 'ok', failed: 'err', cancelled: 'dim' }[j.state] || '';
@@ -1154,7 +1278,9 @@ function evWsView(w) {
   // 버전 — 버전마다 최근 결과와, 견줄 버전(만든 부모 — 없으면 앞 버전)의 같은 데이터 · 설정 결과 가운데 최근 것 대비
   const vrows = w.versions.map((v, k) => {
     const r = evLatest(w, v.id);
-    const base = v.made && v.made.from ? w.versions.find(x => x.id === v.made.from) : k > 0 ? w.versions[k - 1] : null;
+    const bo = v.made && v.made.settings && v.made.settings.based_on;   // 4-2 — 개선 측정의 기준 버전에서 다시 만든 버전은 그 버전 대비
+    const base = bo && w.versions.some(x => x.id === bo) ? w.versions.find(x => x.id === bo)
+      : v.made && v.made.from ? w.versions.find(x => x.id === v.made.from) : k > 0 ? w.versions[k - 1] : null;
     const prev = base && r ? evResults(w).filter(x => x.version === base.id && evSameSet(x, r)).pop() || null : null;
     const pc = !!prev;
     const a = r && r.answers, pa = prev && prev.answers;
@@ -1202,7 +1328,7 @@ function evWsView(w) {
           h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}` + (r.accuracy ? T` · 정답률 ${evPct(r.accuracy.cand)}` : ''))));
     }))
       : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('아직 결과가 없습니다')), h('div', null, T('위에서 평가를 실행하면 여기에 쌓입니다.'))));
-  return h('div', { class: 'col g24' }, head, state, versions, evMakeCard(w, busy), evCheckCard(w, busy), evRunCard(w, busy), results);
+  return h('div', { class: 'col g24' }, head, state, versions, evMakeCard(w, busy), evImproveCard(w, busy), evCheckCard(w, busy), evRunCard(w, busy), results);
 }
 
 // 결과 — 판정 · 지표 · 처음 갈라진 스텝 · 끝난 까닭 · 분야 · 대화
@@ -1486,7 +1612,7 @@ function renderEval(force) {
   if (!page || !S.st || S.view !== 'eval') return;
   const j = S.st.job;
   const js = j && EV_JOBS.includes(j.kind) ? `${j.id}:${j.state}` : '';
-  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; EV.checks = {}; EV.tools = undefined; EV.orig = {}; }   // 평가 작업이 시작 · 끝나면 목록 · 검증 보고서 · 도구 · 원래 모델과 견준 값을 다시
+  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; EV.checks = {}; EV.tools = undefined; EV.orig = {}; EV.imp = {}; }   // 평가 작업이 시작 · 끝나면 목록 · 검증 보고서 · 도구 · 원래 모델과 견준 값 · 개선 보고서를 다시
   const running = !!(j && EV_JOBS.includes(j.kind) && j.state === 'running');
   if (!EV.loading && Date.now() - EV.at > (running ? 3000 : 20000)) evLoad();
   const w = evWs(EV.sel);
