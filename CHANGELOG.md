@@ -6,6 +6,65 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.17.0 — Model evaluation: make, check and improve GGUF files (2026-11-02)
+
+A new **Model evaluation** page turns GeulPU into a test bench for GGUF files: make a GGUF from a Hugging Face folder, check the
+conversion, compare versions with a reference model and grade their answers, and measure which matrix groups to keep at a higher
+precision — with every result reproducible bit for bit. Output bits of existing requests are unchanged.
+
+### Added
+
+- **Server log-probabilities — top 128 and chosen tokens.** A request's `geulpu.top_logprobs` (0–128) returns more than 20 top
+  log-probabilities in the `geulpu` object, and `geulpu.token_ids_logprob` (a list of token ids for each scored position) on a
+  `/v1/completions` echo returns the log-probabilities of those tokens at each position. They are the same contract 5.2 values,
+  bit-identical to the top-k and score values. The model evaluation's distribution comparison (KL divergence) uses them.
+- **Model evaluation backend (API).** The app gains workspaces (the GGUF versions of one model plus a reference model), evaluation jobs,
+  results and before/after comparison (`/api/eval` …). Both models echo-score the reference model's greedy answers, giving KL divergence
+  (the reference's top 64 tokens plus the remaining probability), top-1 agreement, Δp and the PPL ratio; each model also answers with its
+  own chat template, giving the conversations whose answers changed, the first divergent step and the reference margin at that step.
+  Text files are scored at the same positions as llama-perplexity (the second half of each 512-token chunk). Built-in data: 'basic 60'
+  (prompts written for GeulPU, six categories).
+- **Model evaluation screen.** A new 'Model evaluation' entry in the left menu. Create a workspace (a reference model plus the GGUF
+  versions to compare), run an evaluation from the screen, then read the result (a one-sentence verdict, KL divergence, top-1 agreement,
+  the distribution of first divergent steps and the share that diverged at a low-margin step, answers that ended with the end token,
+  categories, every conversation), a before/after comparison of two results (conversations that now match the reference and those that
+  newly diverged — sign test), and where one conversation's answers differ (both answers side by side, the probabilities both models gave
+  the candidate tokens at the first divergent step, and the steps around it). A result's run log opens in the debugger.
+- **GGUF metadata fix.** From a version's menu in Model evaluation, create a new GGUF with a changed chat template, special tokens
+  (BOS · EOS · EOT · PAD) or add_bos/add_eos and add it as a new version. The tensors are copied byte for byte and only the metadata
+  (keys) change — the original file stays as it is. The new version records how it was made, its parent version and the changed keys,
+  and evaluating it again with the same data and settings compares it with its parent.
+- **GGUF conversion check.** In a Model evaluation workspace, set the original model folder (Hugging Face format — tokenizer_config.json ·
+  tokenizer.json · generation_config.json; the weights are not read) and check a version's GGUF. The chat template (five to seven
+  conversation cases rendered with the same jinja interpreter as the server and compared byte for byte — differences shown side by side),
+  EOS, BOS, special tokens, and the vocabulary and merges are each marked pass, problem or to check, and problems that the metadata can
+  fix become a new version with 'Create fixed version'.
+- **Compare with the original model.** A Model evaluation result can feed the reference model's (GGUF) answers to the original model
+  (Hugging Face format — transformers, CPU) token by token and compare every position (KL divergence · top-1 agreement · answer-token
+  log-probability difference). Near 0 means the conversion and the engine reproduce the original model. It uses the Python
+  environment made by Make GGUF's tool setup.
+- **Accuracy evaluation (grading).** When a data line in Model evaluation has `answer` and `grader` (number · choice · exact · tool_call),
+  both the reference and the evaluated model's answers are graded: results show accuracy (95% interval — bootstrap) and the conversations
+  where only one model is correct (sign test), and before/after comparisons show the conversations that went wrong → correct and
+  correct → wrong. Each conversation shows the expected answer, both verdicts and the tool calls. Built-in graded data 'tasks40' (questions
+  written for GeulPU — math · multiple choice · one word · tool calls).
+- **Public tasks (accuracy evaluation).** Model evaluation's built-in data now includes the GSM8K test set (1,319 problems — 'gsm8k') and
+  500 MMLU-Pro test questions chosen evenly by category ('mmlu-pro-500'), both MIT (notices in THIRD_PARTY_NOTICES.md, which is now in the
+  packages). Choosing a data set shows its source, conversation count and license. The conversion rules and tool are in
+  문서/모델평가.md and 도구/공개과제.py.
+- **Make GGUF.** A Model evaluation workspace can now convert the original model (a Hugging Face folder) to GGUF (BF16 · F16 · Q8_0) and
+  quantize it (Q8_0 · Q6_K · Q5_K_M · Q4_K_M · IQ4_XS, an imatrix made from a text file or an existing one, per-matrix types). The
+  converted file becomes the reference model (when there is none) and the quantized files become versions that keep their settings
+  and tool versions; the conversion check runs by itself. 'Quantize the reference model' remakes files without converting again. The
+  tools are downloaded once with 'Set up tools' — llama.cpp b12032 executables and conversion scripts (SHA-256 checked), plus the
+  packages (torch CPU · transformers) in an app-only virtual environment made with this PC's Python. A version shows why when the
+  engine does not support its mix of types.
+- **Improvement measurement.** In a Model evaluation workspace, taking a quantized version as the base, each matrix group (attn_q · attn_k ·
+  attn_v · attn_output · ffn_gate+ffn_up · ffn_down · token_embd · output) and each third of the layers gets a trial file with only that
+  group at a higher type (Q6_K · Q5_K · BF16), evaluated on the same data; a report shows how much each group lowers the KL divergence and
+  how much the file grows (trial files are deleted after measuring). Remaking with the chosen groups evaluates the new version together
+  with the base version.
+
 ## 0.16.0 — Concurrent Qwen3.5 requests · more GGUF files · one-line install (2026-11-02)
 
 ### Added

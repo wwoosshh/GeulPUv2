@@ -294,6 +294,29 @@ costs.
 
 ![The debugger — run list, run header, request table (after a replay all 50 requests and 2 branches are the same)](img/debugger/01-runs-en.png)
 
+### 7. Model evaluation — make · check · compare · improve GGUF files
+
+**Model evaluation** (the flask button on the left rail, since GeulPU 0.17.0) is a test bench for GGUF files. A **workspace** holds one
+model's work: a reference model (best a BF16 or F16 file) and the GGUF files to compare with it (**versions**).
+
+- **Make GGUF** — from a Hugging Face folder (config.json and .safetensors): convert to BF16 · F16 · Q8_0 and quantize (Q8_0 · Q6_K ·
+  Q5_K_M · Q4_K_M · IQ4_XS, an imatrix from a text file, per-matrix types). The first time, **Set up tools** downloads llama.cpp's
+  executables and conversion scripts (a fixed release, SHA-256 checked) and installs the conversion packages into an app-only Python
+  virtual environment made with your Python (3.10 or later). The converted file becomes the reference model; quantized files become
+  versions that keep their settings.
+- **GGUF conversion check** — compares the GGUF's chat template · EOS · BOS · special tokens · tokenizer with the original model's
+  small files, and fixes metadata problems as a new version (tensors are copied byte for byte).
+- **Run evaluation** — both models score the reference model's answers token by token (KL divergence · top-1 agreement) and answer with
+  their own chat templates (answers that differ · the first diverging step · finish reasons). Data with answers is graded too
+  (accuracy with a 95 % interval): built-in `tasks40`, `gsm8k` (GSM8K test) and `mmlu-pro-500` (MMLU-Pro test), or your own JSONL.
+  Rerunning with the same files and settings gives bit-identical results, so a before/after comparison shows only what you changed.
+- **Compare with the original model** — feeds the reference model's answers to the original (transformers) model and compares every
+  position: near 0 means the conversion and the engine reproduce the original model.
+- **Improve** — makes trial files with one matrix group (or a third of the layers) at a higher type, measures how much each lowers
+  the KL divergence and how much the file grows, and remakes the version with the groups you choose.
+
+The plan and the measurements behind these screens are in [문서/모델평가.md](../문서/모델평가.md) (Korean).
+
 ### Use it from other programs (OpenAI-compatible API)
 
 While a model is loaded in the app (sending one chat message loads it), use `http://127.0.0.1:44544/v1` as an OpenAI-compatible base
