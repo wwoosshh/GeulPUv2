@@ -6,6 +6,64 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.18.0 — Model evaluation: transformers 5 models · learned and forgotten · result table · guide (2026-11-02)
+
+0.18.0 fixes and widens 0.17.0's Model evaluation (#196–#202): conversion and comparison for models saved with transformers 5, what a fine-tune learned and forgot against the model before fine-tuning, a result table and workspace comparison, accuracy in Improve, and a Model evaluation guide. Existing requests give the same output bits.
+
+### Added
+
+- **Model evaluation guide.** One document now covers a full round of Model evaluation (workspace → Set up tools → Make GGUF →
+  conversion check → evaluation → Compare with the original model → Improve → before/after → Result table), the data format, the
+  grading rules (number · choice · exact · tool_call — with examples), what the metrics mean and their usual sizes, what a fine-tune
+  learned and forgot against the model before fine-tuning, the result table and workspace comparison, the files in a result folder and
+  the API — [docs/model-evaluation-guide.md](docs/model-evaluation-guide.md) · [모델평가안내.md](모델평가안내.md) (#201).
+- **Against the model before fine-tuning — learned and forgotten.** Choose a baseline model (before fine-tuning) for a Model evaluation
+  workspace, and every result on graded data shows its accuracy and how many conversations the reference and evaluated models learned
+  (wrong before, right now) and forgot (right before, wrong now). The baseline's answers are made once, like reference values, and
+  reused for the same model, data and settings — no more adding the original model as a version for each fine-tune and reading the
+  reference and evaluated columns backwards (#199).
+- **Accuracy and size versus quality in Improve.** With graded data, the improvement report and table give each trial's accuracy (in %p
+  against the base version, with the 95 % interval) and the 'reference only correct' count, and the preselection can go by KL or by
+  accuracy. Layer thirds are preselected too. The workspace's versions measured with the same data and settings are listed side by side
+  by size and quality (KL · accuracy), and a version is flagged when a smaller one is as good or better — for example a 424 MB Q5_K_M
+  next to a 447 MB file made with chosen groups (#197).
+- **Result table and workspace comparison.** A Model evaluation workspace now has a Result table — choose one data/settings
+  combination to see each version's size · KL · top-1 · answers that differ · accuracy (95 % interval) and the reference model's
+  accuracy in one table, per-category accuracy (graded data) or KL with 'By category', and a size–quality chart (KL or accuracy) with its
+  frontier (versions with no smaller version that is as good or better). Results export to CSV (with per-category rows). With several
+  workspaces, 'Compare workspaces' lines up results with the same data and settings type by type — which fine-tune loses less at
+  Q4_K_M (#198).
+
+### Fixed
+
+- **max_tokens on data lines.** In Model evaluation, a data line's max_tokens takes precedence over the run setting, but the result row
+  and the reproduction info showed only the run setting (#201). The result row now reads like 'answers 512 tokens (600 from the data
+  lines)' and the reproduction info shows how many conversations used the data line's value. An issue number left in GeulPU --help is
+  gone too.
+- **Names and type labels of made GGUFs.** Fine-tune folders are all called 'merged', so every file made with Make GGUF showed up as
+  "Merged" on the Models screen and the file names (merged-Q4_K_M-custom.gguf) did not say what changed. Files with per-matrix types
+  also had the wrong type label — a Q4_K_M file with only layers 0–8 at Q6_K showed up as "Q6_K" (#200). The type label now comes from
+  the type llama-quantize wrote (general.file_type — Q4_K_M, Q5_K_M and so on), and made files take their file name and model name
+  (general.name) from the workspace name. With per-matrix types the file name carries the changed matrices
+  (…-Q4_K_M+blk0-8.Q6_K.gguf) and the Models screen shows them next to the type. Make GGUF and Add version have a note field, and
+  'Make with the chosen groups' puts the chosen groups in the note.
+- **Small Model evaluation fixes** (#202). The reference model field of the New workspace dialog no longer preselects the first 16-bit
+  file in the list — 'None — convert with Make GGUF' is the default (with another model or another fine-tune as the reference, every KL
+  measures the wrong thing). The follow-up evaluation of 'Make with the chosen groups' no longer measures the base version again when
+  a result with the same file · data · settings exists (results are bit-identical — evaluations you start yourself still always run).
+  The number of imatrix chunks (512 tokens each) is kept in the run log and the new versions. The workspace header says 'Reference
+  not set yet' instead of repeating itself, and the quantization type and evaluated version checkboxes have names (accessible name ·
+  value). A run handed from Model evaluation to the debugger says why its scores are made separately.
+- **Models saved with transformers 5.** Make GGUF could not convert a fine-tune trained and saved with today's transformers 5.x (the
+  conversion tools' transformers 4.57.6 cannot read 5.x's tokenizer_config.json), and Compare with the original model silently gave a
+  wrong KL because it did not know config.json's rope_parameters (#196). 'Set up tools' now also makes a transformers 5.22.1
+  environment (about 30 MB — torch is shared), and the app picks the environment from the transformers version that saved the folder.
+  Compare with the original model first checks the hyperparameters (layers · heads · RoPE base · RMS eps …) in the GGUF, in config.json
+  and as read by transformers; it stops without a KL when transformers read them differently, and flags a KL above 10⁻³ for a 16-bit
+  reference model. The conversion check has a new 'Settings' item (config.json ↔ GGUF hyperparameters), a failed conversion or
+  comparison shows the last line of its run log, and a folder without weight files is reported before converting (llama.cpp wrote a
+  tokenizer-only GGUF).
+
 ## 0.17.0 — Model evaluation: make, check and improve GGUF files (2026-11-02)
 
 A new **Model evaluation** page turns GeulPU into a test bench for GGUF files: make a GGUF from a Hugging Face folder, check the
