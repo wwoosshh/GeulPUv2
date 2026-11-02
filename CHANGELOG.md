@@ -23,7 +23,7 @@ precision — with every result reproducible bit for bit. Output bits of existin
   (the reference's top 64 tokens plus the remaining probability), top-1 agreement, Δp and the PPL ratio; each model also answers with its
   own chat template, giving the conversations whose answers changed, the first divergent step and the reference margin at that step.
   Text files are scored at the same positions as llama-perplexity (the second half of each 512-token chunk). Built-in data: 'basic 60'
-  (prompts written for GeulPU, six categories). The screens come in the next step.
+  (prompts written for GeulPU, six categories).
 - **Model evaluation screen.** A new 'Model evaluation' entry in the left menu. Create a workspace (a reference model plus the GGUF
   versions to compare), run an evaluation from the screen, then read the result (a one-sentence verdict, KL divergence, top-1 agreement,
   the distribution of first divergent steps and the share that diverged at a low-margin step, answers that ended with the end token,
