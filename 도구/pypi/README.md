@@ -61,7 +61,8 @@ Hugging Face 의 GGUF 하나를 한 줄로: `geulpu --hf Qwen/Qwen3-0.6B-GGUF/Qw
 ## Links
 
 - [README](https://github.com/wwoosshh/GeulPUv2#readme) · [user guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/user-guide.md) ·
-  [debugger guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/debugger-guide.md)
+  [debugger guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/debugger-guide.md) ·
+  [model evaluation guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/model-evaluation-guide.md)
 - [Changelog](https://github.com/wwoosshh/GeulPUv2/blob/main/CHANGELOG.md) · [source](https://github.com/wwoosshh/GeulPUv2) ·
   [issues](https://github.com/wwoosshh/GeulPUv2/issues)
 
