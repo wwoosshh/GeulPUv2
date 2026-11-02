@@ -5,6 +5,17 @@ const EVAL_DICT = {
   "끝 토큰": "End token",
   "도구 호출": "Tool call",
   "아직 없음": "not set yet",
+  "결과 표": "Result table",
+  "데이터 · 설정": "Data · settings",
+  "품질": "Quality",
+  "분야별": "By category",
+  "CSV 내보내기": "Export CSV",
+  "크기와 품질 그림": "Size and quality chart",
+  "크기와 품질의 경계(더 작으면서 {}이 같거나 나은 버전이 없는 것) — {}. 채운 점이 경계입니다.": "The size–quality frontier (versions with no smaller version whose {} is as good or better) — {}. Filled points are on the frontier.",
+  "작업 공간 견주기": "Compare workspaces",
+  "같은 데이터 · 설정으로 잰 작업 공간들(미세조정 · 원래 모델 …)을 형식마다 나란히 봅니다. KL은 저마다의 기준 모델 대비, 정답률의 괄호는 저마다의 기준 모델 대비 차입니다.": "Workspaces measured with the same data and settings (fine-tunes, the original model …) side by side, type by type. KL is against each workspace's own reference model, and the bracket after accuracy is the difference from that reference model.",
+  "정답률 {} ({})": "accuracy {} ({})",
+  "고른 작업 공간에 이 데이터 · 설정의 결과가 없습니다.": "The chosen workspaces have no results with these data and settings.",
   "고르는 기준": "Choose by",
   "정답률(기준 대비 %p)": "Accuracy (vs base, %p)",
   "기준만 맞음": "Reference only correct",
@@ -600,6 +611,7 @@ const EV = {
   res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0, checks: {}, checkV: '', origDir: {},
   tools: undefined, mk: {},   // 4-1 — GGUF 만들기 도구(/api/eval/tools) · 작업 공간마다 만들기 양식
   orig: {}, origDt: 'float32',   // 2-3 — 결과마다 원래 모델과 견준 값(/api/eval/original) · 계산 형식
+  tbl: {}, xw: null,             // #198 — 작업 공간마다 결과 표의 고름(데이터 · 설정 · 분야별 · 품질 기준), 작업 공간 견주기의 고름
   imp: {}, impo: {},   // 4-2 — 작업 공간마다 마지막 개선 측정 보고서(/api/eval/improve) · 측정 양식 · 고른 무리
 };
 const EVF = new Set();   // 받는 중인 것
@@ -1386,6 +1398,9 @@ function evListPane() {
   const L = EV.list, out = [];
   out.push(h('div', { class: 'ev-lhead' }, h('span', { class: 'ink' }, T('작업 공간')), h('span', { class: 'grow' }),
     h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev:new', onclick: evNewWs }, I('plus', 's'), T('새 작업 공간'))));
+  // #198 — 결과가 있는 작업 공간이 둘 넘으면 나란히 견준다
+  if (L && L.workspaces.filter(w => (w.results || []).length).length >= 2) out.push(h('div', { class: 'ev-lhead' },
+    h('button', { class: 'btn sm ghost' + (EV.view === 'xws' ? ' on' : ''), 'data-fk': 'ev:xws', onclick: () => evGo('xws') }, I('layers', 's'), T('작업 공간 견주기'))));
   if (EV.err && !L) out.push(h('div', { class: 'fd-more' }, h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(EV.err)))));
   else if (!L) out.push(h('div', { class: 'fd-more' }, h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'))));
   else if (!L.workspaces.length) out.push(h('div', { class: 'fd-empty' }, I('flask', 'l'), h('div', { class: 'big' }, T('작업 공간이 없습니다')),
@@ -1412,6 +1427,12 @@ function evCrumb(w, parts) {
 const evDetailKey = () => [EV.sel, EV.view, EV.dir, EV.item, EV.cmpA, EV.cmpB].join('|');
 function evDetailPane() {
   const box = h('div', { class: 'ev-detail', 'data-k': evDetailKey() });
+  if (EV.view === 'xws') {                          // #198 — 작업 공간 견주기는 고른 작업 공간과 상관없다
+    let xb;
+    try { xb = evCrossView(); } catch (e) { xb = h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, String(e && e.message))); console.error(e); }
+    put(box, xb);
+    return box;
+  }
   const w = evWs(EV.sel);
   if (!w) {
     put(box, h('div', { class: 'col g24 ev-intro' },
@@ -1430,6 +1451,174 @@ function evDetailPane() {
   } catch (e) { body = h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, String(e && e.message))); console.error(e); }
   put(box, body);
   return box;
+}
+
+// ---------- #198 결과 표 — 버전 × 데이터 · 분야별 · 크기와 품질 그림 · CSV, 작업 공간 견주기 ----------
+// 데이터 · 설정(같은 데이터 · 계산 방식 · 답의 길이 · 생각 · 청크)이 같은 결과끼리 견준다
+const evComboKey = r => { const s = r.settings || {}; return [r.data && r.data.name, s.mode, s.max_tokens, s.thinking ? 1 : 0, s.chunks].join('|'); };
+const evComboLabel = r => { const s = r.settings || {}; return [r.data && r.data.name, evMode(s.mode), evChat(r) ? evMaxLine(r) : T`청크 ${s.chunks}`].filter(Boolean).join(NB); };
+const evVQuant = v => { const m = modelOf(v.model); return m ? `${quantOf(m)}${mixOf(m)}` : (v.quant || ''); };
+const evAccOf = r => (r && r.accuracy && typeof r.accuracy.cand === 'number' ? r.accuracy.cand : null);
+// 버전마다 그 데이터 · 설정의 마지막 결과
+const evByVersion = (w, key) => w.versions.map(v => ({ v, r: evResults(w).filter(x => x.version === v.id && evComboKey(x) === key).pop() })).filter(x => x.r);
+// 품질이 같거나 낫고 더 작은 것이 없는 점들(크기와 품질의 경계) — 품질은 KL(낮을수록) 또는 정답률(높을수록)
+function evFrontier(pts, byAcc) {
+  const better = (u, e) => u !== e && u.size <= e.size && (byAcc ? u.acc >= e.acc && (u.size < e.size || u.acc > e.acc) : u.kl <= e.kl && (u.size < e.size || u.kl < e.kl));
+  return pts.filter(e => !pts.some(u => better(u, e)));
+}
+function evSvg(tag, attrs, ...kids) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v !== null && v !== undefined) e.setAttribute(k, v);
+  for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined) e.append(typeof c === 'string' ? document.createTextNode(c) : c);
+  return e;
+}
+// 크기(가로)와 품질(세로 — KL 은 로그 눈금, 정답률은 %) 그림. 경계의 점은 채우고 나머지는 테두리만
+function evPlot(pts, byAcc) {
+  if (pts.length < 2) return null;
+  const W = 420, H = 210, L = 58, R = 16, TP = 14, B = 30;
+  const xs = pts.map(p => p.size / 1048576), ys = pts.map(p => (byAcc ? p.acc * 100 : Math.log10(Math.max(p.kl, 1e-9))));
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const px = x => L + (x1 > x0 ? (x - x0) / (x1 - x0) : 0.5) * (W - L - R);
+  const py = y => TP + (y1 > y0 ? (y1 - y) / (y1 - y0) : 0.5) * (H - TP - B);
+  const yf = y => (byAcc ? `${y.toFixed(1)}%` : evKL(Math.pow(10, y)));
+  const t = (x, y, s, a, c) => evSvg('text', { x, y, 'font-size': 11, fill: c || 'var(--mute)', 'text-anchor': a || 'start' }, s);
+  const fr = new Set(evFrontier(pts, byAcc).map(p => p.id));
+  return h('div', { class: 'ev-plot', style: 'max-width:460px' }, evSvg('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': T('크기와 품질 그림') },
+    evSvg('line', { x1: L, y1: H - B, x2: W - R, y2: H - B, stroke: 'var(--line-strong)' }),
+    evSvg('line', { x1: L, y1: TP, x2: L, y2: H - B, stroke: 'var(--line-strong)' }),
+    t(L, H - 10, fmtBytes(x0 * 1048576)), t(W - R, H - 10, fmtBytes(x1 * 1048576), 'end'),
+    t(L - 6, H - B, yf(y0), 'end'), t(L - 6, TP + 8, yf(y1), 'end'),
+    pts.map((p, i) => [
+      evSvg('circle', { cx: px(xs[i]), cy: py(ys[i]), r: 4.5, fill: fr.has(p.id) ? 'var(--accent)' : 'none', stroke: 'var(--accent)', 'stroke-width': 1.5 },
+        evSvg('title', null, `${p.id} · ${fmtBytes(p.size)} · ${byAcc ? evPct(p.acc) : `KL ${evKL(p.kl)}`}`)),
+      px(xs[i]) > W - R - 40 ? t(px(xs[i]) - 7, py(ys[i]) - 6, p.id, 'end', 'var(--ink)') : t(px(xs[i]) + 7, py(ys[i]) - 6, p.id, 'start', 'var(--ink)')])));
+}
+// CSV — 작업 공간들의 모든 결과(버전 × 데이터 · 설정), 분야마다 줄을 더한다
+function evCsv(ws) {
+  const q = s => { s = s === null || s === undefined ? '' : String(s); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const rows = [['workspace', 'version', 'label', 'file', 'type', 'size_bytes', 'data', 'mode', 'max_tokens', 'thinking', 'category', 'items', 'kl_mean', 'kl_p99',
+    'top1', 'ppl_ratio', 'answers_differ', 'answers_compared', 'near_tie', 'accuracy', 'accuracy_lo', 'accuracy_hi', 'ref_accuracy', 'ref_only', 'cand_only', 'finished', 'result_dir']];
+  for (const w of ws) for (const r of evResults(w)) {
+    const v = w.versions.find(x => x.id === r.version) || {};
+    const s = r.settings || {}, m = r.metrics || {}, a = r.answers || {}, acc = r.accuracy || {};
+    const ci = acc.cand_ci || [];
+    const base = [w.name, r.version, v.label || '', v.file || '', v.id ? evVQuant(v) : '', v.size || '', r.data && r.data.name, s.mode, s.max_tokens, s.thinking ? 1 : 0];
+    rows.push(base.concat(['', (r.data && r.data.items) || a.items, m.kl_mean, m.kl_p99, m.top1, m.ppl_ratio, a.differ, a.compared, a.near_tie,
+      acc.cand, ci[0], ci[1], acc.ref, acc.ref_only, acc.cand_only, r.finished, r.dir]));
+    for (const c of r.categories || []) {
+      rows.push(base.concat([c.name, c.items, c.kl_mean, '', c.top1, '', c.differ, c.compared, '', c.graded ? c.cand_correct / c.graded : '', '', '',
+        c.graded ? c.ref_correct / c.graded : '', '', '', r.finished, r.dir]));
+    }
+  }
+  return rows.map(r => r.map(q).join(',')).join('\n') + '\n';
+}
+function evTableCard(w) {
+  const rs = evResults(w);
+  if (!rs.length) return null;
+  const o = EV.tbl[w.id] || (EV.tbl[w.id] = { key: '', cat: false, by: 'kl' });
+  const combos = new Map();
+  for (const r of rs) combos.set(evComboKey(r), r);
+  if (!combos.has(o.key)) o.key = evComboKey(rs[rs.length - 1]);
+  const items = evByVersion(w, o.key).sort((a, b) => a.v.size - b.v.size);
+  if (!items.length) return null;
+  const graded = items.some(x => evAccOf(x.r) !== null);
+  if (!graded) o.by = 'kl';
+  const ra = graded ? (items.find(x => x.r.accuracy) || {}).r.accuracy : null;
+  const rm = modelOf(w.reference.model);
+  const sel = h('select', { class: 'input', 'data-fk': 'ev-tbl-combo', 'aria-label': T('데이터 · 설정'), onchange: ev => { o.key = ev.target.value; renderEval(true); } },
+    [...combos.entries()].map(([k, r]) => h('option', { value: k, selected: k === o.key ? true : null }, evComboLabel(r))));
+  const seg = graded ? h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': T('품질') }, [['kl', 'KL'], ['acc', T('정답률')]].map(([v, l]) => h('button', {
+    class: o.by === v ? 'on' : '', role: 'radio', 'aria-checked': o.by === v ? 'true' : 'false', 'data-fk': 'ev-tbl-by-' + v, onclick: () => { o.by = v; renderEval(true); } }, l))) : null;
+  const vcell = v => h('td', { class: 'small' }, h('div', { class: 'ink' }, v.id),
+    v.label ? h('div', { class: 'muted ell', style: 'max-width:12em', 'data-tip': v.label, 'data-tip-pos': 'top' }, v.label) : null);
+  let table;
+  const cats = o.cat ? [...new Set(items.flatMap(x => (x.r.categories || []).map(c => c.name)))] : [];
+  if (o.cat && cats.length) {
+    // 분야별 — 채점 데이터면 정답률, 아니면 KL
+    const cell = (x, n) => {
+      const c = (x.r.categories || []).find(y => y.name === n);
+      if (!c) return h('td', { class: 'r num small' }, '-');
+      return h('td', { class: 'r num small' }, graded && c.graded ? evPct(c.cand_correct / c.graded) : evKL(c.kl_mean));
+    };
+    table = h('table', { class: 'data ev-table' },
+      h('thead', null, h('tr', null, h('th', null, T('버전')), cats.map(n => h('th', { class: 'r' }, n)))),
+      h('tbody', null, items.map(x => h('tr', null, vcell(x.v), cats.map(n => cell(x, n)))),
+        graded && ra ? h('tr', null, h('td', { class: 'small muted' }, T('기준 모델')), cats.map(n => {
+          const c = (items[0].r.categories || []).find(y => y.name === n);
+          return h('td', { class: 'r num small muted' }, c && c.graded ? evPct(c.ref_correct / c.graded) : '-');
+        })) : null));
+  } else {
+    table = h('table', { class: 'data ev-table' },
+      h('thead', null, h('tr', null, h('th', null, T('버전')), h('th', null, T('형식')), h('th', { class: 'r' }, T('크기')), h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'),
+        h('th', { class: 'r' }, T('답이 달라진 대화')), graded ? h('th', { class: 'r' }, T('정답률')) : null)),
+      h('tbody', null, items.map(x => {
+        const m = x.r.metrics || {}, a = x.r.answers || {}, acc = x.r.accuracy;
+        return h('tr', null, vcell(x.v), h('td', { class: 'mono small' }, evVQuant(x.v)), h('td', { class: 'r num small' }, fmtBytes(x.v.size)),
+          h('td', { class: 'r num small' }, evKL(m.kl_mean)), h('td', { class: 'r num small' }, evPct(m.top1)),
+          h('td', { class: 'r num small' }, a.compared ? `${a.differ}/${a.compared}` : '-'),
+          graded ? h('td', { class: 'r num small', 'data-tip': acc && acc.cand_ci ? T`95 % 구간 ${evPct(acc.cand_ci[0])} ~ ${evPct(acc.cand_ci[1])}` : null, 'data-tip-pos': 'top' }, acc ? evPct(acc.cand) : '-') : null);
+      }),
+      graded && ra ? h('tr', null, h('td', { class: 'small muted' }, T('기준 모델')), h('td', { class: 'mono small muted' }, rm ? quantOf(rm) : (w.reference.quant || '')),
+        h('td', { class: 'r num small muted' }, rm ? fmtBytes(rm.size) : '-'), h('td', null, ''), h('td', null, ''), h('td', null, ''),
+        h('td', { class: 'r num small muted', 'data-tip': ra.ref_ci ? T`95 % 구간 ${evPct(ra.ref_ci[0])} ~ ${evPct(ra.ref_ci[1])}` : null, 'data-tip-pos': 'top' }, evPct(ra.ref))) : null));
+  }
+  const byAcc = o.by === 'acc';
+  const pts = items.map(x => ({ id: x.v.id, size: x.v.size, kl: (x.r.metrics || {}).kl_mean, acc: evAccOf(x.r) })).filter(p => typeof p.kl === 'number' && (!byAcc || p.acc !== null));
+  const fr = evFrontier(pts, byAcc).sort((a, b) => a.size - b.size);
+  return h('div', { class: 'card col g12' },
+    h('div', { class: 'row' }, h('span', { class: 'sec' }, T('결과 표')), h('span', { class: 'grow' }),
+      h('button', { class: 'btn sm ghost', 'data-fk': 'ev-tbl-csv', onclick: () => labDownload(`geulpu-eval-${w.id}.csv`, evCsv([w]), 'text/csv') }, I('download', 's'), T('CSV 내보내기'))),
+    h('div', { class: 'row g12 wrap' }, sel,
+      h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-tbl-cat', 'aria-label': T('분야별'), checked: o.cat ? true : null, onchange: ev => { o.cat = ev.target.checked; renderEval(true); } }), T('분야별')),
+      seg),
+    h('div', { class: 'list' }, table),
+    pts.length >= 2 ? evPlot(pts, byAcc) : null,
+    pts.length >= 2 ? h('p', { class: 'small muted m0' }, T`크기와 품질의 경계(더 작으면서 ${byAcc ? T('정답률') : 'KL'}이 같거나 나은 버전이 없는 것) — ${fr.map(p => p.id).join(', ')}. 채운 점이 경계입니다.`) : null);
+}
+// 작업 공간 견주기 — 형식(줄) × 작업 공간(칸): 같은 데이터 · 설정의 KL · 기준 모델 대비 정답률 손실
+function evCrossView() {
+  const L = EV.list;
+  if (!L) return h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
+  const wss = L.workspaces.filter(w => (w.results || []).length);
+  const o = EV.xw || (EV.xw = { pick: new Set(wss.map(w => w.id)), key: '' });
+  const chosen = wss.filter(w => o.pick.has(w.id));
+  const combos = new Map();
+  for (const w of chosen) for (const r of evResults(w)) combos.set(evComboKey(r), r);
+  if (!combos.has(o.key)) o.key = [...combos.keys()].pop() || '';
+  const cells = new Map();                         // 형식 → { 작업 공간 → {v, r} }
+  for (const w of chosen) for (const x of evByVersion(w, o.key)) {
+    const q = evVQuant(x.v);
+    if (!cells.has(q)) cells.set(q, {});
+    const c = cells.get(q), cur = c[w.id];
+    if (!cur || byName(x.r.dir, cur.r.dir) > 0) c[w.id] = x;
+  }
+  const order = [...cells.keys()].sort((a, b) => qRank(a.split('+')[0]) - qRank(b.split('+')[0]) || a.localeCompare(b));
+  const cols = chosen.filter(w => evByVersion(w, o.key).length);      // 이 데이터 · 설정의 결과가 있는 작업 공간만 칸으로
+  const graded = cols.some(w => evByVersion(w, o.key).some(x => evAccOf(x.r) !== null));
+  const cell = x => {
+    if (!x) return h('td', { class: 'r num small muted' }, '-');
+    const acc = x.r.accuracy;
+    const loss = acc && typeof acc.ref === 'number' && typeof acc.cand === 'number' ? acc.ref - acc.cand : null;
+    const dl = loss === null ? '' : `${loss > 0 ? '−' : loss < 0 ? '+' : '±'}${Math.abs(loss * 100).toFixed(2)}%p`;
+    return h('td', { class: 'r num small', 'data-tip': `${x.v.id} · ${x.v.label || x.v.file} · ${fmtBytes(x.v.size)}`, 'data-tip-pos': 'top' },
+      h('div', null, `KL ${evKL((x.r.metrics || {}).kl_mean)}`),
+      graded ? h('div', { class: 'muted' }, loss === null ? '-' : T`정답률 ${evPct(acc.cand)} (${dl})`) : null);
+  };
+  return h('div', { class: 'col g24' },
+    h('div', { class: 'col g8' }, h('nav', { class: 'ev-crumb' }, h('button', { class: 'dbg-link', 'data-fk': 'ev:xws:back', onclick: () => evGo('ws') }, T('모델 평가')),
+      h('span', { class: 'faint' }, '›'), h('span', { class: 'ink' }, T('작업 공간 견주기'))),
+      h('h2', { class: 'm0' }, T('작업 공간 견주기')),
+      h('p', { class: 'muted m0' }, T('같은 데이터 · 설정으로 잰 작업 공간들(미세조정 · 원래 모델 …)을 형식마다 나란히 봅니다. KL은 저마다의 기준 모델 대비, 정답률의 괄호는 저마다의 기준 모델 대비 차입니다.'))),
+    h('div', { class: 'card col g12' },
+      h('div', { class: 'row g12 wrap' }, chosen.length ? h('select', { class: 'input', 'data-fk': 'ev-xw-combo', 'aria-label': T('데이터 · 설정'), onchange: ev => { o.key = ev.target.value; renderEval(true); } },
+        [...combos.entries()].map(([k, r]) => h('option', { value: k, selected: k === o.key ? true : null }, evComboLabel(r)))) : null, h('span', { class: 'grow' }),
+        h('button', { class: 'btn sm ghost', 'data-fk': 'ev-xw-csv', disabled: chosen.length ? null : true, onclick: () => labDownload('geulpu-eval-workspaces.csv', evCsv(chosen), 'text/csv') }, I('download', 's'), T('CSV 내보내기'))),
+      h('div', { class: 'row g12 wrap' }, wss.map(w => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-xw-' + w.id, 'aria-label': w.name, value: w.id, checked: o.pick.has(w.id) ? true : null,
+        onchange: ev => { if (ev.target.checked) o.pick.add(w.id); else o.pick.delete(w.id); renderEval(true); } }), w.name))),
+      cols.length && order.length ? h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+        h('thead', null, h('tr', null, h('th', null, T('형식')), cols.map(w => h('th', { class: 'r' }, w.name)))),
+        h('tbody', null, order.map(q => h('tr', null, h('td', { class: 'mono small' }, q), cols.map(w => cell(cells.get(q)[w.id])))))))
+        : h('div', { class: 'small muted' }, T('고른 작업 공간에 이 데이터 · 설정의 결과가 없습니다.'))));
 }
 
 // 작업 공간 — 지금 상태 · 버전 · 평가 실행 · 결과
@@ -1509,7 +1698,7 @@ function evWsView(w) {
           h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}` + (r.accuracy ? T` · 정답률 ${evPct(r.accuracy.cand)}` : ''))));
     }))
       : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('아직 결과가 없습니다')), h('div', null, T('위에서 평가를 실행하면 여기에 쌓입니다.'))));
-  return h('div', { class: 'col g24' }, head, state, versions, evMakeCard(w, busy), evImproveCard(w, busy), evCheckCard(w, busy), evRunCard(w, busy), results);
+  return h('div', { class: 'col g24' }, head, state, versions, evMakeCard(w, busy), evImproveCard(w, busy), evCheckCard(w, busy), evRunCard(w, busy), results, evTableCard(w));
 }
 
 // 결과 — 판정 · 지표 · 처음 갈라진 스텝 · 끝난 까닭 · 분야 · 대화
