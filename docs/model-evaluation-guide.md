@@ -39,6 +39,11 @@ data and settings a rerun gives bit-identical results, so a before/after compari
 
 ## 2. One round — a fine-tuned model to GGUF
 
+![The Model evaluation page — the workspace list on the left (facts-r16-e6 · facts-r16-e6-replay), and on the right facts-r16-e6's reference model, current state and versions](img/eval/01-workspace-en.png)
+
+The pictures in this guide follow one round with two fine-tunes of Qwen3-0.6B that inject 300 invented facts with LoRA (saved with
+transformers 5.22.1).
+
 1. **New workspace** — give it a name, leave the reference model at 'None — convert from the original model with Make GGUF', and set
    the original model folder.
 2. **Set up tools** (once) — the button on the Make GGUF card. It shows what it downloads, with sizes and sources, and downloads only
@@ -52,6 +57,9 @@ data and settings a rerun gives bit-identical results, so a before/after compari
    environment from the `transformers_version` in the folder's `config.json`. You can also use an imatrix (made from a text file, or a
    file you have) and per-matrix types (one per line, like `attn_v=q6_k` — llama-quantize `--tensor-type`). The number of imatrix
    chunks measured (512 tokens each) is kept in the run log and the versions — a short text gives few chunks.
+
+   ![The Make GGUF card — source 'Original model folder', conversion type BF16, quantization types Q8_0 · Q5_K_M · Q4_K_M · IQ4_XS, no imatrix, a note field](img/eval/02-make-en.png)
+
 4. **Conversion check** — runs by itself after making, and again from the Conversion check card. It compares the GGUF with the
    original folder's small files (the weights are not read):
    - chat template — 5 to 7 conversation cases rendered with both templates are byte-identical,
@@ -62,9 +70,15 @@ data and settings a rerun gives bit-identical results, so a before/after compari
 
    Problems that metadata can fix — template, EOS, `add_bos_token` — get a new version from 'Create fixed version', which keeps the
    tensors and changes only the keys. Different special tokens, tokenizer or settings need a new conversion.
+
+   ![The GGUF conversion check card — chat template, EOS, BOS, special tokens, tokenizer and settings of the reference model (facts-r16-e6-BF16.gguf) all pass](img/eval/03-check-en.png)
+
 5. **Run evaluation** — choose data (section 3), the versions, the compute mode (exact or fast — fast on CUDA only) and the answer
    length. The reference model's answers and the top 64 at every position (the reference values) are made once and reused for the same
    reference model, data and settings. With graded data you can also choose a baseline model (before fine-tuning — section 7).
+
+   ![The Run evaluation card — versions v1 to v4, data facts600, baseline model Qwen3-0.6B BF16, exact, max answer tokens 64](img/eval/04-run-en.png)
+
 6. **Compare with the original model** — the card under the result (section 6). It shows how faithfully conversion and engine
    reproduce the original model.
 7. **Improve** — measure which matrix group of a quantized version improves the KL (and the accuracy, with graded data) most when
@@ -112,6 +126,8 @@ is shown side by side, with counts of 'reference only' and 'evaluated only'.
 
 ## 5. Reading the metrics
 
+![The v3 (Q4_K_M) result — 16 of 600 answers differ, KL 0.0207, top-1 99.36 %, accuracy 97.33 % (reference model 100 %), and against the model before fine-tuning 0.33 %, learned 582, forgotten 0](img/eval/05-result-en.png)
+
 **(a) Distributions on the same tokens** — both models score the reference model's greedy answer token by token. The difference comes
 from the weights alone.
 
@@ -149,6 +165,8 @@ Feeds the result's reference values (the reference model's answers and the top 6
 transformers version that saved the original folder (4.57.6 or 5.22.1). Compute type float32 (default — bfloat16 weights are widened
 exactly) or bfloat16.
 
+![The Compare with the original model card — KL 1.1e-6, top-1 100 %, 2,500 positions, 600 conversations; the 9 hyperparameters are the same in config.json, transformers and the GGUF](img/eval/06-original-en.png)
+
 - **Settings** come first — the 9 hyperparameters as stored in the GGUF, in `config.json` and as read by transformers. When transformers
   read them differently from `config.json`, the model it would run is not the saved model, so it stops without a KL and says what
   differed. When only the GGUF differs, it compares and flags it — that difference shows in the KL.
@@ -166,7 +184,7 @@ fine-tune learned and forgot shows only against the model before fine-tuning.
   `answer`).
 - The baseline model's answers are made once, like the reference values, and reused for the same model, data and settings (the run log
   says when the saved answers are used).
-- **Against the model before fine-tuning** on the result screen — the baseline model's accuracy (95 % interval) and, for the reference
+- **Against the model before fine-tuning** on the result screen (the lower part of the picture in section 5) — the baseline model's accuracy (95 % interval) and, for the reference
   model and the evaluated model each, the accuracy difference from it (%p) and the number of conversations **learned** (the model
   before fine-tuning got it wrong, this model right) and **forgotten** (the model before fine-tuning got it right, this model wrong).
   The result table (section 9) gets a 'Before fine-tuning' row.
@@ -183,6 +201,8 @@ fine-tune with 259 of the base model's own answers mixed in came back to 60.20 %
 Start from a version quantized with Make GGUF (the base version). For each group, a trial file restores only that group to the restore
 type (Q6_K · Q5_K · BF16), with the base version's type and imatrix, and is evaluated on the same data to see how much the KL drops.
 
+![The Improve card — base version v3 (Q4_K_M), facts600, restore type Q6_K; per group KL, vs base, size, per MB, accuracy (vs base, %p) and reference only correct; blk 0-8, ffn_down and attn_output preselected; the size and quality table below](img/eval/07-improve-en.png)
+
 - Groups — `attn_q` · `attn_k` · `attn_v` · `attn_output` · `ffn_gate+ffn_up` (the engine reads both with one type) · `ffn_down` ·
   `token_embd` · `output` (when separate), and optionally the three thirds of the layers.
 - Table — per group: KL · reduction against the base · added size · reduction per MB. With graded data also **Accuracy (vs base, %p)**
@@ -197,9 +217,9 @@ type (Q6_K · Q5_K · BF16), with the base version's type and imatrix, and is ev
   `facts-r16-e6-Q4_K_M+ffn_gate+ffn_up+attn_v.Q6_K.gguf`). The base version is not measured again when a result with the same file,
   data and settings exists.
 - **Size and quality** — at the bottom of the card, this workspace's versions measured with the same data and settings are listed by
-  size and quality (by the Choose by setting), and a version is flagged when a smaller one is as good or better — for example a
-  424 MB Q5_K_M next to a 447 MB file made with chosen groups. At the same size a standard type that other runtimes also know can be the
-  better choice, so evaluate the standard-type versions on the same data too.
+  size and quality (by the Choose by setting), and a version is flagged when a smaller one is as good or better — in the picture,
+  v5 made with the chosen groups (425 MB · 99.83 %) sits next to v2 Q5_K_M (424 MB · 100 %). At the same size a standard type that
+  other runtimes also know can be the better choice, so evaluate the standard-type versions on the same data too.
 
 ## 9. Result table · Compare workspaces
 
@@ -216,10 +236,17 @@ thinking · chunks) to put each version's latest result in one table.
   `items` · `kl_mean` · `kl_p99` · `top1` · `ppl_ratio` · `answers_differ` · `answers_compared` · `near_tie` · `accuracy` ·
   `accuracy_lo` · `accuracy_hi` · `ref_accuracy` · `ref_only` · `cand_only` · `finished` · `result_dir`.
 
+![The Result table — facts600, exact, answers 64 tokens; per version type, size, KL, top-1, answers that differ and accuracy, with rows for the reference model and the model before fine-tuning; below, the size and quality chart (filled v4, v3, v2 and v1 are the frontier, v5 is outlined)](img/eval/08-table-en.png)
+
 **Compare workspaces** (a button above the workspace list once two or more workspaces have results) — lines up workspaces measured
 with the same data and settings, type (row) by workspace (column). Each cell gives the KL (against that workspace's reference model)
 and the accuracy (in brackets, the difference from that workspace's reference model) — which fine-tune, A or B, loses less at Q4_K_M.
 The chosen workspaces' results export as one CSV.
+
+![Compare workspaces — facts-r16-e6 and facts-r16-e6-replay type by type with KL and accuracy: at Q4_K_M facts-r16-e6 keeps 97.33 % (−2.67 %p) and the replay 92.00 % (−7.50 %p)](img/eval/09-workspaces-en.png)
+
+The example in the picture: the replay fine-tune, which mixed in the base model's own answers (it undid the GSM8K forgetting —
+section 7), loses more of the injected facts to quantization — 97.33 % against 92.00 % and KL 0.0207 against 0.0885 at Q4_K_M.
 
 ## 10. Files
 
