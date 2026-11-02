@@ -56,6 +56,26 @@ const EVAL_DICT = {
   "작업 공간": "Workspaces",
   "작업 공간|one": "Workspace",
   "채팅 템플릿": "Chat template",
+  " · 정답률 {}": " · accuracy {}",
+  "정답률": "Accuracy",
+  "채점한 대화 {}개": "{0} graded {0|conversation|conversations}",
+  "95% 구간 {}": "95% interval {}",
+  "차이(평가 − 기준)": "Difference (evaluated − reference)",
+  "기준만 맞음 {} · 평가만 맞음 {} · p = {}": "only reference correct {} · only evaluated correct {} · p = {}",
+  "같은 대화에서 한쪽만 맞은 수로 부호 검정을 합니다. 구간은 대화를 다시 뽑는 부트스트랩(1,000번)입니다.": "The sign test uses the conversations where only one model is correct. The interval is a bootstrap over the conversations (1,000 resamples).",
+  "정답(기준 · 평가)|col": "Correct (ref · eval)",
+  "정답이 다른 대화": "Different correctness",
+  "정답률(평가할 모델)": "Accuracy (evaluated model)",
+  "채점한 대화 {}개 — 틀림 → 맞음 {}개 · 맞음 → 틀림 {}개(부호 검정 p = {})": "{} graded conversations — wrong → correct {} · correct → wrong {} (sign test p = {})",
+  "틀림 → 맞음 {}개": "Wrong → correct: {}",
+  "맞음 → 틀림 {}개": "Correct → wrong: {}",
+  "맞음": "correct",
+  "틀림": "wrong",
+  "채점": "Grading",
+  "정답": "Expected answer",
+  "기준 모델의 도구 호출": "Reference model's tool call",
+  "(없음)": "(none)",
+  "평가할 모델의 도구 호출": "Evaluated model's tool call",
   "사용자 메시지 하나": "One user message",
   "시스템 메시지": "System message",
   "여러 턴": "Several turns",
@@ -882,7 +902,7 @@ function evWsView(w) {
           h('div', { class: 'small muted' }, [r.data && r.data.name, evMode(s.mode), evChat(r) ? T`답 ${s.max_tokens}토큰` : T`청크 ${s.chunks}`].filter(Boolean).join(NB))),
         h('div', { class: 'ev-vres small' },
           h('div', null, evChat(r) && a.compared ? T`답 ${a.differ}/${a.compared} 달라짐` + (a.near_tie ? T` (마진 작음 ${a.near_tie})` : '') : T`위치 ${fmtNum(m.positions || 0)}개`),
-          h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}`)));
+          h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}` + (r.accuracy ? T` · 정답률 ${evPct(r.accuracy.cand)}` : ''))));
     }))
       : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('아직 결과가 없습니다')), h('div', null, T('위에서 평가를 실행하면 여기에 쌓입니다.'))));
   return h('div', { class: 'col g24' }, head, state, versions, evCheckCard(w, busy), evRunCard(w, busy), results);
@@ -907,6 +927,18 @@ function evResultView(w) {
       h('div', { class: 'fd-sub' }, T`${s.finished || evDirWhen(EV.dir)} · ${evNum(s.seconds, 0)}초`)),
     h('div', { class: 'card col g8' }, h('div', { class: 'verdict' }, vd[0]), vd[1] ? h('div', { class: 'small muted' }, vd[1]) : null,
       s.same_vocab === false ? h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('어휘가 기준 모델과 달라 같은 토큰의 확률은 비교하지 않았습니다 — 답은 글로 비교했습니다.'))) : null)];
+  const acc = s.accuracy;
+  if (acc && acc.items) {
+    const ci = c => (Array.isArray(c) ? `${evPct(c[0])} ~ ${evPct(c[1])}` : '-');
+    const d = acc.cand - acc.ref;
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('정답률')), h('span', { class: 'small muted' }, T`채점한 대화 ${acc.items}개`)),
+      h('div', { class: 'fd-stats ev-stats3' },
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('기준 모델')), h('div', { class: 'v' }, evPct(acc.ref)), h('div', { class: 's' }, T`95% 구간 ${ci(acc.ref_ci)}`)),
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('평가할 모델')), h('div', { class: 'v' }, evPct(acc.cand)), h('div', { class: 's' }, T`95% 구간 ${ci(acc.cand_ci)}`)),
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('차이(평가 − 기준)')), h('div', { class: 'v' }, (d > 0 ? '+' : d < 0 ? '−' : '±') + (Math.abs(d) * 100).toFixed(2) + T('%p')),
+          h('div', { class: 's' }, T`기준만 맞음 ${acc.ref_only} · 평가만 맞음 ${acc.cand_only} · p = ${evNum(acc.p, 3)}`))),
+      h('p', { class: 'small muted m0' }, T('같은 대화에서 한쪽만 맞은 수로 부호 검정을 합니다. 구간은 대화를 다시 뽑는 부트스트랩(1,000번)입니다.'))));
+  }
   if (m.positions) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('같은 토큰의 확률')),
     h('span', { class: 'small muted' }, chat ? T('기준 모델이 낸 답의 토큰마다') : T('청크마다 뒤쪽 255 토큰'))),
     kpis([[evKL(m.kl_mean), T('KL divergence 평균')], [evKL(m.kl_p99), T('KL divergence 99 백분위수')], [evPct(m.top1), T('top-1 일치율')],
@@ -937,12 +969,14 @@ function evResultView(w) {
   const cats = s.categories || [];
   if (cats.length > 1) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('분야'))),
     h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
-      h('thead', null, h('tr', null, h('th', null, T('분야')), h('th', { class: 'r' }, T('대화', 'col')), chat ? h('th', { class: 'r' }, T('답이 달라짐')) : null, h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'))),
+      h('thead', null, h('tr', null, h('th', null, T('분야')), h('th', { class: 'r' }, T('대화', 'col')), chat ? h('th', { class: 'r' }, T('답이 달라짐')) : null, acc ? h('th', { class: 'r' }, T('정답(기준 · 평가)', 'col')) : null, h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'))),
       h('tbody', null, cats.map(c => h('tr', null, h('td', null, c.name), h('td', { class: 'r num' }, String(c.items)), chat ? h('td', { class: 'r num' }, `${c.differ}/${c.compared}`) : null,
+        acc ? h('td', { class: 'r num' }, c.graded ? `${c.ref_correct} · ${c.cand_correct}/${c.graded}` : '-') : null,
         h('td', { class: 'r num' }, evKL(c.metrics && c.metrics.kl_mean)), h('td', { class: 'r num' }, evPct(c.metrics && c.metrics.top1)))))))));
   // 대화 — 거르기
   const items = R.items || [];
-  const F = chat ? [['differ', T('답이 달라진 대화'), x => x.same === false], ['tie', T('마진이 작은 스텝에서 갈라짐'), x => !!x.near_tie], ['same', T('같은 답'), x => x.same === true], ['all', T('전체'), () => true]] : [['all', T('전체'), () => true]];
+  const F = chat ? [['differ', T('답이 달라진 대화'), x => x.same === false], ['tie', T('마진이 작은 스텝에서 갈라짐'), x => !!x.near_tie], ['same', T('같은 답'), x => x.same === true],
+    acc ? ['acc', T('정답이 다른 대화'), x => !!x.graded && x.ref_correct !== x.cand_correct] : null, ['all', T('전체'), () => true]].filter(Boolean) : [['all', T('전체'), () => true]];
   const f = F.find(x => x[0] === EV.filter) || F[0];
   const shown = items.filter(f[2]);
   out.push(h('div', { class: 'col g12' },
@@ -953,7 +987,7 @@ function evResultView(w) {
     shown.length ? h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
       h('thead', null, h('tr', null, h('th', null, chat ? T('대화') : T('청크')), h('th', { class: 'c-cat' }, T('분야')),
         chat ? h('th', { class: 'r' }, T('처음 갈라진 스텝')) : null, chat ? h('th', { class: 'r' }, T('마진')) : null,
-        h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'), chat ? h('th', { class: 'c-fin' }, T('끝난 까닭(기준 · 평가)')) : null)),
+        h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'), acc ? h('th', null, T('정답(기준 · 평가)', 'col')) : null, chat ? h('th', { class: 'c-fin' }, T('끝난 까닭(기준 · 평가)')) : null)),
       h('tbody', null, shown.slice(0, 500).map(x => h('tr', { class: chat ? 'clk' : '', onclick: chat ? () => evGo('item', { item: x.i }) : null },
         h('td', null, chat ? h('button', { class: 'dbg-link', 'data-fk': 'ev:it:' + x.i, onclick: ev => { ev.stopPropagation(); evGo('item', { item: x.i }); } }, x.id) : x.id),
         h('td', { class: 'small c-cat' }, x.category),
@@ -961,6 +995,7 @@ function evResultView(w) {
         chat ? h('td', { class: 'r num small' }, typeof x.ref_margin === 'number' ? h('span', { class: x.near_tie ? 'ev-tie' : '' }, evNum(x.ref_margin, 3)) : '-') : null,
         h('td', { class: 'r num small' }, x.scored ? evKL(x.kl_mean) : '-'),
         h('td', { class: 'r num small' }, x.scored ? evPct(x.top1) : '-'),
+        acc ? h('td', { class: 'small nw' }, x.graded ? [evOkI(x.ref_correct), ' ', evOkI(x.cand_correct)] : '-') : null,
         chat ? h('td', { class: 'small c-fin nw' }, `${evFinish(x.ref_finish)} · ${evFinish(x.cand_finish)}`) : null)))))
       : h('div', { class: 'empty-box' }, h('div', null, T('해당하는 대화가 없습니다'))),
     shown.length > 500 ? h('p', { class: 'small muted m0' }, T`처음 500개만 보입니다(모두 ${shown.length}개).`) : null));
@@ -1012,6 +1047,7 @@ function evCompareView(w) {
     ma.positions ? [T('KL divergence 99 백분위수'), evKL(ma.kl_p99), evKL(mb.kl_p99), mb.kl_p99 - ma.kl_p99, x => (x > 0 ? '+' : x < 0 ? '−' : '') + evKL(Math.abs(x))] : null,
     ma.positions ? [T('top-1 일치율'), evPct(ma.top1), evPct(mb.top1), mb.top1 - ma.top1, x => (x > 0 ? '+' : x < 0 ? '−' : '') + (Math.abs(x) * 100).toFixed(2) + T('%p')] : null,
     ma.positions ? [T('PPL 비(평가 ÷ 기준)'), evNum(ma.ppl_ratio, 4), evNum(mb.ppl_ratio, 4), mb.ppl_ratio - ma.ppl_ratio, x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(4)] : null,
+    C.a_accuracy && C.b_accuracy ? [T('정답률(평가할 모델)'), evPct(C.a_accuracy.cand), evPct(C.b_accuracy.cand), C.b_accuracy.cand - C.a_accuracy.cand, x => (x > 0 ? '+' : x < 0 ? '−' : '') + (Math.abs(x) * 100).toFixed(2) + T('%p')] : null,
   ].filter(Boolean);
   out.push(h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
     h('thead', null, h('tr', null, h('th', null, T('지표')), h('th', { class: 'r' }, T('전')), h('th', { class: 'r' }, T('후')), h('th', { class: 'r' }, T('차이')))),
@@ -1021,6 +1057,11 @@ function evCompareView(w) {
   const ids = (list, R, dir, label, note) => h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, label), h('span', { class: 'small muted' }, note)),
     list.length ? h('div', { class: 'row g8 ev-ids' }, list.map(id => { const i = idx(R, id); return i >= 0 ? h('button', { class: 'dbg-chip ev-chip', onclick: () => evGo('item', { dir, item: i }) }, id) : h('span', { class: 'dbg-chip ev-chip' }, id); }))
       : h('div', { class: 'small muted' }, T('없음')));
+  if (C.comparable && C.acc_items) {
+    out.push(h('div', { class: 'card col g8' }, h('div', { class: 'verdict' }, T`채점한 대화 ${C.acc_items}개 — 틀림 → 맞음 ${C.acc_fixed}개 · 맞음 → 틀림 ${C.acc_broke}개(부호 검정 p = ${evNum(C.acc_p, 3)})`)));
+    out.push(ids(C.acc_fixed_items || [], RB, EV.cmpB, T`틀림 → 맞음 ${C.acc_fixed}개`, T('누르면 후 결과의 답을 엽니다')));
+    out.push(ids(C.acc_broke_items || [], RB, EV.cmpB, T`맞음 → 틀림 ${C.acc_broke}개`, T('누르면 후 결과의 답을 엽니다')));
+  }
   if (C.comparable && aa.compared) {
     out.push(ids(C.fixed_items || [], RA, EV.cmpA, T`기준 모델과 같아진 대화 ${C.fixed}개`, T('누르면 전 결과에서 달랐던 답을 엽니다')));
     out.push(ids(C.newly_items || [], RB, EV.cmpB, T`새로 달라진 대화 ${C.newly_diverged}개`, T('누르면 후 결과의 답을 엽니다')));
@@ -1045,6 +1086,8 @@ function evAnswer(label, text, k, tone) {
       !cs.length ? h('span', { class: 'muted' }, T('(빈 답)')) : null));
 }
 const evTok = s => h('span', { class: 'ev-tok mono' }, tokShow(s === null || s === undefined ? '' : s));
+const evOk = v => h('span', { class: v ? 'ev-ok' : 'ev-no' }, v ? T('맞음') : T('틀림'));
+const evOkI = v => h('span', { class: 'ev-oki ' + (v ? 'ev-ok' : 'ev-no'), role: 'img', 'aria-label': v ? T('맞음') : T('틀림'), 'data-tip': v ? T('맞음') : T('틀림'), 'data-tip-pos': 'top' }, I(v ? 'check' : 'x', 's'));
 function evMessages(req) {
   if (!req || !Array.isArray(req.messages)) return null;
   const ms = req.messages;
@@ -1085,6 +1128,17 @@ function evItemView(w) {
       h('span', { class: 'muted' }, T`그 스텝에서 기준 모델의 마진(1위와 2위의 로그확률 차) ${evNum(it.ref_margin, 3)} nat`),
       it.near_tie ? h('span', { class: 'tag acc' }, T('마진이 작은 스텝')) : null) : null,
     h('div', { class: 'small muted' }, [T`기준 모델 ${it.ref_len}토큰(${evFinish(it.ref_finish)})`, it.cand_len !== undefined ? T`평가할 모델 ${it.cand_len}토큰(${evFinish(it.cand_finish)})` : null, it.scored ? T`이 대화의 KL divergence 평균 ${evKL(it.kl_mean)} · top-1 일치율 ${evPct(it.top1)}` : null].filter(Boolean).join(NB))));
+  const evToolTxt = t => { if (!t) return T('(없음)'); let g = t.arguments; if (typeof g === 'string') { try { g = JSON.parse(g); } catch (_) { } } return `${t.name}(${typeof g === 'string' ? g : JSON.stringify(g)})`; };
+  if (it.graded) {
+    const ex = it.expected;
+    const exTxt = typeof ex === 'string' ? ex : JSON.stringify(ex);
+    out.push(h('div', { class: 'card col g8' }, h('div', { class: 'row g8' }, h('span', { class: 'sec' }, T('채점')), h('span', { class: 'grow' }),
+      h('span', { class: 'small' }, T('기준 모델'), ' ', evOk(it.ref_correct), NB, T('평가할 모델'), ' ', evOk(it.cand_correct))),
+      h('div', { class: 'small muted' }, T('정답')), h('pre', { class: 'dbg-ans sm mono' }, exTxt),
+      it.ref_tool || it.cand_tool ? h('div', { class: 'dbg-vs' },
+        h('div', null, h('div', { class: 'eyebrow' }, T('기준 모델의 도구 호출')), h('pre', { class: 'dbg-ans sm mono' }, evToolTxt(it.ref_tool))),
+        h('div', null, h('div', { class: 'eyebrow' }, T('평가할 모델의 도구 호출')), h('pre', { class: 'dbg-ans sm mono' }, evToolTxt(it.cand_tool)))) : null));
+  }
   const msgs = evMessages(X.request);
   if (msgs) out.push(msgs);
   const candText = X.text !== null && X.text !== undefined ? X.text : dv ? dv.cand_text : '';
