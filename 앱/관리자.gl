@@ -1143,7 +1143,7 @@
         (* #137 — 영어 이름은 한글 이름의 별칭(--port · --data · --no-open · --check · --quick · --files · --help) *)
         (문자열_같은가(argv[k], "--help") 또는 문자열_같은가(argv[k], "-h") 또는 문자열_같은가(argv[k], "--도움말"))이면 {
             알림("사용법: GeulPU [--포트|--port 44544] [--자료|--data 폴더] [--열지않음|--no-open] [--hf 저장소/파일.gguf] [--검사|--check 재현성(r1)|쌍(pair) [--빠름|--quick] [--파일|--files 목록]]").
-            알림("영어 이름은 한글 이름의 별칭이다 — English names are aliases of the Korean ones (#137). 자료 폴더: GEULPU_HOME 또는 --자료.").
+            알림("영어 이름은 한글 이름의 별칭이다 — English names are aliases of the Korean ones. 자료 폴더: GEULPU_HOME 또는 --자료.").
             알림("--hf: Hugging Face 의 GGUF 하나를 받아 바로 불러온다 — GeulPU --hf Qwen/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf (파일의 주소를 그대로 붙여도 된다). 이미 GeulPU 가 떠 있으면 그 GeulPU 가 받는다.").
             반환 0.
         }
