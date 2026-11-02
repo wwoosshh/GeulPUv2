@@ -32,6 +32,55 @@ const EVAL_DICT = {
   "이름(영문 · 숫자 · . _ -)": "Name (letters · digits · . _ -)",
   "GeulPU가 쓴 데이터": "Written by GeulPU",
   "내장|data": "Built-in",
+  // 4-1 — GGUF 만들기
+  "GGUF 만들기 도구 준비": "Set up GGUF making tools",
+  "GGUF 만들기": "Make GGUF",
+  "GGUF 만들기와 변환 검증이 이 폴더를 씁니다. 나중에 정해도 됩니다.": "Make GGUF and the conversion check use this folder. You can set it later.",
+  "GGUF를 만들려면 먼저 도구를 받습니다 — llama.cpp의 실행 파일 · 변환 스크립트 · 파이썬 패키지.": "To make GGUF files, first get the tools — llama.cpp executables · conversion scripts · Python packages.",
+  "imatrix에 쓸 파일을 정하세요": "Choose the file for the imatrix",
+  "imatrix에 쓸 파일": "File for the imatrix",
+  "llama.cpp {} 실행 파일 — {}": "llama.cpp {} executables — {}",
+  "도구 — llama.cpp {} · 파이썬 {} · torch {} · transformers {}": "Tools — llama.cpp {} · Python {} · torch {} · transformers {}",
+  "도구 준비": "Set up tools",
+  "받고 설치": "Download and install",
+  "변환 {}": "Converted {}",
+  "변환 스크립트(convert_hf_to_gguf.py 등) {}개": "{0} conversion script {0|file|files} (convert_hf_to_gguf.py and others)",
+  "변환 형식": "Conversion type",
+  "비우면 자동(py -3 · python · python3)": "Automatic if empty (py -3 · python · python3)",
+  "약 150 ~ 250 MB(설치하면 1 GB 안쪽)": "about 150–250 MB (under 1 GB installed)",
+  "없음 — GGUF 만들기로 원래 모델에서 변환": "None — convert from the original model with Make GGUF",
+  "원래 모델 폴더(config.json과 가중치 .safetensors가 있는 폴더)": "Original model folder (the folder with config.json and the .safetensors weights)",
+  "원래 모델 폴더(고름 — Hugging Face 형식)": "Original model folder (optional — Hugging Face format)",
+  "원래 모델(Hugging Face 형식)에서 — llama.cpp의 변환 · 양자화": "From the original model (Hugging Face format) — llama.cpp conversion · quantization",
+  "원래 모델(Hugging Face 형식)을 GGUF로 바꾸고 양자화하는 데 llama.cpp의 도구를 씁니다. 아래 파일을 받아 자료 폴더의 tools에 둡니다 — 앱이 정한 판이고, 받은 파일마다 SHA-256을 확인합니다.": "Converting the original model (Hugging Face format) to GGUF and quantizing it uses llama.cpp's tools. The files below go to tools in the data folder — a version fixed by the app, and the SHA-256 of every file is checked.",
+  "이 PC에서 파이썬을 찾지 못했습니다 — python.org에서 파이썬 3.10 이상을 설치하거나(설치할 때 Add python.exe to PATH), 아래에 경로를 적으세요.": "No Python was found on this PC — install Python 3.10 or later from python.org (check Add python.exe to PATH during setup), or enter its path below.",
+  "자료 폴더의 경로에 ASCII가 아닌 글자가 있어 llama.cpp의 도구를 쓸 수 없습니다 — ASCII 경로의 자료 폴더로 실행하세요.": "The data folder path has non-ASCII characters, so llama.cpp's tools cannot use it — run with a data folder on an ASCII path.",
+  "파이썬 경로": "Python path",
+  "파이썬 경로(고름)": "Python path (optional)",
+  "파이썬 패키지 — {}(CPU) · transformers 등": "Python packages — {} (CPU) · transformers and others",
+  "파이썬은 이 PC의 것으로 앱 전용 가상 환경만 만듭니다 — 찾은 파이썬: {}": "Python itself is not downloaded — the app makes its own virtual environment with this PC's Python. Found: {}",
+  "행렬별 {}": "per matrix {}",
+  "행렬별 형식은 양자화 형식과 함께 씁니다": "Per-matrix types need a quantization type",
+  "변환한 파일은 새 버전이 됩니다(기준 모델이 이미 있음).": "The converted file becomes a new version (the workspace already has a reference model).",
+  "변환한 파일이 이 작업 공간의 기준 모델이 됩니다.": "The converted file becomes this workspace's reference model.",
+  "양자화 형식(여럿 고름 — 고르지 않으면 변환만)": "Quantization types (choose any — none means convert only)",
+  "글 파일로 만들기": "Make from a text file",
+  "imatrix 파일": "imatrix file",
+  "글 파일의 문장으로 행렬마다 중요한 가중치를 잽니다(llama-imatrix — GPU). 모델이 쓰일 글과 비슷할수록 좋습니다.": "Measures which weights matter in each matrix from the text file's sentences (llama-imatrix — GPU). Text close to the model's real use works best.",
+  "행렬별 형식(고급)": "Per-matrix types (advanced)",
+  "행렬별 형식": "Per-matrix types",
+  "줄마다 행렬 이름=형식(llama-quantize --tensor-type). 엔진이 받지 않는 섞임이면 버전에 까닭이 보입니다.": "One matrix name=type per line (llama-quantize --tensor-type). If the engine does not take the mix, the version shows why.",
+  "만들기|make": "Make",
+  "기준 모델에서 만듦": "made from the reference model",
+  "엔진이 받지 않음 — {}": "Not supported by the engine — {}",
+  "기준 모델과 비교할 GGUF 파일을 더하거나, 아래 GGUF 만들기로 원래 모델에서 만드세요.": "Add GGUF files to compare with the reference model, or make them from the original model with Make GGUF below.",
+  "양자화": "Quantized",
+  "양자화 형식을 하나 이상 고르세요": "Choose at least one quantization type",
+  "출발": "Start from",
+  "기준 모델에서 양자화": "Quantize the reference model",
+  "원래 모델 폴더에서 변환": "Convert the original model folder",
+  "기준 모델 {}을 그대로 두고 양자화한 파일만 새 버전으로 — 행렬별 형식을 바꿔 다시 만들 때.": "Keeps the reference model {} and adds only the quantized files as new versions — for remaking with different per-matrix types.",
+  "양자화 형식(여럿 고름)": "Quantization types (choose any)",
   "대화 {}개": "{0} {0|conversation|conversations}",
   "대화 {}개 — 원본 {}개 중 분야마다 고르게": "{0} {0|conversation|conversations} — chosen evenly by category from {1}",
   "평가할 버전을 하나 이상 고르세요": "Choose at least one version to evaluate",
@@ -361,6 +410,69 @@ TMX.push(
   [/원래 모델 폴더가 없습니다: /g, 'The original model folder does not exist: '],
   [/GGUF 파일을 열 수 없습니다/g, 'Cannot open the GGUF file'],
   [/변환 검증 보고서가 없습니다/g, 'No conversion check report'],
+  // 4-1 — GGUF 만들기(앱/평가도구.gl — 도구준비일 · 만들기일)
+  [/llama\.cpp (\S+) 실행 파일 — 이미 있음\((.*?)\)/g, 'llama.cpp $1 executables — already there ($2)'],
+  [/llama\.cpp (\S+) 실행 파일을 받는 중 — (\S+)\(([\d.]+) MB\)/g, 'Downloading llama.cpp $1 executables — $2 ($3 MB)'],
+  [/압축을 푸는 중/g, 'Extracting'],
+  [/압축을 풀 tar 를 찾지 못했습니다/g, 'Could not find tar to extract the archive'],
+  [/llama\.cpp 의 압축을 풀지 못했습니다\(llama-quantize 가 없음\)/g, 'Could not extract llama.cpp (no llama-quantize)'],
+  [/llama\.cpp (\S+) 실행 파일 — /g, 'llama.cpp $1 executables — '],
+  [/변환 스크립트를 받는 중 — (\d+)\/(\d+)/g, 'Downloading the conversion scripts — $1/$2'],
+  [/변환 스크립트\(llama\.cpp (\S+)\) — (\d+) 파일, 새로 받은 것 (\d+)/g, 'Conversion scripts (llama.cpp $1) — $2 files, $3 newly downloaded'],
+  [/파이썬을 찾는 중/g, 'Looking for Python'],
+  [/파이썬 3\.10 이상을 찾지 못했습니다 — python\.org 에서 설치한 뒤\(설치할 때 'Add python\.exe to PATH'\) 다시 누르거나, 파이썬의 경로를 적으세요/g, "Python 3.10 or later was not found — install it from python.org (check 'Add python.exe to PATH') and try again, or enter the path to Python"],
+  [/(\S+) 의 파이썬 (\S+) — 3\.10 이상이 필요합니다/g, '$1 is Python $2 — 3.10 or later is needed'],
+  [/파이썬 (\d+\.\d+\.\d+) — /g, 'Python $1 — '],
+  [/가상 환경을 만드는 중/g, 'Creating the virtual environment'],
+  [/가상 환경을 만들지 못했습니다\(리눅스라면 python3-venv 패키지를 설치하세요\)/g, 'Could not create the virtual environment (on Linux, install the python3-venv package)'],
+  [/변환에 드는 파이썬 패키지를 설치하는 중\(torch · transformers …\)/g, 'Installing the Python packages for conversion (torch · transformers …)'],
+  [/파이썬 패키지를 설치하지 못했습니다\(인터넷 · 디스크 — 작업 기록을 보세요\)/g, 'Could not install the Python packages (internet · disk — see the run log)'],
+  [/패키지를 확인하는 중/g, 'Checking the packages'],
+  [/설치한 패키지를 불러오지 못했습니다: /g, 'Could not import the installed packages: '],
+  [/GGUF 만들기 도구 준비 — llama\.cpp (\S+) · 파이썬 (\S+) · torch (\S+) · transformers (\S+)/g, 'GGUF making tools ready — llama.cpp $1 · Python $2 · torch $3 · transformers $4'],
+  [/(\S+) — 끝 코드 (-?\d+)\. 기록의 끝:/g, '$1 — exit code $2. End of the log:'],
+  [/자료 폴더의 경로에 ASCII 가 아닌 글자가 있어 llama\.cpp 의 도구를 쓸 수 없습니다 — ASCII 경로의 자료 폴더\(--자료\)로 실행하세요/g, "The data folder path has non-ASCII characters, so llama.cpp's tools cannot use it — run with a data folder on an ASCII path (--자료)"],
+  [/자료 폴더의 경로에 ASCII 가 아닌 글자가 있어 llama\.cpp 의 도구를 쓸 수 없습니다/g, "The data folder path has non-ASCII characters, so llama.cpp's tools cannot use it"],
+  [/앱의 도구 목록\(data\\tools\.json\)에 이 체계\((\S+)\)의 llama\.cpp 가 없습니다/g, "The app's tool list (data\\tools.json) has no llama.cpp for this system ($1)"],
+  [/ — 크기가 목록과 다릅니다\(받은 (\d+) · 목록 (\d+) 바이트\)/g, ' — the size differs from the list (got $1 · listed $2 bytes)'],
+  [/ — SHA-256 이 목록과 다릅니다\((\S+)…\) — 쓰지 않았습니다/g, ' — the SHA-256 differs from the list ($1…) — not written'],
+  [/(\S+) 를 쓰지 못했습니다\(디스크 · 폴더 권한\)/g, 'Could not write $1 (disk · folder permissions)'],
+  [/ — 받지 못했습니다/g, ' — could not download'],
+  [/도구 목록의 파일 경로가 맞지 않습니다/g, 'A file path in the tool list is not valid'],
+  [/변환 형식은 bf16 · f16 · q8_0 중 하나입니다/g, 'The conversion type is one of bf16 · f16 · q8_0'],
+  [/모르는 양자화 형식입니다: /g, 'Unknown quantization type: '],
+  [/행렬별 형식은 '이름=형식' 꼴이어야 합니다: /g, "Per-matrix types must look like 'name=type': "],
+  [/행렬별 형식은 양자화 형식과 함께 씁니다/g, 'Per-matrix types need a quantization type'],
+  [/원래 모델 폴더\(Hugging Face 형식 — config\.json 과 가중치가 있는 폴더\)를 정하세요/g, 'Choose the original model folder (Hugging Face format — the folder with config.json and the weights)'],
+  [/원래 모델 폴더에 config\.json 이 없습니다/g, 'The original model folder has no config.json'],
+  [/GGUF 만들기 도구가 준비되지 않았습니다 — '도구 준비'를 먼저 누르세요/g, "The GGUF making tools are not set up — press 'Set up tools' first"],
+  [/imatrix 에 쓸 파일이 없습니다/g, 'The file for the imatrix does not exist'],
+  [/변환하는 중 — (.+?) → (\S+)/g, 'Converting — $1 → $2'],
+  [/변환하지 못했습니다\(convert_hf_to_gguf\.py — 작업 기록을 보세요\)/g, 'Could not convert (convert_hf_to_gguf.py — see the run log)'],
+  [/imatrix 에 쓸 글 파일을 읽지 못했습니다/g, 'Could not read the text file for the imatrix'],
+  [/imatrix 를 만드는 중\(llama-imatrix — GPU\)/g, 'Making the imatrix (llama-imatrix — GPU)'],
+  [/imatrix 를 만들지 못했습니다\(llama-imatrix — 작업 기록을 보세요\)/g, 'Could not make the imatrix (llama-imatrix — see the run log)'],
+  [/imatrix 파일을 읽지 못했습니다/g, 'Could not read the imatrix file'],
+  [/양자화하는 중 — (\S+)\((\d+)\/(\d+)\)/g, 'Quantizing — $1 ($2/$3)'],
+  [/(\S+) 로 양자화하지 못했습니다\(llama-quantize — 작업 기록을 보세요\)/g, 'Could not quantize to $1 (llama-quantize — see the run log)'],
+  [/만든 파일을 모델 목록과 작업 공간에 더하는 중/g, 'Adding the new files to the model list and the workspace'],
+  [/변환한 파일을 모델 폴더로 옮기지 못했습니다/g, 'Could not move the converted file to the model folder'],
+  [/변환한 파일을 원래 모델과 견주는 중\(변환 검증\)/g, 'Comparing the converted file with the original model (conversion check)'],
+  [/(\S+) — 엔진이 받지 않습니다: /g, '$1 — not supported by the engine: '],
+  [/(\S+) 를 (\S+) 로 옮기지 못했습니다/g, 'Could not move $1 to $2'],
+  [/GGUF 만들기 — 변환 (\S+) → 기준 모델/g, 'Make GGUF — converted $1 → reference model'],
+  [/GGUF 만들기 — 기준 모델에서/g, 'Make GGUF — from the reference model'],
+  [/만들기의 출발은 convert · ref 중 하나입니다/g, 'The make source is convert or ref'],
+  [/기준 모델에서 만들 때는 양자화 형식을 하나 이상 고르세요/g, 'Choose at least one quantization type when making from the reference model'],
+  [/기준 모델이 없습니다 — 원래 모델 폴더에서 변환하세요/g, 'There is no reference model — convert from the original model folder'],
+  [/기준 모델이 (\S+) 파일입니다 — 다시 양자화합니다\(--allow-requantize\)\. 16비트 파일에서 만든 것보다 품질이 낮을 수 있습니다/g, 'The reference model is a $1 file — requantizing (--allow-requantize). Quality can be lower than from a 16-bit file'],
+  [/기준 모델을 ASCII 경로로 복사하는 중\(llama\.cpp 의 도구가 읽게\)/g, "Copying the reference model to an ASCII path (for llama.cpp's tools)"],
+  [/기준 모델을 복사하지 못했습니다\(디스크 공간\)/g, 'Could not copy the reference model (disk space)'],
+  [/GGUF 만들기 — 변환 (\S+) → (\S+)/g, 'Make GGUF — converted $1 → $2'],
+  [/ · 변환 검증 못 함: /g, ' · conversion check failed: '],
+  [/ · 변환 검증 문제 (\d+) · 확인 필요 (\d+) · 통과 (\d+)/g, ' · conversion check $1 problems · $2 to check · $3 passed'],
+  [/GGUF 를 읽지 못했습니다/g, 'Could not read the GGUF'],
+  [/엔진이 받지 않는 파일입니다/g, 'The engine does not support this file'],
   [/파일을 열 수 없습니다/g, 'Cannot open the file'],
 );
 
@@ -760,7 +872,9 @@ function evMadeLine(s) {
 function evMakeCard(w, busy) {
   evToolsNeed();
   const t = EV.tools, st = t && !t.error ? t.state : null;
-  const o = EV.mk[w.id] || (EV.mk[w.id] = { outtype: 'bf16', quants: new Set(['Q4_K_M']), imode: 'none', ipath: '', tt: '' });
+  const o = EV.mk[w.id] || (EV.mk[w.id] = { from: w.reference.made ? 'ref' : 'convert', outtype: 'bf16', quants: new Set(['Q4_K_M']), imode: 'none', ipath: '', tt: '' });
+  if (!w.reference.model) o.from = 'convert';
+  const conv = o.from === 'convert';
   const dirv = EV.origDir[w.id] !== undefined ? EV.origDir[w.id] : ((w.original && w.original.dir) || '');
   const dir = h('input', { class: 'input mono', type: 'text', value: dirv, placeholder: 'C:\\models\\my-finetune', 'data-fk': 'ev-mkdir', 'aria-label': T('원래 모델 폴더'),
     oninput: ev => { EV.origDir[w.id] = ev.target.value; } });
@@ -776,12 +890,13 @@ function evMakeCard(w, busy) {
     h('button', { class: 'btn sm primary needs-conn', 'data-fk': 'ev-tools', disabled: busy ? true : null, onclick: evToolsSetup }, I('download', 's'), T('도구 준비')));
   const run = async () => {
     const d = dir.value.trim();
-    if (!d) { toast(T('원래 모델 폴더를 정하세요')); return; }
+    if (conv && !d) { toast(T('원래 모델 폴더를 정하세요')); return; }
+    if (!conv && !o.quants.size) { toast(T('양자화 형식을 하나 이상 고르세요')); return; }
     const tt = o.tt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     if (tt.length && !o.quants.size) { toast(T('행렬별 형식은 양자화 형식과 함께 씁니다')); return; }
     if (o.imode !== 'none' && !o.ipath.trim()) { toast(T('imatrix에 쓸 파일을 정하세요')); return; }
     try {
-      await api('/api/eval/make', { workspace: w.id, source_dir: d, outtype: o.outtype, quants: EV_QUANTS.filter(q => o.quants.has(q)), imatrix: { mode: o.imode, path: o.ipath.trim() }, tensor_types: tt });
+      await api('/api/eval/make', { workspace: w.id, from: o.from, source_dir: d, outtype: o.outtype, quants: EV_QUANTS.filter(q => o.quants.has(q)), imatrix: { mode: o.imode, path: o.ipath.trim() }, tensor_types: tt });
       S.jobHide = ''; EV.at = 0; resetSig(); refresh();
     } catch (e) { toast(e.message, 'err'); }
   };
@@ -790,10 +905,13 @@ function evMakeCard(w, busy) {
       h('span', { class: 'small muted' }, T('원래 모델(Hugging Face 형식)에서 — llama.cpp의 변환 · 양자화'))),
     tools,
     h('div', { class: 'ev-form' },
-      h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(config.json과 가중치 .safetensors가 있는 폴더)')), dir),
-      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('변환 형식')), seg('outtype', [['bf16', 'BF16'], ['f16', 'F16'], ['q8_0', 'Q8_0']], T('변환 형식')),
-        h('span', { class: 'small muted' }, w.reference.model ? T('변환한 파일은 새 버전이 됩니다(기준 모델이 이미 있음).') : T('변환한 파일이 이 작업 공간의 기준 모델이 됩니다.'))),
-      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('양자화 형식(여럿 고름 — 고르지 않으면 변환만)')),
+      w.reference.model ? h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('출발')),
+        seg('from', [['ref', T('기준 모델에서 양자화')], ['convert', T('원래 모델 폴더에서 변환')]], T('출발')),
+        h('span', { class: 'small muted' }, conv ? T('변환한 파일은 새 버전이 됩니다(기준 모델이 이미 있음).') : T`기준 모델 ${evRefLabel(w)}을 그대로 두고 양자화한 파일만 새 버전으로 — 행렬별 형식을 바꿔 다시 만들 때.`)) : null,
+      conv ? h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(config.json과 가중치 .safetensors가 있는 폴더)')), dir) : null,
+      conv ? h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('변환 형식')), seg('outtype', [['bf16', 'BF16'], ['f16', 'F16'], ['q8_0', 'Q8_0']], T('변환 형식')),
+        w.reference.model ? null : h('span', { class: 'small muted' }, T('변환한 파일이 이 작업 공간의 기준 모델이 됩니다.'))) : null,
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, conv ? T('양자화 형식(여럿 고름 — 고르지 않으면 변환만)') : T('양자화 형식(여럿 고름)')),
         h('div', { class: 'row g12 wrap' }, EV_QUANTS.map(q => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-mk-q-' + q, checked: o.quants.has(q) ? true : null,
           onchange: ev => { if (ev.target.checked) o.quants.add(q); else o.quants.delete(q); } }), q)))),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, 'imatrix'),
@@ -806,7 +924,7 @@ function evMakeCard(w, busy) {
           h('textarea', { class: 'input mono', rows: '3', 'data-fk': 'ev-mk-tt', 'aria-label': T('행렬별 형식'), placeholder: 'attn_v=q6_k\nffn_down=q6_k', oninput: ev => { o.tt = ev.target.value; } }, o.tt),
           h('span', { class: 'small muted' }, T('줄마다 행렬 이름=형식(llama-quantize --tensor-type). 엔진이 받지 않는 섞임이면 버전에 까닭이 보입니다.'))))),
     h('div', null, h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-make', disabled: busy || !st ? true : null, onclick: run },
-      I('play', 's'), busy ? T('다른 작업 실행 중') : T('만들기'))));
+      I('play', 's'), busy ? T('다른 작업 실행 중') : T('만들기', 'make'))));
 }
 // 3-2 — 내장 데이터의 출처 · 대화 수 · 라이선스(앱/data/eval/sources.json)
 function evDataInfo(d) {
