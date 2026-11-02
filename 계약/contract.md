@@ -443,7 +443,8 @@ the values received while generating are bit-identical to the values from scorin
    The ranges exist so the work can be split across worker threads — the order inside and across ranges is fixed, so the result does
    not depend on the number of threads.
 4. L = log_w(S), **logprob_j = a_j − L**, entropy **H = L − T / S**.
-5. Top k (≤ 20): the first k indices in (z descending, then index ascending — −0 and +0 are equal) order, with their logprobs.
+5. Top k (≤ 20 in the OpenAI-compatible fields, ≤ 128 through `geulpu.top_logprobs`): the first k indices in (z descending, then index
+   ascending — −0 and +0 are equal) order, with their logprobs. The first k′ entries of a larger k equal what k′ returns.
 
 - **log_w(x)** follows fdlibm's `e_log.c` step by step (S is a normal number between 1 and V): the exponent k and the mantissa are taken
   from the bits, the mantissa is brought into [√2/2, √2) and f = xn − 1; |f| < 2⁻²⁰ has its own short path; otherwise s = f / (2 + f),
@@ -457,7 +458,12 @@ Responses: chat uses the OpenAI form `logprobs.content` (token, logprob, bytes, 
 token_logprobs, top_logprobs, text_offset — with echo the prompt tokens come first, null before `geulpu.echo_from`). The `geulpu`
 object carries the ids and values of the top k (`top_ids`, `top_logprobs` — the completions dictionary form merges tokens with the
 same text), the entropy (`entropy`, `prompt_entropy`), the prompt tokens (`prompt_tokens`) and the logit hashes of the echo rows
-(`prompt_logit_hashes`). Numbers are written with 17 significant digits, so the float64 values come back unchanged.
+(`prompt_logit_hashes`). Numbers are written with 17 significant digits, so the float64 values come back unchanged. Model evaluation 1-1
+([`문서/모델평가.md`](../문서/모델평가.md)): a request with `geulpu.top_logprobs` (0–128) gets that many entries in the `geulpu` top-k fields
+(`top_ids`, `top_logprobs`, `prompt_top_ids`, `prompt_top_logprobs`; the OpenAI-compatible fields keep the k of `logprobs` — the first k of the
+same order), and a `/v1/completions` echo with `geulpu.token_ids_logprob` (a list of token ids for each scored position — as many lists as
+prompt length − `echo_from`, at most 256 ids each) gets, under the same name, the logprob_j of those tokens at each position (the formula
+of step 4 — bit-identical to the top-k and score values).
 
 - **Logit hash** (`logit_hashes`, `prompt_logit_hashes`): for each 32-bit value w of a logit row (V float32 values),
   h ← (h ^ w) × 1099511628211 (mod 2⁶⁴), starting from h = 0xcbf29ce484222325 (FNV-1a 64). Written as 16 hex digits.
