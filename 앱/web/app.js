@@ -1954,7 +1954,7 @@ function kindKey(x) {
 }
 const qtag = m => (quantOf(m) ? h('span', { class: 'qlab' }, quantOf(m)) : null);
 const kindOf = m => ({ think: T('추론 모델'), code: T('코드 모델'), chat: T('일반 모델') })[kindKey(m)];
-function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), pair: T('파일 쌍 재현성'), server: T('모델 불러오기'), device: T('하드웨어 확인'), eval: T('모델 평가'), fix: T('GGUF 메타데이터 고치기'), check: T('GGUF 변환 검증'), tools: T('GGUF 만들기 도구 준비'), make: T('GGUF 만들기') }[j.kind] || TM(j.title); }
+function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), pair: T('파일 쌍 재현성'), server: T('모델 불러오기'), device: T('하드웨어 확인'), eval: T('모델 평가'), fix: T('GGUF 메타데이터 고치기'), check: T('GGUF 변환 검증'), tools: T('GGUF 만들기 도구 준비'), make: T('GGUF 만들기'), orig: T('원래 모델과 견주기') }[j.kind] || TM(j.title); }
 const jobModel = j => String(j.title || '').split(' — ')[1] || '';
 function jobTitle(j) {
   if (j.kind === 'diag' || j.kind === 'speed' || j.kind === 'server') return `${jobName(j)} · ${labelById(jobModel(j))}`;
@@ -2038,7 +2038,7 @@ function renderStatus() {
     const svTxt = sv.state === 'ready' ? T`${labelById(sv.model)} · 동시 ${sv.slots}개 · 문맥 ${fmtCtx(sv.context)}`
       : sv.state === 'starting' ? T`모델 불러오는 중 · ${fmtClock(sv.seconds)}` : sv.state === 'failed' ? T('모델 불러오기 실패') : T('불러온 모델 없음');
     segs.push({ key: 'srv', tip: TM(sv.reason || ''), dot: svDot, text: svTxt });
-    if (j && j.state === 'running' && j.kind !== 'server' && j.kind !== 'device') segs.push({ key: 'job', btn: () => show(['eval', 'fix', 'check', 'tools', 'make'].includes(j.kind) ? 'eval' : 'bench'), tip: ['eval', 'fix', 'check', 'tools', 'make'].includes(j.kind) ? T('모델 평가 보기') : T('벤치마크 보기'), mini: j.progress / 10, text: `${jobName(j)} ${Math.round(j.progress / 10)}%` });
+    if (j && j.state === 'running' && j.kind !== 'server' && j.kind !== 'device') segs.push({ key: 'job', btn: () => show(['eval', 'fix', 'check', 'tools', 'make', 'orig'].includes(j.kind) ? 'eval' : 'bench'), tip: ['eval', 'fix', 'check', 'tools', 'make', 'orig'].includes(j.kind) ? T('모델 평가 보기') : T('벤치마크 보기'), mini: j.progress / 10, text: `${jobName(j)} ${Math.round(j.progress / 10)}%` });
     // 다운로드 — 받는 중이면 진행, 멈춤 · 실패만 남았으면 그 수. 누르면 다운로드 목록
     const all = dlList(), act = all.filter(c => c.download.state === 'downloading' || c.download.state === 'verifying');
     const openDl = ev => openDownloads(ev.currentTarget);

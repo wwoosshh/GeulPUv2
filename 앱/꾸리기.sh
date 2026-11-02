@@ -66,6 +66,7 @@ run kernel-diag-ptx "$ROOT" "$DIST/bin/ptx-backend" 커널/진단.gl -o "$DIST/k
 cp -r "$HERE/web/." "$DIST/web/"
 cp "$HERE/data/models.json" "$DIST/data/"
 cp "$HERE/data/tools.json" "$DIST/data/"                         # 모델 평가 4-1 — GGUF 만들기가 받는 llama.cpp 의 목록
+cp "$HERE/data/orig_compare.py" "$DIST/data/"                    # 모델 평가 2-3 — 원래 모델과 견주기(가상 환경에서)
 cp "$ROOT/교차검증/expected.json" "$ROOT/교차검증/requests.json" "$DIST/data/crosscheck/"
 for f in models.json requests.json expected.json; do cp "$ROOT/교차검증/쌍/$f" "$DIST/data/crosscheck/pair/"; done
 cp "$HERE"/data/eval/* "$DIST/data/eval/"                       # 모델 평가 — 내장 데이터
