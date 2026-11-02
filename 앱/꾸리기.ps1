@@ -108,6 +108,7 @@ foreach ($s in @('16x16x32', '16x8x32', '16x16x16')) {
 # ---- 3. 화면 · 자료 ----
 Copy-Item -Path (Join-Path $Here 'web\*') -Destination (Join-Path $Dist 'web') -Recurse
 Copy-Item -LiteralPath (Join-Path $Here 'data\models.json') -Destination (Join-Path $Dist 'data')
+Copy-Item -LiteralPath (Join-Path $Here 'data\tools.json') -Destination (Join-Path $Dist 'data')   # 모델 평가 4-1 — GGUF 만들기가 받는 llama.cpp 의 목록
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\expected.json') -Destination (Join-Path $Dist 'data\crosscheck')
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\requests.json') -Destination (Join-Path $Dist 'data\crosscheck')
 # 0.11.1 — 파일 쌍 재현성(Liu · Tsai 의 파일): 파일 목록 · 문제의 프롬프트 토큰 · 기준 PC 의 스텝마다 해시

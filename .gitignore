@@ -11,6 +11,7 @@
 !도구/jlens_fit.py
 !도구/same_bits.py
 !도구/공개과제.py
+!도구/llama도구목록.py
 __pycache__/
 *.pyc
 *.임시
