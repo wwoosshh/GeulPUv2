@@ -21,6 +21,15 @@
    "base": "https://raw.githubusercontent.com/ggml-org/llama.cpp/b12032/",
    "requirements": "requirements/requirements-convert_hf_to_gguf.txt",
    "torch": "torch==2.11.0",
+   "transformers5": "5.22.1",
+   "requirements5": [
+    "numpy~=2.2.6; python_version < \"3.14\"",
+    "numpy~=2.4.6; python_version >= \"3.14\"",
+    "sentencepiece>=0.1.98,<0.3.0",
+    "gguf>=0.1.0",
+    "protobuf>=4.21.0,<5.0.0",
+    "transformers==5.22.1"
+   ],
    "files": [
     {
      "path": "LICENSE",
