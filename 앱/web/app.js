@@ -117,6 +117,8 @@ const DICT = {
   "모델 불러오기 실패": "Model failed to load",
   "불러온 모델 없음": "No model loaded",
   "벤치마크 보기": "View benchmark",
+  "모델 평가": "Model evaluation",
+  "모델 평가 보기": "View model evaluation",
   "다운로드 목록": "Downloads",
   "다운로드 {}개 · {}% · {}/s{}{}": "{} downloading · {}% · {}/s{}{}",
   " · 멈춤 {}개": " · {} paused",
@@ -1867,6 +1869,7 @@ function renderAll() {
   else if (S.view === 'device') renderDevice();
   else if (S.view === 'agents') renderAgents();
   else if (S.view === 'settings') renderSettings();
+  else if (S.view === 'eval' && typeof renderEval === 'function') renderEval();   // 모델 평가 1-3 — eval.js(app.js 다음에 읽힌다)
   if (POP && POP.dataset.kind === 'dl') refreshDlPop();
   if (POPANCHOR && !POPANCHOR.isConnected) closePop();   // 다시 그려 기준 단추가 사라졌으면 판도 닫는다
   updateDlBars();
@@ -1949,7 +1952,7 @@ function kindKey(x) {
 }
 const qtag = m => (quantOf(m) ? h('span', { class: 'qlab' }, quantOf(m)) : null);
 const kindOf = m => ({ think: T('추론 모델'), code: T('코드 모델'), chat: T('일반 모델') })[kindKey(m)];
-function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), pair: T('파일 쌍 재현성'), server: T('모델 불러오기'), device: T('하드웨어 확인') }[j.kind] || TM(j.title); }
+function jobName(j) { return { diag: T('하드웨어 진단'), speed: T('속도 측정'), crosscheck: T('재현성 검증'), pair: T('파일 쌍 재현성'), server: T('모델 불러오기'), device: T('하드웨어 확인'), eval: T('모델 평가') }[j.kind] || TM(j.title); }
 const jobModel = j => String(j.title || '').split(' — ')[1] || '';
 function jobTitle(j) {
   if (j.kind === 'diag' || j.kind === 'speed' || j.kind === 'server') return `${jobName(j)} · ${labelById(jobModel(j))}`;
@@ -1994,7 +1997,7 @@ function fitTag(f) {
 }
 
 // ---------- 레일 · 상태 막대 ----------
-const RAIL_ICON = { chat: 'chat', models: 'box', agents: 'term', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
+const RAIL_ICON = { chat: 'chat', models: 'box', eval: 'flask', agents: 'term', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
 document.querySelectorAll('.rail-btn').forEach(b => {
   b.innerHTML = svg(RAIL_ICON[b.dataset.view], 'l') + `<span class="lbl" aria-hidden="true">${esc(b.getAttribute('aria-label'))}</span>`;
   b.addEventListener('click', () => show(b.dataset.view));
@@ -2010,6 +2013,7 @@ function show(view) {
   });
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
   resetSig();
+  if (view === 'eval' && typeof evShow === 'function') evShow();
   renderAll();
   if (view === 'bench') loadResults(true);
   if (view === 'debug') DBG.listAt = 0;
@@ -2032,7 +2036,7 @@ function renderStatus() {
     const svTxt = sv.state === 'ready' ? T`${labelById(sv.model)} · 동시 ${sv.slots}개 · 문맥 ${fmtCtx(sv.context)}`
       : sv.state === 'starting' ? T`모델 불러오는 중 · ${fmtClock(sv.seconds)}` : sv.state === 'failed' ? T('모델 불러오기 실패') : T('불러온 모델 없음');
     segs.push({ key: 'srv', tip: TM(sv.reason || ''), dot: svDot, text: svTxt });
-    if (j && j.state === 'running' && j.kind !== 'server' && j.kind !== 'device') segs.push({ key: 'job', btn: () => show('bench'), tip: T('벤치마크 보기'), mini: j.progress / 10, text: `${jobName(j)} ${Math.round(j.progress / 10)}%` });
+    if (j && j.state === 'running' && j.kind !== 'server' && j.kind !== 'device') segs.push({ key: 'job', btn: () => show(j.kind === 'eval' ? 'eval' : 'bench'), tip: j.kind === 'eval' ? T('모델 평가 보기') : T('벤치마크 보기'), mini: j.progress / 10, text: `${jobName(j)} ${Math.round(j.progress / 10)}%` });
     // 다운로드 — 받는 중이면 진행, 멈춤 · 실패만 남았으면 그 수. 누르면 다운로드 목록
     const all = dlList(), act = all.filter(c => c.download.state === 'downloading' || c.download.state === 'verifying');
     const openDl = ev => openDownloads(ev.currentTarget);
@@ -4843,8 +4847,8 @@ function benchCard(b, runnables, hasR1, busy, r1c) {
 }
 async function pollLog() {
   const j = S.st && S.st.job;
-  if (!j || S.view !== 'bench') return;
-  const pre = document.getElementById('joblog');
+  if (!j || (S.view !== 'bench' && S.view !== 'eval')) return;
+  const pre = document.getElementById(S.view === 'eval' ? 'ev-joblog' : 'joblog');   // 모델 평가 1-3 — 평가 화면의 작업 카드
   if (!pre) return;
   if (S.log.job !== j.id) S.log = { job: j.id, from: 0 };
   try {
