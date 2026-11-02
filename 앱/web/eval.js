@@ -5,6 +5,9 @@ const EVAL_DICT = {
   "끝 토큰": "End token",
   "도구 호출": "Tool call",
   "아직 없음": "not set yet",
+  "답 {}토큰(데이터 줄의 값 {}개)": "answers {0} tokens ({1} from the data lines)",
+  "데이터 줄의 max_tokens": "max_tokens of the data lines",
+  "대화 {}개는 설정의 max_tokens 대신 데이터 줄의 값을 썼습니다": "{0} {0|conversation|conversations} used the data line's value instead of the max_tokens setting",
   "청크 {}개 × {}토큰": "{0} {0|chunk|chunks} × {1} tokens",
   "잰 청크의 수(청크마다 512 토큰)가 작업 기록과 만든 버전에 남습니다 — 글이 짧으면 청크가 적습니다.": "The number of chunks measured (512 tokens each) is kept in the run log and the new versions — a short text gives few chunks.",
   "미세조정한 모델이면 '없음'으로 두고 원래 모델 폴더를 정하세요 — GGUF 만들기로 변환한 파일이 기준 모델이 됩니다.": "For a fine-tuned model, leave this at 'None' and set the original model folder — the file converted with Make GGUF becomes the reference model.",
@@ -605,6 +608,11 @@ const evLatest = (w, vid) => evResults(w).filter(r => r.version === vid).pop() |
 const evChat = r => !!(r && r.data && r.data.kind === 'chat');
 const evSameSet = (a, b) => !!(a && b && a.data && b.data && a.data.sha256 === b.data.sha256 && JSON.stringify(evSetKey(a.settings)) === JSON.stringify(evSetKey(b.settings)));
 const evSetKey = s => (s ? [s.mode, s.max_tokens, s.thinking, s.top_k, s.chunks] : null);
+// #201 — 답의 최대 토큰: 데이터 줄의 max_tokens 가 실행 설정보다 앞선다(그런 대화의 수를 함께)
+const evMaxLine = r => {
+  const s = r.settings || {}, n = r.data && r.data.own_max_tokens;
+  return n ? T`답 ${s.max_tokens}토큰(데이터 줄의 값 ${n}개)` : T`답 ${s.max_tokens}토큰`;
+};
 
 async function evLoad() {
   if (EV.loading) return;
@@ -1422,7 +1430,7 @@ function evWsView(w) {
         h('label', { class: 'check ev-pick' }, h('input', { type: 'checkbox', 'aria-label': T`${r.dir} 고르기`, 'data-fk': 'ev:pick:' + r.dir, checked: pick.includes(r.dir) ? true : null,
           onchange: ev => { EV.pick = pick.filter(d => d !== r.dir); if (ev.target.checked) { EV.pick.push(r.dir); if (EV.pick.length > 2) EV.pick.shift(); } renderEval(true); } })),
         h('div', { class: 'ev-vfile' }, h('div', { class: 'ink' }, `${r.version} · ${evDirWhen(r.dir)}`),
-          h('div', { class: 'small muted' }, [r.data && r.data.name, evMode(s.mode), evChat(r) ? T`답 ${s.max_tokens}토큰` : T`청크 ${s.chunks}`].filter(Boolean).join(NB))),
+          h('div', { class: 'small muted' }, [r.data && r.data.name, evMode(s.mode), evChat(r) ? evMaxLine(r) : T`청크 ${s.chunks}`].filter(Boolean).join(NB))),
         h('div', { class: 'ev-vres small' },
           h('div', null, evChat(r) && a.compared ? T`답 ${a.differ}/${a.compared} 달라짐` + (a.near_tie ? T` (마진 작음 ${a.near_tie})` : '') : T`위치 ${fmtNum(m.positions || 0)}개`),
           h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}` + (r.accuracy ? T` · 정답률 ${evPct(r.accuracy.cand)}` : ''))));
@@ -1529,10 +1537,11 @@ function evResultView(w) {
         [T('평가한 파일'), `${s.version_model && s.version_model.file} · ${s.version_model && s.version_model.sha256}`],
         [T('데이터'), `${s.data && s.data.name} · ${s.data && s.data.sha256}`],
         [T('설정'), Object.entries(st).map(([k, v]) => `${k}=${v}`).join(' ')],
+        s.data && s.data.own_max_tokens ? [T('데이터 줄의 max_tokens'), T`대화 ${s.data.own_max_tokens}개는 설정의 max_tokens 대신 데이터 줄의 값을 썼습니다`] : null,
         ['GeulPU', `${rp.geulpu} · ${String(rp.commit || '').slice(0, 12)}`],
         [T('장치'), `${rp.device} · ${LAYER[rp.layer] || rp.layer}`],
         [T('커널 모듈'), `${rp.module} · ${String(rp.module_sha256 || '').slice(0, 16)}`],
-        [T('결과 해시'), s.result_sha256]].map(([k, v]) => [h('div', { class: 'k' }, k), h('div', { class: 'v mono small ev-wrap' }, String(v))])),
+        [T('결과 해시'), s.result_sha256]].filter(Boolean).map(([k, v]) => [h('div', { class: 'k' }, k), h('div', { class: 'v mono small ev-wrap' }, String(v))])),
     h('p', { class: 'small muted' }, T('같은 파일 · 데이터 · 설정 · GeulPU 버전이면 다시 실행해도 결과 해시가 같습니다.'))));
   return h('div', { class: 'col g24' }, out);
 }
