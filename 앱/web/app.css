@@ -1009,7 +1009,7 @@ table.data.dbg-table tbody tr.on td { background: var(--canvas-soft); }
 .ev-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 14px; }
 .ev-steps li { display: flex; flex-direction: column; gap: 2px; padding-left: 4px; }
 .ev-steps li::marker { color: var(--mute); }
-.ev-table td, .ev-table th { padding: 10px 12px; }
+table.data.ev-table td, table.data.ev-table th { padding: 10px 12px; }
 table.data.ev-table th { white-space: normal; }
 .ev-pick { width: 36px; padding-right: 0; }
 .ev-vrow { display: grid; grid-template-columns: 84px minmax(0, 1.2fr) minmax(0, 1fr) 36px; gap: 4px 16px; align-items: center; padding: 12px 8px 12px 16px; border-top: 1px solid var(--hairline); }
@@ -1028,7 +1028,7 @@ table.data.ev-table th { white-space: normal; }
   .ev-rrow { grid-template-columns: 28px minmax(0, 1fr); }
   .ev-rrow .ev-vres { grid-column: 2; }
   .ev-table .c-cat, .ev-table .c-fin, .ev-table .c-opt { display: none; }
-  .ev-table td, .ev-table th { padding: 8px 10px; }
+  table.data.ev-table td, table.data.ev-table th { padding: 8px 8px; }
 }
 .ev-form { display: flex; flex-direction: column; gap: 16px; }
 .ev-form select.input { min-width: 0; max-width: 100%; }
@@ -1043,6 +1043,13 @@ table.data.ev-table th { white-space: normal; }
 .ev-bar .n { text-align: right; color: var(--ink); }
 .ev-key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--line-strong); }
 .ev-stats2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ev-stats3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ev-stats3 .s { white-space: normal; }
+.ev-ok { color: var(--ok); }
+.ev-oki { display: inline-flex; vertical-align: middle; }
+.ev-oki svg.i { width: 14px; height: 14px; }
+.ev-no { color: var(--err); }
+@media (max-width: 1280px) { .ev-stats3 { grid-template-columns: minmax(0, 1fr); } .ev-stats3 .cell { border-left: 0; border-top: 1px solid var(--hairline); } .ev-stats3 .cell:first-child { border-top: 0; } }
 .ev-tie { color: var(--accent); }
 .ev-wrap { overflow-wrap: anywhere; }
 .ev-cmpsel { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: end; }
