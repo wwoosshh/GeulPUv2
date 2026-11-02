@@ -160,7 +160,8 @@ model architecture lives in one folder per architecture (`구조/<name>/`), and 
   integration work updates them for a release). A change users will notice adds one fragment file, `문서/바뀐것.d/<branch>.md`
   (format in [`_꼴.md`](../문서/바뀐것.d/_꼴.md): kind, Korean, `---`, English). On the release branch,
   `python -I -X utf8 시험/바뀐것합치기.py --쓰기` moves the fragments into [문서/바뀐것.md](../문서/바뀐것.md) ("다음 판") and
-  [CHANGELOG.md](../CHANGELOG.md) ("Unreleased") and deletes them. The quick check validates the fragments.
+  [CHANGELOG.md](../CHANGELOG.md) ("Unreleased") and deletes them. Relative links inside a fragment are written relative to the
+  fragment file (merging rewrites them for both documents), and the quick check validates the fragments and their links.
 - **Merging**: branch → pull request → green CI → squash merge (as before). When `main` is merged into a branch, the tables that grow by
   lines ([`시험/모듈해시.txt`](../시험/모듈해시.txt), [`시험/SASS넘침.txt`](../시험/SASS넘침.txt)) keep the lines of both sides
   (`merge=union` in `.gitattributes`); if both sides changed the same line, the quick check reports the hash mismatch.

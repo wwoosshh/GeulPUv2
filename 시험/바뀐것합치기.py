@@ -17,14 +17,22 @@
   - **English title.** Text …  (CHANGELOG.md 의 '## Unreleased' 아래 '### Added' 등의 끝에)
 
 사용자에게 보이지 않는 변경(시험 · 내부 구조 · 문서만)은 조각을 쓰지 않는다.
+
+조각 안의 상대 링크는 조각 파일 기준으로 쓴다(PR 에서 조각을 열어도 맞게 — 예: ../../docs/x.md · ../같은비트.md). 합칠 때 두 문서의
+자리(문서/ · 저장소 뿌리)에 맞게 고친다. 그 자리 기준으로 이미 맞는 링크는 그대로 둔다. 어느 쪽으로도 없는 파일을 가리키면 알리고
+멈춘다(빠른 점검이 PR 에서 잡게).
 """
 import argparse
 import os
+import posixpath
+import re
 import sys
+import urllib.parse
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 조각곳 = os.path.join(ROOT, "문서", "바뀐것.d")
 갈래들 = {"더함": "Added", "바꿈": "Changed", "고침": "Fixed"}
+링크꼴 = re.compile(r"\]\(([^)\s]+)\)")
 
 
 def 읽기(경로):
@@ -61,6 +69,22 @@ def 조각들():
             raise SystemExit(f"{이름}: 한국어 · 영어 가운데 빈 쪽이 있다")
         나온.append((이름, 갈래, ko, en))
     return 나온
+
+
+def 링크고침(글, 곳, 경고):
+    """조각(문서/바뀐것.d/) 기준의 상대 링크를 곳(저장소 뿌리 기준 폴더 — '문서' 또는 '')에 맞춘다"""
+    def 바꿈(m):
+        t = m.group(1)
+        길, 샵, 꼬리 = t.partition("#")
+        if not 길 or 길.startswith("/") or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", 길):
+            return m.group(0)                                    # 주소(https: · mailto:) · 같은 문서 안의 '#…' · 뿌리 기준
+        조각기준 = posixpath.normpath(posixpath.join("문서/바뀐것.d", 길))
+        if not 조각기준.startswith("../") and os.path.exists(os.path.join(ROOT, urllib.parse.unquote(조각기준))):
+            return f"]({posixpath.relpath('/' + 조각기준, '/' + 곳)}{샵}{꼬리})"
+        if not os.path.exists(os.path.join(ROOT, 곳, urllib.parse.unquote(길))):
+            경고.append(t)
+        return m.group(0)
+    return 링크꼴.sub(바꿈, 글)
 
 
 def 절끝(줄들, 시작):
@@ -131,8 +155,15 @@ def main():
     if not 조각:
         print("조각 없음 — 문서/바뀐것.d/ 가 비었다")
         return 0
+    경고 = []
+    조각 = [(이름, 갈래, 링크고침(ko, "문서", 경고), 링크고침(en, "", 경고)) for 이름, 갈래, ko, en in 조각]
     for 이름, 갈래, ko, en in 조각:
         print(f"{이름} ({갈래} · {갈래들[갈래]}): {ko.splitlines()[0][:80]} / {en.splitlines()[0][:80]}")
+    for t in 경고:
+        print(f"링크 확인: ({t}) — 조각 기준으로도 넣을 자리 기준으로도 파일이 없다")
+    if 경고:
+        print(f"깨진 링크 {len(경고)} 개 — 조각 파일 기준의 상대 경로로 고친 뒤 다시(빠른 점검도 여기서 멈춘다)")
+        return 1
     if not a.쓰기:
         print(f"조각 {len(조각)} 개 — --쓰기 로 넣는다")
         return 0
