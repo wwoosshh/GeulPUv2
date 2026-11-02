@@ -77,8 +77,6 @@ const EVAL_DICT = {
   "양자화": "Quantized",
   "양자화 형식을 하나 이상 고르세요": "Choose at least one quantization type",
   "출발": "Start from",
-  "기준 모델에서 양자화": "Quantize the reference model",
-  "원래 모델 폴더에서 변환": "Convert the original model folder",
   "기준 모델 {}을 그대로 두고 양자화한 파일만 새 버전으로 — 행렬별 형식을 바꿔 다시 만들 때.": "Keeps the reference model {} and adds only the quantized files as new versions — for remaking with different per-matrix types.",
   "양자화 형식(여럿 고름)": "Quantization types (choose any)",
   "대화 {}개": "{0} {0|conversation|conversations}",
@@ -472,6 +470,7 @@ TMX.push(
   [/ · 변환 검증 못 함: /g, ' · conversion check failed: '],
   [/ · 변환 검증 문제 (\d+) · 확인 필요 (\d+) · 통과 (\d+)/g, ' · conversion check $1 problems · $2 to check · $3 passed'],
   [/GGUF 를 읽지 못했습니다/g, 'Could not read the GGUF'],
+  [/(\S+): 형식 (\d+) — 이 길의 행렬은 (.+?) 여야 한다/g, '$1: type $2 — matrices on this path must be $3'],   // 엔진의 모델 확인(엔진/가중치K.gl)
   [/엔진이 받지 않는 파일입니다/g, 'The engine does not support this file'],
   [/파일을 열 수 없습니다/g, 'Cannot open the file'],
 );
@@ -906,7 +905,7 @@ function evMakeCard(w, busy) {
     tools,
     h('div', { class: 'ev-form' },
       w.reference.model ? h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('출발')),
-        seg('from', [['ref', T('기준 모델에서 양자화')], ['convert', T('원래 모델 폴더에서 변환')]], T('출발')),
+        seg('from', [['ref', T('기준 모델')], ['convert', T('원래 모델 폴더')]], T('출발')),
         h('span', { class: 'small muted' }, conv ? T('변환한 파일은 새 버전이 됩니다(기준 모델이 이미 있음).') : T`기준 모델 ${evRefLabel(w)}을 그대로 두고 양자화한 파일만 새 버전으로 — 행렬별 형식을 바꿔 다시 만들 때.`)) : null,
       conv ? h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(config.json과 가중치 .safetensors가 있는 폴더)')), dir) : null,
       conv ? h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('변환 형식')), seg('outtype', [['bf16', 'BF16'], ['f16', 'F16'], ['q8_0', 'Q8_0']], T('변환 형식')),
