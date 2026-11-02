@@ -1,0 +1,899 @@
+// 모델 평가(문서/모델평가.md — 1-3) — 작업 공간(모델 하나의 작업: 기준 모델 · 버전들 · 결과)을 왼쪽에, 고른 것을 오른쪽에: 작업 공간 ·
+// 결과 · 전후 비교 · 답이 달라진 곳. 넓은 창은 두 칸이 저마다 스크롤하고(화면은 고정), 좁은 창은 위아래로 놓인다(디버거와 같은 꼴).
+// app.js 다음에 읽힌다 — app.js 의 도움(h · T · api · modal …)과 상태(S)를 쓴다. 영어 문구는 아래 사전(app.js 의 DICT 에 더한다)
+const EVAL_DICT = {
+  "끝 토큰": "End token",
+  "도구 호출": "Tool call",
+  "기준 모델 없음": "No reference model",
+  "먼저 모델 화면에서 GGUF 파일을 더하세요": "Add a GGUF file on the Models screen first",
+  "새 작업 공간": "New workspace",
+  "기준 모델": "Reference model",
+  "작업 공간 하나는 모델 하나의 작업입니다 — 기준 모델과, 그와 비교할 GGUF 파일(버전)들과 결과를 묶습니다.": "A workspace holds the work on one model — a reference model, the GGUF files (versions) compared with it, and the results.",
+  "이름": "Name",
+  "같은 모델의 BF16 · F16 파일이 가장 좋습니다(그래픽 메모리에 들지 않으면 Q8_0). 평가할 파일은 모두 이 모델과 비교합니다.": "A BF16 or F16 file of the same model is best (Q8_0 if it does not fit in graphics memory). Every evaluated file is compared with this model.",
+  "만들기": "Create",
+  "고를 수 있는 모델이 없습니다": "No model to choose",
+  "기준 모델 바꾸기": "Change reference model",
+  "지난 결과는 그대로 남지만, 기준 모델이 다른 결과끼리는 전후 비교를 하지 않습니다.": "Earlier results stay, but results with different reference models are not compared before/after.",
+  "작업 공간 지우기": "Delete workspace",
+  "{} — 목록에서 지웁니다. 결과 파일은 자료 폴더의 평가\\지운작업공간\\ 으로 옮겨 둡니다(모델 파일은 그대로).": "{} — removed from the list. Its result files are moved to the deleted-workspaces folder in the data folder (model files are not touched).",
+  "더할 수 있는 모델이 없습니다 — 모델 화면에서 GGUF 파일을 더하세요": "No model to add — add a GGUF file on the Models screen",
+  "평가할 GGUF": "GGUF to evaluate",
+  "버전 더하기": "Add version",
+  "기준 모델과 비교할 GGUF 파일을 고르세요. 파일은 옮기지 않고 앱의 모델 목록에 있는 파일을 그대로 씁니다.": "Choose a GGUF file to compare with the reference model. The file is not moved — the app uses the file in its model list.",
+  "더하기": "Add",
+  "버전 지우기": "Remove version",
+  "{} — 작업 공간에서 뺍니다. 모델 파일과 지난 결과는 그대로 남습니다.": "{} — removed from the workspace. The model file and earlier results stay.",
+  "비우면 파일 이름": "File name if empty",
+  "데이터를 불러왔습니다 — {}": "Data imported — {}",
+  "데이터 불러오기": "Import data",
+  "JSONL — 줄마다 대화 하나: {\"messages\": […]}, 고를 수 있는 칸 id · category · tools · max_tokens · thinking. TXT — 텍스트 하나를 문맥 512의 청크로 나눠 llama-perplexity와 같은 위치를 점수 매깁니다.": "JSONL — one conversation per line: {\"messages\": […]}, optional fields id · category · tools · max_tokens · thinking. TXT — one text split into context-512 chunks, scored at the same positions as llama-perplexity.",
+  "파일 경로(.jsonl · .txt)": "File path (.jsonl · .txt)",
+  "이름(영문 · 숫자 · . _ -)": "Name (letters · digits · . _ -)",
+  "평가할 버전을 하나 이상 고르세요": "Choose at least one version to evaluate",
+  "데이터를 고르세요": "Choose the data",
+  "평가하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?": "The loaded chat model is unloaded so the evaluation has the GPU to itself. Continue?",
+  "평가 실행": "Run evaluation",
+  "실행하는 동안 불러온 채팅 모델은 GPU에서 내립니다": "The loaded chat model is unloaded from the GPU while it runs",
+  "평가할 버전": "Versions to evaluate",
+  "먼저 버전을 더하세요": "Add a version first",
+  "데이터": "Data",
+  "텍스트": "Text",
+  "대화": "Conversations",
+  "청크 수(512 토큰)": "Chunks (512 tokens)",
+  "답의 최대 토큰": "Max answer tokens",
+  "동시 요청": "Concurrent requests",
+  "생각(thinking) 켬": "Thinking on",
+  "위치마다 평가할 모델의 상위 확률도 저장(cand.bin — 다시 계산 · 분석용, 위치마다 약 0.5 KB)": "Also save the evaluated model's top probabilities at every position (cand.bin — for recomputation and analysis, about 0.5 KB per position)",
+  "텍스트 데이터는 같은 토큰의 확률만 비교합니다(llama-perplexity --kl-divergence와 같은 위치).": "Text data compares only the probabilities of the same tokens (the same positions as llama-perplexity --kl-divergence).",
+  "기준 모델이 낸 답을 두 모델이 점수 매기고(같은 토큰의 확률), 두 모델이 저마다의 채팅 템플릿으로 답합니다. 기준 모델의 값은 처음 한 번 만들고, 같은 기준 모델 · 데이터 · 설정이면 다시 씁니다.": "Both models score the reference model's answers (probabilities of the same tokens), and each model answers with its own chat template. The reference values are made once and reused for the same reference model, data and settings.",
+  "KL divergence {} · top-1 일치율 {}": "KL divergence {} · top-1 agreement {}",
+  "대화 {}개 중 {}개의 답이 기준 모델과 달라졌습니다": "{1} of {0} answers differ from the reference model",
+  " — 그중 {}개는 마진이 작은 스텝(0.05 nat 미만)에서 갈라졌습니다": " — {} of them diverged at a low-margin step (below 0.05 nat)",
+  "대화 {}개의 답이 모두 기준 모델과 같습니다": "All {} answers match the reference model",
+  "비교한 위치가 없습니다": "No positions were compared",
+  "위치 {}개": "{} positions",
+  "작업 공간": "Workspaces",
+  "작업 공간|one": "Workspace",
+  "기준 모델|col": "Reference",
+  "평가할 모델|col": "Evaluated",
+  "대화|col": "Items",
+  "작업 공간이 없습니다": "No workspaces",
+  "새 작업 공간을 만들고 기준 모델을 고른 뒤, 비교할 GGUF 파일을 버전으로 더하세요.": "Create a workspace, choose a reference model, then add the GGUF files to compare as versions.",
+  "기준 모델 {}": "Reference {}",
+  "버전 {}개": "{0} {0|version|versions}",
+  "{} · 답 {}/{} 달라짐": "{} · {}/{} answers differ",
+  "작업 공간 목록": "Workspace list",
+  "GGUF 파일을 기준 모델과 비교합니다": "Compare GGUF files with a reference model",
+  "작업 공간 만들기": "Create a workspace",
+  "기준 모델을 고릅니다 — 같은 모델의 BF16 · F16 파일(그래픽 메모리에 들지 않으면 Q8_0).": "Choose the reference model — a BF16 or F16 file of the same model (Q8_0 if it does not fit in graphics memory).",
+  "비교할 GGUF 파일(양자화 · 미세조정한 파일)을 v1 · v2 …로 더합니다.": "Add the GGUF files to compare (quantized or fine-tuned files) as v1 · v2 ….",
+  "기준 모델이 낸 답의 토큰마다 두 모델의 확률을 비교하고(KL divergence · top-1 일치율), 두 모델이 저마다 낸 답이 어디서 갈라지는지 봅니다.": "Compare the two models' probabilities at every token of the reference model's answers (KL divergence · top-1 agreement), and see where each model's own answer diverges.",
+  "결과 · 전후 비교": "Results · before/after comparison",
+  "버전을 고친 뒤 같은 데이터 · 설정으로 다시 실행하면, 기준 모델과 같아진 대화와 새로 달라진 대화로 나아졌는지 판정합니다.": "After changing a version, run again with the same data and settings — the conversations that now match the reference and those that newly diverged decide whether it improved.",
+  "작업 공간 메뉴": "Workspace menu",
+  "기준 모델이 앱의 모델 목록에 없습니다 — 모델 화면에서 그 파일을 다시 더하거나 기준 모델을 바꾸세요.": "The reference model is not in the app's model list — add the file again on the Models screen or change the reference model.",
+  "지금 상태 — {}": "Current state — {}",
+  "지금 상태": "Current state",
+  "아직 평가하지 않았습니다 — 아래에서 평가를 실행하세요.": "Not evaluated yet — run an evaluation below.",
+  "평가할 GGUF 파일을 버전으로 더하세요.": "Add the GGUF files to evaluate as versions.",
+  "답이 달라진 대화 {}": "Differing answers {}",
+  "지금": "Current",
+  "가져옴": "Imported",
+  "메타데이터 고침": "Metadata fixed",
+  "다시 양자화": "Requantized",
+  "변환": "Converted",
+  "답 {}/{} 달라짐 · KL {}": "{}/{} answers differ · KL {}",
+  "결과 없음": "No result",
+  "앞 버전 대비 {}": "vs previous version {}",
+  "앞 버전과 데이터 · 설정이 달라 비교하지 않음": "Not compared with the previous version (different data or settings)",
+  "답 {}/{} 달라짐": "{}/{} answers differ",
+  "{} 메뉴": "{} menu",
+  "최근 결과 보기": "View latest result",
+  "지금 버전으로": "Make current",
+  "버전": "Version",
+  "버전이 없습니다": "No versions",
+  "기준 모델과 비교할 GGUF 파일을 더하세요.": "Add a GGUF file to compare with the reference model.",
+  "{}개 · 둘을 고르면 전후 비교": "{} · choose two to compare before/after",
+  "전후 비교": "Before/after comparison",
+  "답이 달라진 대화": "Differing answers",
+  "{} 고르기": "Select {}",
+  "답 {}토큰": "answers {} tokens",
+  "청크 {}": "{} chunks",
+  " (마진 작음 {})": " (low margin {})",
+  "위에서 평가를 실행하면 여기에 쌓입니다.": "Results appear here after you run an evaluation above.",
+  "{} 결과": "{} result",
+  "디버거로 열기": "Open in debugger",
+  "{} · {}초": "{} · {} s",
+  "어휘가 기준 모델과 달라 같은 토큰의 확률은 비교하지 않았습니다 — 답은 글로 비교했습니다.": "The vocabulary differs from the reference model, so token probabilities were not compared — the answers were compared as text.",
+  "같은 토큰의 확률": "Probabilities of the same tokens",
+  "기준 모델이 낸 답의 토큰마다": "at every token of the reference model's answers",
+  "청크마다 뒤쪽 255 토큰": "the last 255 tokens of every chunk",
+  "KL divergence 평균": "Mean KL divergence",
+  "KL divergence 99 백분위수": "KL divergence, 99th percentile",
+  "top-1 일치율": "Top-1 agreement",
+  "PPL 비(평가 ÷ 기준)": "PPL ratio (evaluated ÷ reference)",
+  "Δp 평균(기준 − 평가)": "Mean Δp (reference − evaluated)",
+  "기준 모델의 상위 {}개 밖 확률": "Probability outside the reference top {}",
+  "KL divergence는 기준 모델의 상위 {}개 토큰과 나머지 확률 하나로 계산한 값입니다 — 모든 어휘로 계산한 값보다 조금 작습니다(아래쪽 값). 위치 {}개.": "KL divergence is computed from the reference model's top {} tokens plus one remainder probability — slightly below the full-vocabulary value (a lower bound). {} positions.",
+  "답이 달라진 대화 {}개": "{} differing answers",
+  "{} 이상": "{} or more",
+  "달라진 대화": "Differing answers",
+  "마진이 작은 스텝(0.05 nat 미만)에서 갈라짐": "Diverged at a low-margin step (below 0.05 nat)",
+  "글로 비교한 대화 {}개": "{} compared as text",
+  "답이 길면 확률 차이가 작아도 어딘가에서 갈라지기 쉽습니다. 일찍 갈라진 대화와 마진이 작은 스텝에서 갈라진 대화를 함께 보세요.": "Long answers tend to diverge somewhere even when the probability differences are small. Look at both the early divergences and those at low-margin steps.",
+  "끝난 까닭": "Finish reasons",
+  "기준 모델 — 끝 토큰으로 끝남": "Reference model — ended with the end token",
+  "평가할 모델 — 끝 토큰으로 끝남": "Evaluated model — ended with the end token",
+  "평가할 모델이 끝 토큰(EOS)으로 끝내지 못하고 최대 길이까지 간 답이 기준 모델보다 많습니다 — GGUF 의 채팅 템플릿 · EOS 토큰을 확인하세요.": "More of the evaluated model's answers ran to the maximum length instead of ending with the end token (EOS) than the reference model's — check the GGUF's chat template and EOS token.",
+  "분야": "Category",
+  "답이 달라짐": "Differing answers",
+  "마진이 작은 스텝에서 갈라짐": "Low-margin divergence",
+  "전체": "All",
+  "청크": "Chunks",
+  "대화 거르기": "Filter conversations",
+  "끝난 까닭(기준 · 평가)": "Finish (reference · evaluated)",
+  "글로 비교": "Text only",
+  "해당하는 대화가 없습니다": "No matching conversations",
+  "처음 500개만 보입니다(모두 {}개).": "Showing the first 500 (of {}).",
+  "재현 정보": "Reproduction info",
+  "평가한 파일": "Evaluated file",
+  "장치": "Device",
+  "결과 해시": "Result hash",
+  "같은 파일 · 데이터 · 설정 · GeulPU 버전이면 다시 실행해도 결과 해시가 같습니다.": "With the same files, data, settings and GeulPU version, a rerun gives the same result hash.",
+  "전": "Before",
+  "후": "After",
+  "두 결과 비교": "Compare two results",
+  "서로 다른 결과 두 개를 고르세요.": "Choose two different results.",
+  "데이터가 다릅니다": "the data differs",
+  "설정이 다릅니다": "the settings differ",
+  "기준 모델이 다릅니다": "the reference model differs",
+  "대화 수가 다릅니다": "the number of conversations differs",
+  "나아졌습니다 — 기준 모델과 같아진 대화 {}개 · 새로 달라진 대화 {}개(부호 검정 p = {})": "Improved — {} now match the reference · {} newly diverged (sign test p = {})",
+  "나빠졌습니다 — 기준 모델과 같아진 대화 {}개 · 새로 달라진 대화 {}개(부호 검정 p = {})": "Got worse — {} now match the reference · {} newly diverged (sign test p = {})",
+  "뚜렷한 차이가 없습니다 — 기준 모델과 같아진 대화 {}개 · 새로 달라진 대화 {}개(부호 검정 p = {})": "No clear difference — {} now match the reference · {} newly diverged (sign test p = {})",
+  "비교할 수 없습니다 — {}": "Cannot compare — {}",
+  "나아짐": "Improved",
+  "나빠짐": "Worse",
+  "차이 없음": "No clear difference",
+  "비교 불가": "Not comparable",
+  "GeulPU의 결과에는 실행마다의 잡음이 없어 대화 하나하나의 바뀜은 파일을 바꾼 데서 옵니다. 어떤 대화를 골랐나에 따른 차이는 남기 때문에 부호 검정으로 판정합니다(p < 0.05).": "GeulPU results carry no run-to-run noise, so each conversation's change comes from the file change. Which conversations were chosen still matters, so the verdict uses a sign test (p < 0.05).",
+  "지표": "Metric",
+  "차이": "Change",
+  "기준 모델과 같아진 대화 {}개": "{} now match the reference",
+  "누르면 전 결과에서 달랐던 답을 엽니다": "Opens the differing answer in the before result",
+  "새로 달라진 대화 {}개": "{} newly diverged",
+  "누르면 후 결과의 답을 엽니다": "Opens the answer in the after result",
+  "(빈 답)": "(empty answer)",
+  "메시지 {}개": "{0} {0|message|messages}",
+  "도구 {}개": "{0} {0|tool|tools}",
+  "앞의 메시지 {}개": "{0} earlier {0|message|messages}",
+  "앞 대화": "Previous conversation",
+  "다음 대화": "Next conversation",
+  "두 모델의 답이 토큰까지 같습니다.": "The two models' answers match token for token.",
+  "두 모델의 답이 다릅니다 — 어휘가 달라 글로 비교했습니다.": "The two answers differ — compared as text because the vocabularies differ.",
+  "스텝 {}에서 처음 갈라졌습니다 — 그 앞 {}토큰은 같습니다.": "First diverged at step {} — the {} tokens before it match.",
+  "그 스텝에서 기준 모델의 마진(1위와 2위의 로그확률 차) {} nat": "Reference model's margin at that step (log-probability gap between 1st and 2nd) {} nat",
+  "기준 모델 {}토큰({})": "Reference model {} tokens ({})",
+  "평가할 모델 {}토큰({})": "Evaluated model {} tokens ({})",
+  "첫 토큰(스텝 1)부터 갈라졌습니다.": "The answers diverge from the first token (step 1).",
+  "이 대화의 KL divergence 평균 {} · top-1 일치율 {}": "This conversation: mean KL divergence {} · top-1 agreement {}",
+  "두 모델의 답": "Both models' answer",
+  "두 답": "The two answers",
+  "흐린 글은 두 답이 같은 앞부분, 밝은 글은 갈라진 뒤": "Dim text is the shared beginning, bright text is after the divergence",
+  "평가할 모델": "Evaluated model",
+  "기준 모델이 고름": "Reference model's choice",
+  "평가할 모델이 고름": "Evaluated model's choice",
+  " · 기준 모델의 {}위": " · rank {} for the reference model",
+  " · 기준 모델의 상위 {}개 밖": " · outside the reference model's top {}",
+  "스텝 {}의 후보": "Candidates at step {}",
+  "같은 앞부분에서 두 모델이 다음 토큰에 준 확률": "The probabilities both models gave the next token after the same beginning",
+  "표시": "Mark",
+  "그 앞뒤 스텝": "Steps around it",
+  "기준 모델의 답을 두 모델이 점수 매긴 값": "Both models scoring the reference model's answer",
+  "기준 모델의 토큰": "Reference token",
+  "갈라진 스텝 뒤로는 기준 모델의 답을 따라간 값입니다 — 평가할 모델이 자기 답을 이어 간 값이 아닙니다.": "After the divergent step the values follow the reference model's answer — not the evaluated model's own continuation.",
+  "작업 공간 {}개": "{0} {0|workspace|workspaces}",
+  "GGUF 파일을 기준 모델과 비교합니다 — 다음 토큰 확률의 차이(KL divergence · top-1 일치율)와 두 모델이 낸 답. 같은 파일 · 같은 설정이면 다시 실행해도 결과가 비트까지 같습니다.": "Compare GGUF files with a reference model — the difference in next-token probabilities (KL divergence · top-1 agreement) and the answers both models give. With the same files and settings, a rerun gives bit-identical results.",
+};
+Object.assign(DICT, EVAL_DICT);
+// 평가 작업(앱/평가.gl)의 단계 · 실행 기록 · 오류 문구 → 영어(app.js 의 TMX 뒤에)
+TMX.push(
+  [/\[([^\]]+)\] 추론 서버를 시작합니다\(슬롯 (\d+) · 문맥 (\d+) — 처음에는 커널 컴파일과 실행 방식 측정으로 몇 분 걸릴 수 있습니다\)/g, '[$1] Starting the inference server ($2 slots · context $3 — the first time can take a few minutes to compile kernels and measure)'],
+  [/\[([^\]]+)\] 추론 서버 준비 완료\(슬롯 (\d+), ([\d.]+)초 · 어휘 (\d+)\)\./g, '[$1] Inference server ready ($2 slots, $3 s · vocabulary $4).'],
+  [/\[([^\]]+)\] 슬롯 (\d+)개로는 추론 서버가 시작되지 않았습니다: /g, '[$1] The inference server did not start with $2 slots: '],
+  [/ — 기준 모델의 답 (\d+)\/(\d+)/g, ' — reference answers $1/$2'],
+  [/ — 기준 모델의 상위 확률 (\d+)\/(\d+)/g, ' — reference top probabilities $1/$2'],
+  [/ — 같은 토큰의 확률 (\d+)\/(\d+)/g, ' — probabilities of the same tokens $1/$2'],
+  [/ — 토큰 글 (\d+)\/(\d+)/g, ' — token text $1/$2'],
+  [/ — 답 (\d+)\/(\d+)/g, ' — answers $1/$2'],
+  [/기준 모델 — preparing kernel modules/g, 'Reference model — preparing kernel modules'],   // app.js 의 '(\S+) — 커널 모듈 준비 중' 이 먼저 바꾼 나머지
+  [/텍스트 토큰 (\d+)개 → 청크 (\d+)개\(문맥 512 · 청크마다 뒤쪽 255 토큰을 점수 매김\)\./g, '$1 text tokens → $2 chunks (context 512 · the last 255 tokens of each chunk are scored).'],
+  [/대화 (\d+)개의 그리디 답을 만듭니다\./g, 'Making greedy answers for $1 conversations.'],
+  [/\] 답 (\d+)\/(\d+)개\./g, '] answers $1/$2.'],
+  [/상위 (\d+)개의 로그확률 — (\d+)\/(\d+)개\./g, 'top-$1 log-probabilities — $2/$3.'],
+  [/어휘가 기준 모델과 달라\(어휘 (\d+) · (\d+)\) 분포 비교는 하지 않고 답만 견줍니다\./g, 'The vocabulary differs from the reference model (vocabulary $1 · $2) — comparing answers only, without the distribution comparison.'],
+  [/위치 (\d+) · KL divergence 평균 (\S+) · top-1 일치율 (\S+) · 답이 달라진 대화 (\d+)\/(\d+) — 결과 해시 /g, '$1 positions · mean KL divergence $2 · top-1 agreement $3 · differing answers $4/$5 — result hash '],
+  [/저장해 둔 기준값을 씁니다\(같은 기준 모델 · 데이터 · 설정\): /g, 'Reusing the saved reference values (same reference model · data · settings): '],
+  [/작업 공간에 없는 버전입니다\./g, 'The version is not in the workspace.'],
+  [/모델이 앱의 모델 목록에 없습니다\((.*?)\)\./g, "The model is not in the app's model list ($1)."],
+  [/그래픽 메모리가 모자랍니다\(파일 ([\d.]+) GB\)\./g, 'Not enough graphics memory (file $1 GB).'],
+  [/커널 모듈을 만들지 못했습니다\./g, 'Could not build the kernel modules.'],
+  [/추론 서버를 시작하지 못했습니다\(결과 폴더의 server-\*\.log 참고\)\./g, 'Could not start the inference server (see server-*.log in the result folder).'],
+  [/모델 평가 — 버전 (\d+)\/(\d+)개 끝\((.*?)\) · 데이터 (\S+) · (exact|fast)/g, 'Model evaluation — $1/$2 versions done ($3) · data $4 · $5'],
+  [/평가 요청을 읽지 못했습니다/g, 'Could not read the evaluation request'],
+  [/기준 모델이 앱의 모델 목록에 없습니다 — 모델 화면에서 더한 뒤 작업 공간의 기준 모델을 고르세요/g, "The reference model is not in the app's model list — add it on the Models screen, then choose the workspace's reference model"],
+  [/기준 모델 파일의 SHA-256 을 계산하지 못했습니다/g, "Could not compute the reference model file's SHA-256"],
+  [/데이터 파일을 읽지 못했습니다/g, 'Could not read the data file'],
+  [/기준 모델의 커널 모듈을 만들지 못했습니다/g, "Could not build the reference model's kernel modules"],
+  [/데이터에 대화가 없습니다\(JSONL — 줄마다 messages\)/g, 'The data has no conversations (JSONL — messages on every line)'],
+  [/기준 모델의 추론 서버를 시작하지 못했습니다\(기준값 폴더의 server-ref-\*\.log 참고\)/g, "Could not start the reference model's inference server (see server-ref-*.log in the reference folder)"],
+  [/평가한 버전이 없습니다 — 작업 기록 참고/g, 'No version was evaluated — see the run log'],
+  [/텍스트 파일을 읽지 못했습니다/g, 'Could not read the text file'],
+  [/텍스트를 토큰으로 나누지 못했습니다\(\/tokenize\)/g, 'Could not tokenize the text (/tokenize)'],
+  [/텍스트가 짧아 청크\(512 토큰\)를 만들 수 없습니다/g, 'The text is too short for a chunk (512 tokens)'],
+  [/기준 모델이 답을 하나도 내지 못했습니다\(run-ref\.jsonl 참고\)/g, 'The reference model gave no answers (see run-ref.jsonl)'],
+  [/기준 모델의 로그확률을 받지 못했습니다/g, "Could not get the reference model's log-probabilities"],
+  [/이미 이 작업 공간에 있는 모델입니다\(기준 모델 또는 버전\)/g, 'The model is already in this workspace (reference model or version)'],
+  [/기준 모델이 앱의 모델 목록에 없습니다/g, "The reference model is not in the app's model list"],
+  [/모델이 앱의 모델 목록에 없습니다/g, "The model is not in the app's model list"],
+  [/작업 공간을 쓰지 못했습니다/g, 'Could not write the workspace'],
+  [/작업 공간이 없습니다/g, 'The workspace does not exist'],
+  [/비교할 결과가 없습니다/g, 'No results to compare'],
+  [/결과가 없습니다/g, 'The result does not exist'],
+  [/대화가 없습니다/g, 'The conversation does not exist'],
+  [/\.jsonl\(채팅 — 줄마다 messages\) 또는 \.txt\(텍스트\) 파일만 불러옵니다/g, 'Only .jsonl (chat — messages on every line) or .txt (text) files can be imported'],
+  [/데이터 이름은 영문 · 숫자 · \. · _ · - 로 120 자까지/g, 'Data names use letters, digits, . _ - up to 120 characters'],
+  [/데이터를 쓰지 못했습니다/g, 'Could not write the data'],
+  [/데이터가 없습니다/g, 'The data does not exist'],
+  [/이 결과에는 실행 로그가 없습니다\(텍스트 데이터\)/g, 'This result has no run log (text data)'],
+  [/실행 로그를 디버거 폴더로 옮기지 못했습니다/g, 'Could not copy the run log to the debugger folder'],
+  [/\[기준\]/g, '[reference]'],
+);
+
+// view: ws(작업 공간) · result(결과) · compare(전후 비교) · item(답이 달라진 곳). res · cmp · items 는 받아 둔 응답(결과 폴더는 다시 쓰지 않는다)
+const EV = {
+  list: null, listSig: '', at: 0, loading: false, err: '',
+  sel: load('geulpu.ev.sel', ''), view: 'ws', dir: '', item: -1, cmpA: '', cmpB: '',
+  res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0,
+};
+const EVF = new Set();   // 받는 중인 것
+const evEnc = encodeURIComponent;
+const evWs = id => (EV.list && EV.list.workspaces.find(w => w.id === id)) || null;
+const evKL = x => (typeof x === 'number' && isFinite(x) ? (x >= 0.1 ? x.toFixed(3) : x >= 0.0001 ? x.toFixed(4) : x > 0 ? x.toExponential(1) : '0') : '-');
+const evPct = x => (typeof x === 'number' && isFinite(x) ? (x * 100).toFixed(2) + '%' : '-');
+const evNum = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d) : '-');
+const evProb = lp => (typeof lp === 'number' && isFinite(lp) ? pct(lp) : '-');
+const evDirWhen = d => { const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/.exec(String(d || '')); return m ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}` : String(d || ''); };
+const evMode = m => (m === 'fast' ? T('빠름') : T('정밀'));
+const evFinish = f => ({ stop: T('끝 토큰'), length: T('최대 길이'), tool_calls: T('도구 호출'), text: '-' })[f] || (f || '-');
+const evRefLabel = w => (w.reference && w.reference.model ? labelById(w.reference.model) : T('기준 모델 없음'));
+const evVerLabel = (w, vid) => { const v = w.versions.find(x => x.id === vid); return v ? `${vid} · ${modelOf(v.model) ? labelById(v.model) : v.file}` : vid; };
+const evResults = w => [...(w.results || [])].sort((a, b) => byName(a.dir, b.dir));
+const evLatest = (w, vid) => evResults(w).filter(r => r.version === vid).pop() || null;
+const evChat = r => !!(r && r.data && r.data.kind === 'chat');
+const evSameSet = (a, b) => !!(a && b && a.data && b.data && a.data.sha256 === b.data.sha256 && JSON.stringify(evSetKey(a.settings)) === JSON.stringify(evSetKey(b.settings)));
+const evSetKey = s => (s ? [s.mode, s.max_tokens, s.thinking, s.top_k, s.chunks] : null);
+
+async function evLoad() {
+  if (EV.loading) return;
+  EV.loading = true;
+  EV.at = Date.now();
+  try {
+    const r = await api('/api/eval');
+    const sig = JSON.stringify(r);
+    EV.err = '';
+    if (sig !== EV.listSig) { EV.listSig = sig; EV.list = r; }
+  } catch (e) { EV.err = e.message; }
+  finally { EV.loading = false; EV.at = Date.now(); renderEval(); }
+}
+function evFetch(kind, key, url) {
+  if (EV[kind][key] !== undefined || EVF.has(kind + key)) return;
+  EVF.add(kind + key);
+  api(url).then(r => { EV[kind][key] = r; }, e => { EV[kind][key] = { error: e.message }; })
+    .finally(() => { EVF.delete(kind + key); EV.tick++; renderEval(); });
+}
+const evResKey = (w, dir) => w.id + '/' + dir;
+const evDirLabel = (w, dir) => { const r = (w.results || []).find(x => x.dir === dir); return r ? `${r.version} · ${evDirWhen(dir)}` : dir; };
+const evRes = (w, dir) => EV.res[evResKey(w, dir)];
+// 지금 보기에 드는 응답을 받는다(결과 · 비교 · 대화)
+function evNeed(w) {
+  if (!w) return;
+  const res = dir => evFetch('res', evResKey(w, dir), `/api/eval/result?workspace=${evEnc(w.id)}&dir=${evEnc(dir)}`);
+  if ((EV.view === 'result' || EV.view === 'item') && EV.dir) res(EV.dir);
+  if (EV.view === 'item' && EV.dir && EV.item >= 0) evFetch('items', `${w.id}/${EV.dir}/${EV.item}`, `/api/eval/item?workspace=${evEnc(w.id)}&dir=${evEnc(EV.dir)}&i=${EV.item}`);
+  if (EV.view === 'compare' && EV.cmpA && EV.cmpB) {
+    evFetch('cmp', `${w.id}/${EV.cmpA}/${EV.cmpB}`, `/api/eval/compare?workspace=${evEnc(w.id)}&a=${evEnc(EV.cmpA)}&b=${evEnc(EV.cmpB)}`);
+    res(EV.cmpA); res(EV.cmpB);
+  }
+}
+function evGo(view, o) {
+  Object.assign(EV, { view }, o || {});
+  if (o && o.sel !== undefined) store('geulpu.ev.sel', EV.sel);
+  renderEval(true);
+}
+function evShow() { EV.at = 0; }
+
+// ---------- 작업 공간 · 버전 · 데이터 — 창 ----------
+const evRunnables = () => sortedModels().filter(runnable);
+const evModelOpts = (ms, sel) => ms.map(m => h('option', { value: m.id, selected: m.id === sel ? true : null }, `${displayName(m)} · ${quantOf(m)} · ${fmtBytes(m.size)}`));
+function evNewWs() {
+  const ms = evRunnables();
+  if (!ms.length) { toast(T('먼저 모델 화면에서 GGUF 파일을 더하세요')); return; }
+  const name = h('input', { class: 'input', type: 'text', value: T('새 작업 공간'), maxlength: 80 });
+  const ref = h('select', { class: 'input', 'aria-label': T('기준 모델') }, evModelOpts(ms, (ms.find(m => /BF16|F16|F32/.test(quantOf(m))) || ms.find(m => quantOf(m) === 'Q8_0') || ms[0]).id));
+  const go = async () => {
+    try {
+      const w = await api('/api/eval/workspace', { action: 'create', name: name.value.trim() || T('새 작업 공간'), reference: ref.value });
+      closeModal();
+      await evLoad();
+      evGo('ws', { sel: w.id });
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  modal(h('div', { class: 'col g16' }, h('h2', null, T('새 작업 공간')),
+    h('p', { class: 'm0 muted' }, T('작업 공간 하나는 모델 하나의 작업입니다 — 기준 모델과, 그와 비교할 GGUF 파일(버전)들과 결과를 묶습니다.')),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('이름')), name),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('기준 모델')), ref,
+      h('span', { class: 'small muted' }, T('같은 모델의 BF16 · F16 파일이 가장 좋습니다(그래픽 메모리에 들지 않으면 Q8_0). 평가할 파일은 모두 이 모델과 비교합니다.')))),
+  [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('만들기'))], false, 'input');
+}
+function evRename(w) {
+  const name = h('input', { class: 'input', type: 'text', value: w.name, maxlength: 80 });
+  const go = async () => {
+    try { await api('/api/eval/workspace', { action: 'update', id: w.id, name: name.value.trim() || w.name }); closeModal(); evLoad(); }
+    catch (e) { toast(e.message, 'err'); }
+  };
+  modal(h('div', { class: 'col g16' }, h('h2', null, T('이름 바꾸기')), h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('이름')), name)),
+    [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('저장'))], false, 'input');
+}
+function evSetRef(w) {
+  const ms = evRunnables().filter(m => !w.versions.some(v => v.model === m.id));
+  if (!ms.length) { toast(T('고를 수 있는 모델이 없습니다')); return; }
+  const ref = h('select', { class: 'input', 'aria-label': T('기준 모델') }, evModelOpts(ms, w.reference.model));
+  const go = async () => {
+    try { await api('/api/eval/workspace', { action: 'update', id: w.id, reference: ref.value }); closeModal(); evLoad(); }
+    catch (e) { toast(e.message, 'err'); }
+  };
+  modal(h('div', { class: 'col g16' }, h('h2', null, T('기준 모델 바꾸기')),
+    h('p', { class: 'm0 muted' }, T('지난 결과는 그대로 남지만, 기준 모델이 다른 결과끼리는 전후 비교를 하지 않습니다.')), ref),
+    [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('저장'))]);
+}
+async function evDelWs(w) {
+  if (!(await confirmBox(T('작업 공간 지우기'), h('p', { class: 'muted m0' }, T`${w.name} — 목록에서 지웁니다. 결과 파일은 자료 폴더의 평가\\지운작업공간\\ 으로 옮겨 둡니다(모델 파일은 그대로).`), T('지우기'), 'danger'))) return;
+  try { await api('/api/eval/workspace', { action: 'delete', id: w.id }); EV.sel = ''; store('geulpu.ev.sel', ''); await evLoad(); evGo('ws'); }
+  catch (e) { toast(e.message, 'err'); }
+}
+function evAddVersion(w) {
+  const ms = evRunnables().filter(m => m.id !== w.reference.model && !w.versions.some(v => v.model === m.id));
+  if (!ms.length) { toast(T('더할 수 있는 모델이 없습니다 — 모델 화면에서 GGUF 파일을 더하세요')); return; }
+  const sel = h('select', { class: 'input', 'aria-label': T('평가할 GGUF') }, evModelOpts(ms, ms[0].id));
+  const go = async () => {
+    try {
+      const r = await api('/api/eval/version', { workspace: w.id, model: sel.value });
+      closeModal();
+      const o = EV.opts[w.id];
+      if (o && r.current) o.versions.add(r.current);
+      evLoad();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  modal(h('div', { class: 'col g16' }, h('h2', null, T('버전 더하기')),
+    h('p', { class: 'm0 muted' }, T('기준 모델과 비교할 GGUF 파일을 고르세요. 파일은 옮기지 않고 앱의 모델 목록에 있는 파일을 그대로 씁니다.')), sel),
+    [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('더하기'))]);
+}
+async function evDelVersion(w, v) {
+  if (!(await confirmBox(T('버전 지우기'), h('p', { class: 'muted m0' }, T`${v.id} — 작업 공간에서 뺍니다. 모델 파일과 지난 결과는 그대로 남습니다.`), T('지우기'), 'danger'))) return;
+  try { await api('/api/eval/version', { workspace: w.id, action: 'delete', id: v.id }); evLoad(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+function evImport(w) {
+  const path = h('input', { class: 'input mono', type: 'text', placeholder: 'C:\\data\\my-set.jsonl' });
+  const name = h('input', { class: 'input', type: 'text', placeholder: T('비우면 파일 이름') });
+  const go = async () => {
+    try {
+      const r = await api('/api/eval/data/import', Object.assign({ path: path.value.trim() }, name.value.trim() ? { name: name.value.trim() } : {}));
+      closeModal();
+      evOpts(w).data = r.name;
+      toast(T`데이터를 불러왔습니다 — ${r.name}`, 'ok');
+      evLoad();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  modal(h('div', { class: 'col g16' }, h('h2', null, T('데이터 불러오기')),
+    h('p', { class: 'm0 muted' }, T('JSONL — 줄마다 대화 하나: {"messages": […]}, 고를 수 있는 칸 id · category · tools · max_tokens · thinking. TXT — 텍스트 하나를 문맥 512의 청크로 나눠 llama-perplexity와 같은 위치를 점수 매깁니다.')),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('파일 경로(.jsonl · .txt)')), path),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('이름(영문 · 숫자 · . _ -)')), name)),
+  [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('불러오기'))], false, 'input');
+}
+
+// ---------- 평가 실행 ----------
+function evOpts(w) {
+  let o = EV.opts[w.id];
+  if (!o) {
+    const ds = (EV.list && EV.list.data) || [];
+    const d0 = ds.find(d => d.name === 'basic60') || ds.find(d => d.kind === 'chat') || ds[0];
+    o = EV.opts[w.id] = { versions: new Set(w.current ? [w.current] : w.versions.map(v => v.id)), data: d0 ? d0.name : '', mode: 'exact', max: 512, think: false, chunks: 64, slots: 8, dump: false };
+  }
+  for (const v of [...o.versions]) if (!w.versions.some(x => x.id === v)) o.versions.delete(v);
+  return o;
+}
+async function evRun(w) {
+  const o = evOpts(w);
+  const vs = w.versions.map(v => v.id).filter(id => o.versions.has(id));
+  if (!vs.length) { toast(T('평가할 버전을 하나 이상 고르세요')); return; }
+  if (!o.data) { toast(T('데이터를 고르세요')); return; }
+  if (S.streaming) { toast(T('채팅의 답이 끝난 뒤 실행할 수 있습니다')); return; }
+  if (S.st.server.state === 'ready' && !(await confirmBox(T('채팅 모델을 내립니다'), h('p', { class: 'muted m0' }, T('평가하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?')), T('계속')))) return;
+  try {
+    await api('/api/eval/run', { workspace: w.id, versions: vs, data: o.data, mode: o.mode, max_tokens: o.max, thinking: o.think, chunks: o.chunks, slots: o.slots, dump: o.dump });
+    S.jobHide = '';
+    EV.at = 0;
+    resetSig();
+    refresh();
+  } catch (e) { toast(e.message, 'err'); }
+}
+function evRunCard(w, busy) {
+  const o = evOpts(w);
+  const ds = (EV.list && EV.list.data) || [];
+  const d = ds.find(x => x.name === o.data);
+  const text = !!(d && d.kind === 'text');
+  const cuda = S.st.device && S.st.device.layer === 'cuda';
+  if (!cuda) o.mode = 'exact';
+  const num = (key, min, max, label) => h('label', { class: 'col g4 ev-num' }, h('span', { class: 'small muted' }, label),
+    h('input', { class: 'input num', type: 'number', min, max, value: o[key], 'data-fk': 'ev-o-' + key, onchange: ev => { const x = Math.round(+ev.target.value); o[key] = Math.min(max, Math.max(min, isFinite(x) ? x : o[key])); ev.target.value = o[key]; } }));
+  const seg = h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': T('계산 방식') }, ['exact', 'fast'].map(m => h('button', {
+    class: o.mode === m ? 'on' : '', role: 'radio', 'aria-checked': o.mode === m ? 'true' : 'false', 'data-fk': 'ev-mode-' + m, disabled: m === 'fast' && !cuda ? true : null,
+    onclick: () => { o.mode = m; renderEval(true); },
+  }, evMode(m))));
+  const ok = w.versions.length && w.reference.model && ds.length;
+  return h('div', { class: 'card col g16' },
+    h('div', { class: 'row' }, h('span', { class: 'sec' }, T('평가 실행')), h('span', { class: 'grow' }),
+      h('span', { class: 'small muted' }, T('실행하는 동안 불러온 채팅 모델은 GPU에서 내립니다'))),
+    h('div', { class: 'ev-form' },
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('평가할 버전')),
+        w.versions.length ? h('div', { class: 'row g12' }, w.versions.map(v => h('label', { class: 'check' }, h('input', {
+          type: 'checkbox', 'data-fk': 'ev-v-' + v.id, checked: o.versions.has(v.id) ? true : null,
+          onchange: ev => { if (ev.target.checked) o.versions.add(v.id); else o.versions.delete(v.id); },
+        }), v.id))) : h('span', { class: 'small muted' }, T('먼저 버전을 더하세요'))),
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('데이터')),
+        h('div', { class: 'row g8 nowrap' },
+          h('select', { class: 'input', 'data-fk': 'ev-data', 'aria-label': T('데이터'), onchange: ev => { o.data = ev.target.value; renderEval(true); } },
+            ds.map(x => h('option', { value: x.name, selected: x.name === o.data ? true : null },
+              `${x.name} · ${x.kind === 'text' ? T('텍스트') : T('대화')} · ${x.source === 'builtin' ? T('내장') : T('불러옴')}`))),
+          h('button', { class: 'btn sm needs-conn', onclick: () => evImport(w) }, I('folder', 's'), T('불러오기')))),
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('계산 방식')), seg),
+      h('div', { class: 'row g16 ev-nums' },
+        text ? num('chunks', 1, 4096, T('청크 수(512 토큰)')) : num('max', 1, 8192, T('답의 최대 토큰')),
+        num('slots', 1, 8, T('동시 요청')),
+        text ? null : h('label', { class: 'check ev-think' }, h('input', { type: 'checkbox', 'data-fk': 'ev-think', checked: o.think ? true : null, onchange: ev => { o.think = ev.target.checked; } }), T('생각(thinking) 켬'))),
+      h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-dump', checked: o.dump ? true : null, onchange: ev => { o.dump = ev.target.checked; } }),
+        T('위치마다 평가할 모델의 상위 확률도 저장(cand.bin — 다시 계산 · 분석용, 위치마다 약 0.5 KB)'))),
+    h('p', { class: 'small muted m0' }, text
+      ? T('텍스트 데이터는 같은 토큰의 확률만 비교합니다(llama-perplexity --kl-divergence와 같은 위치).')
+      : T('기준 모델이 낸 답을 두 모델이 점수 매기고(같은 토큰의 확률), 두 모델이 저마다의 채팅 템플릿으로 답합니다. 기준 모델의 값은 처음 한 번 만들고, 같은 기준 모델 · 데이터 · 설정이면 다시 씁니다.')),
+    h('div', null, h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-run', disabled: busy || !ok ? true : null, onclick: () => evRun(w) },
+      I('play', 's'), busy ? T('다른 작업 실행 중') : T('평가 실행'))));
+}
+
+// ---------- 판정 문장(3.7) ----------
+function evVerdict(r) {
+  if (!r) return null;
+  const a = r.answers || {}, m = r.metrics || {};
+  const dist = m.positions ? T`KL divergence ${evKL(m.kl_mean)} · top-1 일치율 ${evPct(m.top1)}` : null;
+  if (evChat(r) && a.compared) {
+    const s = a.differ ? T`대화 ${a.compared}개 중 ${a.differ}개의 답이 기준 모델과 달라졌습니다` + (a.near_tie ? T` — 그중 ${a.near_tie}개는 마진이 작은 스텝(0.05 nat 미만)에서 갈라졌습니다` : '')
+      : T`대화 ${a.compared}개의 답이 모두 기준 모델과 같습니다`;
+    return [s, dist];
+  }
+  return [dist || T('비교한 위치가 없습니다'), m.positions ? T`위치 ${fmtNum(m.positions)}개` : null];
+}
+
+// ---------- 화면 ----------
+const evJobOf = () => { const j = S.st && S.st.job; return j && j.kind === 'eval' && (j.state === 'running' || jobKey(j) !== S.jobHide) ? j : null; };
+function evJobCard(j) {
+  const tone = { running: 'acc', done: 'ok', failed: 'err', cancelled: 'dim' }[j.state] || '';
+  return h('div', { class: 'card job ev-job' },
+    h('div', { class: 'head' },
+      h('div', { class: 't' }, h('div', { class: 'ink h3' }, T('모델 평가')), h('div', { class: 'small muted', id: 'ev-job-step' }, j.state === 'running' ? TM(j.step || '') : '')),
+      h('span', { class: 'tag ' + tone, id: 'ev-job-time' }, ''),
+      j.state === 'running' ? h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev-job-stop', onclick: () => api('/api/job/cancel', {}).then(refresh).catch(e => toast(e.message, 'err')) }, I('stop', 's'), T('중지'))
+        : h('button', { class: 'icon-btn', 'data-tip': T('카드 닫기'), 'data-tip-pos': 'left', 'aria-label': T('끝난 작업 카드 닫기'), onclick: () => { S.jobHide = jobKey(j); store('geulpu.jobHide', S.jobHide); renderEval(true); } }, I('x', 's'))),
+    h('div', { class: 'bar' + (j.state === 'done' ? ' done' : j.state === 'failed' ? ' fail' : '') }, h('i', { id: 'ev-job-bar', style: `width:${j.state === 'done' ? 100 : j.progress / 10}%` })),
+    j.state === 'done' && j.summary ? h('div', { class: 'small' }, TM(j.summary)) : null,
+    j.reason && j.state !== 'done' ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(j.reason))) : null,
+    h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T('실행 기록')), h('pre', { class: 'log', id: 'ev-joblog' })));
+}
+function evJobTick() {
+  const j = evJobOf();
+  if (!j) return;
+  const set = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+  set('ev-job-step', j.state === 'running' ? TM(j.step || '') : '');
+  set('ev-job-time', `${{ running: T('실행 중'), done: T('완료'), failed: T('실패'), cancelled: T('중지됨') }[j.state] || j.state} · ${fmtClock(j.seconds)}`);
+  const bar = document.getElementById('ev-job-bar');
+  if (bar) bar.style.width = (j.state === 'done' ? 100 : j.progress / 10) + '%';
+}
+function evListPane() {
+  const L = EV.list, out = [];
+  out.push(h('div', { class: 'ev-lhead' }, h('span', { class: 'ink' }, T('작업 공간')), h('span', { class: 'grow' }),
+    h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev:new', onclick: evNewWs }, I('plus', 's'), T('새 작업 공간'))));
+  if (EV.err && !L) out.push(h('div', { class: 'fd-more' }, h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(EV.err)))));
+  else if (!L) out.push(h('div', { class: 'fd-more' }, h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'))));
+  else if (!L.workspaces.length) out.push(h('div', { class: 'fd-empty' }, I('flask', 'l'), h('div', { class: 'big' }, T('작업 공간이 없습니다')),
+    h('div', { class: 'small' }, T('새 작업 공간을 만들고 기준 모델을 고른 뒤, 비교할 GGUF 파일을 버전으로 더하세요.'))));
+  else out.push(h('div', { class: 'fd-list' }, [...L.workspaces].sort((a, b) => byName(a.id, b.id)).map(w => {
+    const cur = w.current ? evLatest(w, w.current) : null;
+    const a = cur && cur.answers;
+    return h('button', { class: 'fd-row' + (EV.sel === w.id ? ' on' : ''), 'data-fk': 'ev:ws:' + w.id, 'aria-current': EV.sel === w.id ? 'true' : null, onclick: () => evGo('ws', { sel: w.id, dir: '', item: -1 }) },
+      h('span', { class: 'main' },
+        h('span', { class: 'top' }, h('span', { class: 'nm' }, w.name)),
+        h('span', { class: 'by' }, T`기준 모델 ${evRefLabel(w)}`),
+        h('span', { class: 'foot' }, h('span', { class: 'st' }, I('layers'), T`버전 ${w.versions.length}개`),
+          cur && evChat(cur) && a && a.compared ? h('span', { class: 'st' }, I('target'), T`${cur.version} · 답 ${a.differ}/${a.compared} 달라짐`)
+            : cur ? h('span', { class: 'st' }, I('target'), `${cur.version} · KL ${evKL(cur.metrics && cur.metrics.kl_mean)}`) : null)));
+  })));
+  return h('div', { class: 'ev-list', 'aria-label': T('작업 공간 목록') }, out);
+}
+function evCrumb(w, parts) {
+  return h('nav', { class: 'ev-crumb', 'aria-label': T('위치') }, [
+    h('button', { class: 'dbg-link', 'data-fk': 'ev:crumb:ws', onclick: () => evGo('ws') }, w.name),
+    parts.map(([label, fn]) => [h('span', { class: 'faint' }, '›'), fn ? h('button', { class: 'dbg-link', onclick: fn }, label) : h('span', { class: 'ink' }, label)]),
+  ]);
+}
+const evDetailKey = () => [EV.sel, EV.view, EV.dir, EV.item, EV.cmpA, EV.cmpB].join('|');
+function evDetailPane() {
+  const box = h('div', { class: 'ev-detail', 'data-k': evDetailKey() });
+  const w = evWs(EV.sel);
+  if (!w) {
+    put(box, h('div', { class: 'col g24 ev-intro' },
+      h('div', { class: 'col g8' }, h('div', { class: 'eyebrow' }, T('모델 평가')), h('h2', { class: 'm0' }, T('GGUF 파일을 기준 모델과 비교합니다'))),
+      h('ol', { class: 'ev-steps' },
+        h('li', null, h('span', { class: 'ink' }, T('작업 공간 만들기')), h('span', { class: 'small muted' }, T('기준 모델을 고릅니다 — 같은 모델의 BF16 · F16 파일(그래픽 메모리에 들지 않으면 Q8_0).'))),
+        h('li', null, h('span', { class: 'ink' }, T('버전 더하기')), h('span', { class: 'small muted' }, T('비교할 GGUF 파일(양자화 · 미세조정한 파일)을 v1 · v2 …로 더합니다.'))),
+        h('li', null, h('span', { class: 'ink' }, T('평가 실행')), h('span', { class: 'small muted' }, T('기준 모델이 낸 답의 토큰마다 두 모델의 확률을 비교하고(KL divergence · top-1 일치율), 두 모델이 저마다 낸 답이 어디서 갈라지는지 봅니다.'))),
+        h('li', null, h('span', { class: 'ink' }, T('결과 · 전후 비교')), h('span', { class: 'small muted' }, T('버전을 고친 뒤 같은 데이터 · 설정으로 다시 실행하면, 기준 모델과 같아진 대화와 새로 달라진 대화로 나아졌는지 판정합니다.')))),
+      h('div', null, h('button', { class: 'btn primary needs-conn', onclick: evNewWs }, I('plus', 's'), T('새 작업 공간')))));
+    return box;
+  }
+  let body;
+  try {
+    body = EV.view === 'result' && EV.dir ? evResultView(w) : EV.view === 'compare' ? evCompareView(w) : EV.view === 'item' && EV.dir && EV.item >= 0 ? evItemView(w) : evWsView(w);
+  } catch (e) { body = h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, String(e && e.message))); console.error(e); }
+  put(box, body);
+  return box;
+}
+
+// 작업 공간 — 지금 상태 · 버전 · 평가 실행 · 결과
+function evWsView(w) {
+  const busy = !!(S.st.job && S.st.job.state === 'running');
+  const rs = evResults(w);
+  const cur = w.current ? evLatest(w, w.current) : null;
+  const vd = evVerdict(cur);
+  const head = h('div', { class: 'fd-dhead' },
+    h('div', { class: 'row g8' }, h('span', { class: 'eyebrow' }, T('작업 공간', 'one')), h('span', { class: 'grow' }),
+      h('button', { class: 'icon-btn', 'aria-label': T('작업 공간 메뉴'), 'aria-haspopup': 'menu', 'data-tip': T('작업 공간 메뉴'), 'data-tip-pos': 'left',
+        onclick: ev => menu(ev.currentTarget, T('작업 공간 메뉴'), [
+          { icon: 'edit', label: T('이름 바꾸기'), run: () => evRename(w) },
+          { icon: 'target', label: T('기준 모델 바꾸기'), run: () => evSetRef(w) },
+          '-', { icon: 'trash', label: T('작업 공간 지우기'), danger: true, run: () => evDelWs(w) }], 'right') }, I('dots'))),
+    h('div', { class: 'fd-title' }, w.name),
+    h('div', { class: 'fd-sub' }, T`기준 모델 ${evRefLabel(w)}`, w.reference.sha256 ? h('span', { class: 'mono faint small' }, ` · ${w.reference.sha256.slice(0, 12)}`) : null),
+    w.reference.model && !modelOf(w.reference.model) ? h('div', { class: 'note-line err mt8' }, I('alert', 's'), h('span', null, T('기준 모델이 앱의 모델 목록에 없습니다 — 모델 화면에서 그 파일을 다시 더하거나 기준 모델을 바꾸세요.'))) : null);
+  const state = h('div', { class: 'card col g8 ev-state' },
+    h('div', { class: 'eyebrow' }, cur ? T`지금 상태 — ${evVerLabel(w, cur.version)}` : T('지금 상태')),
+    vd ? h('div', { class: 'verdict' }, vd[0]) : h('div', { class: 'verdict' }, w.versions.length ? T('아직 평가하지 않았습니다 — 아래에서 평가를 실행하세요.') : T('평가할 GGUF 파일을 버전으로 더하세요.')),
+    vd && vd[1] ? h('div', { class: 'small muted' }, vd[1]) : null,
+    cur ? h('div', null, h('button', { class: 'btn sm', onclick: () => evGo('result', { dir: cur.dir }) }, T('결과 보기'), I('chevR', 's'))) : null);
+  // 버전 — 버전마다 최근 결과와 앞 버전(같은 데이터 · 설정의 최근 결과) 대비
+  const vrows = w.versions.map((v, k) => {
+    const r = evLatest(w, v.id);
+    const prev = k > 0 ? evLatest(w, w.versions[k - 1].id) : null;
+    const pc = r && prev && evSameSet(r, prev);
+    const a = r && r.answers, pa = prev && prev.answers;
+    const m = r && r.metrics, pm = prev && prev.metrics;
+    const sign = x => (x > 0 ? '+' : x < 0 ? '−' : '±') + Math.abs(x);
+    const dKL = pc && m && pm && m.positions && pm.positions ? m.kl_mean - pm.kl_mean : null;
+    const delta = pc ? [dKL !== null ? `KL ${dKL > 0 ? '+' : dKL < 0 ? '−' : '±'}${evKL(Math.abs(dKL))}` : null,
+      evChat(r) && a && pa && a.compared && pa.compared ? T`답이 달라진 대화 ${sign(a.differ - pa.differ)}` : null].filter(Boolean).join(NB) : '';
+    return h('div', { class: 'ev-vrow' + (r ? ' clk' : ''), onclick: e => { if (r && !e.target.closest('button')) evGo('result', { dir: r.dir }); } },
+      h('div', { class: 'ev-vid' }, h('span', { class: 'ink' }, v.id), w.current === v.id ? h('span', { class: 'tag acc' }, T('지금')) : null),
+      h('div', { class: 'ev-vfile' }, h('div', { class: 'ink ell', 'data-tip': modelOf(v.model) ? labelById(v.model) : v.file, 'data-tip-pos': 'top' }, v.file),
+        h('div', { class: 'small muted' }, [fmtBytes(v.size), ({ imported: T('가져옴'), metadata: T('메타데이터 고침'), quantized: T('다시 양자화'), converted: T('변환') })[v.made && v.made.kind] || ''].filter(Boolean).join(NB))),
+      h('div', { class: 'ev-vres' }, h('div', { class: 'small' }, r ? (evChat(r) && a && a.compared ? T`답 ${a.differ}/${a.compared} 달라짐 · KL ${evKL(m && m.kl_mean)}` : `KL ${evKL(m && m.kl_mean)} · top-1 ${evPct(m && m.top1)}`) : h('span', { class: 'muted' }, T('결과 없음'))),
+        delta ? h('div', { class: 'small muted' }, T`앞 버전 대비 ${delta}`) : k > 0 && r && prev ? h('div', { class: 'small muted' }, T('앞 버전과 데이터 · 설정이 달라 비교하지 않음')) : null),
+      h('div', { class: 'ev-vmenu' }, h('button', { class: 'icon-btn', 'aria-label': T`${v.id} 메뉴`, 'aria-haspopup': 'menu', onclick: ev => menu(ev.currentTarget, T`${v.id} 메뉴`, [
+        r ? { icon: 'chevR', label: T('최근 결과 보기'), run: () => evGo('result', { dir: r.dir }) } : null,
+        w.current !== v.id ? { icon: 'check', label: T('지금 버전으로'), run: () => api('/api/eval/workspace', { action: 'update', id: w.id, current: v.id }).then(evLoad, e => toast(e.message, 'err')) } : null,
+        '-', { icon: 'trash', label: T('버전 지우기'), danger: true, run: () => evDelVersion(w, v) }], 'right') }, I('dots'))));
+  });
+  const versions = h('div', { class: 'col g12' },
+    h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('버전')), h('span', { class: 'grow' }),
+      h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev:addv', onclick: () => evAddVersion(w) }, I('plus', 's'), T('버전 더하기'))),
+    w.versions.length ? h('div', { class: 'list ev-vlist' }, vrows)
+      : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('버전이 없습니다')), h('div', null, T('기준 모델과 비교할 GGUF 파일을 더하세요.'))));
+  // 결과 — 둘을 고르면 전후 비교
+  const pick = EV.pick.filter(d => rs.some(r => r.dir === d));
+  const results = h('div', { class: 'col g12' },
+    h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('결과')), h('span', { class: 'small muted' }, rs.length ? T`${rs.length}개 · 둘을 고르면 전후 비교` : ''), h('span', { class: 'grow' }),
+      h('button', { class: 'btn sm', 'data-fk': 'ev:cmp', disabled: pick.length === 2 ? null : true, onclick: () => { const [a, b] = [...pick].sort(byName); evGo('compare', { cmpA: a, cmpB: b }); } }, T('전후 비교'))),
+    rs.length ? h('div', { class: 'list ev-vlist' }, [...rs].reverse().map(r => {
+      const a = r.answers || {}, m = r.metrics || {}, s = r.settings || {};
+      return h('div', { class: 'ev-rrow clk', onclick: e => { if (!e.target.closest('input, label')) evGo('result', { dir: r.dir }); } },
+        h('label', { class: 'check ev-pick' }, h('input', { type: 'checkbox', 'aria-label': T`${r.dir} 고르기`, 'data-fk': 'ev:pick:' + r.dir, checked: pick.includes(r.dir) ? true : null,
+          onchange: ev => { EV.pick = pick.filter(d => d !== r.dir); if (ev.target.checked) { EV.pick.push(r.dir); if (EV.pick.length > 2) EV.pick.shift(); } renderEval(true); } })),
+        h('div', { class: 'ev-vfile' }, h('div', { class: 'ink' }, `${r.version} · ${evDirWhen(r.dir)}`),
+          h('div', { class: 'small muted' }, [r.data && r.data.name, evMode(s.mode), evChat(r) ? T`답 ${s.max_tokens}토큰` : T`청크 ${s.chunks}`].filter(Boolean).join(NB))),
+        h('div', { class: 'ev-vres small' },
+          h('div', null, evChat(r) && a.compared ? T`답 ${a.differ}/${a.compared} 달라짐` + (a.near_tie ? T` (마진 작음 ${a.near_tie})` : '') : T`위치 ${fmtNum(m.positions || 0)}개`),
+          h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}`)));
+    }))
+      : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('아직 결과가 없습니다')), h('div', null, T('위에서 평가를 실행하면 여기에 쌓입니다.'))));
+  return h('div', { class: 'col g24' }, head, state, versions, evRunCard(w, busy), results);
+}
+
+// 결과 — 판정 · 지표 · 처음 갈라진 스텝 · 끝난 까닭 · 분야 · 대화
+function evResultView(w) {
+  const R = evRes(w, EV.dir);
+  const crumb = evCrumb(w, [[evDirLabel(w, EV.dir)]]);
+  if (!R) return h('div', { class: 'col g16' }, crumb, h('div', { class: 'row g8 muted' }, h('i', { class: 'dot busy' }), T('불러오는 중')));
+  if (R.error) return h('div', { class: 'col g16' }, crumb, h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(R.error))));
+  const s = R.summary, a = s.answers || {}, m = s.metrics || {}, st = s.settings || {}, rp = s.reproduce || {};
+  const chat = evChat(s);
+  const vd = evVerdict(s);
+  const K = st.top_k || 64;
+  const out = [crumb,
+    h('div', { class: 'fd-dhead' },
+      h('div', { class: 'row g8' }, h('span', { class: 'eyebrow' }, [s.version_model && s.version_model.file, s.data && s.data.name, evMode(st.mode)].filter(Boolean).join(NB)), h('span', { class: 'grow' }),
+        h('button', { class: 'btn sm ghost needs-conn', onclick: () => api('/api/eval/open', { workspace: w.id, dir: EV.dir }).catch(e => toast(e.message, 'err')) }, I('folder', 's'), T('결과 폴더 열기')),
+        chat ? h('button', { class: 'btn sm ghost needs-conn', onclick: () => evToDebugger(w, EV.dir, -1) }, I('bug', 's'), T('디버거로 열기')) : null),
+      h('div', { class: 'fd-title' }, T`${s.version} 결과`),
+      h('div', { class: 'fd-sub' }, T`${s.finished || evDirWhen(EV.dir)} · ${evNum(s.seconds, 0)}초`)),
+    h('div', { class: 'card col g8' }, h('div', { class: 'verdict' }, vd[0]), vd[1] ? h('div', { class: 'small muted' }, vd[1]) : null,
+      s.same_vocab === false ? h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('어휘가 기준 모델과 달라 같은 토큰의 확률은 비교하지 않았습니다 — 답은 글로 비교했습니다.'))) : null)];
+  if (m.positions) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('같은 토큰의 확률')),
+    h('span', { class: 'small muted' }, chat ? T('기준 모델이 낸 답의 토큰마다') : T('청크마다 뒤쪽 255 토큰'))),
+    kpis([[evKL(m.kl_mean), T('KL divergence 평균')], [evKL(m.kl_p99), T('KL divergence 99 백분위수')], [evPct(m.top1), T('top-1 일치율')],
+      [evNum(m.ppl_ratio, 4), T('PPL 비(평가 ÷ 기준)')], [evPct(m.dp_mean), T('Δp 평균(기준 − 평가)')], [evPct(m.tail_mean), T`기준 모델의 상위 ${K}개 밖 확률`]], true),
+    h('p', { class: 'small muted m0' }, T`KL divergence는 기준 모델의 상위 ${K}개 토큰과 나머지 확률 하나로 계산한 값입니다 — 모든 어휘로 계산한 값보다 조금 작습니다(아래쪽 값). 위치 ${fmtNum(m.positions)}개.`)));
+  if (chat && a.compared) {
+    const its = (R.items || []).filter(x => x.same === false);
+    const bins = [[1, 8], [9, 32], [33, 128], [129, 512], [513, Infinity]];
+    const cnt = bins.map(([lo, hi]) => its.filter(x => x.first_divergence !== null && x.first_divergence + 1 >= lo && x.first_divergence + 1 <= hi));
+    const max = Math.max(1, ...cnt.map(c => c.length));
+    const textOnly = its.filter(x => x.first_divergence === null).length;
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('처음 갈라진 스텝')),
+      h('span', { class: 'small muted' }, T`답이 달라진 대화 ${a.differ}개`)),
+      h('div', { class: 'card col g8 ev-bars' }, bins.map(([lo, hi], k) => h('div', { class: 'ev-bar' },
+        h('span', { class: 'l small muted num' }, hi === Infinity ? T`${lo} 이상` : `${lo}–${hi}`),
+        h('span', { class: 'b' }, h('i', { style: `width:${(100 * cnt[k].length / max).toFixed(1)}%` }), cnt[k].some(x => x.near_tie) ? h('i', { class: 'nt', style: `width:${(100 * cnt[k].filter(x => x.near_tie).length / max).toFixed(1)}%` }) : null),
+        h('span', { class: 'n small num' }, String(cnt[k].length)))),
+        h('div', { class: 'row g16 small muted' }, h('span', { class: 'row g8' }, h('i', { class: 'ev-key' }), T('달라진 대화')), h('span', { class: 'row g8' }, h('i', { class: 'ev-key nt' }), T('마진이 작은 스텝(0.05 nat 미만)에서 갈라짐')),
+          textOnly ? h('span', null, T`글로 비교한 대화 ${textOnly}개`) : null)),
+      h('p', { class: 'small muted m0' }, T('답이 길면 확률 차이가 작아도 어딘가에서 갈라지기 쉽습니다. 일찍 갈라진 대화와 마진이 작은 스텝에서 갈라진 대화를 함께 보세요.'))));
+    const eosWarn = a.cand_stop < a.ref_stop - Math.max(2, Math.round(a.compared * 0.1));
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('끝난 까닭'))),
+      h('div', { class: 'fd-stats ev-stats2' },
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('기준 모델 — 끝 토큰으로 끝남')), h('div', { class: 'v' }, `${a.ref_stop}/${a.compared}`)),
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('평가할 모델 — 끝 토큰으로 끝남')), h('div', { class: 'v' }, `${a.cand_stop}/${a.compared}`))),
+      eosWarn ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('평가할 모델이 끝 토큰(EOS)으로 끝내지 못하고 최대 길이까지 간 답이 기준 모델보다 많습니다 — GGUF 의 채팅 템플릿 · EOS 토큰을 확인하세요.'))) : null));
+  }
+  const cats = s.categories || [];
+  if (cats.length > 1) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('분야'))),
+    h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+      h('thead', null, h('tr', null, h('th', null, T('분야')), h('th', { class: 'r' }, T('대화', 'col')), chat ? h('th', { class: 'r' }, T('답이 달라짐')) : null, h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'))),
+      h('tbody', null, cats.map(c => h('tr', null, h('td', null, c.name), h('td', { class: 'r num' }, String(c.items)), chat ? h('td', { class: 'r num' }, `${c.differ}/${c.compared}`) : null,
+        h('td', { class: 'r num' }, evKL(c.metrics && c.metrics.kl_mean)), h('td', { class: 'r num' }, evPct(c.metrics && c.metrics.top1)))))))));
+  // 대화 — 거르기
+  const items = R.items || [];
+  const F = chat ? [['differ', T('답이 달라진 대화'), x => x.same === false], ['tie', T('마진이 작은 스텝에서 갈라짐'), x => !!x.near_tie], ['same', T('같은 답'), x => x.same === true], ['all', T('전체'), () => true]] : [['all', T('전체'), () => true]];
+  const f = F.find(x => x[0] === EV.filter) || F[0];
+  const shown = items.filter(f[2]);
+  out.push(h('div', { class: 'col g12' },
+    h('div', { class: 'section-head' }, h('span', { class: 'sec' }, chat ? T('대화') : T('청크')), h('span', { class: 'small muted' }, String(items.length))),
+    F.length > 1 ? h('div', { class: 'row g8', role: 'radiogroup', 'aria-label': T('대화 거르기') }, F.map(([k, l, fn]) => h('button', {
+      class: 'fchip' + (f[0] === k ? ' on' : ''), role: 'radio', 'aria-checked': f[0] === k ? 'true' : 'false', 'data-fk': 'ev:f:' + k, onclick: () => { EV.filter = k; renderEval(true); },
+    }, l, h('span', { class: 'muted num' }, String(items.filter(fn).length))))) : null,
+    shown.length ? h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+      h('thead', null, h('tr', null, h('th', null, chat ? T('대화') : T('청크')), h('th', { class: 'c-cat' }, T('분야')),
+        chat ? h('th', { class: 'r' }, T('처음 갈라진 스텝')) : null, chat ? h('th', { class: 'r' }, T('마진')) : null,
+        h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'), chat ? h('th', { class: 'c-fin' }, T('끝난 까닭(기준 · 평가)')) : null)),
+      h('tbody', null, shown.slice(0, 500).map(x => h('tr', { class: chat ? 'clk' : '', onclick: chat ? () => evGo('item', { item: x.i }) : null },
+        h('td', null, chat ? h('button', { class: 'dbg-link', 'data-fk': 'ev:it:' + x.i, onclick: ev => { ev.stopPropagation(); evGo('item', { item: x.i }); } }, x.id) : x.id),
+        h('td', { class: 'small c-cat' }, x.category),
+        chat ? h('td', { class: 'r num small' }, x.same ? h('span', { class: 'muted' }, T('같음')) : x.first_divergence !== null ? String(x.first_divergence + 1) : T('글로 비교')) : null,
+        chat ? h('td', { class: 'r num small' }, typeof x.ref_margin === 'number' ? h('span', { class: x.near_tie ? 'ev-tie' : '' }, evNum(x.ref_margin, 3)) : '-') : null,
+        h('td', { class: 'r num small' }, x.scored ? evKL(x.kl_mean) : '-'),
+        h('td', { class: 'r num small' }, x.scored ? evPct(x.top1) : '-'),
+        chat ? h('td', { class: 'small c-fin nw' }, `${evFinish(x.ref_finish)} · ${evFinish(x.cand_finish)}`) : null)))))
+      : h('div', { class: 'empty-box' }, h('div', null, T('해당하는 대화가 없습니다'))),
+    shown.length > 500 ? h('p', { class: 'small muted m0' }, T`처음 500개만 보입니다(모두 ${shown.length}개).`) : null));
+  out.push(h('details', { class: 'fold ev-repro' }, h('summary', null, I('chevR', 's'), T('재현 정보')),
+    h('div', { class: 'kv mt16' },
+      [[T('기준 모델'), `${s.reference && s.reference.file} · ${s.reference && s.reference.sha256}`],
+        [T('평가한 파일'), `${s.version_model && s.version_model.file} · ${s.version_model && s.version_model.sha256}`],
+        [T('데이터'), `${s.data && s.data.name} · ${s.data && s.data.sha256}`],
+        [T('설정'), Object.entries(st).map(([k, v]) => `${k}=${v}`).join(' ')],
+        ['GeulPU', `${rp.geulpu} · ${String(rp.commit || '').slice(0, 12)}`],
+        [T('장치'), `${rp.device} · ${LAYER[rp.layer] || rp.layer}`],
+        [T('커널 모듈'), `${rp.module} · ${String(rp.module_sha256 || '').slice(0, 16)}`],
+        [T('결과 해시'), s.result_sha256]].map(([k, v]) => [h('div', { class: 'k' }, k), h('div', { class: 'v mono small ev-wrap' }, String(v))])),
+    h('p', { class: 'small muted' }, T('같은 파일 · 데이터 · 설정 · GeulPU 버전이면 다시 실행해도 결과 해시가 같습니다.'))));
+  return h('div', { class: 'col g24' }, out);
+}
+
+// 전후 비교(3.7) — 같은 데이터 · 같은 설정 · 같은 기준 모델의 두 결과
+function evCompareView(w) {
+  const rs = evResults(w);
+  const sel = (key, val) => h('select', { class: 'input', 'data-fk': 'ev:cmp:' + key, 'aria-label': key === 'cmpA' ? T('전') : T('후'),
+    onchange: ev => { EV[key] = ev.target.value; renderEval(true); } },
+    rs.map(r => h('option', { value: r.dir, selected: r.dir === val ? true : null }, `${r.version} · ${r.data && r.data.name} · ${evMode(r.settings && r.settings.mode)} · ${evDirWhen(r.dir)}`)));
+  if ((!EV.cmpA || !EV.cmpB) && rs.length >= 2) { EV.cmpA = rs[rs.length - 2].dir; EV.cmpB = rs[rs.length - 1].dir; }
+  const out = [evCrumb(w, [[T('전후 비교')]]),
+    h('div', { class: 'fd-dhead' }, h('div', { class: 'eyebrow' }, T('전후 비교')), h('div', { class: 'fd-title' }, T('두 결과 비교'))),
+    h('div', { class: 'ev-cmpsel' }, h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('전')), sel('cmpA', EV.cmpA)),
+      h('span', { class: 'faint ev-arrow' }, '→'), h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('후')), sel('cmpB', EV.cmpB)))];
+  if (!EV.cmpA || !EV.cmpB || EV.cmpA === EV.cmpB) { out.push(h('p', { class: 'muted' }, T('서로 다른 결과 두 개를 고르세요.'))); return h('div', { class: 'col g24' }, out); }
+  const C = EV.cmp[`${w.id}/${EV.cmpA}/${EV.cmpB}`];
+  if (!C) { out.push(h('div', { class: 'row g8 muted' }, h('i', { class: 'dot busy' }), T('불러오는 중'))); return h('div', { class: 'col g24' }, out); }
+  if (C.error) { out.push(h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(C.error)))); return h('div', { class: 'col g24' }, out); }
+  const why = !C.same_data ? T('데이터가 다릅니다') : !C.same_settings ? T('설정이 다릅니다') : !C.same_reference ? T('기준 모델이 다릅니다') : T('대화 수가 다릅니다');
+  const pv = evNum(C.p, 3);
+  const vt = { better: T`나아졌습니다 — 기준 모델과 같아진 대화 ${C.fixed}개 · 새로 달라진 대화 ${C.newly_diverged}개(부호 검정 p = ${pv})`,
+    worse: T`나빠졌습니다 — 기준 모델과 같아진 대화 ${C.fixed}개 · 새로 달라진 대화 ${C.newly_diverged}개(부호 검정 p = ${pv})`,
+    no_clear_difference: T`뚜렷한 차이가 없습니다 — 기준 모델과 같아진 대화 ${C.fixed}개 · 새로 달라진 대화 ${C.newly_diverged}개(부호 검정 p = ${pv})`,
+    not_comparable: T`비교할 수 없습니다 — ${why}` }[C.verdict] || C.verdict;
+  const tone = { better: 'ok', worse: 'err' }[C.verdict] || '';
+  out.push(h('div', { class: 'card col g8' }, h('div', { class: 'row g8' }, h('span', { class: 'tag ' + tone }, { better: T('나아짐'), worse: T('나빠짐'), no_clear_difference: T('차이 없음'), not_comparable: T('비교 불가') }[C.verdict] || ''),
+    h('span', { class: 'small muted' }, `${C.a_version} → ${C.b_version}`)), h('div', { class: 'verdict' }, vt),
+    C.comparable ? h('p', { class: 'small muted m0' }, T('GeulPU의 결과에는 실행마다의 잡음이 없어 대화 하나하나의 바뀜은 파일을 바꾼 데서 옵니다. 어떤 대화를 골랐나에 따른 차이는 남기 때문에 부호 검정으로 판정합니다(p < 0.05).')) : null));
+  const ma = C.a_metrics || {}, mb = C.b_metrics || {}, aa = C.a_answers || {}, ab = C.b_answers || {};
+  const rows = [
+    aa.compared ? [T('답이 달라진 대화'), `${aa.differ}/${aa.compared}`, `${ab.differ}/${ab.compared}`, ab.differ - aa.differ, x => (x > 0 ? '+' : '') + x] : null,
+    aa.compared ? [T('마진이 작은 스텝에서 갈라짐'), String(aa.near_tie), String(ab.near_tie), ab.near_tie - aa.near_tie, x => (x > 0 ? '+' : '') + x] : null,
+    aa.compared ? [T('평가할 모델 — 끝 토큰으로 끝남'), `${aa.cand_stop}/${aa.compared}`, `${ab.cand_stop}/${ab.compared}`, ab.cand_stop - aa.cand_stop, x => (x > 0 ? '+' : '') + x] : null,
+    ma.positions ? [T('KL divergence 평균'), evKL(ma.kl_mean), evKL(mb.kl_mean), mb.kl_mean - ma.kl_mean, x => (x > 0 ? '+' : x < 0 ? '−' : '') + evKL(Math.abs(x))] : null,
+    ma.positions ? [T('KL divergence 99 백분위수'), evKL(ma.kl_p99), evKL(mb.kl_p99), mb.kl_p99 - ma.kl_p99, x => (x > 0 ? '+' : x < 0 ? '−' : '') + evKL(Math.abs(x))] : null,
+    ma.positions ? [T('top-1 일치율'), evPct(ma.top1), evPct(mb.top1), mb.top1 - ma.top1, x => (x > 0 ? '+' : x < 0 ? '−' : '') + (Math.abs(x) * 100).toFixed(2) + T('%p')] : null,
+    ma.positions ? [T('PPL 비(평가 ÷ 기준)'), evNum(ma.ppl_ratio, 4), evNum(mb.ppl_ratio, 4), mb.ppl_ratio - ma.ppl_ratio, x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(4)] : null,
+  ].filter(Boolean);
+  out.push(h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+    h('thead', null, h('tr', null, h('th', null, T('지표')), h('th', { class: 'r' }, T('전')), h('th', { class: 'r' }, T('후')), h('th', { class: 'r' }, T('차이')))),
+    h('tbody', null, rows.map(([l, va, vb, d, fd]) => h('tr', null, h('td', null, l), h('td', { class: 'r num' }, va), h('td', { class: 'r num' }, vb), h('td', { class: 'r num' }, isFinite(d) ? fd(d) : '-')))))));
+  const RA = evRes(w, EV.cmpA), RB = evRes(w, EV.cmpB);
+  const idx = (R, id) => { const x = R && R.items && R.items.find(t => t.id === id); return x ? x.i : -1; };
+  const ids = (list, R, dir, label, note) => h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, label), h('span', { class: 'small muted' }, note)),
+    list.length ? h('div', { class: 'row g8 ev-ids' }, list.map(id => { const i = idx(R, id); return i >= 0 ? h('button', { class: 'dbg-chip ev-chip', onclick: () => evGo('item', { dir, item: i }) }, id) : h('span', { class: 'dbg-chip ev-chip' }, id); }))
+      : h('div', { class: 'small muted' }, T('없음')));
+  if (C.comparable && aa.compared) {
+    out.push(ids(C.fixed_items || [], RA, EV.cmpA, T`기준 모델과 같아진 대화 ${C.fixed}개`, T('누르면 전 결과에서 달랐던 답을 엽니다')));
+    out.push(ids(C.newly_items || [], RB, EV.cmpB, T`새로 달라진 대화 ${C.newly_diverged}개`, T('누르면 후 결과의 답을 엽니다')));
+  }
+  return h('div', { class: 'col g24' }, out);
+}
+
+// 답이 달라진 곳 — 대화 하나: 두 답, 처음 갈라진 스텝의 후보(두 모델의 확률), 그 앞뒤 스텝
+const evText = c => (typeof c === 'string' ? c : Array.isArray(c) ? c.map(p => (p && typeof p.text === 'string' ? p.text : '')).join('') : c === null || c === undefined ? '' : JSON.stringify(c));
+function evPrefix(a, b) {
+  const x = Array.from(a || ''), y = Array.from(b || '');
+  let k = 0;
+  while (k < x.length && k < y.length && x[k] === y[k]) k++;
+  return k;
+}
+function evAnswer(label, text, k, tone) {
+  const cs = Array.from(text || '');
+  const pre = cs.slice(0, k), tail = cs.slice(k).join('');
+  const cut = pre.length > 240 ? '…' + pre.slice(-240).join('') : pre.join('');
+  return h('div', { class: 'col g8 ev-ans' }, h('div', { class: 'eyebrow' }, label),
+    h('pre', { class: 'dbg-ans' }, cut ? h('span', { class: 'ev-same' }, cut) : null, tail ? h('span', { class: 'ev-diff ' + (tone || '') }, tail) : null,
+      !cs.length ? h('span', { class: 'muted' }, T('(빈 답)')) : null));
+}
+const evTok = s => h('span', { class: 'ev-tok mono' }, tokShow(s === null || s === undefined ? '' : s));
+function evMessages(req) {
+  if (!req || !Array.isArray(req.messages)) return null;
+  const ms = req.messages;
+  const last = ms.length ? ms[ms.length - 1] : null;
+  const one = m => h('div', { class: 'dbg-msg' }, h('span', { class: 'qlab' }, m.role),
+    h('span', { class: 'dbg-msg-t' }, (() => { const t = evText(m.content) || (m.tool_calls ? JSON.stringify(m.tool_calls) : ''); return t.length > 1500 ? t.slice(0, 1500) + '…' : t; })()));
+  return h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('대화')),
+    h('span', { class: 'small muted' }, [T`메시지 ${ms.length}개`, req.tools && req.tools.length ? T`도구 ${req.tools.length}개` : null].filter(Boolean).join(NB))),
+    ms.length > 1 ? h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T`앞의 메시지 ${ms.length - 1}개`), h('div', { class: 'col g8 mt8' }, ms.slice(0, -1).map(one))) : null,
+    last ? one(last) : null);
+}
+function evItemView(w) {
+  const R = evRes(w, EV.dir);
+  const X = EV.items[`${w.id}/${EV.dir}/${EV.item}`];
+  const row = R && R.items ? R.items.find(x => x.i === EV.item) : null;
+  const crumb = evCrumb(w, [[evDirLabel(w, EV.dir), () => evGo('result', { item: -1 })], [row ? row.id : String(EV.item)]]);
+  if (!X || !R) return h('div', { class: 'col g16' }, crumb, h('div', { class: 'row g8 muted' }, h('i', { class: 'dot busy' }), T('불러오는 중')));
+  if (X.error || R.error) return h('div', { class: 'col g16' }, crumb, h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(X.error || R.error))));
+  const it = X.item || {}, dv = X.diverge, s = R.summary;
+  const items = R.items || [];
+  const pos = items.findIndex(x => x.i === EV.item);
+  const nav = d => { const x = items[pos + d]; return x ? () => evGo('item', { item: x.i }) : null; };
+  const out = [crumb,
+    h('div', { class: 'fd-dhead' },
+      h('div', { class: 'row g8' }, h('span', { class: 'eyebrow' }, [it.category, evVerLabel(w, s.version)].filter(Boolean).join(NB)), h('span', { class: 'grow' }),
+        h('button', { class: 'icon-btn', 'aria-label': T('앞 대화'), 'data-tip': T('앞 대화'), 'data-tip-pos': 'bottom', disabled: nav(-1) ? null : true, onclick: nav(-1) }, I('chevL')),
+        h('button', { class: 'icon-btn', 'aria-label': T('다음 대화'), 'data-tip': T('다음 대화'), 'data-tip-pos': 'bottom', disabled: nav(1) ? null : true, onclick: nav(1) }, I('chevR')),
+        h('button', { class: 'btn sm ghost needs-conn', onclick: () => evToDebugger(w, EV.dir, EV.item) }, I('bug', 's'), T('디버거로 열기'))),
+      h('div', { class: 'fd-title' }, it.id || String(EV.item)))];
+  const d = dv ? dv.first_divergence : it.first_divergence;
+  let line;
+  if (it.same) line = T('두 모델의 답이 토큰까지 같습니다.');
+  else if (d === null || d === undefined) line = T('두 모델의 답이 다릅니다 — 어휘가 달라 글로 비교했습니다.');
+  else if (d === 0) line = T('첫 토큰(스텝 1)부터 갈라졌습니다.');
+  else line = T`스텝 ${d + 1}에서 처음 갈라졌습니다 — 그 앞 ${d}토큰은 같습니다.`;
+  out.push(h('div', { class: 'card col g8' }, h('div', { class: 'verdict' }, line),
+    !it.same && typeof it.ref_margin === 'number' ? h('div', { class: 'row g8 small' },
+      h('span', { class: 'muted' }, T`그 스텝에서 기준 모델의 마진(1위와 2위의 로그확률 차) ${evNum(it.ref_margin, 3)} nat`),
+      it.near_tie ? h('span', { class: 'tag acc' }, T('마진이 작은 스텝')) : null) : null,
+    h('div', { class: 'small muted' }, [T`기준 모델 ${it.ref_len}토큰(${evFinish(it.ref_finish)})`, it.cand_len !== undefined ? T`평가할 모델 ${it.cand_len}토큰(${evFinish(it.cand_finish)})` : null, it.scored ? T`이 대화의 KL divergence 평균 ${evKL(it.kl_mean)} · top-1 일치율 ${evPct(it.top1)}` : null].filter(Boolean).join(NB))));
+  const msgs = evMessages(X.request);
+  if (msgs) out.push(msgs);
+  const candText = X.text !== null && X.text !== undefined ? X.text : dv ? dv.cand_text : '';
+  if (it.same || !dv) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('답'))), evAnswer(T('두 모델의 답'), candText, 0)));
+  else {
+    const k = evPrefix(dv.ref_text, dv.cand_text);
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('두 답')), h('span', { class: 'small muted' }, T('흐린 글은 두 답이 같은 앞부분, 밝은 글은 갈라진 뒤'))),
+      h('div', { class: 'dbg-vs' }, evAnswer(T('기준 모델'), dv.ref_text, k), evAnswer(T('평가할 모델'), dv.cand_text, k, 'cand'))));
+  }
+  if (dv && Array.isArray(dv.candidates) && dv.candidates.length) {
+    const ct = dv.cand_token;
+    const inTop = ct && dv.candidates.some(c => c.id === ct.id);
+    const rows = dv.candidates.map((c, q) => h('tr', { class: ct && c.id === ct.id ? 'ev-pickrow' : q === 0 ? 'ev-refrow' : '' },
+      h('td', null, evTok(c.text)),
+      h('td', { class: 'small muted' }, [q === 0 ? T('기준 모델이 고름') : null, ct && c.id === ct.id ? T('평가할 모델이 고름') : null].filter(Boolean).join(NB)),
+      h('td', { class: 'r num' }, evProb(c.ref_lp)), h('td', { class: 'r num' }, evProb(c.cand_lp))));
+    if (ct && !inTop) rows.push(h('tr', { class: 'ev-pickrow' }, h('td', null, evTok(ct.text)), h('td', { class: 'small muted' }, T('평가할 모델이 고름') + (ct.ref_rank >= 0 ? T` · 기준 모델의 ${ct.ref_rank + 1}위` : T` · 기준 모델의 상위 ${s.settings && s.settings.top_k}개 밖`)),
+      h('td', { class: 'r num' }, ct.ref_rank >= 0 ? evProb(ct.ref_lp) : '-'), h('td', { class: 'r num' }, ct.ref_rank >= 0 ? evProb(ct.cand_lp) : '-')));
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T`스텝 ${d + 1}의 후보`), h('span', { class: 'small muted' }, T('같은 앞부분에서 두 모델이 다음 토큰에 준 확률'))),
+      h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+        h('thead', null, h('tr', null, h('th', null, T('토큰')), h('th', null, h('span', { class: 'sr' }, T('표시'))), h('th', { class: 'r' }, T('기준 모델', 'col')), h('th', { class: 'r' }, T('평가할 모델', 'col')))),
+        h('tbody', null, rows)))));
+  }
+  if (dv && Array.isArray(dv.window) && dv.window.length) {
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('그 앞뒤 스텝')), h('span', { class: 'small muted' }, T('기준 모델의 답을 두 모델이 점수 매긴 값'))),
+      h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+        h('thead', null, h('tr', null, h('th', { class: 'r' }, T('스텝')), h('th', null, T('기준 모델의 토큰')), h('th', { class: 'r' }, T('기준 모델', 'col')), h('th', { class: 'r' }, T('평가할 모델', 'col')), h('th', { class: 'r' }, 'KL'), h('th', { class: 'c-opt' }, 'top-1'))),
+        h('tbody', null, dv.window.map(x => h('tr', { class: x.pos === d ? 'ev-refrow' : '' },
+          h('td', { class: 'r num' }, String(x.pos + 1)), h('td', null, evTok(x.text)), h('td', { class: 'r num' }, evProb(x.ref_lp)), h('td', { class: 'r num' }, evProb(x.cand_lp)),
+          h('td', { class: 'r num' }, evKL(x.kl)), h('td', { class: 'small c-opt' }, x.top1_same ? T('같음') : h('span', { class: 'ev-tie' }, T('다름')))))))),
+      h('p', { class: 'small muted m0' }, T('갈라진 스텝 뒤로는 기준 모델의 답을 따라간 값입니다 — 평가할 모델이 자기 답을 이어 간 값이 아닙니다.'))));
+  }
+  return h('div', { class: 'col g24' }, out);
+}
+async function evToDebugger(w, dir, i) {
+  try {
+    const r = await api('/api/eval/debug', { workspace: w.id, dir });
+    show('debug');
+    dbgSelect(r.run);
+    if (i >= 0) { DBG.view = 'req'; DBG.ri = i; }
+    renderDebug(true);
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function renderEval(force) {
+  const page = $('#page-eval');
+  if (!page || !S.st || S.view !== 'eval') return;
+  const j = S.st.job;
+  const js = j && j.kind === 'eval' ? `${j.id}:${j.state}` : '';
+  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; }                   // 평가 작업이 시작 · 끝나면 목록을 다시
+  const running = !!(j && j.kind === 'eval' && j.state === 'running');
+  if (!EV.loading && Date.now() - EV.at > (running ? 3000 : 20000)) evLoad();
+  const w = evWs(EV.sel);
+  if (EV.list && EV.sel && !w) { EV.sel = ''; EV.view = 'ws'; }
+  evNeed(w);
+  const jc = evJobOf();
+  const sig = [S.conn, EV.listSig, EV.err, EV.sel, EV.view, EV.dir, EV.item, EV.cmpA, EV.cmpB, EV.filter, EV.pick.join(','), EV.tick,
+    jc && [jc.id, jc.state, jc.reason, !!jc.summary], S.st.job && S.st.job.state, S.st.models.map(m => m.id).join(','), S.st.server.state, S.st.device.layer];
+  if (!changed('ev', sig) && !force) { evJobTick(); return; }
+  const ol = page.querySelector('.ev-list'), od = page.querySelector('.ev-detail');
+  const ly = ol ? ol.scrollTop : 0, dy = od && od.dataset.k === evDetailKey() ? od.scrollTop : 0;
+  rebuild(page,
+    pageHead(EV.list ? T`작업 공간 ${EV.list.workspaces.length}개` : null, T('모델 평가'),
+      T('GGUF 파일을 기준 모델과 비교합니다 — 다음 토큰 확률의 차이(KL divergence · top-1 일치율)와 두 모델이 낸 답. 같은 파일 · 같은 설정이면 다시 실행해도 결과가 비트까지 같습니다.')),
+    jc ? evJobCard(jc) : null,
+    h('div', { class: 'ev' }, h('div', { class: 'ev-body' }, evListPane(), evDetailPane())));
+  S.log = { job: jc ? jc.id : 0, from: 0 };
+  const nl = page.querySelector('.ev-list'), nd = page.querySelector('.ev-detail');
+  if (nl) nl.scrollTop = ly;
+  if (nd) nd.scrollTop = dy;
+  evJobTick();
+}

@@ -157,10 +157,12 @@ h3 { font-size: 17px; line-height: 24px; }
 .mt20 { margin-top: 20px; }
 .mt24 { margin-top: 24px; }
 .g0 { gap: 0; }
+.g4 { gap: 4px; }
 .g8 { gap: 8px; }
 .g12 { gap: 12px; }
 .g16 { gap: 16px; }
 .g20 { gap: 20px; }
+.g24 { gap: 24px; }
 .nowrap { flex-wrap: nowrap; }
 .w100 { width: 100%; }
 .w360 { width: 360px; max-width: calc(100vw - 48px); }
@@ -983,6 +985,86 @@ table.data.dbg-table tbody tr.on td { background: var(--canvas-soft); }
 }
 .lens-seg { padding: 2px; }
 .lens-seg button { height: 22px; padding: 0 10px; font-size: 12px; }
+
+/* 모델 평가(1-3) — 작업 공간 목록(왼쪽) · 고른 것(오른쪽: 작업 공간 · 결과 · 전후 비교 · 답이 달라진 곳). 넓은 창은 두 칸이 저마다 스크롤(화면은
+   고정), 좁은 창은 위아래로(디버거와 같은 꼴) */
+.ev { display: flex; flex-direction: column; }
+.ev-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 24px; }
+.ev-list { min-width: 0; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-card); overflow: hidden; }
+.ev-detail { min-width: 0; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-card); padding: 24px 28px 28px; }
+.ev-list::-webkit-scrollbar-thumb, .ev-detail::-webkit-scrollbar-thumb { border-color: var(--canvas-card); }
+@media (width > 960px) {
+  .page.wide > .ev { flex: 1; min-height: 360px; }   /* 작업 카드의 기록을 펼쳐도 두 칸이 남게 — 모자라면 화면이 스크롤된다 */
+  .ev-body { flex: 1; min-height: 0; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); }
+  .ev-list, .ev-detail { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+}
+@media (max-width: 960px) {
+  .ev-list { max-height: 40vh; overflow-y: auto; }
+  .ev-detail { padding: 20px; }
+}
+.ev-job { margin-bottom: 16px; }
+.ev-lhead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--hairline); background: var(--canvas-card); }
+.ev-crumb { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 13px; line-height: 19px; }
+.ev-intro { max-width: 680px; padding: 8px 0; }
+.ev-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 14px; }
+.ev-steps li { display: flex; flex-direction: column; gap: 2px; padding-left: 4px; }
+.ev-steps li::marker { color: var(--mute); }
+.ev-table td, .ev-table th { padding: 10px 12px; }
+table.data.ev-table th { white-space: normal; }
+.ev-pick { width: 36px; padding-right: 0; }
+.ev-vrow { display: grid; grid-template-columns: 84px minmax(0, 1.2fr) minmax(0, 1fr) 36px; gap: 4px 16px; align-items: center; padding: 12px 8px 12px 16px; border-top: 1px solid var(--hairline); }
+.ev-vrow:first-child { border-top: 0; }
+.ev-vrow.clk { cursor: pointer; }
+.ev-vrow.clk:hover { background: var(--hover); }
+.ev-vid { display: flex; align-items: center; gap: 8px; }
+.ev-vfile, .ev-vres { min-width: 0; }
+.ev-rrow { display: grid; grid-template-columns: 28px minmax(0, 1.2fr) minmax(0, 1fr); gap: 4px 16px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--hairline); cursor: pointer; }
+.ev-rrow:first-child { border-top: 0; }
+.ev-rrow:hover { background: var(--hover); }
+@media (max-width: 1280px) {
+  .ev-vrow { grid-template-columns: 84px minmax(0, 1fr) 36px; }
+  .ev-vrow .ev-vres { grid-column: 2; grid-row: 2; }
+  .ev-vmenu { grid-column: 3; grid-row: 1; }
+  .ev-rrow { grid-template-columns: 28px minmax(0, 1fr); }
+  .ev-rrow .ev-vres { grid-column: 2; }
+  .ev-table .c-cat, .ev-table .c-fin, .ev-table .c-opt { display: none; }
+  .ev-table td, .ev-table th { padding: 8px 10px; }
+}
+.ev-form { display: flex; flex-direction: column; gap: 16px; }
+.ev-form select.input { min-width: 0; max-width: 100%; }
+.ev-nums { align-items: flex-end; }
+.ev-num input { width: 120px; }
+.ev-think { min-height: 40px; }
+.ev-bars { padding: 16px 20px; }
+.ev-bar { display: grid; grid-template-columns: 72px minmax(0, 1fr) 40px; align-items: center; gap: 12px; }
+.ev-bar .b { position: relative; height: 10px; background: var(--fill); border-radius: 2px; overflow: hidden; }
+.ev-bar .b i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--line-strong); border-radius: 2px; }
+.ev-bar .b i.nt, .ev-key.nt { background: var(--accent); }
+.ev-bar .n { text-align: right; color: var(--ink); }
+.ev-key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--line-strong); }
+.ev-stats2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ev-tie { color: var(--accent); }
+.ev-wrap { overflow-wrap: anywhere; }
+.ev-cmpsel { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: end; }
+.ev-cmpsel select { width: 100%; }
+.ev-arrow { padding-bottom: 10px; }
+.ev-ids { gap: 6px; }
+.ev-chip { height: 26px; line-height: 24px; }
+.ev-ans pre.dbg-ans { max-height: 360px; }
+.ev-same { color: var(--faint); }
+.ev-diff { color: var(--ink); }
+.ev-same + .ev-diff { border-left: 2px solid var(--accent); padding-left: 2px; }
+.ev-tok {
+  display: inline-block; max-width: 280px; padding: 1px 6px; border: 1px solid var(--hairline-strong); border-radius: 4px; background: var(--canvas-raise);
+  color: var(--ink); font-size: 12px; line-height: 18px; white-space: pre; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
+}
+table.data.ev-table tbody tr.ev-refrow td { background: var(--canvas-soft); }
+table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
+@media (max-width: 640px) {
+  .ev-cmpsel { grid-template-columns: minmax(0, 1fr); }
+  .ev-arrow { display: none; }
+  .ev-table .c-cat, .ev-table .c-fin, .ev-table .c-data { display: none; }
+}
 
 /* 0.14.2 — 에이전트 화면: VS Code 확장에 넣을 값(이름 · 값 · 복사) */
 .ag-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 8px 12px; align-items: center; margin-top: 8px; }

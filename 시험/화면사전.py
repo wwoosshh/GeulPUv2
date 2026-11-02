@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """앱 화면(앱/web)의 GPU 없는 점검 — 빠른 점검 2c(시험/빠른점검.py 가 부른다).
 
-  1. app.js 문법 — node --check(node 가 있을 때).
-  2. 영어 사전 — 화면 문구는 한국어로 쓰고 T('…') · T`…${x}…` 로 감싸 영어 화면이면 DICT 에서 바꾼다(app.js 머리말). 코드의 T 호출
+  1. app.js · eval.js 문법 — node --check(node 가 있을 때).
+  2. 영어 사전 — 화면 문구는 한국어로 쓰고 T('…') · T`…${x}…` 로 감싸 영어 화면이면 DICT 에서 바꾼다(app.js 머리말 — eval.js 의 문구는
+     그 파일의 EVAL_DICT 가 DICT 에 더해진다). 두 파일의 T 호출
      가운데 첫 인자가 글 그대로인 것(작은따옴표 글 · 템플릿)과 index.html 의 정적 문구(aria-label · data-tip · placeholder · title ·
      글)가 모두 DICT 에 있는지 본다. 문맥을 붙인 T('파일', 'k') 는 '파일|k' 나 '파일' 가운데 하나. 주석 · 다른 글 안의 T 는 세지 않는다
      (작은 JS 훑기 — 글 · 템플릿 · 주석 · 정규식을 건너뛴다). DICT 의 같은 열쇠 두 번도 틀림으로 센다(뒤의 것이 앞을 덮는다).
@@ -18,6 +19,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.join(ROOT, "앱", "web", "app.js")
+EVAL = os.path.join(ROOT, "앱", "web", "eval.js")          # 모델 평가 1-3 — 사전은 EVAL_DICT
 HTML = os.path.join(ROOT, "앱", "web", "index.html")
 한글 = re.compile(r"[가-힣]")
 정규식앞 = set("(,=:[!&|?{};+-*%<>~^")
@@ -167,8 +169,8 @@ def 훑기(s, i, out, 닫기=False):
     return i
 
 
-def 사전(s):
-    i = s.index("const DICT = {")
+def 사전(s, 머리="const DICT = {"):
+    i = s.index(머리)
     j = s.index("\n};", i)
     열쇠, 겹침 = {}, []
     for k, line in enumerate(s[i:j].split("\n")[1:], start=s.count("\n", 0, i) + 2):
@@ -198,26 +200,39 @@ def main():
     틀림 = []
     node = shutil.which("node")
     if node:
-        r = subprocess.run([node, "--check", APP], capture_output=True, text=True, encoding="utf-8")
-        if r.returncode != 0:
-            틀림.append("app.js 문법: " + r.stderr.strip()[-400:])
-        문법 = "app.js 문법 통과"
+        for f in (APP, EVAL):
+            r = subprocess.run([node, "--check", f], capture_output=True, text=True, encoding="utf-8")
+            if r.returncode != 0:
+                틀림.append(os.path.basename(f) + " 문법: " + r.stderr.strip()[-400:])
+        문법 = "app.js · eval.js 문법 통과"
     else:
-        문법 = "node 가 없어 app.js 문법은 건너뜀"
+        문법 = "node 가 없어 app.js · eval.js 문법은 건너뜀"
     s = open(APP, encoding="utf-8").read()
+    se = open(EVAL, encoding="utf-8").read()
     열쇠, 겹침 = 사전(s)
     for key, a, b in 겹침:
         틀림.append(f"DICT 의 같은 열쇠 두 번(줄 {a} · {b}): {key[:60]}")
-    호출 = [x for x in 뽑기(s) if 한글.search(x[0])]
-    for key, 문맥, 줄 in 호출:
-        if key in 열쇠 or (문맥 is not None and f"{key}|{문맥}" in 열쇠):
-            continue
-        틀림.append(f"app.js 줄 {줄}: 사전에 없음 — {json.dumps(key, ensure_ascii=False)[:90]}")
+    열쇠e, 겹침e = 사전(se, "const EVAL_DICT = {")
+    for key, a, b in 겹침e:
+        틀림.append(f"EVAL_DICT 의 같은 열쇠 두 번(줄 {a} · {b}): {key[:60]}")
+    for key, b in 열쇠e.items():
+        if key in 열쇠:
+            틀림.append(f"DICT(app.js 줄 {열쇠[key]})와 EVAL_DICT(eval.js 줄 {b})에 같은 열쇠: {key[:60]}")
+    열쇠 = {**열쇠, **열쇠e}
+    호출 = []
+    for 이름, 글 in (("app.js", s), ("eval.js", se)):
+        for key, 문맥, 줄 in 뽑기(글):
+            if not 한글.search(key):
+                continue
+            호출.append((key, 문맥, 줄))
+            if key in 열쇠 or (문맥 is not None and f"{key}|{문맥}" in 열쇠):
+                continue
+            틀림.append(f"{이름} 줄 {줄}: 사전에 없음 — {json.dumps(key, ensure_ascii=False)[:90]}")
     정적 = html문구(open(HTML, encoding="utf-8").read())
     for t in 정적:
         if t not in 열쇠:
             틀림.append(f"index.html: 사전에 없음 — {t[:60]}")
-    for t in 틀림[:30]:
+    for t in 틀림[:int(os.environ.get("GEULPU_DICT_SHOW", "30"))]:
         print("틀림 —", t)
     if 틀림:
         print(f"화면 점검: 못 미침 {len(틀림)} — {문법}")
