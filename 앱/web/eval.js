@@ -79,6 +79,15 @@ const EVAL_DICT = {
   "출발": "Start from",
   "기준 모델 {}을 그대로 두고 양자화한 파일만 새 버전으로 — 행렬별 형식을 바꿔 다시 만들 때.": "Keeps the reference model {} and adds only the quantized files as new versions — for remaking with different per-matrix types.",
   "양자화 형식(여럿 고름)": "Quantization types (choose any)",
+  // 2-3 — 원래 모델과 견주기
+  "원래 모델과 견주기": "Compare with the original model",
+  "계산 형식": "Compute type",
+  "KL divergence {} · top-1 일치율 {} · 위치 {}개 · 대화 {}개": "KL divergence {0} · top-1 agreement {1} · {2} {2|position|positions} · {3} {3|conversation|conversations}",
+  "답 토큰의 로그확률 차(절댓값 평균) {} · 가장 큰 KL {} · {} · transformers {} · {}": "Answer-token log-probability difference (mean absolute) {} · largest KL {} · {} · transformers {} · {}",
+  "transformers · CPU — GGUF 만들기의 파이썬 환경": "transformers · CPU — the Make GGUF Python environment",
+  "기준 모델(GGUF)의 답을 원래 모델에 같은 토큰으로 넣어 위치마다 견줍니다. 0에 가까우면 변환과 엔진이 원래 모델을 그대로 옮긴 것이고, 버전들의 KL은 그 위에 더해진 차이입니다.": "Feeds the reference model's (GGUF) answers to the original model token by token and compares every position. Near 0 means conversion and engine reproduce the original model; the versions' KL is the difference added on top.",
+  "견주기": "Compare",
+  "원래 모델과 견주려면 작업 공간의 GGUF 만들기에서 도구 준비를 먼저 하세요(파이썬 · transformers).": "To compare with the original model, first set up tools in the workspace's Make GGUF (Python · transformers).",
   "대화 {}개": "{0} {0|conversation|conversations}",
   "대화 {}개 — 원본 {}개 중 분야마다 고르게": "{0} {0|conversation|conversations} — chosen evenly by category from {1}",
   "평가할 버전을 하나 이상 고르세요": "Choose at least one version to evaluate",
@@ -471,6 +480,19 @@ TMX.push(
   [/ · 변환 검증 문제 (\d+) · 확인 필요 (\d+) · 통과 (\d+)/g, ' · conversion check $1 problems · $2 to check · $3 passed'],
   [/GGUF 를 읽지 못했습니다/g, 'Could not read the GGUF'],
   [/(\S+): 형식 (\d+) — 이 길의 행렬은 (.+?) 여야 한다/g, '$1: type $2 — matrices on this path must be $3'],   // 엔진의 모델 확인(엔진/가중치K.gl)
+  // 2-3 — 원래 모델과 견주기(원래비교일 · data/orig_compare.py)
+  [/원래 모델에 기준 모델의 답을 넣어 견주는 중\(transformers · CPU · (\S+)\)/g, "Feeding the reference model's answers to the original model (transformers · CPU · $1)"],
+  [/원래 모델과 견주기 — 위치 (\d+) · KL (\S+) · top-1 ([\d.]+) %/g, 'Compared with the original model — $1 positions · KL $2 · top-1 $3 %'],
+  [/원래 모델을 읽었다 — (\S+) · ([\d.]+) 초/g, 'Loaded the original model — $1 · $2 s'],
+  [/(\d+)\/(\d+) (\S+) — 위치 (\d+) · KL (\S+)/g, '$1/$2 $3 — $4 positions · KL $5'],
+  [/원래 모델과 견줌 — 대화 (\d+) · 위치 (\d+) · KL (\S+) · top-1 ([\d.]+) %/g, 'Compared with the original model — $1 conversations · $2 positions · KL $3 · top-1 $4 %'],
+  [/계산 형식은 float32 · bfloat16 중 하나입니다/g, 'The compute type is float32 or bfloat16'],
+  [/이 결과에는 견줄 기준값\(같은 토큰의 확률\)이 없습니다/g, 'This result has no reference values to compare (probabilities of the same tokens)'],
+  [/GGUF 만들기 도구\(파이썬 가상 환경\)가 준비되지 않았습니다 — '도구 준비'를 먼저 누르세요/g, "The Make GGUF tools (Python virtual environment) are not set up — press 'Set up tools' first"],
+  [/앱의 data\\orig_compare\.py 가 없습니다/g, "The app's data\\orig_compare.py is missing"],
+  [/원래 모델과 견주지 못했습니다\(orig_compare\.py — 작업 기록을 보세요\)/g, 'Could not compare with the original model (orig_compare.py — see the run log)'],
+  [/원래 모델과 견준 값이 없습니다/g, 'No comparison with the original model yet'],
+  [/결과를 쓰지 못했습니다/g, 'Could not write the result'],
   [/엔진이 받지 않는 파일입니다/g, 'The engine does not support this file'],
   [/파일을 열 수 없습니다/g, 'Cannot open the file'],
 );
@@ -481,6 +503,7 @@ const EV = {
   sel: load('geulpu.ev.sel', ''), view: 'ws', dir: '', item: -1, cmpA: '', cmpB: '',
   res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0, checks: {}, checkV: '', origDir: {},
   tools: undefined, mk: {},   // 4-1 — GGUF 만들기 도구(/api/eval/tools) · 작업 공간마다 만들기 양식
+  orig: {}, origDt: 'float32',   // 2-3 — 결과마다 원래 모델과 견준 값(/api/eval/original) · 계산 형식
 };
 const EVF = new Set();   // 받는 중인 것
 const evEnc = encodeURIComponent;
@@ -925,6 +948,47 @@ function evMakeCard(w, busy) {
     h('div', null, h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-make', disabled: busy || !st ? true : null, onclick: run },
       I('play', 's'), busy ? T('다른 작업 실행 중') : T('만들기', 'make'))));
 }
+// ---------- 2-3 원래 모델과 견주기 ----------
+// 결과의 기준값(GGUF 기준 모델의 답 · 상위 K)을 원래 모델(transformers)에 같은 토큰으로 넣는다 — 변환 · 엔진이 원래 모델을 얼마나 그대로 옮겼나
+function evOrigCard(w, dir) {
+  evToolsNeed();
+  const key = `${w.id}/${dir}`;
+  if (EV.orig[key] === undefined && !EVF.has('orig' + key)) {
+    EVF.add('orig' + key);
+    api(`/api/eval/original?workspace=${evEnc(w.id)}&dir=${evEnc(dir)}`).then(r => { EV.orig[key] = r; }, () => { EV.orig[key] = { missing: true }; })
+      .finally(() => { EVF.delete('orig' + key); EV.tick++; renderEval(); });
+  }
+  const O = EV.orig[key];
+  const busy = !!(S.st.job && S.st.job.state === 'running');
+  const t = EV.tools, st = t && !t.error ? t.state : null;
+  const dirv = EV.origDir[w.id] !== undefined ? EV.origDir[w.id] : ((w.original && w.original.dir) || '');
+  const inp = h('input', { class: 'input mono', type: 'text', value: dirv, placeholder: 'C:\\models\\my-finetune', 'data-fk': 'ev-origcmp', 'aria-label': T('원래 모델 폴더'),
+    oninput: ev => { EV.origDir[w.id] = ev.target.value; } });
+  const seg = h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': T('계산 형식') }, ['float32', 'bfloat16'].map(v => h('button', {
+    class: EV.origDt === v ? 'on' : '', role: 'radio', 'aria-checked': EV.origDt === v ? 'true' : 'false', 'data-fk': 'ev-odt-' + v,
+    onclick: () => { EV.origDt = v; renderEval(true); } }, v)));
+  const run = async () => {
+    const d = inp.value.trim();
+    if (!d) { toast(T('원래 모델 폴더를 정하세요')); return; }
+    try { await api('/api/eval/original', { workspace: w.id, dir, original_dir: d, dtype: EV.origDt }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    catch (e) { toast(e.message, 'err'); }
+  };
+  let body = null;
+  if (O === undefined) body = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
+  else if (!O.missing && !O.error) body = h('div', { class: 'col g4' },
+    h('div', null, T`KL divergence ${evKL(O.kl_mean)} · top-1 일치율 ${evPct(O.top1)} · 위치 ${fmtNum(O.positions || 0)}개 · 대화 ${O.conversations}개`),
+    h('div', { class: 'small muted' }, T`답 토큰의 로그확률 차(절댓값 평균) ${evNum(O.answer_logprob_abs_mean, 6)} · 가장 큰 KL ${evKL(O.kl_max)} · ${O.dtype} · transformers ${O.transformers} · ${String(O.finished || '').replace('T', ' ').slice(0, 16)}`));
+  return h('div', { class: 'card col g12' },
+    h('div', { class: 'row' }, h('span', { class: 'sec' }, T('원래 모델과 견주기')), h('span', { class: 'grow' }),
+      h('span', { class: 'small muted' }, T('transformers · CPU — GGUF 만들기의 파이썬 환경'))),
+    h('p', { class: 'small muted m0' }, T('기준 모델(GGUF)의 답을 원래 모델에 같은 토큰으로 넣어 위치마다 견줍니다. 0에 가까우면 변환과 엔진이 원래 모델을 그대로 옮긴 것이고, 버전들의 KL은 그 위에 더해진 차이입니다.')),
+    body,
+    st ? h('div', { class: 'ev-form' },
+      h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(config.json과 가중치 .safetensors가 있는 폴더)')), inp),
+      h('div', { class: 'row g12 wrap' }, h('div', { class: 'col g4' }, h('span', { class: 'small muted' }, T('계산 형식')), seg),
+        h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-origrun', disabled: busy ? true : null, onclick: run }, I('target', 's'), busy ? T('다른 작업 실행 중') : T('견주기')))))
+      : h('div', { class: 'small muted' }, T('원래 모델과 견주려면 작업 공간의 GGUF 만들기에서 도구 준비를 먼저 하세요(파이썬 · transformers).')));
+}
 // 3-2 — 내장 데이터의 출처 · 대화 수 · 라이선스(앱/data/eval/sources.json)
 function evDataInfo(d) {
   if (!d || !d.items) return null;
@@ -991,7 +1055,7 @@ function evVerdict(r) {
 }
 
 // ---------- 화면 ----------
-const EV_JOBS = ['eval', 'fix', 'check', 'tools', 'make'];
+const EV_JOBS = ['eval', 'fix', 'check', 'tools', 'make', 'orig'];
 const evJobOf = () => { const j = S.st && S.st.job; return j && EV_JOBS.includes(j.kind) && (j.state === 'running' || jobKey(j) !== S.jobHide) ? j : null; };
 function evJobCard(j) {
   const tone = { running: 'acc', done: 'ok', failed: 'err', cancelled: 'dim' }[j.state] || '';
@@ -1232,6 +1296,7 @@ function evResultView(w) {
         chat ? h('td', { class: 'small c-fin nw' }, `${evFinish(x.ref_finish)} · ${evFinish(x.cand_finish)}`) : null)))))
       : h('div', { class: 'empty-box' }, h('div', null, T('해당하는 대화가 없습니다'))),
     shown.length > 500 ? h('p', { class: 'small muted m0' }, T`처음 500개만 보입니다(모두 ${shown.length}개).`) : null));
+  if (chat && m.positions) out.push(evOrigCard(w, EV.dir));
   out.push(h('details', { class: 'fold ev-repro' }, h('summary', null, I('chevR', 's'), T('재현 정보')),
     h('div', { class: 'kv mt16' },
       [[T('기준 모델'), `${s.reference && s.reference.file} · ${s.reference && s.reference.sha256}`],
@@ -1421,7 +1486,7 @@ function renderEval(force) {
   if (!page || !S.st || S.view !== 'eval') return;
   const j = S.st.job;
   const js = j && EV_JOBS.includes(j.kind) ? `${j.id}:${j.state}` : '';
-  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; EV.checks = {}; EV.tools = undefined; }   // 평가 작업이 시작 · 끝나면 목록 · 검증 보고서 · 도구를 다시
+  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; EV.checks = {}; EV.tools = undefined; EV.orig = {}; }   // 평가 작업이 시작 · 끝나면 목록 · 검증 보고서 · 도구 · 원래 모델과 견준 값을 다시
   const running = !!(j && EV_JOBS.includes(j.kind) && j.state === 'running');
   if (!EV.loading && Date.now() - EV.at > (running ? 3000 : 20000)) evLoad();
   const w = evWs(EV.sel);
