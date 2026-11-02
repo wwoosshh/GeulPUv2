@@ -3,9 +3,9 @@
 **[한국어](../모델평가안내.md)** · [README](../README.md) · [User guide](user-guide.md) · [Debugger guide](debugger-guide.md) · [Research guide](research-guide.md) · [Plan and measurements (Korean)](../문서/모델평가.md)
 
 **Model evaluation** (the flask button on the left rail) is a test bench for GGUF files. Make a GGUF from a fine-tuned model (a Hugging
-Face folder), check that the conversion is right, measure what each quantization changes, and remake a file that loses less quality —
-then compare before and after. With the same files, data and settings a rerun gives bit-identical results, so a before/after
-comparison shows only what you changed.
+Face folder), check that the conversion is right, measure what each quantization changes, count what the fine-tune learned and forgot
+against the model before fine-tuning, and remake a file that loses less quality — then compare before and after. With the same files,
+data and settings a rerun gives bit-identical results, so a before/after comparison shows only what you changed.
 
 ## Contents
 
@@ -15,10 +15,12 @@ comparison shows only what you changed.
 - [4. Grading rules](#4-grading-rules)
 - [5. Reading the metrics](#5-reading-the-metrics)
 - [6. Compare with the original model](#6-compare-with-the-original-model)
-- [7. Improve — restore one matrix group at a time](#7-improve--restore-one-matrix-group-at-a-time)
-- [8. Files](#8-files)
-- [9. From scripts — the API](#9-from-scripts--the-api)
-- [10. FAQ](#10-faq)
+- [7. Against the model before fine-tuning — learned and forgotten](#7-against-the-model-before-fine-tuning--learned-and-forgotten)
+- [8. Improve — restore one matrix group at a time](#8-improve--restore-one-matrix-group-at-a-time)
+- [9. Result table · Compare workspaces](#9-result-table--compare-workspaces)
+- [10. Files](#10-files)
+- [11. From scripts — the API](#11-from-scripts--the-api)
+- [12. FAQ](#12-faq)
 
 ## 1. Terms
 
@@ -28,6 +30,8 @@ comparison shows only what you changed.
 - **Reference model** — what every version is compared with. A BF16 or F16 file of the same model is best (Q8_0 if it does not fit in
   graphics memory); for a fine-tuned model, the BF16 converted with Make GGUF becomes the reference. With a file of another model or
   another fine-tune as the reference, every KL measures the wrong thing.
+- **Baseline model** (optional) — a GGUF of the model before fine-tuning. When one is chosen, every result on graded data counts what
+  the fine-tune learned and forgot (section 7).
 - **Version** — a GGUF file to compare (v1, v2, …). Its making settings (type · imatrix · per-matrix types · tool versions) and a note
   are kept with it.
 - **Original model** — the Hugging Face folder (`config.json` · `.safetensors` weights · tokenizer files). Conversion, the conversion
@@ -60,13 +64,15 @@ comparison shows only what you changed.
    tensors and changes only the keys. Different special tokens, tokenizer or settings need a new conversion.
 5. **Run evaluation** — choose data (section 3), the versions, the compute mode (exact or fast — fast on CUDA only) and the answer
    length. The reference model's answers and the top 64 at every position (the reference values) are made once and reused for the same
-   reference model, data and settings.
+   reference model, data and settings. With graded data you can also choose a baseline model (before fine-tuning — section 7).
 6. **Compare with the original model** — the card under the result (section 6). It shows how faithfully conversion and engine
    reproduce the original model.
-7. **Improve** — measure which matrix group of a quantized version lowers the KL most when restored to a higher type, and remake the
-   version with the groups you choose (section 7).
+7. **Improve** — measure which matrix group of a quantized version improves the KL (and the accuracy, with graded data) most when
+   restored to a higher type, and remake the version with the groups you choose (section 8).
 8. **Before/after** — choose two results in the list. Results with the same data, settings and reference model are compared, and the
    verdict counts conversations that now match the reference model and ones that newly differ.
+9. **Result table** — see the workspace's versions in one table and a size and quality chart, and export them as CSV. Compare
+   workspaces lines them up type by type with the workspaces of other fine-tunes (section 9).
 
 ## 3. Data
 
@@ -150,33 +156,80 @@ exactly) or bfloat16.
   1.0 × 10⁻⁴ — smaller when the answers are more certain). Above 10⁻³ the screen flags it. With a Q8_0 reference model it is around
   1.6 × 10⁻³, and the versions' KL is measured on top of that.
 
-## 7. Improve — restore one matrix group at a time
+## 7. Against the model before fine-tuning — learned and forgotten
+
+KL and accuracy against the reference model (the fine-tuned model's BF16) measure what conversion and quantization lost. What the
+fine-tune learned and forgot shows only against the model before fine-tuning.
+
+- On the Run evaluation card, choose the GGUF of the model before fine-tuning under **Baseline model (before fine-tuning — optional)**
+  (it has to be in the app's model list). The workspace keeps it for later evaluations. It counts on graded data only (data with
+  `answer`).
+- The baseline model's answers are made once, like the reference values, and reused for the same model, data and settings (the run log
+  says when the saved answers are used).
+- **Against the model before fine-tuning** on the result screen — the baseline model's accuracy (95 % interval) and, for the reference
+  model and the evaluated model each, the accuracy difference from it (%p) and the number of conversations **learned** (the model
+  before fine-tuning got it wrong, this model right) and **forgotten** (the model before fine-tuning got it right, this model wrong).
+  The result table (section 9) gets a 'Before fine-tuning' row.
+- Data that asks only about the injected knowledge cannot show forgetting — the model before fine-tuning did not know it, so there is
+  nothing to forget. Evaluate on general-ability data (`gsm8k` · `mmlu-pro-500`) too.
+
+Example — measured on this PC (Qwen3-0.6B fine-tuned on 300 invented facts with short answers): on facts600 the model before
+fine-tuning scores 0.33 %, and the fine-tuned BF16 learned 598 and forgot 0. On GSM8K the model before fine-tuning scores 60.35 % and
+the fine-tuned BF16 5.08 % (learned 22 · forgotten 751) — it learned only short answers and forgot how to work problems out. A second
+fine-tune with 259 of the base model's own answers mixed in came back to 60.20 %.
+
+## 8. Improve — restore one matrix group at a time
 
 Start from a version quantized with Make GGUF (the base version). For each group, a trial file restores only that group to the restore
 type (Q6_K · Q5_K · BF16), with the base version's type and imatrix, and is evaluated on the same data to see how much the KL drops.
 
 - Groups — `attn_q` · `attn_k` · `attn_v` · `attn_output` · `ffn_gate+ffn_up` (the engine reads both with one type) · `ffn_down` ·
   `token_embd` · `output` (when separate), and optionally the three thirds of the layers.
-- Table — per group: KL · reduction against the base · added size · reduction per MB.
-- Preselected — among matrix groups that cut the KL by more than 5 %, the three with the largest reduction per MB (layer thirds overlap
-  matrix groups and are left out; you can tick them). Reductions measured group by group do not add up — the evaluation after making is
-  the real value.
+- Table — per group: KL · reduction against the base · added size · reduction per MB. With graded data also **Accuracy (vs base, %p)**
+  (the tooltip gives the 95 % interval) and **Reference only correct** (conversations the reference model got right and the trial file
+  wrong).
+- Preselected — by **Choose by** (KL or accuracy, with graded data): among groups that cut the KL by more than 5 % or that raised the
+  accuracy, the three with the largest reduction or gain per MB (layer thirds included — you can change the ticks). With few
+  conversations an accuracy difference can be chance. Values measured group by group do not add up — the evaluation after making is the
+  real value.
 - **Make with the chosen groups** — remakes the version with the chosen groups at the restore type and evaluates it together with the
   base version on the same data. The chosen groups go into the file name and the note (for example
   `facts-r16-e6-Q4_K_M+ffn_gate+ffn_up+attn_v.Q6_K.gguf`). The base version is not measured again when a result with the same file,
   data and settings exists.
-- At the same size a standard type that other runtimes also know (for example Q5_K_M) can be the better choice — evaluate the made
-  version and the standard versions together on the same data.
+- **Size and quality** — at the bottom of the card, this workspace's versions measured with the same data and settings are listed by
+  size and quality (by the Choose by setting), and a version is flagged when a smaller one is as good or better — for example a
+  424 MB Q5_K_M next to a 447 MB file made with chosen groups. At the same size a standard type that other runtimes also know can be the
+  better choice, so evaluate the standard-type versions on the same data too.
 
-## 8. Files
+## 9. Result table · Compare workspaces
+
+**Result table** (a card on the workspace screen) — choose one **Data · settings** combination (data · compute mode · answer length ·
+thinking · chunks) to put each version's latest result in one table.
+
+- Columns — version (note) · type · size · KL · top-1 · answers that differ · accuracy (graded data — the tooltip gives the 95 %
+  interval). With graded data, rows for the reference model and the model before fine-tuning (section 7) follow underneath.
+- **By category** — accuracy (graded data) or KL per category (`category`).
+- **Size and quality chart** — size across, **Quality** up (KL on a log scale, or accuracy). Filled points are the frontier — versions
+  with no smaller version that is as good or better. An outlined point has a smaller version that is as good or better.
+- **Export CSV** — every result of the workspace (version × data · settings), one row each, plus per-category rows. The columns are
+  `workspace` · `version` · `label` · `file` · `type` · `size_bytes` · `data` · `mode` · `max_tokens` · `thinking` · `category` ·
+  `items` · `kl_mean` · `kl_p99` · `top1` · `ppl_ratio` · `answers_differ` · `answers_compared` · `near_tie` · `accuracy` ·
+  `accuracy_lo` · `accuracy_hi` · `ref_accuracy` · `ref_only` · `cand_only` · `finished` · `result_dir`.
+
+**Compare workspaces** (a button above the workspace list once two or more workspaces have results) — lines up workspaces measured
+with the same data and settings, type (row) by workspace (column). Each cell gives the KL (against that workspace's reference model)
+and the accuracy (in brackets, the difference from that workspace's reference model) — which fine-tune, A or B, loses less at Q4_K_M.
+The chosen workspaces' results export as one CSV.
+
+## 10. Files
 
 Under the data folder (`--data` · `--자료`, or the `GEULPU_HOME` environment variable; `%USERPROFILE%\GeulPU` by default):
 
 | Path | Contents |
 |---|---|
-| `평가\작업공간\<id>\workspace.json` | Name · original folder · reference model · versions (making settings · note) |
-| `평가\작업공간\<id>\결과\<time>-<version>\` | `summary.json` (metrics · accuracy · reproduction info · result hash) · `items.jsonl` (per conversation) · `positions.bin` (per position KL · top-1 · Δp …) · `diverge.jsonl` (where answers split) · `run-<version>.jsonl` (run log of the generated answers — 'Open in debugger') |
-| `평가\기준값\<first 16 of the key>\` | `reference.json` · `topk.bin` (reference values) · `run-ref.jsonl` · `original.json` (Compare with the original model) |
+| `평가\작업공간\<id>\workspace.json` | Name · original folder · reference model · baseline model · versions (making settings · note) |
+| `평가\작업공간\<id>\결과\<time>-<version>\` | `summary.json` (metrics · accuracy · against the model before fine-tuning (`baseline`) · reproduction info · result hash) · `items.jsonl` (per conversation — with a baseline model, also whether it got the conversation right, `base_correct`) · `positions.bin` (per position KL · top-1 · Δp …) · `diverge.jsonl` (where answers split) · `run-<version>.jsonl` (run log of the generated answers — 'Open in debugger') |
+| `평가\기준값\<first 16 of the key>\` | `reference.json` · `topk.bin` (reference values) · `run-ref.jsonl` · `original.json` (Compare with the original model) — the baseline model's answers are kept the same way, in that model's key folder |
 | `평가\작업공간\<id>\검증\` · `개선\` | Conversion check and improvement reports |
 | `평가\데이터\` | Imported data |
 | `made\<workspace>\` | Made GGUFs · imatrix (under the model folder when it is an ASCII path — llama.cpp's tools cannot open non-ASCII paths) |
@@ -186,7 +239,7 @@ Under the data folder (`--data` · `--자료`, or the `GEULPU_HOME` environment 
 GeulPU version and commit, device, kernel modules and their hashes, data SHA-256, settings and the result hash. With the same files,
 data, settings and GeulPU version, a rerun gives the same result hash.
 
-## 9. From scripts — the API
+## 11. From scripts — the API
 
 Scripts use the same API as the screen (the app's address, `http://127.0.0.1:44544` by default). Jobs (make · evaluate · compare ·
 improve …) run one at a time — a `POST` starts a job, and `job` in `GET /api/state` (`state` · `summary` · `reason`) shows its progress
@@ -194,8 +247,8 @@ and end. `POST /api/job/cancel` stops it and `GET /api/job/log?from=<line>` read
 
 | Request | What it does · body (JSON) |
 |---|---|
-| `GET /api/eval` | Workspaces, versions and results, and the data list |
-| `POST /api/eval/workspace` | `{"action": "create", "name", "reference": "<model id or empty>", "original_dir"}` · `update` (`id` · `name` · `current`) · `delete` (`id`) |
+| `GET /api/eval` | Workspaces, versions and results, and the data list — each result has `metrics` · `accuracy` · `categories` (per category) · `baseline` (against the model before fine-tuning) |
+| `POST /api/eval/workspace` | `{"action": "create", "name", "reference": "<model id or empty>", "original_dir"}` · `update` (`id` · `name` · `current` · `baseline`: the baseline model's id, empty to remove it) · `delete` (`id`) |
 | `POST /api/eval/version` | `{"workspace", "model", "label"}` — adds a GGUF from the app's model list as a version (`action: "delete"` with `id` removes one) |
 | `POST /api/eval/data/import` | `{"path", "name"}` — imports JSONL or TXT |
 | `POST /api/eval/tools` | Set up tools — `{"python": "<path, empty for automatic>"}` · `GET` shows what it downloads and the installed tools |
@@ -205,7 +258,7 @@ and end. `POST /api/job/cancel` stops it and `GET /api/job/log?from=<line>` read
 | `POST /api/eval/run` | Evaluate `{"workspace", "versions": ["v1"], "data", "mode": "exact" · "fast", "max_tokens", "thinking", "slots"}` |
 | `GET /api/eval/result?workspace=&dir=` · `/api/eval/item?workspace=&dir=&i=` · `/api/eval/compare?workspace=&a=&b=` | A result · one conversation · before/after |
 | `POST /api/eval/original` · `GET /api/eval/original?workspace=&dir=` | Compare with the original model `{"workspace", "dir", "original_dir", "dtype": "float32"}` · its values |
-| `POST /api/eval/improve` · `GET /api/eval/improve?workspace=` | Improvement measurement `{"workspace", "base", "data", "max_tokens", "restore": "q6_k", "layer_ranges": true}` · the last report |
+| `POST /api/eval/improve` · `GET /api/eval/improve?workspace=` | Improvement measurement `{"workspace", "base", "data", "max_tokens", "restore": "q6_k", "layer_ranges": true}` · the last report (with graded data, `accuracy` for `base` and every row) |
 | `POST /api/eval/debug` · `/api/eval/open` | Send a result's run logs to the debugger · open the result folder |
 
 Example — evaluate version v1 on facts600 and read the accuracy (Python standard library only):
@@ -232,8 +285,11 @@ print(r["dir"], r["metrics"]["kl_mean"], (r.get("accuracy") or {}).get("cand")) 
 To run a separate app, use `GeulPU --port 44600 --data D:\eval-data --no-open` (Korean names `--포트` · `--자료` · `--열지않음`).
 `GeulPU --help` lists every option.
 
-## 10. FAQ
+## 12. FAQ
 
+- **How do I see whether the fine-tune forgot what the model could do before?** — on the Run evaluation card, choose the model before
+  fine-tuning as the baseline model and evaluate on general-ability data such as `gsm8k` · `mmlu-pro-500`. 'Forgotten' in the result
+  counts conversations the model before fine-tuning got right and this model got wrong (section 7).
 - **My model was trained and saved with transformers 5 and does not convert** — press Set up tools again. It adds the transformers 5
   environment (about 30 MB). llama.cpp pins transformers 4.57.6, and 4.x cannot read the `tokenizer_config.json` that 5.x writes.
 - **The KL is not 0 — is the conversion wrong?** — between a 16-bit reference model and the original model, the KL is 10⁻⁶ to 10⁻⁴ from
