@@ -1933,8 +1933,15 @@ function quantOf(m) {
   if (!moe && s.quant && !['K', 'KI', 'W16'].includes(s.quant)) return s.quant;
   const c = catalogOf(m);
   if (c && c.quant) return c.quant;
+  if (s.file_type) return s.file_type;        // #200 — llama-quantize 가 적은 형식(general.file_type): 행렬 하나의 형식이 아니라 Q4_K_M 처럼
   if (moe) { const q = quantFromName(String((m && m.path) || '').split(/[\\/]/).pop()); if (q) return q; }
   return s.weight_type || s.quant || '';
+}
+// #200 — 모델 평가가 행렬별 형식으로 만든 파일은 이름의 '+' 뒤에 바꾼 행렬이 있다(…-Q4_K_M+blk0-8.Q6_K.gguf) — 형식 옆에 보인다
+function mixOf(m) {
+  const f = String((m && m.path) || '').split(/[\\/]/).pop().replace(/\.gguf$/i, '');
+  const i = f.indexOf('+');
+  return i > 0 ? f.slice(i) : '';
 }
 const QORDER = ['F32', 'F16', 'BF16', 'Q8_0', 'Q6_K', 'Q5_K_M', 'Q5_K_S', 'Q4_K_M', 'Q4_K_S', 'Q4_0'];
 const qRank = q => { const i = QORDER.indexOf(q); return i < 0 ? 99 : i; };
@@ -3880,6 +3887,7 @@ function quantLine(m) {
   else if (m.catalog && m.sha256 && !m.verified) tags.push(h('span', { class: 'tag err' }, I('alert'), T('무결성 확인 안 됨')));
   return h('div', { class: 'qline' + (s.ok && m.device_reason ? ' dimmed' : '') },
     h('span', { class: 'qlab', 'data-tip': m.path, 'data-tip-pos': 'top' }, q || '-'),
+    mixOf(m) ? h('span', { class: 'small muted ell', style: 'max-width:16em', 'data-tip': mixOf(m), 'data-tip-pos': 'top' }, mixOf(m)) : null,
     h('span', { class: 'sz' }, fmtBytes(m.size)),
     tags.length ? h('span', { class: 'qtags' }, tags) : null,
     h('span', { class: 'grow' }),

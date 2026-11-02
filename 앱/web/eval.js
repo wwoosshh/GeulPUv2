@@ -42,6 +42,9 @@ const EVAL_DICT = {
   "llama.cpp {} 실행 파일 — {}": "llama.cpp {} executables — {}",
   "도구 — llama.cpp {} · 파이썬 {} · torch {} · transformers {}": "Tools — llama.cpp {} · Python {} · torch {} · transformers {}",
   "도구 준비": "Set up tools",
+  "메모(고름)": "Note (optional)",
+  "메모(고름 — 만든 버전에 붙음)": "Note (optional — attached to the new versions)",
+  "예: LoRA r16 · 되풀이 데이터 섞음": "e.g. LoRA r16 · replay data mixed in",
   "transformers {} 환경 — transformers 5로 저장한 모델 폴더용(torch는 위의 것을 함께 씀)": "transformers {} environment — for model folders saved with transformers 5 (shares torch with the one above)",
   "약 30 MB(설치하면 200 MB 안쪽)": "About 30 MB (under 200 MB installed)",
   "도구 — llama.cpp {} · 파이썬 {} · torch {} · transformers {} · {}": "Tools — llama.cpp {} · Python {} · torch {} · transformers {} · {}",
@@ -647,7 +650,7 @@ function evShow() { EV.at = 0; }
 
 // ---------- 작업 공간 · 버전 · 데이터 — 창 ----------
 const evRunnables = () => sortedModels().filter(runnable);
-const evModelOpts = (ms, sel) => ms.map(m => h('option', { value: m.id, selected: m.id === sel ? true : null }, `${displayName(m)} · ${quantOf(m)} · ${fmtBytes(m.size)}`));
+const evModelOpts = (ms, sel) => ms.map(m => h('option', { value: m.id, selected: m.id === sel ? true : null }, `${displayName(m)} · ${quantOf(m)}${mixOf(m)} · ${fmtBytes(m.size)}`));
 function evNewWs() {
   const ms = evRunnables();
   const name = h('input', { class: 'input', type: 'text', value: T('새 작업 공간'), maxlength: 80 });
@@ -702,9 +705,10 @@ function evAddVersion(w) {
   const ms = evRunnables().filter(m => m.id !== w.reference.model && !w.versions.some(v => v.model === m.id));
   if (!ms.length) { toast(T('더할 수 있는 모델이 없습니다 — 모델 화면에서 GGUF 파일을 더하세요')); return; }
   const sel = h('select', { class: 'input', 'aria-label': T('평가할 GGUF') }, evModelOpts(ms, ms[0].id));
+  const memo = h('input', { class: 'input', type: 'text', maxlength: '120', placeholder: T('예: LoRA r16 · 되풀이 데이터 섞음'), 'aria-label': T('메모(고름)') });
   const go = async () => {
     try {
-      const r = await api('/api/eval/version', { workspace: w.id, model: sel.value });
+      const r = await api('/api/eval/version', { workspace: w.id, model: sel.value, label: memo.value.trim() });
       closeModal();
       const o = EV.opts[w.id];
       if (o && r.current) o.versions.add(r.current);
@@ -712,7 +716,8 @@ function evAddVersion(w) {
     } catch (e) { toast(e.message, 'err'); }
   };
   modal(h('div', { class: 'col g16' }, h('h2', null, T('버전 더하기')),
-    h('p', { class: 'm0 muted' }, T('기준 모델과 비교할 GGUF 파일을 고르세요. 파일은 옮기지 않고 앱의 모델 목록에 있는 파일을 그대로 씁니다.')), sel),
+    h('p', { class: 'm0 muted' }, T('기준 모델과 비교할 GGUF 파일을 고르세요. 파일은 옮기지 않고 앱의 모델 목록에 있는 파일을 그대로 씁니다.')), sel,
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('메모(고름)')), memo)),
     [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('더하기'))]);
 }
 async function evDelVersion(w, v) {
@@ -937,7 +942,7 @@ function evCheckCard(w, busy) {
       h('div', { class: 'row g12' },
         h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('검사할 버전')),
           h('select', { class: 'input', 'data-fk': 'ev-chkv', onchange: ev => { EV.checkV = ev.target.value; renderEval(true); } },
-            opts.map(v => h('option', { value: v.id, selected: v.id === vid ? true : null }, `${v.id === 'ref' ? T('기준 모델') : v.id} · ${v.file}`)))),
+            opts.map(v => h('option', { value: v.id, selected: v.id === vid ? true : null }, `${v.id === 'ref' ? T('기준 모델') : v.id} · ${v.label || v.file}`)))),
         h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-chk', disabled: busy ? true : null, onclick: run }, I('shield', 's'), busy ? T('다른 작업 실행 중') : T('검사'))))),
     body);
 }
@@ -984,7 +989,7 @@ function evMadeLine(s) {
 function evMakeCard(w, busy) {
   evToolsNeed();
   const t = EV.tools, st = t && !t.error ? t.state : null;
-  const o = EV.mk[w.id] || (EV.mk[w.id] = { from: w.reference.made ? 'ref' : 'convert', outtype: 'bf16', quants: new Set(['Q4_K_M']), imode: 'none', ipath: '', tt: '' });
+  const o = EV.mk[w.id] || (EV.mk[w.id] = { from: w.reference.made ? 'ref' : 'convert', outtype: 'bf16', quants: new Set(['Q4_K_M']), imode: 'none', ipath: '', tt: '', label: '' });
   if (!w.reference.model) o.from = 'convert';
   const conv = o.from === 'convert';
   const dirv = EV.origDir[w.id] !== undefined ? EV.origDir[w.id] : ((w.original && w.original.dir) || '');
@@ -1014,7 +1019,7 @@ function evMakeCard(w, busy) {
     if (tt.length && !o.quants.size) { toast(T('행렬별 형식은 양자화 형식과 함께 씁니다')); return; }
     if (o.imode !== 'none' && !o.ipath.trim()) { toast(T('imatrix에 쓸 파일을 정하세요')); return; }
     try {
-      await api('/api/eval/make', { workspace: w.id, from: o.from, source_dir: d, outtype: o.outtype, quants: EV_QUANTS.filter(q => o.quants.has(q)), imatrix: { mode: o.imode, path: o.ipath.trim() }, tensor_types: tt });
+      await api('/api/eval/make', { workspace: w.id, from: o.from, source_dir: d, outtype: o.outtype, quants: EV_QUANTS.filter(q => o.quants.has(q)), imatrix: { mode: o.imode, path: o.ipath.trim() }, tensor_types: tt, label: o.label.trim() });
       S.jobHide = ''; EV.at = 0; resetSig(); refresh();
     } catch (e) { toast(e.message, 'err'); }
   };
@@ -1040,7 +1045,11 @@ function evMakeCard(w, busy) {
       h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T('행렬별 형식(고급)')),
         h('div', { class: 'col g8 mt8' },
           h('textarea', { class: 'input mono', rows: '3', 'data-fk': 'ev-mk-tt', 'aria-label': T('행렬별 형식'), placeholder: 'attn_v=q6_k\nffn_down=q6_k', oninput: ev => { o.tt = ev.target.value; } }, o.tt),
-          h('span', { class: 'small muted' }, T('줄마다 행렬 이름=형식(llama-quantize --tensor-type). 엔진이 받지 않는 섞임이면 버전에 까닭이 보입니다.'))))),
+          h('span', { class: 'small muted' }, T('줄마다 행렬 이름=형식(llama-quantize --tensor-type). 엔진이 받지 않는 섞임이면 버전에 까닭이 보입니다.')))),
+      // #200 — 만든 버전에 붙는 메모(파일 이름은 작업 공간 이름에서, 행렬별 형식이면 바꾼 행렬이 꼬리에)
+      h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('메모(고름 — 만든 버전에 붙음)')),
+        h('input', { class: 'input', type: 'text', maxlength: '120', value: o.label, 'data-fk': 'ev-mk-label', placeholder: T('예: LoRA r16 · 되풀이 데이터 섞음'),
+          oninput: ev => { o.label = ev.target.value; } }))),
     h('div', null, h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-make', disabled: busy || !st ? true : null, onclick: run },
       I('play', 's'), busy ? T('다른 작업 실행 중') : T('만들기', 'make'))));
 }
@@ -1088,8 +1097,10 @@ function evImproveCard(w, busy) {
       if (!sel.length) { toast(T('무리를 하나 이상 고르세요')); return; }
       const tt = [].concat(...sel.map(r => r.tensor_types || []), rep.base.tensor_types || []);
       try {
+        // #200 — 고른 무리의 이름이 메모 · 파일 이름의 꼬리(예: ffn_gate+ffn_up+attn_v.Q6_K)
+        const label = `${sel.map(r => r.name.replace(/\s+/g, '')).join('+')}.${String(rep.restore).toUpperCase()}`;
         await api('/api/eval/make', { workspace: w.id, from: 'ref', quants: [rep.base.type], imatrix: rep.base.imatrix ? { mode: 'file', path: rep.base.imatrix } : { mode: 'none' },
-          tensor_types: tt, based_on: rep.base.version, then_eval: { data: rep.data, max_tokens: rep.max_tokens, versions: [rep.base.version] } });
+          tensor_types: tt, based_on: rep.base.version, label, then_eval: { data: rep.data, max_tokens: rep.max_tokens, versions: [rep.base.version] } });
         S.jobHide = ''; EV.at = 0; resetSig(); refresh();
       } catch (e) { toast(e.message, 'err'); }
     };
@@ -1119,7 +1130,7 @@ function evImproveCard(w, busy) {
     h('div', { class: 'ev-form' },
       h('div', { class: 'row g12 wrap' },
         h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('기준 버전')),
-          h('select', { class: 'input', 'data-fk': 'ev-imp-base', onchange: ev => { o.base = ev.target.value; } }, qv.map(v => h('option', { value: v.id, selected: v.id === o.base ? true : null }, `${v.id} · ${v.file}`)))),
+          h('select', { class: 'input', 'data-fk': 'ev-imp-base', onchange: ev => { o.base = ev.target.value; } }, qv.map(v => h('option', { value: v.id, selected: v.id === o.base ? true : null }, `${v.id} · ${v.label || v.file}`)))),
         h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('데이터')),
           h('select', { class: 'input', 'data-fk': 'ev-imp-data', onchange: ev => { o.data = ev.target.value; } }, ds.map(d => h('option', { value: d.name, selected: d.name === o.data ? true : null }, d.name)))),
         h('label', { class: 'col g4 ev-num' }, h('span', { class: 'small muted' }, T('답의 최대 토큰')),
@@ -1219,7 +1230,7 @@ function evRunCard(w, busy) {
       h('span', { class: 'small muted' }, T('실행하는 동안 불러온 채팅 모델은 GPU에서 내립니다'))),
     h('div', { class: 'ev-form' },
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('평가할 버전')),
-        w.versions.length ? h('div', { class: 'row g12' }, w.versions.map(v => h('label', { class: 'check' }, h('input', {
+        w.versions.length ? h('div', { class: 'row g12' }, w.versions.map(v => h('label', { class: 'check', 'data-tip': v.label || v.file, 'data-tip-pos': 'top' }, h('input', {
           type: 'checkbox', 'data-fk': 'ev-v-' + v.id, checked: o.versions.has(v.id) ? true : null,
           onchange: ev => { if (ev.target.checked) o.versions.add(v.id); else o.versions.delete(v.id); },
         }), v.id))) : h('span', { class: 'small muted' }, T('먼저 버전을 더하세요'))),
@@ -1370,7 +1381,9 @@ function evWsView(w) {
       evChat(r) && a && pa && a.compared && pa.compared ? T`답이 달라진 대화 ${sign(a.differ - pa.differ)}` : null].filter(Boolean).join(NB) : '';
     return h('div', { class: 'ev-vrow' + (r ? ' clk' : ''), onclick: e => { if (r && !e.target.closest('button')) evGo('result', { dir: r.dir }); } },
       h('div', { class: 'ev-vid' }, h('span', { class: 'ink' }, v.id), w.current === v.id ? h('span', { class: 'tag acc' }, T('지금')) : null),
-      h('div', { class: 'ev-vfile' }, h('div', { class: 'ink ell', 'data-tip': modelOf(v.model) ? labelById(v.model) : v.file, 'data-tip-pos': 'top' }, v.file),
+      // #200 — 메모가 있으면 메모를 앞에, 파일 이름은 그 아래(파일 이름은 작업 공간 이름 · 바꾼 행렬에서 짓는다)
+      h('div', { class: 'ev-vfile' }, h('div', { class: 'ink ell', 'data-tip': modelOf(v.model) ? labelById(v.model) : v.file, 'data-tip-pos': 'top' }, v.label || v.file),
+        v.label ? h('div', { class: 'small faint ell', 'data-tip': v.file, 'data-tip-pos': 'top' }, v.file) : null,
         h('div', { class: 'small muted' }, [fmtBytes(v.size), ({ imported: T('가져옴'), metadata: T('메타데이터 고침'), quantized: T('다시 양자화'), converted: T('변환'), convert: T('변환'), quantize: T('양자화') })[v.made && v.made.kind] || '',
           v.made && v.made.from ? (v.made.from === 'ref' ? T('기준 모델에서 만듦') : T`${v.made.from}에서 만듦`) : null].filter(Boolean).join(NB)),
         v.made && v.made.changed ? h('div', { class: 'small faint ell', 'data-tip': v.made.changed, 'data-tip-pos': 'top' }, T`바꾼 키 ${v.made.changed}`) : null,
