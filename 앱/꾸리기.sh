@@ -6,7 +6,8 @@
 # 1. 글 컴파일러: 파이썬 참조 구현 → 글로 쓴 컴파일러 → 같은 소스로 한 번 더(고정점).
 # 2. 빌드: GeulPU(앱/관리자.gl) · bin/ 의 server-cuda · device-cuda · diag-cuda · kernel-gen · ptx-backend, kernels/diag.ptx.
 #    Vulkan(server-vulkan · device-vulkan)은 리눅스에서 아직 없다(#135).
-# 3. web/ · data/(받을 모델 목록 · 교차검증 기준) · LICENSE · README.txt, version.json(판 · 커밋 · 빌드 때 · 파일마다 SHA-256).
+# 3. web/ · data/(받을 모델 목록 · 교차검증 기준 · 모델 평가의 내장 데이터) · LICENSE · THIRD_PARTY_NOTICES.md · README.txt, version.json(판 ·
+#    커밋 · 빌드 때 · 파일마다 SHA-256).
 # 4. GeulPU-<판>-linux-x64.tar.gz 와 SHA256SUMS.txt.
 # 윈도의 꾸리기가 견주는 교차검증 기준의 빌드 해시(expected.json 의 build)는 윈도 실행 파일의 것이라 견주지 않는다.
 set -euo pipefail
@@ -67,7 +68,7 @@ cp "$HERE/data/models.json" "$DIST/data/"
 cp "$ROOT/교차검증/expected.json" "$ROOT/교차검증/requests.json" "$DIST/data/crosscheck/"
 for f in models.json requests.json expected.json; do cp "$ROOT/교차검증/쌍/$f" "$DIST/data/crosscheck/pair/"; done
 cp "$HERE"/data/eval/* "$DIST/data/eval/"                       # 모델 평가 — 내장 데이터
-cp "$ROOT/LICENSE" "$DIST/"
+cp "$ROOT/LICENSE" "$ROOT/THIRD_PARTY_NOTICES.md" "$DIST/"        # 고지 — 내장 데이터(GSM8K · MMLU-Pro)와 llama.cpp 에서 만든 표
 cp "$HERE/읽어보기.txt" "$DIST/README.txt"
 
 say "version.json..."

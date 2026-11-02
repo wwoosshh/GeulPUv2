@@ -2,7 +2,8 @@
 """모델 평가 3-1(문서/모델평가.md 3.9) — 정답 채점(앱/평가채점.gl)의 파이썬 참조와 GPU 없는 대조(엔진/시험_채점.gl).
 
 채점 규칙(number · choice · exact · tool_call)과 정답률의 부트스트랩 95 % 구간을 같은 규칙으로 계산해, 프로그램의 판정 · 구간의 비트가
-같은가 본다. 사례는 손으로 정한 것(기대 판정을 함께 적음 — 규칙이 뜻대로인가)과 무작위로 지은 것(참조와 같은가).
+같은가 본다. 사례는 손으로 정한 것(기대 판정을 함께 적음 — 규칙이 뜻대로인가)과 무작위로 지은 것(참조와 같은가), 그리고 3-2 부터
+내장 데이터(앱/data/eval/*.jsonl)의 줄마다 정답으로 지은 답(맞음이어야 함 — 데이터와 채점의 자기 점검)과 줄의 꼴.
 
     python -I -X utf8 시험/채점.py check <시험_채점.exe>        (빠른 점검 · CI)
 """
@@ -14,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def 숫자(c):
     return "0" <= c <= "9"
@@ -248,12 +250,53 @@ def 무작위(r, n):
     return out
 
 
+def 지은답(grader, expected):
+    """정답으로 지은 답 — (답 글, 도구 호출)"""
+    if grader == "number":
+        return f"Step by step. The answer is {expected.split('####')[-1].strip()}.", None
+    if grader == "choice":
+        return f"Let me think. The answer is ({expected}).", None
+    if grader == "exact":
+        return expected, None
+    return "", expected
+
+
+def 내장(틀림):
+    """3-2 — 앱/data/eval 의 JSONL 마다 줄의 꼴(messages · 겹치지 않는 id · 아는 채점과 정답)을 보고, 채점하는 줄의 정답으로 지은 답을
+    (grader, expected, answer, tool, 기대 1) 사례로 낸다"""
+    폴더 = os.path.join(ROOT, "앱", "data", "eval")
+    사례, 수 = [], {}
+    for f in sorted(os.listdir(폴더)):
+        if not f.endswith(".jsonl"):
+            continue
+        ids = set()
+        for k, l in enumerate(open(os.path.join(폴더, f), encoding="utf-8"), 1):
+            x = json.loads(l)
+            i = x.get("id")
+            if i is not None and i in ids:
+                틀림.append(f"{f}:{k} — id 가 겹친다: {i}")
+            ids.add(i)
+            if not isinstance(x.get("messages"), list) or not x["messages"]:
+                틀림.append(f"{f}:{k} — messages 가 없다")
+            g = x.get("grader")
+            if g is None:
+                continue
+            if g not in ("number", "choice", "exact", "tool_call") or "answer" not in x:
+                틀림.append(f"{f}:{k} — 채점 {g!r} · 정답 {'있음' if 'answer' in x else '없음'}")
+                continue
+            a, t = 지은답(g, x["answer"])
+            사례.append((g, x["answer"], a, t, 1))
+            수[f[:-6]] = 수.get(f[:-6], 0) + 1
+    return 사례, 수
+
+
 def check(exe):
     sys.stdout.reconfigure(encoding="utf-8")
     r = random.Random(3)
-    사례 = 손 + 무작위(r, 400)
-    부트 = [[1] * 10, [0] * 7, [r.randint(0, 1) for _ in range(60)], [r.randint(0, 1) for _ in range(300)], [1, 0]]
     틀림 = []
+    내장사례, 내장수 = 내장(틀림)
+    사례 = 손 + 무작위(r, 400) + 내장사례
+    부트 = [[1] * 10, [0] * 7, [r.randint(0, 1) for _ in range(60)], [r.randint(0, 1) for _ in range(300)], [1, 0]]
     with tempfile.TemporaryDirectory() as 폴더:
         pi = os.path.join(폴더, "cases.json")
         po = os.path.join(폴더, "out.json")
@@ -278,7 +321,9 @@ def check(exe):
     if 틀림:
         print(f"정답 채점: 못 미침 {len(틀림)}")
         return 1
-    print(f"정답 채점: 통과 — 판정 {len(사례)} 사례(손으로 정한 {len(손)} · 무작위 {len(사례) - len(손)}) · 부트스트랩 구간 {len(부트)} 경우의 비트가 참조와 같음")
+    내장글 = " · ".join(f"{k} {v}" for k, v in 내장수.items())
+    print(f"정답 채점: 통과 — 판정 {len(사례)} 사례(손으로 정한 {len(손)} · 무작위 400 · 내장 데이터의 정답으로 지은 답 {len(내장사례)} — {내장글}) · "
+          f"부트스트랩 구간 {len(부트)} 경우의 비트가 참조와 같음")
     return 0
 
 

@@ -10,6 +10,7 @@
 !도구/사전처리표.py
 !도구/jlens_fit.py
 !도구/same_bits.py
+!도구/공개과제.py
 __pycache__/
 *.pyc
 *.임시
