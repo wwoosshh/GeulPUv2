@@ -27,9 +27,13 @@ const EVAL_DICT = {
   "비우면 파일 이름": "File name if empty",
   "데이터를 불러왔습니다 — {}": "Data imported — {}",
   "데이터 불러오기": "Import data",
-  "JSONL — 줄마다 대화 하나: {\"messages\": […]}, 고를 수 있는 칸 id · category · tools · max_tokens · thinking. TXT — 텍스트 하나를 문맥 512의 청크로 나눠 llama-perplexity와 같은 위치를 점수 매깁니다.": "JSONL — one conversation per line: {\"messages\": […]}, optional fields id · category · tools · max_tokens · thinking. TXT — one text split into context-512 chunks, scored at the same positions as llama-perplexity.",
+  "JSONL — 줄마다 대화 하나: {\"messages\": […]}, 고를 수 있는 칸 id · category · tools · max_tokens · thinking, 정답을 채점하려면 answer와 grader(number · choice · exact · tool_call). TXT — 텍스트 하나를 문맥 512의 청크로 나눠 llama-perplexity와 같은 위치를 점수 매깁니다.": "JSONL — one conversation per line: {\"messages\": […]}, optional fields id · category · tools · max_tokens · thinking, and answer with grader (number · choice · exact · tool_call) to score correctness. TXT — one text split into context-512 chunks, scored at the same positions as llama-perplexity.",
   "파일 경로(.jsonl · .txt)": "File path (.jsonl · .txt)",
   "이름(영문 · 숫자 · . _ -)": "Name (letters · digits · . _ -)",
+  "GeulPU가 쓴 데이터": "Written by GeulPU",
+  "내장|data": "Built-in",
+  "대화 {}개": "{0} {0|conversation|conversations}",
+  "대화 {}개 — 원본 {}개 중 분야마다 고르게": "{0} {0|conversation|conversations} — chosen evenly by category from {1}",
   "평가할 버전을 하나 이상 고르세요": "Choose at least one version to evaluate",
   "데이터를 고르세요": "Choose the data",
   "평가하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?": "The loaded chat model is unloaded so the evaluation has the GPU to itself. Continue?",
@@ -569,7 +573,7 @@ function evImport(w) {
     } catch (e) { toast(e.message, 'err'); }
   };
   modal(h('div', { class: 'col g16' }, h('h2', null, T('데이터 불러오기')),
-    h('p', { class: 'm0 muted' }, T('JSONL — 줄마다 대화 하나: {"messages": […]}, 고를 수 있는 칸 id · category · tools · max_tokens · thinking. TXT — 텍스트 하나를 문맥 512의 청크로 나눠 llama-perplexity와 같은 위치를 점수 매깁니다.')),
+    h('p', { class: 'm0 muted' }, T('JSONL — 줄마다 대화 하나: {"messages": […]}, 고를 수 있는 칸 id · category · tools · max_tokens · thinking, 정답을 채점하려면 answer와 grader(number · choice · exact · tool_call). TXT — 텍스트 하나를 문맥 512의 청크로 나눠 llama-perplexity와 같은 위치를 점수 매깁니다.')),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('파일 경로(.jsonl · .txt)')), path),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('이름(영문 · 숫자 · . _ -)')), name)),
   [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('불러오기'))], false, 'input');
@@ -705,6 +709,14 @@ function evCheckCard(w, busy) {
         h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-chk', disabled: busy ? true : null, onclick: run }, I('shield', 's'), busy ? T('다른 작업 실행 중') : T('검사'))))),
     body);
 }
+// 3-2 — 내장 데이터의 출처 · 대화 수 · 라이선스(앱/data/eval/sources.json)
+function evDataInfo(d) {
+  if (!d || !d.items) return null;
+  const parts = [d.by === 'GeulPU' ? T('GeulPU가 쓴 데이터') : d.title,
+    d.of ? T`대화 ${fmtNum(d.items)}개 — 원본 ${fmtNum(d.of)}개 중 분야마다 고르게` : T`대화 ${fmtNum(d.items)}개`, d.license,
+    d.url ? h('a', { href: d.url, target: '_blank', rel: 'noopener' }, d.url.replace(/^https?:\/\//, '')) : null].filter(Boolean);
+  return h('div', { class: 'small muted break' }, parts.map((x, i) => [i ? ' · ' : null, x]));
+}
 function evRunCard(w, busy) {
   const o = evOpts(w);
   const ds = (EV.list && EV.list.data) || [];
@@ -732,8 +744,9 @@ function evRunCard(w, busy) {
         h('div', { class: 'row g8 nowrap' },
           h('select', { class: 'input', 'data-fk': 'ev-data', 'aria-label': T('데이터'), onchange: ev => { o.data = ev.target.value; renderEval(true); } },
             ds.map(x => h('option', { value: x.name, selected: x.name === o.data ? true : null },
-              `${x.name} · ${x.kind === 'text' ? T('텍스트') : T('대화')} · ${x.source === 'builtin' ? T('내장') : T('불러옴')}`))),
-          h('button', { class: 'btn sm needs-conn', onclick: () => evImport(w) }, I('folder', 's'), T('불러오기')))),
+              `${x.name} · ${x.kind === 'text' ? T('텍스트') + ' · ' : ''}${x.source === 'builtin' ? T('내장', 'data') : T('불러옴')}`))),
+          h('button', { class: 'btn sm needs-conn', onclick: () => evImport(w) }, I('folder', 's'), T('불러오기'))),
+        evDataInfo(d)),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('계산 방식')), seg),
       h('div', { class: 'row g16 ev-nums' },
         text ? num('chunks', 1, 4096, T('청크 수(512 토큰)')) : num('max', 1, 8192, T('답의 최대 토큰')),

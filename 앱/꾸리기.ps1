@@ -7,7 +7,8 @@
 # 2. 뒷단 둘(PTX · SPIR-V)은 글 저장소에서, 나머지는 이 저장소에서 빌드한다:
 #      GeulPU.exe(앱/관리자.gl) · bin\server-cuda · server-vulkan · device-vulkan · device-cuda · diag-cuda · diag-vulkan · kernel-gen ·
 #      ptx-backend · spirv-backend, kernels\ 의 진단 커널(PTX · SPIR-V — 협력 모양 셋)
-# 3. web\ · data\(받을 모델 목록 · 교차검증 기준) · LICENSE · README.txt 를 넣고 version.json(판 · 커밋 · 빌드 때 · 파일마다 SHA-256)을 쓴다.
+# 3. web\ · data\(받을 모델 목록 · 교차검증 기준 · 모델 평가의 내장 데이터) · LICENSE · THIRD_PARTY_NOTICES.md · README.txt 를 넣고
+#    version.json(판 · 커밋 · 빌드 때 · 파일마다 SHA-256)을 쓴다.
 # 4. 교차검증 기준(expected.json)에 있는 빌드 해시와 견준다 — 다르면 멈춘다(-AllowHashChange 면 경고만). 릴리스의 서버 · 생성기 · 뒷단이
 #    기준 PC 에서 R1 32 문제를 비트까지 맞춘 빌드와 같은 바이트라는 것을 릴리스마다 확인한다.
 # 5. GeulPU-<판>-windows-x64.zip 과 SHA256SUMS.txt.
@@ -116,6 +117,8 @@ foreach ($f in @('models.json', 'requests.json', 'expected.json')) {
 # 모델 평가(문서/모델평가.md) — 내장 데이터(앱/data/eval)
 Copy-Item -Path (Join-Path $Here 'data\eval\*') -Destination (Join-Path $Dist 'data\eval')
 Copy-Item -LiteralPath (Join-Path $Root 'LICENSE') -Destination $Dist
+# 고지 — 내장 데이터(GSM8K · MMLU-Pro)와 llama.cpp 에서 만든 표
+Copy-Item -LiteralPath (Join-Path $Root 'THIRD_PARTY_NOTICES.md') -Destination $Dist
 Copy-Item -LiteralPath (Join-Path $Here '읽어보기.txt') -Destination (Join-Path $Dist 'README.txt')
 
 # ---- 4. 기준 해시와 견주기 ----

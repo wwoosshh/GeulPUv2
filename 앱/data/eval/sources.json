@@ -1,0 +1,6 @@
+{
+  "basic60": {"items": 60, "by": "GeulPU", "license": "MIT"},
+  "tasks40": {"items": 40, "by": "GeulPU", "license": "MIT"},
+  "gsm8k": {"title": "GSM8K test", "items": 1319, "license": "MIT", "url": "https://github.com/openai/grade-school-math"},
+  "mmlu-pro-500": {"title": "MMLU-Pro test", "items": 500, "of": 12032, "license": "MIT", "url": "https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro"}
+}
