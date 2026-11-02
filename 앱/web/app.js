@@ -1193,6 +1193,7 @@ const DICT = {
   " · 건너뜀 {}개": " · {} skipped",
   " (분기 {}개 포함)": " (including {0} {0|branch|branches})",
   "중단점은 그 요청을 생성한 모델의 점수에서 찾습니다 — 점수가 있는 요청 {}/{}개. 이 실행의 모델로 '점수 매기기'를 누르세요.": "Breakpoints come from the scores of the model that generated each request — {}/{} requests have them. Press 'Score' with this run's model.",
+  "모델 평가는 기준 모델의 답을 두 모델로 매긴 확률만 남깁니다 — 이 실행의 답(이 모델이 낸 답)의 점수는 모델을 불러 따로 매깁니다.": "Model evaluation keeps only the probabilities of the reference model's answers scored by both models — the scores of this run's answers (the ones this model gave) are made separately with the model loaded.",
   "요청 {}": "Request {}",
   "온도 {}": "temperature {}",
   "시드 {}": "seed {}",
@@ -7161,6 +7162,8 @@ function dbgReqsView(run) {
       h('span', null, T`재생: ${fmtNum(ran.length)}개 중 같음 ${fmtNum(ran.filter(v => v.result === 'same').length)}개` + (vals.length > ran.length ? T` · 건너뜀 ${fmtNum(vals.length - ran.length)}개` : '')
         + (rb ? T` (분기 ${fmtNum(rb)}개 포함)` : ''))) : null,
     scored < run.reqs.length ? labNote(T`중단점은 그 요청을 생성한 모델의 점수에서 찾습니다 — 점수가 있는 요청 ${fmtNum(scored)}/${fmtNum(run.reqs.length)}개. 이 실행의 모델로 '점수 매기기'를 누르세요.`) : null,
+    // #202 — 모델 평가에서 넘어온 실행: 평가가 잰 확률은 기준 모델의 답을 두 모델로 매긴 것이고, 여기의 점수는 이 모델이 낸 자기 답의 것이다
+    scored < run.reqs.length && /^eval-/.test(run.name || '') ? labNote(T('모델 평가는 기준 모델의 답을 두 모델로 매긴 확률만 남깁니다 — 이 실행의 답(이 모델이 낸 답)의 점수는 모델을 불러 따로 매깁니다.')) : null,
     dbgBreakSet(),
     h('div', { class: 'list' }, h('table', { class: 'data lab-table dbg-table' },
       h('thead', null, h('tr', null, [T('차례'), T('경로'), T('상태'), T('프롬프트'), T('스텝'), T('끝'), T('중단점'), T('분기'), T('재생')].map((t, k) => h('th', { class: k === 3 || k === 4 || k === 7 ? 'r' : null }, t)))),
