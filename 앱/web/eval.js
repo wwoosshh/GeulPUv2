@@ -5,6 +5,13 @@ const EVAL_DICT = {
   "끝 토큰": "End token",
   "도구 호출": "Tool call",
   "아직 없음": "not set yet",
+  "비교용 모델(미세조정 전 — 고름)": "Baseline model (before fine-tuning — optional)",
+  "비교용 모델": "Baseline model",
+  "미세조정 전 모델을 고르면 채점 데이터의 결과마다 그 모델 대비 정답률과 배운 것(전에 틀리고 지금 맞음) · 잊은 것(전에 맞고 지금 틀림)을 셉니다. 그 모델의 답은 한 번 만들어 다시 씁니다.": "Choose the model before fine-tuning to get, for every result on graded data, the accuracy against it and what was learned (wrong before, right now) and forgotten (right before, wrong now). Its answers are made once and reused.",
+  "미세조정 전 모델 대비": "Against the model before fine-tuning",
+  "미세조정 전": "Before fine-tuning",
+  "배운 것 {} · 잊은 것 {}": "learned {} · forgotten {}",
+  "배운 것은 미세조정 전 모델이 틀리고 이 모델이 맞은 대화, 잊은 것은 미세조정 전 모델이 맞고 이 모델이 틀린 대화입니다.": "Learned: conversations the model before fine-tuning got wrong and this model got right. Forgotten: the ones it got right and this model got wrong.",
   "결과 표": "Result table",
   "데이터 · 설정": "Data · settings",
   "품질": "Quality",
@@ -1342,6 +1349,13 @@ function evRunCard(w, busy) {
               `${x.name} · ${x.kind === 'text' ? T('텍스트') + ' · ' : ''}${x.source === 'builtin' ? T('내장', 'data') : T('불러옴')}`))),
           h('button', { class: 'btn sm needs-conn', onclick: () => evImport(w) }, I('folder', 's'), T('불러오기'))),
         evDataInfo(d)),
+      // #199 — 비교용 모델(미세조정 전): 채점 데이터면 결과마다 배운 것 · 잊은 것. 그 모델의 답은 기준값처럼 한 번 만들고 다시 쓴다
+      text ? null : h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('비교용 모델(미세조정 전 — 고름)')),
+        h('select', { class: 'input', 'data-fk': 'ev-base', 'aria-label': T('비교용 모델'), onchange: async ev => {
+          try { await api('/api/eval/workspace', { action: 'update', id: w.id, baseline: ev.target.value }); evLoad(); } catch (e) { toast(e.message, 'err'); }
+        } }, h('option', { value: '', selected: w.baseline && w.baseline.model ? null : true }, T('없음')),
+          evModelOpts(evRunnables().filter(m => m.id !== w.reference.model), (w.baseline && w.baseline.model) || '')),
+        h('span', { class: 'small muted' }, T('미세조정 전 모델을 고르면 채점 데이터의 결과마다 그 모델 대비 정답률과 배운 것(전에 틀리고 지금 맞음) · 잊은 것(전에 맞고 지금 틀림)을 셉니다. 그 모델의 답은 한 번 만들어 다시 씁니다.'))),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('계산 방식')), seg),
       h('div', { class: 'row g16 ev-nums' },
         text ? num('chunks', 1, 4096, T('청크 수(512 토큰)')) : num('max', 1, 8192, T('답의 최대 토큰')),
@@ -1560,7 +1574,17 @@ function evTableCard(w) {
       }),
       graded && ra ? h('tr', null, h('td', { class: 'small muted' }, T('기준 모델')), h('td', { class: 'mono small muted' }, rm ? quantOf(rm) : (w.reference.quant || '')),
         h('td', { class: 'r num small muted' }, rm ? fmtBytes(rm.size) : '-'), h('td', null, ''), h('td', null, ''), h('td', null, ''),
-        h('td', { class: 'r num small muted', 'data-tip': ra.ref_ci ? T`95 % 구간 ${evPct(ra.ref_ci[0])} ~ ${evPct(ra.ref_ci[1])}` : null, 'data-tip-pos': 'top' }, evPct(ra.ref))) : null));
+        h('td', { class: 'r num small muted', 'data-tip': ra.ref_ci ? T`95 % 구간 ${evPct(ra.ref_ci[0])} ~ ${evPct(ra.ref_ci[1])}` : null, 'data-tip-pos': 'top' }, evPct(ra.ref))) : null,
+      // #199 — 비교용 모델(미세조정 전)의 정답률
+      (() => {
+        const b = (items.find(x => x.r.baseline) || {}).r;
+        const bl = b && b.baseline;
+        if (!graded || !bl || typeof bl.accuracy !== 'number') return null;
+        const bm = modelOf(bl.model);
+        return h('tr', null, h('td', { class: 'small muted' }, T('미세조정 전')), h('td', { class: 'mono small muted' }, bm ? quantOf(bm) : ''),
+          h('td', { class: 'r num small muted' }, bm ? fmtBytes(bm.size) : '-'), h('td', null, ''), h('td', null, ''), h('td', null, ''),
+          h('td', { class: 'r num small muted', 'data-tip': Array.isArray(bl.ci) ? T`95 % 구간 ${evPct(bl.ci[0])} ~ ${evPct(bl.ci[1])}` : null, 'data-tip-pos': 'top' }, evPct(bl.accuracy)));
+      })()));
   }
   const byAcc = o.by === 'acc';
   const pts = items.map(x => ({ id: x.v.id, size: x.v.size, kl: (x.r.metrics || {}).kl_mean, acc: evAccOf(x.r) })).filter(p => typeof p.kl === 'number' && (!byAcc || p.acc !== null));
@@ -1731,6 +1755,19 @@ function evResultView(w) {
         h('div', { class: 'cell' }, h('div', { class: 'k' }, T('차이(평가 − 기준)')), h('div', { class: 'v' }, (d > 0 ? '+' : d < 0 ? '−' : '±') + (Math.abs(d) * 100).toFixed(2) + T('%p')),
           h('div', { class: 's' }, T`기준만 맞음 ${acc.ref_only} · 평가만 맞음 ${acc.cand_only} · p = ${evNum(acc.p, 3)}`))),
       h('p', { class: 'small muted m0' }, T('같은 대화에서 한쪽만 맞은 수로 부호 검정을 합니다. 구간은 대화를 다시 뽑는 부트스트랩(1,000번)입니다.'))));
+    // #199 — 비교용 모델(미세조정 전) 대비: 배운 것 · 잊은 것
+    const bl = s.baseline;
+    if (bl && bl.items) {
+      const dd = x => `${x > 0 ? '+' : x < 0 ? '−' : '±'}${(Math.abs(x) * 100).toFixed(2)}%p`;
+      out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('미세조정 전 모델 대비')), h('span', { class: 'small muted' }, `${bl.file || ''}`)),
+        h('div', { class: 'fd-stats ev-stats3' },
+          h('div', { class: 'cell' }, h('div', { class: 'k' }, T('미세조정 전')), h('div', { class: 'v' }, evPct(bl.accuracy)), h('div', { class: 's' }, T`95% 구간 ${ci(bl.ci)}`)),
+          h('div', { class: 'cell' }, h('div', { class: 'k' }, T('기준 모델')), h('div', { class: 'v' }, dd(acc.ref - bl.accuracy)),
+            h('div', { class: 's' }, T`배운 것 ${bl.ref_learned} · 잊은 것 ${bl.ref_forgotten}`)),
+          h('div', { class: 'cell' }, h('div', { class: 'k' }, T('평가할 모델')), h('div', { class: 'v' }, dd(acc.cand - bl.accuracy)),
+            h('div', { class: 's' }, T`배운 것 ${bl.cand_learned} · 잊은 것 ${bl.cand_forgotten}`))),
+        h('p', { class: 'small muted m0' }, T('배운 것은 미세조정 전 모델이 틀리고 이 모델이 맞은 대화, 잊은 것은 미세조정 전 모델이 맞고 이 모델이 틀린 대화입니다.'))));
+    }
   }
   if (m.positions) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('같은 토큰의 확률')),
     h('span', { class: 'small muted' }, chat ? T('기준 모델이 낸 답의 토큰마다') : T('청크마다 뒤쪽 255 토큰'))),
