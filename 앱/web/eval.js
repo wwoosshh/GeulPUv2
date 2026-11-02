@@ -55,6 +55,19 @@ const EVAL_DICT = {
   "위치 {}개": "{} positions",
   "작업 공간": "Workspaces",
   "작업 공간|one": "Workspace",
+  "채팅 템플릿": "Chat template",
+  "(키 없음)": "(no key)",
+  "바뀐 것이 없습니다": "Nothing changed",
+  "메타데이터 고치기 — {}": "Fix metadata — {}",
+  "텐서는 그대로 두고 GGUF의 메타데이터(키)만 바꾼 새 파일을 앱의 모델 폴더에 쓰고 새 버전으로 더합니다. 원래 파일은 바뀌지 않습니다.": "Writes a new file to the app's model folder with only the GGUF metadata (keys) changed — the tensors stay as they are — and adds it as a new version. The original file is not changed.",
+  "어휘 {}": "vocabulary {}",
+  "키 {}개": "{0} {0|key|keys}",
+  "채팅 템플릿(tokenizer.chat_template — jinja)": "Chat template (tokenizer.chat_template — jinja)",
+  "토큰은 어휘의 제어 토큰(control · user-defined)에서 고릅니다. 고친 버전으로 다시 평가하면 앞 버전과 전후 비교할 수 있습니다.": "Tokens are chosen from the vocabulary's control tokens (control · user-defined). Evaluate the fixed version again to compare it with the previous one.",
+  "새 버전 만들기": "Create new version",
+  "바꾼 키 {}": "Changed keys: {}",
+  "메타데이터 고치기": "Fix metadata",
+  "채팅 템플릿 · 특수 토큰 — 새 버전으로": "Chat template · special tokens — as a new version",
   "기준 모델|col": "Reference",
   "평가할 모델|col": "Evaluated",
   "대화|col": "Items",
@@ -85,8 +98,8 @@ const EVAL_DICT = {
   "변환": "Converted",
   "답 {}/{} 달라짐 · KL {}": "{}/{} answers differ · KL {}",
   "결과 없음": "No result",
-  "앞 버전 대비 {}": "vs previous version {}",
-  "앞 버전과 데이터 · 설정이 달라 비교하지 않음": "Not compared with the previous version (different data or settings)",
+  "{} 대비 {}": "vs {} {}",
+  "{}에서 만듦": "made from {}",
   "답 {}/{} 달라짐": "{}/{} answers differ",
   "{} 메뉴": "{} menu",
   "최근 결과 보기": "View latest result",
@@ -249,6 +262,28 @@ TMX.push(
   [/이 결과에는 실행 로그가 없습니다\(텍스트 데이터\)/g, 'This result has no run log (text data)'],
   [/실행 로그를 디버거 폴더로 옮기지 못했습니다/g, 'Could not copy the run log to the debugger folder'],
   [/\[기준\]/g, '[reference]'],
+  // 2-1 — 메타데이터 고치기(평가고침일 · 앱/GGUF쓰기.gl)
+  [/원래 파일을 읽는 중/g, 'Reading the original file'],
+  [/\[([^\]]+)\] (.+?) → (.+?)\(바꾸는 키: (.*?)\)/g, '[$1] $2 → $3 (keys: $4)'],
+  [/새 파일을 쓰는 중 — (\d+)\/(\d+) MB/g, 'Writing the new file — $1/$2 MB'],
+  [/새 파일을 모델 목록에 더하는 중/g, 'Adding the new file to the model list'],
+  [/GGUF 메타데이터 고치기 — (\S+) → (\S+) · /g, 'GGUF metadata fix — $1 → $2 · '],
+  [/버전의 모델이 앱의 모델 목록에 없습니다/g, "The version's model is not in the app's model list"],
+  [/요청을 읽지 못했습니다/g, 'Could not read the request'],
+  [/버전이 없습니다/g, 'The version does not exist'],
+  [/바꿀 키가 없습니다/g, 'No keys to change'],
+  [/원래 파일을 열 수 없습니다/g, 'Cannot open the original file'],
+  [/새 파일을 만들 수 없습니다\(모델 폴더를 확인하세요\)/g, 'Cannot create the new file (check the model folder)'],
+  [/새 파일의 크기가 맞지 않습니다\(디스크 공간을 확인하세요\)/g, 'The new file has the wrong size (check the disk space)'],
+  [/GGUF 버전 3만 다룹니다/g, 'Only GGUF version 3 is handled'],
+  [/GGUF 헤더가 손상되었습니다/g, 'The GGUF header is damaged'],
+  [/GGUF 헤더를 끝까지 읽지 못했습니다\(파일이 잘렸거나 손상됨\)/g, 'Could not read the whole GGUF header (the file is truncated or damaged)'],
+  [/GGUF 의 자료 구역이 파일 밖입니다/g, "The GGUF data section is outside the file"],
+  [/GGUF 파일이 아닙니다/g, 'Not a GGUF file'],
+  [/키 이름은 1 ~ 256 바이트/g, 'Key names are 1–256 bytes'],
+  [/바꿀 수 있는 형은 글 · 정수 · bool 뿐입니다/g, 'Only string, integer and bool values can be changed'],
+  [/(\S+) 의 형이 파일과 다릅니다\(글 · 정수 · bool 사이에서는 바꾸지 않습니다\)/g, '$1 has a different type in the file (string, integer and bool are not converted)'],
+  [/파일을 열 수 없습니다/g, 'Cannot open the file'],
 );
 
 // view: ws(작업 공간) · result(결과) · compare(전후 비교) · item(답이 달라진 곳). res · cmp · items 는 받아 둔 응답(결과 폴더는 다시 쓰지 않는다)
@@ -385,6 +420,60 @@ async function evDelVersion(w, v) {
   try { await api('/api/eval/version', { workspace: w.id, action: 'delete', id: v.id }); evLoad(); }
   catch (e) { toast(e.message, 'err'); }
 }
+// 2-1 — 메타데이터 고치기: 채팅 템플릿 · 특수 토큰(번호) · add_bos/eos 를 바꾼 새 GGUF(텐서는 바이트 그대로)를 새 버전으로
+const EV_SPECIAL = [['bos', 'tokenizer.ggml.bos_token_id', 'BOS'], ['eos', 'tokenizer.ggml.eos_token_id', 'EOS'], ['eot', 'tokenizer.ggml.eot_token_id', 'EOT'], ['pad', 'tokenizer.ggml.padding_token_id', 'PAD']];
+async function evFixMeta(w, v) {
+  let M;
+  try { M = await api('/api/eval/meta?model=' + evEnc(v.model)); } catch (e) { toast(e.message, 'err'); return; }
+  const ctl = M.control || [];
+  const tpl = h('textarea', { class: 'input mono ev-tpl', rows: 12, spellcheck: 'false', 'aria-label': T('채팅 템플릿') });
+  tpl.value = M.chat_template || '';
+  const sp = EV_SPECIAL.map(([k, key, label]) => {
+    const cur = M.special && M.special[k];
+    const ids = new Map(ctl.map(c => [c.id, c.text]));
+    if (cur && !ids.has(cur.id)) ids.set(cur.id, cur.text || '');
+    const sel = h('select', { class: 'input', 'aria-label': label },
+      h('option', { value: '' }, T('(키 없음)')),
+      [...ids].sort((a, b) => a[0] - b[0]).map(([id, text]) => h('option', { value: String(id), selected: cur && cur.id === id ? true : null }, `${id} · ${text}`)));
+    return { k, key, label, cur, sel };
+  });
+  const flag = (key, cur) => h('select', { class: 'input', 'aria-label': key },
+    h('option', { value: '', selected: cur === null ? true : null }, T('(키 없음)')),
+    h('option', { value: 'true', selected: cur === true ? true : null }, 'true'), h('option', { value: 'false', selected: cur === false ? true : null }, 'false'));
+  const tk = M.tokenizer || {};
+  const fb = flag('add_bos_token', tk.add_bos_token === undefined ? null : tk.add_bos_token);
+  const fe = flag('add_eos_token', tk.add_eos_token === undefined ? null : tk.add_eos_token);
+  const go = async () => {
+    const ch = [];
+    if (tpl.value !== (M.chat_template || '')) ch.push(tpl.value ? { key: 'tokenizer.chat_template', type: 'string', value: tpl.value } : { key: 'tokenizer.chat_template', type: 'remove' });
+    for (const s of sp) {
+      const was = s.cur ? String(s.cur.id) : '';
+      if (s.sel.value !== was) ch.push(s.sel.value === '' ? { key: s.key, type: 'remove' } : { key: s.key, type: 'u32', value: +s.sel.value });
+    }
+    for (const [sel, key, cur] of [[fb, 'tokenizer.ggml.add_bos_token', tk.add_bos_token], [fe, 'tokenizer.ggml.add_eos_token', tk.add_eos_token]]) {
+      const was = cur === null || cur === undefined ? '' : String(cur);
+      if (sel.value !== was) ch.push(sel.value === '' ? { key, type: 'remove' } : { key, type: 'bool', value: sel.value === 'true' });
+    }
+    if (!ch.length) { toast(T('바뀐 것이 없습니다')); return; }
+    try {
+      await api('/api/eval/fix', { workspace: w.id, from: v.id, changes: ch });
+      closeModal();
+      S.jobHide = '';
+      EV.at = 0;
+      resetSig();
+      refresh();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  modal(h('div', { class: 'col g16' }, h('h2', null, T`메타데이터 고치기 — ${v.id}`),
+    h('p', { class: 'm0 muted' }, T('텐서는 그대로 두고 GGUF의 메타데이터(키)만 바꾼 새 파일을 앱의 모델 폴더에 쓰고 새 버전으로 더합니다. 원래 파일은 바뀌지 않습니다.')),
+    h('div', { class: 'small muted' }, [M.arch, tk.model, tk.pre, T`어휘 ${fmtNum(tk.vocab || 0)}`, T`키 ${(M.keys || []).length}개`].filter(Boolean).join(NB)),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('채팅 템플릿(tokenizer.chat_template — jinja)')), tpl),
+    h('div', { class: 'ev-specials' }, sp.map(s => h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, `${s.label} · ${s.key}`), s.sel)),
+      h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, 'tokenizer.ggml.add_bos_token'), fb),
+      h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, 'tokenizer.ggml.add_eos_token'), fe)),
+    h('p', { class: 'small muted m0' }, T('토큰은 어휘의 제어 토큰(control · user-defined)에서 고릅니다. 고친 버전으로 다시 평가하면 앞 버전과 전후 비교할 수 있습니다.'))),
+  [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary needs-conn', onclick: go }, T('새 버전 만들기'))], true);
+}
 function evImport(w) {
   const path = h('input', { class: 'input mono', type: 'text', placeholder: 'C:\\data\\my-set.jsonl' });
   const name = h('input', { class: 'input', type: 'text', placeholder: T('비우면 파일 이름') });
@@ -487,12 +576,13 @@ function evVerdict(r) {
 }
 
 // ---------- 화면 ----------
-const evJobOf = () => { const j = S.st && S.st.job; return j && j.kind === 'eval' && (j.state === 'running' || jobKey(j) !== S.jobHide) ? j : null; };
+const EV_JOBS = ['eval', 'fix'];
+const evJobOf = () => { const j = S.st && S.st.job; return j && EV_JOBS.includes(j.kind) && (j.state === 'running' || jobKey(j) !== S.jobHide) ? j : null; };
 function evJobCard(j) {
   const tone = { running: 'acc', done: 'ok', failed: 'err', cancelled: 'dim' }[j.state] || '';
   return h('div', { class: 'card job ev-job' },
     h('div', { class: 'head' },
-      h('div', { class: 't' }, h('div', { class: 'ink h3' }, T('모델 평가')), h('div', { class: 'small muted', id: 'ev-job-step' }, j.state === 'running' ? TM(j.step || '') : '')),
+      h('div', { class: 't' }, h('div', { class: 'ink h3' }, jobName(j)), h('div', { class: 'small muted', id: 'ev-job-step' }, j.state === 'running' ? TM(j.step || '') : '')),
       h('span', { class: 'tag ' + tone, id: 'ev-job-time' }, ''),
       j.state === 'running' ? h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev-job-stop', onclick: () => api('/api/job/cancel', {}).then(refresh).catch(e => toast(e.message, 'err')) }, I('stop', 's'), T('중지'))
         : h('button', { class: 'icon-btn', 'data-tip': T('카드 닫기'), 'data-tip-pos': 'left', 'aria-label': T('끝난 작업 카드 닫기'), onclick: () => { S.jobHide = jobKey(j); store('geulpu.jobHide', S.jobHide); renderEval(true); } }, I('x', 's'))),
@@ -581,11 +671,12 @@ function evWsView(w) {
     vd ? h('div', { class: 'verdict' }, vd[0]) : h('div', { class: 'verdict' }, w.versions.length ? T('아직 평가하지 않았습니다 — 아래에서 평가를 실행하세요.') : T('평가할 GGUF 파일을 버전으로 더하세요.')),
     vd && vd[1] ? h('div', { class: 'small muted' }, vd[1]) : null,
     cur ? h('div', null, h('button', { class: 'btn sm', onclick: () => evGo('result', { dir: cur.dir }) }, T('결과 보기'), I('chevR', 's'))) : null);
-  // 버전 — 버전마다 최근 결과와 앞 버전(같은 데이터 · 설정의 최근 결과) 대비
+  // 버전 — 버전마다 최근 결과와, 견줄 버전(만든 부모 — 없으면 앞 버전)의 같은 데이터 · 설정 결과 가운데 최근 것 대비
   const vrows = w.versions.map((v, k) => {
     const r = evLatest(w, v.id);
-    const prev = k > 0 ? evLatest(w, w.versions[k - 1].id) : null;
-    const pc = r && prev && evSameSet(r, prev);
+    const base = v.made && v.made.from ? w.versions.find(x => x.id === v.made.from) : k > 0 ? w.versions[k - 1] : null;
+    const prev = base && r ? evResults(w).filter(x => x.version === base.id && evSameSet(x, r)).pop() || null : null;
+    const pc = !!prev;
     const a = r && r.answers, pa = prev && prev.answers;
     const m = r && r.metrics, pm = prev && prev.metrics;
     const sign = x => (x > 0 ? '+' : x < 0 ? '−' : '±') + Math.abs(x);
@@ -595,12 +686,15 @@ function evWsView(w) {
     return h('div', { class: 'ev-vrow' + (r ? ' clk' : ''), onclick: e => { if (r && !e.target.closest('button')) evGo('result', { dir: r.dir }); } },
       h('div', { class: 'ev-vid' }, h('span', { class: 'ink' }, v.id), w.current === v.id ? h('span', { class: 'tag acc' }, T('지금')) : null),
       h('div', { class: 'ev-vfile' }, h('div', { class: 'ink ell', 'data-tip': modelOf(v.model) ? labelById(v.model) : v.file, 'data-tip-pos': 'top' }, v.file),
-        h('div', { class: 'small muted' }, [fmtBytes(v.size), ({ imported: T('가져옴'), metadata: T('메타데이터 고침'), quantized: T('다시 양자화'), converted: T('변환') })[v.made && v.made.kind] || ''].filter(Boolean).join(NB))),
+        h('div', { class: 'small muted' }, [fmtBytes(v.size), ({ imported: T('가져옴'), metadata: T('메타데이터 고침'), quantized: T('다시 양자화'), converted: T('변환') })[v.made && v.made.kind] || '',
+          v.made && v.made.from ? T`${v.made.from}에서 만듦` : null].filter(Boolean).join(NB)),
+        v.made && v.made.changed ? h('div', { class: 'small faint ell', 'data-tip': v.made.changed, 'data-tip-pos': 'top' }, T`바꾼 키 ${v.made.changed}`) : null),
       h('div', { class: 'ev-vres' }, h('div', { class: 'small' }, r ? (evChat(r) && a && a.compared ? T`답 ${a.differ}/${a.compared} 달라짐 · KL ${evKL(m && m.kl_mean)}` : `KL ${evKL(m && m.kl_mean)} · top-1 ${evPct(m && m.top1)}`) : h('span', { class: 'muted' }, T('결과 없음'))),
-        delta ? h('div', { class: 'small muted' }, T`앞 버전 대비 ${delta}`) : k > 0 && r && prev ? h('div', { class: 'small muted' }, T('앞 버전과 데이터 · 설정이 달라 비교하지 않음')) : null),
+        delta ? h('div', { class: 'small muted' }, T`${base.id} 대비 ${delta}`) : null),
       h('div', { class: 'ev-vmenu' }, h('button', { class: 'icon-btn', 'aria-label': T`${v.id} 메뉴`, 'aria-haspopup': 'menu', onclick: ev => menu(ev.currentTarget, T`${v.id} 메뉴`, [
         r ? { icon: 'chevR', label: T('최근 결과 보기'), run: () => evGo('result', { dir: r.dir }) } : null,
         w.current !== v.id ? { icon: 'check', label: T('지금 버전으로'), run: () => api('/api/eval/workspace', { action: 'update', id: w.id, current: v.id }).then(evLoad, e => toast(e.message, 'err')) } : null,
+        { icon: 'edit', label: T('메타데이터 고치기'), sub: T('채팅 템플릿 · 특수 토큰 — 새 버전으로'), run: () => evFixMeta(w, v) },
         '-', { icon: 'trash', label: T('버전 지우기'), danger: true, run: () => evDelVersion(w, v) }], 'right') }, I('dots'))));
   });
   const versions = h('div', { class: 'col g12' },
@@ -873,9 +967,9 @@ function renderEval(force) {
   const page = $('#page-eval');
   if (!page || !S.st || S.view !== 'eval') return;
   const j = S.st.job;
-  const js = j && j.kind === 'eval' ? `${j.id}:${j.state}` : '';
+  const js = j && EV_JOBS.includes(j.kind) ? `${j.id}:${j.state}` : '';
   if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; }                   // 평가 작업이 시작 · 끝나면 목록을 다시
-  const running = !!(j && j.kind === 'eval' && j.state === 'running');
+  const running = !!(j && EV_JOBS.includes(j.kind) && j.state === 'running');
   if (!EV.loading && Date.now() - EV.at > (running ? 3000 : 20000)) evLoad();
   const w = evWs(EV.sel);
   if (EV.list && EV.sel && !w) { EV.sel = ''; EV.view = 'ws'; }

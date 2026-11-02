@@ -33,6 +33,8 @@
          (시험/도구오류.py)
      4p. 모델 평가의 지표 계산(문서/모델평가.md 1-2 — 앱/평가계산.gl · 엔진/시험_평가계산.gl): KL divergence(상위 K + 나머지 확률) ·
          꼬리 · 백분위수 · 부호 검정 · 계약의 지수 · 로그가 파이썬 참조(시험/평가계산.py)와 비트까지 같은가
+     4q. 모델 평가의 GGUF 다시 쓰기(문서/모델평가.md 2-1 — 앱/GGUF쓰기.gl · 엔진/시험_GGUF쓰기.gl): 메타데이터만 고친 GGUF 의 키 · 텐서
+         정보 · 자료 구역 · 맞춤이 파이썬의 GGUF 읽기(시험/GGUF쓰기.py)로 본 기대와 같은가, 틀린 고침을 거절하는가
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것.
      0.12.0 12-3g-2 — --MoE 행은 CUDA 만이라 SPIR-V 칸이 "-"). 5 와 7(SASS)의 코드는 시험/모듈점검.py
@@ -393,6 +395,18 @@ def 평가계산(출력):
     알림("평가 지표의 계산(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
 
 
+def GGUF쓰기(출력):
+    """모델 평가 2-1 — 메타데이터만 고친 GGUF(앱/GGUF쓰기.gl)가 키 · 텐서 정보 · 자료 구역 · 맞춤에서 기대와 같은가(GPU 없이)"""
+    exe = os.path.join(출력, "시험_GGUF쓰기" + EXE)
+    if not os.path.exists(exe):
+        알림("GGUF 다시 쓰기(GPU 없이)", False, "시험_GGUF쓰기 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "GGUF쓰기.py"), "check", exe],
+                      os.path.join(출력, "GGUF쓰기.txt"))
+    알림("GGUF 다시 쓰기(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
 def 망가진입력(출력):
     """GHSA-4v72 — 조작된 GGUF 를 엔진의 GGUF 열기가 오류로 끝내는가(접근 위반 · 멈춤 · 그냥 열림이 아니라), NaN · ±Inf 로짓에서 뽑기가
     범위 안의 번호를 고르는가(GPU 없이)"""
@@ -566,6 +580,7 @@ def main():
             앱누수(출력)
             계약대조(출력)
             평가계산(출력)
+            GGUF쓰기(출력)
             건너뛴 = set()
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)

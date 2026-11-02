@@ -1051,6 +1051,9 @@ table.data.ev-table th { white-space: normal; }
 .ev-ids { gap: 6px; }
 .ev-chip { height: 26px; line-height: 24px; }
 .ev-ans pre.dbg-ans { max-height: 360px; }
+.ev-tpl { min-height: 200px; resize: vertical; font-size: 12px; line-height: 18px; white-space: pre; }
+.ev-specials { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+@media (max-width: 640px) { .ev-specials { grid-template-columns: minmax(0, 1fr); } }
 .ev-same { color: var(--faint); }
 .ev-diff { color: var(--ink); }
 .ev-same + .ev-diff { border-left: 2px solid var(--accent); padding-left: 2px; }
