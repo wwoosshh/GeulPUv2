@@ -42,6 +42,9 @@ a token, a tool result, the quantization — and see the effect of that one chan
   generations and a Radeon RX 9060 XT.
 - **Debugger for local models.** Record runs, replay them bit for bit, find low-margin steps, branch from any token or edited request,
   and compare two runs request by request — from the app or from scripts.
+- **Model evaluation for GGUF files.** Make a GGUF from a Hugging Face folder, check the conversion against the original files and the
+  original (transformers) model, compare versions with a reference model and grade their answers (built-in GSM8K and MMLU-Pro sets),
+  and measure which matrix groups to keep at a higher precision — every result reproducible bit for bit (from 0.17.0).
 - **Research panel.** For any answer in the chat: each token's probability, rank, top-10 alternatives, entropy and margin; branch,
   compare, score text, export, and check reproduction files. From 0.13.0 it also shows at which layer an answer appears — the logit lens
   at every layer, and the Jacobian lens with a J file fitted on the original (PyTorch) model.
