@@ -4,7 +4,10 @@
 const EVAL_DICT = {
   "끝 토큰": "End token",
   "도구 호출": "Tool call",
-  "기준 모델 없음": "No reference model",
+  "아직 없음": "not set yet",
+  "청크 {}개 × {}토큰": "{0} {0|chunk|chunks} × {1} tokens",
+  "잰 청크의 수(청크마다 512 토큰)가 작업 기록과 만든 버전에 남습니다 — 글이 짧으면 청크가 적습니다.": "The number of chunks measured (512 tokens each) is kept in the run log and the new versions — a short text gives few chunks.",
+  "미세조정한 모델이면 '없음'으로 두고 원래 모델 폴더를 정하세요 — GGUF 만들기로 변환한 파일이 기준 모델이 됩니다.": "For a fine-tuned model, leave this at 'None' and set the original model folder — the file converted with Make GGUF becomes the reference model.",
   "먼저 모델 화면에서 GGUF 파일을 더하세요": "Add a GGUF file on the Models screen first",
   "새 작업 공간": "New workspace",
   "기준 모델": "Reference model",
@@ -519,6 +522,8 @@ TMX.push(
   [/imatrix 를 만드는 중\(llama-imatrix — GPU\)/g, 'Making the imatrix (llama-imatrix — GPU)'],
   [/imatrix 를 만들지 못했습니다\(llama-imatrix — 작업 기록을 보세요\)/g, 'Could not make the imatrix (llama-imatrix — see the run log)'],
   [/imatrix 파일을 읽지 못했습니다/g, 'Could not read the imatrix file'],
+  [/imatrix — 청크 (\d+) 개 × (\d+) 토큰\(모두 (\d+) 토큰\)/g, 'imatrix — $1 chunks × $2 tokens ($3 tokens in all)'],
+  [/\[(\S+)\] 같은 파일 · 데이터 · 설정의 결과가 있어 다시 재지 않습니다\((\S+)\)/g, '[$1] A result with the same file · data · settings exists, so it was not measured again ($2)'],
   [/양자화하는 중 — (\S+)\((\d+)\/(\d+)\)/g, 'Quantizing — $1 ($2/$3)'],
   [/(\S+) 로 양자화하지 못했습니다\(llama-quantize — 작업 기록을 보세요\)/g, 'Could not quantize to $1 (llama-quantize — see the run log)'],
   [/만든 파일을 모델 목록과 작업 공간에 더하는 중/g, 'Adding the new files to the model list and the workspace'],
@@ -593,7 +598,7 @@ const evProb = lp => (typeof lp === 'number' && isFinite(lp) ? pct(lp) : '-');
 const evDirWhen = d => { const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/.exec(String(d || '')); return m ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}` : String(d || ''); };
 const evMode = m => (m === 'fast' ? T('빠름') : T('정밀'));
 const evFinish = f => ({ stop: T('끝 토큰'), length: T('최대 길이'), tool_calls: T('도구 호출'), text: '-' })[f] || (f || '-');
-const evRefLabel = w => (w.reference && w.reference.model ? labelById(w.reference.model) : T('기준 모델 없음'));
+const evRefLabel = w => (w.reference && w.reference.model ? labelById(w.reference.model) : T('아직 없음'));   // #202 — '기준 모델 기준 모델 없음'이 되지 않게
 const evVerLabel = (w, vid) => { const v = w.versions.find(x => x.id === vid); return v ? `${vid} · ${modelOf(v.model) ? labelById(v.model) : v.file}` : vid; };
 const evResults = w => [...(w.results || [])].sort((a, b) => byName(a.dir, b.dir));
 const evLatest = (w, vid) => evResults(w).filter(r => r.version === vid).pop() || null;
@@ -654,9 +659,9 @@ const evModelOpts = (ms, sel) => ms.map(m => h('option', { value: m.id, selected
 function evNewWs() {
   const ms = evRunnables();
   const name = h('input', { class: 'input', type: 'text', value: T('새 작업 공간'), maxlength: 80 });
-  const def = ms.length ? (ms.find(m => /BF16|F16|F32/.test(quantOf(m))) || ms.find(m => quantOf(m) === 'Q8_0') || ms[0]).id : '';
-  // 4-1 — 기준 모델 없이도 만든다: 원래 모델에서 'GGUF 만들기'로 변환한 파일이 기준 모델이 된다
-  const ref = h('select', { class: 'input', 'aria-label': T('기준 모델') }, h('option', { value: '', selected: def ? null : true }, T('없음 — GGUF 만들기로 원래 모델에서 변환')), evModelOpts(ms, def));
+  // 4-1 — 기준 모델 없이도 만든다: 원래 모델에서 'GGUF 만들기'로 변환한 파일이 기준 모델이 된다. #202 — 기본은 '없음'(목록의 첫 16비트
+  // 파일을 미리 고르면 다른 모델 · 다른 미세조정이 기준이 되어 모든 KL 이 엉뚱한 것을 잰다)
+  const ref = h('select', { class: 'input', 'aria-label': T('기준 모델') }, h('option', { value: '', selected: true }, T('없음 — GGUF 만들기로 원래 모델에서 변환')), evModelOpts(ms, ''));
   const orig = h('input', { class: 'input mono', type: 'text', placeholder: 'C:\\models\\my-finetune', 'aria-label': T('원래 모델 폴더') });
   const go = async () => {
     try {
@@ -670,7 +675,8 @@ function evNewWs() {
     h('p', { class: 'm0 muted' }, T('작업 공간 하나는 모델 하나의 작업입니다 — 기준 모델과, 그와 비교할 GGUF 파일(버전)들과 결과를 묶습니다.')),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('이름')), name),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('기준 모델')), ref,
-      h('span', { class: 'small muted' }, T('같은 모델의 BF16 · F16 파일이 가장 좋습니다(그래픽 메모리에 들지 않으면 Q8_0). 평가할 파일은 모두 이 모델과 비교합니다.'))),
+      h('span', { class: 'small muted' }, T('같은 모델의 BF16 · F16 파일이 가장 좋습니다(그래픽 메모리에 들지 않으면 Q8_0). 평가할 파일은 모두 이 모델과 비교합니다.')),
+      h('span', { class: 'small muted' }, T('미세조정한 모델이면 \'없음\'으로 두고 원래 모델 폴더를 정하세요 — GGUF 만들기로 변환한 파일이 기준 모델이 됩니다.'))),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(고름 — Hugging Face 형식)')), orig,
       h('span', { class: 'small muted' }, T('GGUF 만들기와 변환 검증이 이 폴더를 씁니다. 나중에 정해도 됩니다.')))),
   [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('만들기'))], false, 'input');
@@ -983,6 +989,7 @@ function evMadeLine(s) {
   const tool = s.llama_cpp ? `llama.cpp ${s.llama_cpp}` : null;
   if (s.step === 'convert') return [T`변환 ${String(s.outtype || '').toUpperCase()}`, tool, s.transformers ? `transformers ${s.transformers}` : null].filter(Boolean).join(NB);
   if (s.step === 'quantize') return [s.type, s.imatrix ? `imatrix ${s.imatrix.file || ''}`.trim() : null,
+    s.imatrix && s.imatrix.chunks ? T`청크 ${s.imatrix.chunks}개 × ${s.imatrix.chunk_size}토큰` : null,     // #202
     (s.tensor_types || []).length ? T`행렬별 ${s.tensor_types.join(', ')}` : null, tool].filter(Boolean).join(NB);
   return '';
 }
@@ -1035,13 +1042,14 @@ function evMakeCard(w, busy) {
       conv ? h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('변환 형식')), seg('outtype', [['bf16', 'BF16'], ['f16', 'F16'], ['q8_0', 'Q8_0']], T('변환 형식')),
         w.reference.model ? null : h('span', { class: 'small muted' }, T('변환한 파일이 이 작업 공간의 기준 모델이 됩니다.'))) : null,
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, conv ? T('양자화 형식(여럿 고름 — 고르지 않으면 변환만)') : T('양자화 형식(여럿 고름)')),
-        h('div', { class: 'row g12 wrap' }, EV_QUANTS.map(q => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-mk-q-' + q, checked: o.quants.has(q) ? true : null,
+        h('div', { class: 'row g12 wrap' }, EV_QUANTS.map(q => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-mk-q-' + q, value: q, 'aria-label': q, checked: o.quants.has(q) ? true : null,
           onchange: ev => { if (ev.target.checked) o.quants.add(q); else o.quants.delete(q); } }), q)))),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, 'imatrix'),
         seg('imode', [['none', T('없음')], ['text', T('글 파일로 만들기')], ['file', T('imatrix 파일')]], 'imatrix'),
         o.imode !== 'none' ? h('input', { class: 'input mono', type: 'text', value: o.ipath, placeholder: o.imode === 'text' ? 'C:\\data\\calibration.txt' : 'C:\\data\\imatrix.gguf',
           'data-fk': 'ev-mk-ipath', 'aria-label': T('imatrix에 쓸 파일'), oninput: ev => { o.ipath = ev.target.value; } }) : null,
-        o.imode === 'text' ? h('span', { class: 'small muted' }, T('글 파일의 문장으로 행렬마다 중요한 가중치를 잽니다(llama-imatrix — GPU). 모델이 쓰일 글과 비슷할수록 좋습니다.')) : null),
+        o.imode === 'text' ? h('span', { class: 'small muted' }, T('글 파일의 문장으로 행렬마다 중요한 가중치를 잽니다(llama-imatrix — GPU). 모델이 쓰일 글과 비슷할수록 좋습니다.')) : null,
+        o.imode !== 'none' ? h('span', { class: 'small muted' }, T('잰 청크의 수(청크마다 512 토큰)가 작업 기록과 만든 버전에 남습니다 — 글이 짧으면 청크가 적습니다.')) : null),
       h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T('행렬별 형식(고급)')),
         h('div', { class: 'col g8 mt8' },
           h('textarea', { class: 'input mono', rows: '3', 'data-fk': 'ev-mk-tt', 'aria-label': T('행렬별 형식'), placeholder: 'attn_v=q6_k\nffn_down=q6_k', oninput: ev => { o.tt = ev.target.value; } }, o.tt),
@@ -1231,7 +1239,7 @@ function evRunCard(w, busy) {
     h('div', { class: 'ev-form' },
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('평가할 버전')),
         w.versions.length ? h('div', { class: 'row g12' }, w.versions.map(v => h('label', { class: 'check', 'data-tip': v.label || v.file, 'data-tip-pos': 'top' }, h('input', {
-          type: 'checkbox', 'data-fk': 'ev-v-' + v.id, checked: o.versions.has(v.id) ? true : null,
+          type: 'checkbox', 'data-fk': 'ev-v-' + v.id, value: v.id, 'aria-label': `${v.id} · ${v.label || v.file}`, checked: o.versions.has(v.id) ? true : null,
           onchange: ev => { if (ev.target.checked) o.versions.add(v.id); else o.versions.delete(v.id); },
         }), v.id))) : h('span', { class: 'small muted' }, T('먼저 버전을 더하세요'))),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('데이터')),
