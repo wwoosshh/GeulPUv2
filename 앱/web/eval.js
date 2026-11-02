@@ -5,6 +5,17 @@ const EVAL_DICT = {
   "끝 토큰": "End token",
   "도구 호출": "Tool call",
   "아직 없음": "not set yet",
+  "고르는 기준": "Choose by",
+  "정답률(기준 대비 %p)": "Accuracy (vs base, %p)",
+  "기준만 맞음": "Reference only correct",
+  " · 기준 버전의 정답률 {}": " · base version accuracy {}",
+  "95 % 구간 {} ~ {}": "95 % interval {} – {}",
+  "미리 고른 것 — 정답률을 높인 무리 가운데 1 MB 당 오름이 큰 차례로 셋. 대화가 적으면 정답률의 차이는 우연일 수 있습니다(정답률 칸의 풍선 도움말이 95 % 구간). 무리마다 잰 값은 더해지지 않습니다 — 만든 뒤의 평가가 실제 값입니다.": "Preselected — among groups that raised the accuracy, the three with the largest gain per MB. With few conversations an accuracy difference can be chance (the accuracy cell's tooltip is the 95 % interval). Values measured group by group do not add up — the evaluation after making is the real value.",
+  "미리 고른 것 — KL을 5 % 넘게 줄인 무리(층 토막 포함) 가운데 1 MB 당 줄임이 큰 차례로 셋. 무리마다 잰 줄임은 더해지지 않습니다 — 만든 뒤의 평가가 실제 값입니다.": "Preselected — among groups (layer thirds included) that cut the KL by more than 5 %, the three with the largest reduction per MB. Reductions measured group by group do not add up — the evaluation after making is the real value.",
+  "같은 데이터({}) · 답 {}토큰 · 정밀로 잰 버전 — 크기와 품질({})": "Versions measured on the same data ({}) · answers {} tokens · exact — size and quality ({})",
+  "형식": "Type",
+  "더 작고 같거나 나은 버전 있음 — {}": "A smaller version that is as good or better exists — {}",
+  "같은 크기면 다른 런타임과도 맞는 표준 형식(예: Q5_K_M)이 나을 수 있습니다 — 표준 형식 버전을 같은 데이터로 함께 평가하면 여기 나란히 보입니다.": "At the same size a standard type that other runtimes also know (e.g. Q5_K_M) can be the better choice — evaluate standard-type versions on the same data and they show up here side by side.",
   "답 {}토큰(데이터 줄의 값 {}개)": "answers {0} tokens ({1} from the data lines)",
   "데이터 줄의 max_tokens": "max_tokens of the data lines",
   "대화 {}개는 설정의 max_tokens 대신 데이터 줄의 값을 썼습니다": "{0} {0|conversation|conversations} used the data line's value instead of the max_tokens setting",
@@ -1076,6 +1087,42 @@ function evImpNeed(w) {
   api(`/api/eval/improve?workspace=${evEnc(w.id)}`).then(r => { EV.imp[w.id] = r; }, () => { EV.imp[w.id] = { missing: true }; })
     .finally(() => { EVF.delete('imp' + w.id); EV.tick++; renderEval(); });
 }
+// #197 — 같은 데이터 · 설정으로 잰 이 작업 공간의 버전들의 크기와 품질(KL · 정답률). 더 작고 품질이 같거나 나은 버전이 있으면 짚는다 —
+// 품질은 고르는 기준(by)으로: KL 이면 KL, 정답률이면 정답률(모든 버전에 있을 때)
+function evSizeQuality(w, rep, by) {
+  const es = [];
+  for (const v of w.versions) {
+    const r = evResults(w).filter(x => x.version === v.id && x.data && x.data.name === rep.data && x.settings && x.settings.max_tokens === rep.max_tokens
+      && x.settings.mode === 'exact' && x.metrics && typeof x.metrics.kl_mean === 'number').pop();
+    if (r) es.push({ v, size: v.size, kl: r.metrics.kl_mean, acc: r.accuracy && typeof r.accuracy.cand === 'number' ? r.accuracy.cand : null });
+  }
+  if (es.length < 2) return null;
+  const useAcc = by === 'acc' && es.every(e => e.acc !== null);
+  const better = (u, e) => u !== e && u.size <= e.size && (useAcc ? u.acc >= e.acc && (u.size < e.size || u.acc > e.acc)
+    : u.kl <= e.kl && (u.size < e.size || u.kl < e.kl));
+  es.sort((a, b) => a.size - b.size);
+  const hasAcc = es.some(e => e.acc !== null);
+  return h('div', { class: 'col g8 mt8' },
+    h('div', { class: 'small muted' }, T`같은 데이터(${rep.data}) · 답 ${rep.max_tokens}토큰 · 정밀로 잰 버전 — 크기와 품질(${useAcc ? T('정답률') : 'KL'})`),
+    h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
+      h('thead', null, h('tr', null, h('th', null, T('버전')), h('th', null, T('형식')), h('th', { class: 'r' }, T('크기')), h('th', { class: 'r' }, 'KL'),
+        hasAcc ? h('th', { class: 'r' }, T('정답률')) : null, h('th', null, ''))),
+      h('tbody', null, es.map(e => {
+        const u = es.find(x => better(x, e));
+        const m = modelOf(e.v.model);
+        const mix = m ? mixOf(m) : '';
+        return h('tr', null,
+          h('td', { class: 'small' }, h('div', { class: 'ink' }, e.v.id),
+            e.v.label ? h('div', { class: 'muted ell', style: 'max-width:12em', 'data-tip': e.v.label, 'data-tip-pos': 'top' }, e.v.label) : null),
+          h('td', { class: 'small' }, h('div', { class: 'mono' }, m ? quantOf(m) : (e.v.quant || '')),
+            mix ? h('div', { class: 'muted mono ell', style: 'max-width:12em', 'data-tip': mix, 'data-tip-pos': 'top' }, mix) : null),
+          h('td', { class: 'r num small' }, fmtBytes(e.size)),
+          h('td', { class: 'r num small' }, evKL(e.kl)),
+          hasAcc ? h('td', { class: 'r num small' }, e.acc === null ? '-' : evPct(e.acc)) : null,
+          h('td', { class: 'small acc' }, u ? T`더 작고 같거나 나은 버전 있음 — ${u.v.id}` : null));
+      })))),
+    h('p', { class: 'small muted m0' }, T('같은 크기면 다른 런타임과도 맞는 표준 형식(예: Q5_K_M)이 나을 수 있습니다 — 표준 형식 버전을 같은 데이터로 함께 평가하면 여기 나란히 보입니다.')));
+}
 function evImproveCard(w, busy) {
   const qv = w.versions.filter(v => v.made && v.made.kind === 'quantize' && v.made.settings);
   if (!w.reference.model || !qv.length) return null;
@@ -1097,17 +1144,34 @@ function evImproveCard(w, busy) {
   let table = null;
   if (rep) {
     const bk = rep.base.kl_mean;
+    // #197 — 채점 데이터면 시험마다 정답률(결과의 accuracy)도 — 고르는 기준을 KL · 정답률에서
+    const bacc = rep.base.accuracy && typeof rep.base.accuracy.cand === 'number' ? rep.base.accuracy.cand : null;
+    if (bacc === null) o.by = 'kl';
+    const byAcc = o.by === 'acc';
     const rows = (rep.rows || []).map(r => {
       const d = typeof r.kl_mean === 'number' && r.kl_mean >= 0 && bk > 0 ? (bk - r.kl_mean) / bk : null;
       const ds = typeof r.size === 'number' && rep.base.size ? r.size - rep.base.size : null;
-      return Object.assign({}, r, { d, ds, eff: d !== null && ds > 0 ? (d * 100) / (ds / 1048576) : null });   // 1 MB 당 KL 을 줄인 몫(%)
+      const acc = r.accuracy && typeof r.accuracy.cand === 'number' ? r.accuracy.cand : null;
+      const da = acc !== null && bacc !== null ? acc - bacc : null;
+      return Object.assign({}, r, { d, ds, acc, da,
+        eff: d !== null && ds > 0 ? (d * 100) / (ds / 1048576) : null,          // 1 MB 당 KL 을 줄인 몫(%)
+        effA: da !== null && ds > 0 ? (da * 100) / (ds / 1048576) : null });    // 1 MB 당 오른 정답률(%p)
     });
-    const sorted = [...rows].sort((a, b) => (b.d === null ? -9 : b.d) - (a.d === null ? -9 : a.d));
-    // 미리 고르기 — 행렬 무리(층 토막은 행렬 무리와 겹친다) 가운데 5 % 넘게 줄인 것을 1 MB 당 줄임이 큰 차례로 셋
-    if (!o.pick || o.pickFor !== rep.finished) {
-      o.pick = new Set(rows.filter(r => !r.error && r.d !== null && r.d >= 0.05 && r.eff !== null && !/^blk /.test(r.name)).sort((a, b) => b.eff - a.eff).slice(0, 3).map(r => r.name));
-      o.pickFor = rep.finished;
+    const sorted = [...rows].sort(byAcc ? (a, b) => (b.da === null ? -9 : b.da) - (a.da === null ? -9 : a.da)
+      : (a, b) => (b.d === null ? -9 : b.d) - (a.d === null ? -9 : a.d));
+    // 미리 고르기 — KL: 5 % 넘게 줄인 무리, 정답률: 정답률을 높인 무리 — 1 MB 당이 큰 차례로 셋(#197 — 층 토막도 넣는다)
+    const pickKey = `${rep.finished}|${o.by || 'kl'}`;
+    if (!o.pick || o.pickFor !== pickKey) {
+      const cand = byAcc ? rows.filter(r => !r.error && r.da !== null && r.da > 0 && r.effA !== null).sort((a, b) => b.effA - a.effA)
+        : rows.filter(r => !r.error && r.d !== null && r.d >= 0.05 && r.eff !== null).sort((a, b) => b.eff - a.eff);
+      o.pick = new Set(cand.slice(0, 3).map(r => r.name));
+      o.pickFor = pickKey;
     }
+    const segBy = bacc === null ? null : h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': T('고르는 기준') }, [['kl', 'KL'], ['acc', T('정답률')]].map(([v, l]) => h('button', {
+      class: (o.by || 'kl') === v ? 'on' : '', role: 'radio', 'aria-checked': (o.by || 'kl') === v ? 'true' : 'false', 'data-fk': 'ev-imp-by-' + v,
+      onclick: () => { o.by = v; renderEval(true); } }, l)));
+    const pp = x => `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(2)}`;
+    const ci = a => (a && Array.isArray(a.cand_ci) ? T`95 % 구간 ${evPct(a.cand_ci[0])} ~ ${evPct(a.cand_ci[1])}` : null);
     const make = async () => {
       const sel = rows.filter(r => o.pick.has(r.name));
       if (!sel.length) { toast(T('무리를 하나 이상 고르세요')); return; }
@@ -1121,22 +1185,31 @@ function evImproveCard(w, busy) {
       } catch (e) { toast(e.message, 'err'); }
     };
     table = h('div', { class: 'col g8' },
-      h('div', { class: 'small muted' }, T`마지막 측정 — 기준 ${rep.base.version}(${rep.base.type}) · KL ${evKL(bk)} · 되돌릴 형식 ${String(rep.restore).toUpperCase()} · 데이터 ${rep.data} · 답 ${rep.max_tokens}토큰 · ${String(rep.finished || '').replace('T', ' ').slice(0, 16)}`),
+      h('div', { class: 'small muted' }, T`마지막 측정 — 기준 ${rep.base.version}(${rep.base.type}) · KL ${evKL(bk)} · 되돌릴 형식 ${String(rep.restore).toUpperCase()} · 데이터 ${rep.data} · 답 ${rep.max_tokens}토큰 · ${String(rep.finished || '').replace('T', ' ').slice(0, 16)}`
+        + (bacc !== null ? T` · 기준 버전의 정답률 ${evPct(bacc)}` : '')),
+      segBy ? h('div', { class: 'row g12 wrap' }, h('span', { class: 'small muted' }, T('고르는 기준')), segBy) : null,
       h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
         h('thead', null, h('tr', null, h('th', null, ''), h('th', null, T('무리')), h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, T('기준 대비')), h('th', { class: 'r' }, T('크기')),
-          h('th', { class: 'r' }, T('1 MB 당')))),
+          h('th', { class: 'r' }, T('1 MB 당')),
+          bacc !== null ? [h('th', { class: 'r' }, T('정답률(기준 대비 %p)')), h('th', { class: 'r' }, T('기준만 맞음'))] : null)),
         h('tbody', null, sorted.map(r => h('tr', null,
           h('td', null, r.error ? null : h('input', { type: 'checkbox', 'aria-label': r.name, 'data-fk': 'ev-imp-p-' + r.name, checked: o.pick.has(r.name) ? true : null,
             onchange: ev => { if (ev.target.checked) o.pick.add(r.name); else o.pick.delete(r.name); } })),
           h('td', { class: 'mono small' }, r.name),
-          r.error ? h('td', { class: 'small err', colspan: '4' }, TM(r.error)) : [
+          r.error ? h('td', { class: 'small err', colspan: bacc !== null ? '6' : '4' }, TM(r.error)) : [
             h('td', { class: 'r num small' }, evKL(r.kl_mean)),
             h('td', { class: 'r num small' }, r.d === null ? '-' : `${r.d >= 0 ? '−' : '+'}${Math.abs(r.d * 100).toFixed(1)}%`),
             h('td', { class: 'r num small' }, r.ds === null ? '-' : `${r.ds >= 0 ? '+' : '−'}${fmtBytes(Math.abs(r.ds))}`),
-            h('td', { class: 'r num small' }, r.eff === null ? '-' : `${r.eff >= 0 ? '−' : '+'}${Math.abs(r.eff).toFixed(2)}%`)]))))),
-      h('p', { class: 'small muted m0' }, T('미리 고른 것 — 행렬 무리 가운데 KL을 5 % 넘게 줄인 것을 1 MB 당 줄임이 큰 차례로 셋. 무리마다 잰 줄임은 더해지지 않습니다 — 만든 뒤의 평가가 실제 값입니다.')),
+            h('td', { class: 'r num small' }, r.eff === null ? '-' : `${r.eff >= 0 ? '−' : '+'}${Math.abs(r.eff).toFixed(2)}%`),
+            bacc !== null ? [
+              h('td', { class: 'r num small nw', 'data-tip': ci(r.accuracy), 'data-tip-pos': 'top' }, r.acc === null ? '-' : `${evPct(r.acc)} (${r.da === null ? '-' : pp(r.da)})`),
+              h('td', { class: 'r num small' }, r.accuracy && typeof r.accuracy.ref_only === 'number' ? String(r.accuracy.ref_only) : '-')] : null]))))),
+      h('p', { class: 'small muted m0' }, byAcc
+        ? T('미리 고른 것 — 정답률을 높인 무리 가운데 1 MB 당 오름이 큰 차례로 셋. 대화가 적으면 정답률의 차이는 우연일 수 있습니다(정답률 칸의 풍선 도움말이 95 % 구간). 무리마다 잰 값은 더해지지 않습니다 — 만든 뒤의 평가가 실제 값입니다.')
+        : T('미리 고른 것 — KL을 5 % 넘게 줄인 무리(층 토막 포함) 가운데 1 MB 당 줄임이 큰 차례로 셋. 무리마다 잰 줄임은 더해지지 않습니다 — 만든 뒤의 평가가 실제 값입니다.')),
       h('div', { class: 'row g12 wrap' }, h('span', { class: 'small muted grow' }, T('고른 무리를 되돌릴 형식으로 바꿔 기준 버전과 같은 형식 · imatrix로 다시 만들고, 기준 버전과 함께 같은 데이터로 평가합니다.')),
-        h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-imp-make', disabled: busy || !st ? true : null, onclick: make }, I('play', 's'), T('고른 무리로 만들기'))));
+        h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-imp-make', disabled: busy || !st ? true : null, onclick: make }, I('play', 's'), T('고른 무리로 만들기'))),
+      evSizeQuality(w, rep, o.by));
   }
   const n = 8 + (o.ranges ? 3 : 0);
   return h('div', { class: 'card col g16' },
