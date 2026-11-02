@@ -369,6 +369,7 @@ const EV = {
   list: null, listSig: '', at: 0, loading: false, err: '',
   sel: load('geulpu.ev.sel', ''), view: 'ws', dir: '', item: -1, cmpA: '', cmpB: '',
   res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0, checks: {}, checkV: '', origDir: {},
+  tools: undefined, mk: {},   // 4-1 — GGUF 만들기 도구(/api/eval/tools) · 작업 공간마다 만들기 양식
 };
 const EVF = new Set();   // 받는 중인 것
 const evEnc = encodeURIComponent;
@@ -440,12 +441,14 @@ const evRunnables = () => sortedModels().filter(runnable);
 const evModelOpts = (ms, sel) => ms.map(m => h('option', { value: m.id, selected: m.id === sel ? true : null }, `${displayName(m)} · ${quantOf(m)} · ${fmtBytes(m.size)}`));
 function evNewWs() {
   const ms = evRunnables();
-  if (!ms.length) { toast(T('먼저 모델 화면에서 GGUF 파일을 더하세요')); return; }
   const name = h('input', { class: 'input', type: 'text', value: T('새 작업 공간'), maxlength: 80 });
-  const ref = h('select', { class: 'input', 'aria-label': T('기준 모델') }, evModelOpts(ms, (ms.find(m => /BF16|F16|F32/.test(quantOf(m))) || ms.find(m => quantOf(m) === 'Q8_0') || ms[0]).id));
+  const def = ms.length ? (ms.find(m => /BF16|F16|F32/.test(quantOf(m))) || ms.find(m => quantOf(m) === 'Q8_0') || ms[0]).id : '';
+  // 4-1 — 기준 모델 없이도 만든다: 원래 모델에서 'GGUF 만들기'로 변환한 파일이 기준 모델이 된다
+  const ref = h('select', { class: 'input', 'aria-label': T('기준 모델') }, h('option', { value: '', selected: def ? null : true }, T('없음 — GGUF 만들기로 원래 모델에서 변환')), evModelOpts(ms, def));
+  const orig = h('input', { class: 'input mono', type: 'text', placeholder: 'C:\\models\\my-finetune', 'aria-label': T('원래 모델 폴더') });
   const go = async () => {
     try {
-      const w = await api('/api/eval/workspace', { action: 'create', name: name.value.trim() || T('새 작업 공간'), reference: ref.value });
+      const w = await api('/api/eval/workspace', { action: 'create', name: name.value.trim() || T('새 작업 공간'), reference: ref.value, original_dir: orig.value.trim() });
       closeModal();
       await evLoad();
       evGo('ws', { sel: w.id });
@@ -455,7 +458,9 @@ function evNewWs() {
     h('p', { class: 'm0 muted' }, T('작업 공간 하나는 모델 하나의 작업입니다 — 기준 모델과, 그와 비교할 GGUF 파일(버전)들과 결과를 묶습니다.')),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('이름')), name),
     h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('기준 모델')), ref,
-      h('span', { class: 'small muted' }, T('같은 모델의 BF16 · F16 파일이 가장 좋습니다(그래픽 메모리에 들지 않으면 Q8_0). 평가할 파일은 모두 이 모델과 비교합니다.')))),
+      h('span', { class: 'small muted' }, T('같은 모델의 BF16 · F16 파일이 가장 좋습니다(그래픽 메모리에 들지 않으면 Q8_0). 평가할 파일은 모두 이 모델과 비교합니다.'))),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(고름 — Hugging Face 형식)')), orig,
+      h('span', { class: 'small muted' }, T('GGUF 만들기와 변환 검증이 이 폴더를 씁니다. 나중에 정해도 됩니다.')))),
   [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('만들기'))], false, 'input');
 }
 function evRename(w) {
@@ -661,14 +666,18 @@ function evCheckDetails(it) {
 }
 async function evApplyFix(w, vid, changes) {
   const v = w.versions.find(x => x.id === vid);
+  const rm = vid === 'ref' ? modelOf(w.reference.model) : null;
   const keys = [...new Set(changes.map(c => c.key))].join(', ');
-  if (!(await confirmBox(T('고친 버전 만들기'), h('p', { class: 'muted m0' }, T`${vid}에서 메타데이터만 바꾼 새 버전을 만듭니다 — 바꾸는 키: ${keys}. 새 파일이 모델 폴더에 쓰입니다(${fmtBytes(v ? v.size : 0)}).`), T('만들기')))) return;
+  const from = vid === 'ref' ? T('기준 모델') : vid;
+  if (!(await confirmBox(T('고친 버전 만들기'), h('p', { class: 'muted m0' }, T`${from}에서 메타데이터만 바꾼 새 버전을 만듭니다 — 바꾸는 키: ${keys}. 새 파일이 모델 폴더에 쓰입니다(${fmtBytes(v ? v.size : rm ? rm.size : 0)}).`), T('만들기')))) return;
   try { await api('/api/eval/fix', { workspace: w.id, from: vid, changes }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
 function evCheckCard(w, busy) {
-  if (!w.versions.length) return null;
-  const vid = EV.checkV && w.versions.some(v => v.id === EV.checkV) ? EV.checkV : (w.current || w.versions[0].id);
+  // 검사할 것 — 버전들과(4-1) 기준 모델('ref' — GGUF 만들기가 변환한 파일일 때가 많다)
+  const opts = (w.reference.model ? [{ id: 'ref', file: w.reference.file }] : []).concat(w.versions);
+  if (!opts.length) return null;
+  const vid = EV.checkV && opts.some(v => v.id === EV.checkV) ? EV.checkV : (w.current || (w.versions[0] ? w.versions[0].id : 'ref'));
   evCheckNeed(w, vid);
   const R = EV.checks[`${w.id}/${vid}`];
   const dirv = EV.origDir[w.id] !== undefined ? EV.origDir[w.id] : ((w.original && w.original.dir) || '');
@@ -682,7 +691,7 @@ function evCheckCard(w, busy) {
   };
   let body;
   if (R === undefined) body = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
-  else if (R.missing) body = h('p', { class: 'small muted m0' }, T`${vid}는 아직 검사하지 않았습니다.`);
+  else if (R.missing) body = h('p', { class: 'small muted m0' }, T`${vid === 'ref' ? T('기준 모델') : vid}는 아직 검사하지 않았습니다.`);
   else {
     const its = R.items || [];
     const fixes = its.filter(it => it.fix && Array.isArray(it.fix.changes)).flatMap(it => it.fix.changes);
@@ -705,9 +714,99 @@ function evCheckCard(w, busy) {
       h('div', { class: 'row g12' },
         h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('검사할 버전')),
           h('select', { class: 'input', 'data-fk': 'ev-chkv', onchange: ev => { EV.checkV = ev.target.value; renderEval(true); } },
-            w.versions.map(v => h('option', { value: v.id, selected: v.id === vid ? true : null }, `${v.id} · ${v.file}`)))),
+            opts.map(v => h('option', { value: v.id, selected: v.id === vid ? true : null }, `${v.id === 'ref' ? T('기준 모델') : v.id} · ${v.file}`)))),
         h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-chk', disabled: busy ? true : null, onclick: run }, I('shield', 's'), busy ? T('다른 작업 실행 중') : T('검사'))))),
     body);
+}
+// ---------- 4-1 GGUF 만들기 ----------
+const EV_QUANTS = ['Q8_0', 'Q6_K', 'Q5_K_M', 'Q4_K_M', 'IQ4_XS'];
+const evMB = n => `${((n || 0) / 1048576).toFixed(1)} MB`;
+function evToolsNeed() {
+  if (EV.tools !== undefined || EVF.has('tools')) return;
+  EVF.add('tools');
+  api('/api/eval/tools').then(r => { EV.tools = r; }, e => { EV.tools = { error: e.message }; })
+    .finally(() => { EVF.delete('tools'); EV.tick++; renderEval(); });
+}
+// 받을 것(출처 · 크기)을 보이고, 누르면 작업 'tools'
+function evToolsSetup() {
+  const t = EV.tools || {}, b = t.build || {}, c = t.convert || {};
+  const py = h('input', { class: 'input mono', type: 'text', placeholder: T('비우면 자동(py -3 · python · python3)'), 'aria-label': T('파이썬 경로') });
+  const row = (what, size, src) => h('div', { class: 'ev-chk' }, h('div', { class: 'ink' }, what), h('div', { class: 'small muted' }, [size, src].filter(Boolean).join(NB)));
+  const go = async () => {
+    try { await api('/api/eval/tools', { python: py.value.trim() }); closeModal(); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    catch (e) { toast(e.message, 'err'); }
+  };
+  const cands = t.python_candidates || [];
+  modal(h('div', { class: 'col g16' }, h('h2', null, T('GGUF 만들기 도구 준비')),
+    h('p', { class: 'm0 muted' }, T('원래 모델(Hugging Face 형식)을 GGUF로 바꾸고 양자화하는 데 llama.cpp의 도구를 씁니다. 아래 파일을 받아 자료 폴더의 tools에 둡니다 — 앱이 정한 판이고, 받은 파일마다 SHA-256을 확인합니다.')),
+    h('div', { class: 'list ev-chks' },
+      row(T`llama.cpp ${t.tag} 실행 파일 — ${b.file}`, evMB(b.size), 'github.com/ggml-org/llama.cpp · MIT'),
+      row(T`변환 스크립트(convert_hf_to_gguf.py 등) ${c.files}개`, evMB(c.bytes), 'raw.githubusercontent.com/ggml-org/llama.cpp · MIT'),
+      row(T`파이썬 패키지 — ${c.torch}(CPU) · transformers 등`, T('약 150 ~ 250 MB(설치하면 1 GB 안쪽)'), 'pypi.org · download.pytorch.org')),
+    h('p', { class: 'small muted m0' }, cands.length ? T`파이썬은 이 PC의 것으로 앱 전용 가상 환경만 만듭니다 — 찾은 파이썬: ${cands.join(', ')}`
+      : T('이 PC에서 파이썬을 찾지 못했습니다 — python.org에서 파이썬 3.10 이상을 설치하거나(설치할 때 Add python.exe to PATH), 아래에 경로를 적으세요.')),
+    h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('파이썬 경로(고름)')), py)),
+  [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('취소')), h('button', { class: 'btn primary', onclick: go }, T('받고 설치'))], false, 'input');
+}
+// 만든 설정의 한 줄(버전 · 기준 모델) — 변환: 형식 · llama.cpp, 양자화: 형식 · imatrix · 행렬별 형식
+function evMadeLine(s) {
+  if (!s) return '';
+  const tool = s.llama_cpp ? `llama.cpp ${s.llama_cpp}` : null;
+  if (s.step === 'convert') return [T`변환 ${String(s.outtype || '').toUpperCase()}`, tool].filter(Boolean).join(NB);
+  if (s.step === 'quantize') return [s.type, s.imatrix ? `imatrix ${s.imatrix.file || ''}`.trim() : null,
+    (s.tensor_types || []).length ? T`행렬별 ${s.tensor_types.join(', ')}` : null, tool].filter(Boolean).join(NB);
+  return '';
+}
+function evMakeCard(w, busy) {
+  evToolsNeed();
+  const t = EV.tools, st = t && !t.error ? t.state : null;
+  const o = EV.mk[w.id] || (EV.mk[w.id] = { outtype: 'bf16', quants: new Set(['Q4_K_M']), imode: 'none', ipath: '', tt: '' });
+  const dirv = EV.origDir[w.id] !== undefined ? EV.origDir[w.id] : ((w.original && w.original.dir) || '');
+  const dir = h('input', { class: 'input mono', type: 'text', value: dirv, placeholder: 'C:\\models\\my-finetune', 'data-fk': 'ev-mkdir', 'aria-label': T('원래 모델 폴더'),
+    oninput: ev => { EV.origDir[w.id] = ev.target.value; } });
+  const seg = (key, vals, label) => h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': label }, vals.map(([v, l]) => h('button', {
+    class: o[key] === v ? 'on' : '', role: 'radio', 'aria-checked': o[key] === v ? 'true' : 'false', 'data-fk': `ev-mk-${key}-${v}`,
+    onclick: () => { o[key] = v; renderEval(true); } }, l)));
+  let tools;
+  if (t === undefined) tools = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
+  else if (t.error) tools = h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, TM(t.error)));
+  else if (!t.ascii_ok) tools = h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('자료 폴더의 경로에 ASCII가 아닌 글자가 있어 llama.cpp의 도구를 쓸 수 없습니다 — ASCII 경로의 자료 폴더로 실행하세요.')));
+  else if (st) tools = h('div', { class: 'small muted' }, T`도구 — llama.cpp ${st.llama_cpp.tag} · 파이썬 ${st.python.version} · torch ${st.python.torch} · transformers ${st.python.transformers}`);
+  else tools = h('div', { class: 'row g12 wrap' }, h('span', { class: 'small muted grow' }, T('GGUF를 만들려면 먼저 도구를 받습니다 — llama.cpp의 실행 파일 · 변환 스크립트 · 파이썬 패키지.')),
+    h('button', { class: 'btn sm primary needs-conn', 'data-fk': 'ev-tools', disabled: busy ? true : null, onclick: evToolsSetup }, I('download', 's'), T('도구 준비')));
+  const run = async () => {
+    const d = dir.value.trim();
+    if (!d) { toast(T('원래 모델 폴더를 정하세요')); return; }
+    const tt = o.tt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    if (tt.length && !o.quants.size) { toast(T('행렬별 형식은 양자화 형식과 함께 씁니다')); return; }
+    if (o.imode !== 'none' && !o.ipath.trim()) { toast(T('imatrix에 쓸 파일을 정하세요')); return; }
+    try {
+      await api('/api/eval/make', { workspace: w.id, source_dir: d, outtype: o.outtype, quants: EV_QUANTS.filter(q => o.quants.has(q)), imatrix: { mode: o.imode, path: o.ipath.trim() }, tensor_types: tt });
+      S.jobHide = ''; EV.at = 0; resetSig(); refresh();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  return h('div', { class: 'card col g16' },
+    h('div', { class: 'row' }, h('span', { class: 'sec' }, T('GGUF 만들기')), h('span', { class: 'grow' }),
+      h('span', { class: 'small muted' }, T('원래 모델(Hugging Face 형식)에서 — llama.cpp의 변환 · 양자화'))),
+    tools,
+    h('div', { class: 'ev-form' },
+      h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(config.json과 가중치 .safetensors가 있는 폴더)')), dir),
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('변환 형식')), seg('outtype', [['bf16', 'BF16'], ['f16', 'F16'], ['q8_0', 'Q8_0']], T('변환 형식')),
+        h('span', { class: 'small muted' }, w.reference.model ? T('변환한 파일은 새 버전이 됩니다(기준 모델이 이미 있음).') : T('변환한 파일이 이 작업 공간의 기준 모델이 됩니다.'))),
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('양자화 형식(여럿 고름 — 고르지 않으면 변환만)')),
+        h('div', { class: 'row g12 wrap' }, EV_QUANTS.map(q => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-mk-q-' + q, checked: o.quants.has(q) ? true : null,
+          onchange: ev => { if (ev.target.checked) o.quants.add(q); else o.quants.delete(q); } }), q)))),
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, 'imatrix'),
+        seg('imode', [['none', T('없음')], ['text', T('글 파일로 만들기')], ['file', T('imatrix 파일')]], 'imatrix'),
+        o.imode !== 'none' ? h('input', { class: 'input mono', type: 'text', value: o.ipath, placeholder: o.imode === 'text' ? 'C:\\data\\calibration.txt' : 'C:\\data\\imatrix.gguf',
+          'data-fk': 'ev-mk-ipath', 'aria-label': T('imatrix에 쓸 파일'), oninput: ev => { o.ipath = ev.target.value; } }) : null,
+        o.imode === 'text' ? h('span', { class: 'small muted' }, T('글 파일의 문장으로 행렬마다 중요한 가중치를 잽니다(llama-imatrix — GPU). 모델이 쓰일 글과 비슷할수록 좋습니다.')) : null),
+      h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T('행렬별 형식(고급)')),
+        h('div', { class: 'col g8 mt8' },
+          h('textarea', { class: 'input mono', rows: '3', 'data-fk': 'ev-mk-tt', 'aria-label': T('행렬별 형식'), placeholder: 'attn_v=q6_k\nffn_down=q6_k', oninput: ev => { o.tt = ev.target.value; } }, o.tt),
+          h('span', { class: 'small muted' }, T('줄마다 행렬 이름=형식(llama-quantize --tensor-type). 엔진이 받지 않는 섞임이면 버전에 까닭이 보입니다.'))))),
+    h('div', null, h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-make', disabled: busy || !st ? true : null, onclick: run },
+      I('play', 's'), busy ? T('다른 작업 실행 중') : T('만들기'))));
 }
 // 3-2 — 내장 데이터의 출처 · 대화 수 · 라이선스(앱/data/eval/sources.json)
 function evDataInfo(d) {
@@ -775,7 +874,7 @@ function evVerdict(r) {
 }
 
 // ---------- 화면 ----------
-const EV_JOBS = ['eval', 'fix', 'check'];
+const EV_JOBS = ['eval', 'fix', 'check', 'tools', 'make'];
 const evJobOf = () => { const j = S.st && S.st.job; return j && EV_JOBS.includes(j.kind) && (j.state === 'running' || jobKey(j) !== S.jobHide) ? j : null; };
 function evJobCard(j) {
   const tone = { running: 'acc', done: 'ok', failed: 'err', cancelled: 'dim' }[j.state] || '';
@@ -863,7 +962,8 @@ function evWsView(w) {
           { icon: 'target', label: T('기준 모델 바꾸기'), run: () => evSetRef(w) },
           '-', { icon: 'trash', label: T('작업 공간 지우기'), danger: true, run: () => evDelWs(w) }], 'right') }, I('dots'))),
     h('div', { class: 'fd-title' }, w.name),
-    h('div', { class: 'fd-sub' }, T`기준 모델 ${evRefLabel(w)}`, w.reference.sha256 ? h('span', { class: 'mono faint small' }, ` · ${w.reference.sha256.slice(0, 12)}`) : null),
+    h('div', { class: 'fd-sub' }, T`기준 모델 ${evRefLabel(w)}`, w.reference.sha256 ? h('span', { class: 'mono faint small' }, ` · ${w.reference.sha256.slice(0, 12)}`) : null,
+      w.reference.made ? h('span', { class: 'faint small' }, ` · ${evMadeLine(w.reference.made)}`) : null),
     w.reference.model && !modelOf(w.reference.model) ? h('div', { class: 'note-line err mt8' }, I('alert', 's'), h('span', null, T('기준 모델이 앱의 모델 목록에 없습니다 — 모델 화면에서 그 파일을 다시 더하거나 기준 모델을 바꾸세요.'))) : null);
   const state = h('div', { class: 'card col g8 ev-state' },
     h('div', { class: 'eyebrow' }, cur ? T`지금 상태 — ${evVerLabel(w, cur.version)}` : T('지금 상태')),
@@ -885,9 +985,12 @@ function evWsView(w) {
     return h('div', { class: 'ev-vrow' + (r ? ' clk' : ''), onclick: e => { if (r && !e.target.closest('button')) evGo('result', { dir: r.dir }); } },
       h('div', { class: 'ev-vid' }, h('span', { class: 'ink' }, v.id), w.current === v.id ? h('span', { class: 'tag acc' }, T('지금')) : null),
       h('div', { class: 'ev-vfile' }, h('div', { class: 'ink ell', 'data-tip': modelOf(v.model) ? labelById(v.model) : v.file, 'data-tip-pos': 'top' }, v.file),
-        h('div', { class: 'small muted' }, [fmtBytes(v.size), ({ imported: T('가져옴'), metadata: T('메타데이터 고침'), quantized: T('다시 양자화'), converted: T('변환') })[v.made && v.made.kind] || '',
-          v.made && v.made.from ? T`${v.made.from}에서 만듦` : null].filter(Boolean).join(NB)),
-        v.made && v.made.changed ? h('div', { class: 'small faint ell', 'data-tip': v.made.changed, 'data-tip-pos': 'top' }, T`바꾼 키 ${v.made.changed}`) : null),
+        h('div', { class: 'small muted' }, [fmtBytes(v.size), ({ imported: T('가져옴'), metadata: T('메타데이터 고침'), quantized: T('다시 양자화'), converted: T('변환'), convert: T('변환'), quantize: T('양자화') })[v.made && v.made.kind] || '',
+          v.made && v.made.from ? (v.made.from === 'ref' ? T('기준 모델에서 만듦') : T`${v.made.from}에서 만듦`) : null].filter(Boolean).join(NB)),
+        v.made && v.made.changed ? h('div', { class: 'small faint ell', 'data-tip': v.made.changed, 'data-tip-pos': 'top' }, T`바꾼 키 ${v.made.changed}`) : null,
+        v.made && v.made.settings ? h('div', { class: 'small faint ell', 'data-tip': evMadeLine(v.made.settings), 'data-tip-pos': 'top' }, evMadeLine(v.made.settings)) : null,
+        modelOf(v.model) && modelOf(v.model).shape && !modelOf(v.model).shape.ok ? h('div', { class: 'small err ell', 'data-tip': TM(modelOf(v.model).shape.reason || ''), 'data-tip-pos': 'top' },
+          T`엔진이 받지 않음 — ${TM(modelOf(v.model).shape.reason || '')}`) : null),
       h('div', { class: 'ev-vres' }, h('div', { class: 'small' }, r ? (evChat(r) && a && a.compared ? T`답 ${a.differ}/${a.compared} 달라짐 · KL ${evKL(m && m.kl_mean)}` : `KL ${evKL(m && m.kl_mean)} · top-1 ${evPct(m && m.top1)}`) : h('span', { class: 'muted' }, T('결과 없음'))),
         delta ? h('div', { class: 'small muted' }, T`${base.id} 대비 ${delta}`) : null),
       h('div', { class: 'ev-vmenu' }, h('button', { class: 'icon-btn', 'aria-label': T`${v.id} 메뉴`, 'aria-haspopup': 'menu', onclick: ev => menu(ev.currentTarget, T`${v.id} 메뉴`, [
@@ -900,7 +1003,7 @@ function evWsView(w) {
     h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('버전')), h('span', { class: 'grow' }),
       h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev:addv', onclick: () => evAddVersion(w) }, I('plus', 's'), T('버전 더하기'))),
     w.versions.length ? h('div', { class: 'list ev-vlist' }, vrows)
-      : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('버전이 없습니다')), h('div', null, T('기준 모델과 비교할 GGUF 파일을 더하세요.'))));
+      : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('버전이 없습니다')), h('div', null, T('기준 모델과 비교할 GGUF 파일을 더하거나, 아래 GGUF 만들기로 원래 모델에서 만드세요.'))));
   // 결과 — 둘을 고르면 전후 비교
   const pick = EV.pick.filter(d => rs.some(r => r.dir === d));
   const results = h('div', { class: 'col g12' },
@@ -918,7 +1021,7 @@ function evWsView(w) {
           h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}` + (r.accuracy ? T` · 정답률 ${evPct(r.accuracy.cand)}` : ''))));
     }))
       : h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('아직 결과가 없습니다')), h('div', null, T('위에서 평가를 실행하면 여기에 쌓입니다.'))));
-  return h('div', { class: 'col g24' }, head, state, versions, evCheckCard(w, busy), evRunCard(w, busy), results);
+  return h('div', { class: 'col g24' }, head, state, versions, evMakeCard(w, busy), evCheckCard(w, busy), evRunCard(w, busy), results);
 }
 
 // 결과 — 판정 · 지표 · 처음 갈라진 스텝 · 끝난 까닭 · 분야 · 대화
@@ -1201,7 +1304,7 @@ function renderEval(force) {
   if (!page || !S.st || S.view !== 'eval') return;
   const j = S.st.job;
   const js = j && EV_JOBS.includes(j.kind) ? `${j.id}:${j.state}` : '';
-  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; EV.checks = {}; }   // 평가 작업이 시작 · 끝나면 목록 · 검증 보고서를 다시
+  if (js !== EV.jobSig) { EV.jobSig = js; EV.at = 0; EV.checks = {}; EV.tools = undefined; }   // 평가 작업이 시작 · 끝나면 목록 · 검증 보고서 · 도구를 다시
   const running = !!(j && EV_JOBS.includes(j.kind) && j.state === 'running');
   if (!EV.loading && Date.now() - EV.at > (running ? 3000 : 20000)) evLoad();
   const w = evWs(EV.sel);
