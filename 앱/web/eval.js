@@ -340,6 +340,10 @@ const EVAL_DICT = {
   "미세조정 전 모델을 고르면 텍스트 결과에 그 모델의 같은 토큰 PPL과 PPL 비를 함께 보입니다(이어서 사전학습의 PPL 변화). 그 모델의 값은 한 번 재어 다시 씁니다.": "If you choose the model before fine-tuning, text results also show its PPL on the same tokens and the PPL ratios (the PPL change from continued pretraining). Its values are measured once and reused.",
   "기준 ÷ 비교용 {} · 평가 ÷ 비교용 {}": "reference ÷ baseline {} · evaluated ÷ baseline {}",
   "PPL은 청크마다 뒤쪽 255 토큰(llama-perplexity와 같은 위치)의 평균 NLL(nat)의 지수입니다. BPB(bits per byte)는 같은 글의 바이트로 나눈 값이라 어휘가 다른 모델끼리도 견줄 수 있습니다 — 그 모델을 기준 모델로 둔 작업 공간에서 같은 데이터로 재세요.": "PPL is the exponential of the mean NLL (nat) over the last 255 tokens of each chunk (the same positions as llama-perplexity). BPB (bits per byte) divides by the bytes of the same text, so models with different vocabularies can be compared — measure such a model as the reference model of its own workspace on the same data.",
+  "견줄 대화 수": "Conversations to compare",
+  "견줄 대화 수(0 = 모두)": "Conversations to compare (0 = all)",
+  " — 처음 {}/{}개만": " — only the first {}/{}",
+  "CPU로 대화마다 원래 모델을 한 번 돌립니다 — 대화 수 · 답 길이에 비례해, 짧은 답 60개는 1분 안쪽이고 GSM8K 1,319개는 수십 분입니다. 처음 n개만 견주면 빨리 끝납니다(같은 결과의 기준값 앞쪽).": "The original model runs once per conversation on the CPU — the time grows with the number of conversations and answer length: 60 short answers take under a minute, the 1,319 of GSM8K take tens of minutes. Comparing only the first n finishes sooner (the front of the same result's reference values).",
   "Δp 평균(기준 − 평가)": "Mean Δp (reference − evaluated)",
   "기준 모델의 상위 {}개 밖 확률": "Probability outside the reference top {}",
   "KL divergence는 기준 모델의 상위 {}개 토큰과 나머지 확률 하나로 계산한 값입니다 — 모든 어휘로 계산한 값보다 조금 작습니다(아래쪽 값). 위치 {}개.": "KL divergence is computed from the reference model's top {} tokens plus one remainder probability — slightly below the full-vocabulary value (a lower bound). {} positions.",
@@ -617,6 +621,12 @@ TMX.push(
   [/원래 모델을 읽었다 — (\S+) · ([\d.]+) 초/g, 'Loaded the original model — $1 · $2 s'],
   [/(\d+)\/(\d+) (\S+) — 위치 (\d+) · KL (\S+)/g, '$1/$2 $3 — $4 positions · KL $5'],
   [/원래 모델과 견줌 — 대화 (\d+) · 위치 (\d+) · KL (\S+) · top-1 ([\d.]+) %/g, 'Compared with the original model — $1 conversations · $2 positions · KL $3 · top-1 $4 %'],
+  // #219 — 진행 · 처음 n 개만
+  [/원래 모델과 견주는 중 — 대화 (\d+)\/(\d+)/g, 'Comparing with the original model — conversation $1/$2'],
+  [/ · 남은 시간 약 (\d+)초/g, ' · about $1 s left'],
+  [/ · 남은 시간 약 (\d+)분/g, ' · about $1 min left'],
+  [/ · 처음 (\d+)\/(\d+)개 대화/g, ' · first $1/$2 conversations'],
+  [/처음 (\d+)개 대화만 견줌\(모두 (\d+)개\)/g, 'Compared only the first $1 conversations ($2 in all)'],
   [/계산 형식은 float32 · bfloat16 중 하나입니다/g, 'The compute type is float32 or bfloat16'],
   [/이 결과에는 견줄 기준값\(같은 토큰의 확률\)이 없습니다/g, 'This result has no reference values to compare (probabilities of the same tokens)'],
   [/GGUF 만들기 도구\(파이썬 가상 환경\)가 준비되지 않았습니다 — '도구 준비'를 먼저 누르세요/g, "The Make GGUF tools (Python virtual environment) are not set up — press 'Set up tools' first"],
@@ -658,7 +668,7 @@ const EV = {
   sel: load('geulpu.ev.sel', ''), view: 'ws', dir: '', item: -1, cmpA: '', cmpB: '',
   res: {}, cmp: {}, items: {}, filter: 'differ', pick: [], opts: {}, jobSig: '', tick: 0, checks: {}, checkV: '', origDir: {},
   tools: undefined, mk: {},   // 4-1 — GGUF 만들기 도구(/api/eval/tools) · 작업 공간마다 만들기 양식
-  orig: {}, origDt: 'float32',   // 2-3 — 결과마다 원래 모델과 견준 값(/api/eval/original) · 계산 형식
+  orig: {}, origDt: 'float32', origLimit: 0,   // 2-3 — 결과마다 원래 모델과 견준 값(/api/eval/original) · 계산 형식 · #219 견줄 대화 수(0 = 모두)
   tbl: {}, xw: null,             // #198 — 작업 공간마다 결과 표의 고름(데이터 · 설정 · 분야별 · 품질 기준), 작업 공간 견주기의 고름
   imp: {}, impo: {},   // 4-2 — 작업 공간마다 마지막 개선 측정 보고서(/api/eval/improve) · 측정 양식 · 고른 무리
 };
@@ -1337,10 +1347,13 @@ function evOrigCard(w, dir) {
   const seg = h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': T('계산 형식') }, ['float32', 'bfloat16'].map(v => h('button', {
     class: EV.origDt === v ? 'on' : '', role: 'radio', 'aria-checked': EV.origDt === v ? 'true' : 'false', 'data-fk': 'ev-odt-' + v,
     onclick: () => { EV.origDt = v; renderEval(true); } }, v)));
+  // #219 — 처음 n 개 대화만 견주기(0 이면 모두 — GSM8K 크기 결과는 CPU 로 수십 분)
+  const lim = h('input', { class: 'input num', type: 'number', min: 0, max: 100000, value: EV.origLimit || 0, 'data-fk': 'ev-origlim', 'aria-label': T('견줄 대화 수'),
+    onchange: ev => { const x = Math.round(+ev.target.value); EV.origLimit = isFinite(x) && x > 0 ? x : 0; ev.target.value = EV.origLimit; } });
   const run = async () => {
     const d = inp.value.trim();
     if (!d) { toast(T('원래 모델 폴더를 정하세요')); return; }
-    try { await api('/api/eval/original', { workspace: w.id, dir, original_dir: d, dtype: EV.origDt }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    try { await api('/api/eval/original', { workspace: w.id, dir, original_dir: d, dtype: EV.origDt, limit: EV.origLimit || 0 }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
     catch (e) { toast(e.message, 'err'); }
   };
   let body = null;
@@ -1350,7 +1363,8 @@ function evOrigCard(w, dir) {
     // 10⁻³ 을 넘으면 짚는다
     const big16 = O.reference_16bit === true && typeof O.kl_mean === 'number' && O.kl_mean > 1e-3;
     body = h('div', { class: 'col g4' },
-      h('div', null, T`KL divergence ${evKL(O.kl_mean)} · top-1 일치율 ${evPct(O.top1)} · 위치 ${fmtNum(O.positions || 0)}개 · 대화 ${O.conversations}개`),
+      h('div', null, T`KL divergence ${evKL(O.kl_mean)} · top-1 일치율 ${evPct(O.top1)} · 위치 ${fmtNum(O.positions || 0)}개 · 대화 ${O.conversations}개`
+        + (O.conversations_total > O.conversations ? T` — 처음 ${O.conversations}/${O.conversations_total}개만` : '')),
       h('div', { class: 'small muted' }, T`답 토큰의 로그확률 차(절댓값 평균) ${evNum(O.answer_logprob_abs_mean, 6)} · 가장 큰 KL ${evKL(O.kl_max)} · ${O.dtype} · transformers ${O.transformers} · ${String(O.finished || '').replace('T', ' ').slice(0, 16)}`),
       O.config_check ? evOrigCfgLine(O.config_check) : null,
       O.reference_16bit !== true ? null : big16
@@ -1365,7 +1379,9 @@ function evOrigCard(w, dir) {
     st ? h('div', { class: 'ev-form' },
       h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('원래 모델 폴더(config.json과 가중치 .safetensors가 있는 폴더)')), inp),
       h('div', { class: 'row g12 wrap' }, h('div', { class: 'col g4' }, h('span', { class: 'small muted' }, T('계산 형식')), seg),
-        h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-origrun', disabled: busy ? true : null, onclick: run }, I('target', 's'), busy ? T('다른 작업 실행 중') : T('견주기')))))
+        h('label', { class: 'col g4 ev-num' }, h('span', { class: 'small muted' }, T('견줄 대화 수(0 = 모두)')), lim),
+        h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-origrun', disabled: busy ? true : null, onclick: run }, I('target', 's'), busy ? T('다른 작업 실행 중') : T('견주기')))),
+      h('span', { class: 'small muted' }, T('CPU로 대화마다 원래 모델을 한 번 돌립니다 — 대화 수 · 답 길이에 비례해, 짧은 답 60개는 1분 안쪽이고 GSM8K 1,319개는 수십 분입니다. 처음 n개만 견주면 빨리 끝납니다(같은 결과의 기준값 앞쪽).')))
       : h('div', { class: 'small muted' }, T('원래 모델과 견주려면 작업 공간의 GGUF 만들기에서 도구 준비를 먼저 하세요(파이썬 · transformers).')));
 }
 // 3-2 — 내장 데이터의 출처 · 대화 수 · 라이선스(앱/data/eval/sources.json)

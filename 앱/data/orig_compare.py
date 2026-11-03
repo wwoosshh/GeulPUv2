@@ -135,6 +135,7 @@ def main():
     ap.add_argument("--dtype", default="float32", choices=["float32", "bfloat16"])
     ap.add_argument("--gguf")
     ap.add_argument("--gguf-id")
+    ap.add_argument("--limit", type=int, default=0)      # #219 — 처음 n 개 대화만(0 이면 모두) — GSM8K 크기 결과는 CPU 로 수십 분
     a = ap.parse_args()
     import torch
     import transformers
@@ -169,6 +170,9 @@ def main():
     합top1 = 합n = 0
     큰kl = 0.0
     대화 = [e for e in ref["items"] if e.get("scored")]
+    전체 = len(대화)
+    if 0 < a.limit < 전체:                               # topk.bin 은 대화 차례대로라 처음 n 개는 앞쪽을 그대로 읽는다
+        대화 = 대화[:a.limit]
     for k, e in enumerate(대화, 1):
         p, ans = e["prompt"], e["answer"]
         m = len(ans)
@@ -208,17 +212,21 @@ def main():
         합top1 += t1_i
         합n += m
         print(f"{k}/{len(대화)} {e['id']} — 위치 {m} · KL {kl_i / max(m, 1):.6f}", flush=True)
-    if 쪽 != len(topk):
+    if len(대화) == 전체 and 쪽 != len(topk):
         sys.exit(f"topk.bin 의 길이가 reference.json 과 맞지 않는다({쪽} · {len(topk)})")
+    if 쪽 > len(topk):
+        sys.exit(f"topk.bin 이 reference.json 보다 짧다({쪽} · {len(topk)})")
     out = {"format": "geulpu-eval-original/1", "hf_dir": a.hf, "dtype": a.dtype, "torch": torch.__version__,
            "transformers": transformers.__version__, "reference_key": ref["key"], "reference_model": ref["model"], "top_k": K,
-           "conversations": len(대화), "positions": 합n, "kl_mean": 합kl / max(합n, 1), "kl_max": 큰kl, "top1": 합top1 / max(합n, 1),
+           "conversations": len(대화), "conversations_total": 전체, "positions": 합n, "kl_mean": 합kl / max(합n, 1), "kl_max": 큰kl, "top1": 합top1 / max(합n, 1),
            "answer_logprob_abs_mean": 합d / max(합n, 1), "config_check": 설정,
            "reference_types": 형식들, "reference_16bit": None if 형식들 is None else all(x in ("F32", "F16", "BF16") for x in 형식들),
            "seconds": round(time.time() - t0, 1), "finished": time.strftime("%Y-%m-%dT%H:%M:%S"), "items": 줄}
     with open(a.out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False)
     print(f"원래 모델과 견줌 — 대화 {len(대화)} · 위치 {합n} · KL {out['kl_mean']:.3g} · top-1 {out['top1'] * 100:.2f} %", flush=True)
+    if len(대화) < 전체:
+        print(f"처음 {len(대화)}개 대화만 견줌(모두 {전체}개)", flush=True)
 
 
 if __name__ == "__main__":
