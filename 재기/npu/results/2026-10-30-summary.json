@@ -1,0 +1,322 @@
+{
+  "passed": true,
+  "kernel_checks": 16,
+  "linear_checks": 124,
+  "matrix": [
+    {
+      "shape_M_N_K": [
+        1,
+        1024,
+        1024
+      ],
+      "median_seconds": {
+        "planned": 0.024939299997640774,
+        "fused": 0.020333300009951927
+      },
+      "speedup": 1.2265249607999924,
+      "dispatches": {
+        "planned": 1,
+        "fused": 1
+      },
+      "allocated_output_bytes_per_call": {
+        "planned": 2097152,
+        "fused": 1048576
+      },
+      "median_profiles": {
+        "planned": {
+          "packing_seconds": 0.0025536500179441646,
+          "device_and_transfer_seconds": 0.01235225000709761,
+          "finalization_seconds": 0.00928964999911841
+        },
+        "fused": {
+          "packing_seconds": 0.002146199985872954,
+          "device_and_transfer_seconds": 0.009284400002798066,
+          "finalization_seconds": 0.008460500001092441
+        }
+      }
+    },
+    {
+      "shape_M_N_K": [
+        32,
+        256,
+        1024
+      ],
+      "median_seconds": {
+        "planned": 0.15013419999741018,
+        "fused": 0.12751550000393763
+      },
+      "speedup": 1.1773800047270653,
+      "dispatches": {
+        "planned": 8,
+        "fused": 8
+      },
+      "allocated_output_bytes_per_call": {
+        "planned": 2097152,
+        "fused": 1048576
+      },
+      "median_profiles": {
+        "planned": {
+          "packing_seconds": 0.003935950080631301,
+          "device_and_transfer_seconds": 0.09363314998336136,
+          "finalization_seconds": 0.051099700009217486
+        },
+        "fused": {
+          "packing_seconds": 0.0038412500434787944,
+          "device_and_transfer_seconds": 0.07416240003658459,
+          "finalization_seconds": 0.048896049993345514
+        }
+      }
+    },
+    {
+      "shape_M_N_K": [
+        16,
+        1024,
+        3072
+      ],
+      "median_seconds": {
+        "planned": 0.29814105000696145,
+        "fused": 0.2541536499920767
+      },
+      "speedup": 1.1730740440527063,
+      "dispatches": {
+        "planned": 8,
+        "fused": 8
+      },
+      "allocated_output_bytes_per_call": {
+        "planned": 2097152,
+        "fused": 1048576
+      },
+      "median_profiles": {
+        "planned": {
+          "packing_seconds": 0.013381949946051463,
+          "device_and_transfer_seconds": 0.09280245000263676,
+          "finalization_seconds": 0.18696384999202564
+        },
+        "fused": {
+          "packing_seconds": 0.01134984998498112,
+          "device_and_transfer_seconds": 0.07193900000129361,
+          "finalization_seconds": 0.1717062999960035
+        }
+      }
+    }
+  ],
+  "models": {
+    "planned": {
+      "complete": true,
+      "tokens": [
+        1,
+        2,
+        3
+      ],
+      "linear_checks": 282,
+      "residual_checks": 56,
+      "logit_checks": 2,
+      "different_bits_elements": 0,
+      "logits_sha256": [
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838",
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838"
+      ],
+      "repeat_differences": [
+        null,
+        {
+          "elements": 455808,
+          "different_bits_elements": 0,
+          "max_abs": 0.0
+        }
+      ],
+      "linear_seconds_by_repeat": {
+        "0": 19.161436899914406,
+        "1": 10.243458100070711
+      },
+      "profile_seconds_by_repeat": {
+        "0": {
+          "packing_seconds": 1.3229620998899918,
+          "device_and_transfer_seconds": 13.23902760000783,
+          "finalization_seconds": 4.446749100199668
+        },
+        "1": {
+          "packing_seconds": 0.9096218998893164,
+          "device_and_transfer_seconds": 3.922749800083693,
+          "finalization_seconds": 5.2364133002993185
+        }
+      },
+      "completion": {
+        "event": "complete",
+        "npu_dispatches": 654,
+        "passed": true,
+        "plan_cache_hits": 141,
+        "plan_cache_misses": 141,
+        "host_plan_bytes": 595984384
+      }
+    },
+    "fused": {
+      "complete": true,
+      "tokens": [
+        1,
+        2,
+        3
+      ],
+      "linear_checks": 282,
+      "residual_checks": 56,
+      "logit_checks": 2,
+      "different_bits_elements": 0,
+      "logits_sha256": [
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838",
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838"
+      ],
+      "repeat_differences": [
+        null,
+        {
+          "elements": 455808,
+          "different_bits_elements": 0,
+          "max_abs": 0.0
+        }
+      ],
+      "linear_seconds_by_repeat": {
+        "0": 22.745482900209026,
+        "1": 7.835938000120223
+      },
+      "profile_seconds_by_repeat": {
+        "0": {
+          "packing_seconds": 1.7589558995096013,
+          "device_and_transfer_seconds": 14.05292970003211,
+          "finalization_seconds": 6.7790123999875505
+        },
+        "1": {
+          "packing_seconds": 0.7178056996781379,
+          "device_and_transfer_seconds": 3.012593200081028,
+          "finalization_seconds": 4.012149499787483
+        }
+      },
+      "completion": {
+        "event": "complete",
+        "npu_dispatches": 654,
+        "passed": true,
+        "plan_cache_hits": 141,
+        "plan_cache_misses": 141,
+        "host_plan_bytes": 595984384
+      }
+    },
+    "fused-length1": {
+      "complete": true,
+      "tokens": [
+        1
+      ],
+      "linear_checks": 282,
+      "residual_checks": 56,
+      "logit_checks": 2,
+      "different_bits_elements": 0,
+      "logits_sha256": [
+        "b0fcea7ffe8189bd7339feb2eed1821e1519606e3802e52ff8da53302ad5c080",
+        "b0fcea7ffe8189bd7339feb2eed1821e1519606e3802e52ff8da53302ad5c080"
+      ],
+      "repeat_differences": [
+        null,
+        {
+          "elements": 151936,
+          "different_bits_elements": 0,
+          "max_abs": 0.0
+        }
+      ],
+      "linear_seconds_by_repeat": {
+        "0": 13.561725900217425,
+        "1": 6.167783600045368
+      },
+      "profile_seconds_by_repeat": {
+        "0": {
+          "packing_seconds": 0.9220049004652537,
+          "device_and_transfer_seconds": 11.10106560017448,
+          "finalization_seconds": 1.4946781000762712
+        },
+        "1": {
+          "packing_seconds": 0.7353987001115456,
+          "device_and_transfer_seconds": 3.0956560000777245,
+          "finalization_seconds": 2.2732586998317856
+        }
+      },
+      "completion": {
+        "event": "complete",
+        "npu_dispatches": 654,
+        "passed": true,
+        "plan_cache_hits": 141,
+        "plan_cache_misses": 141,
+        "host_plan_bytes": 595984384
+      }
+    },
+    "fused-length16": {
+      "complete": true,
+      "tokens": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "linear_checks": 282,
+      "residual_checks": 56,
+      "logit_checks": 2,
+      "different_bits_elements": 0,
+      "logits_sha256": [
+        "d1cad149069e7080b0396189b63482ae2bde973a606ba0ead8990d41c37c2af6",
+        "d1cad149069e7080b0396189b63482ae2bde973a606ba0ead8990d41c37c2af6"
+      ],
+      "repeat_differences": [
+        null,
+        {
+          "elements": 2430976,
+          "different_bits_elements": 0,
+          "max_abs": 0.0
+        }
+      ],
+      "linear_seconds_by_repeat": {
+        "0": 47.82934169998043,
+        "1": 38.72313690005103
+      },
+      "profile_seconds_by_repeat": {
+        "0": {
+          "packing_seconds": 2.188763899204787,
+          "device_and_transfer_seconds": 19.80098919910961,
+          "finalization_seconds": 25.408300999901257
+        },
+        "1": {
+          "packing_seconds": 1.7086580994655378,
+          "device_and_transfer_seconds": 11.764947799732909,
+          "finalization_seconds": 24.83902469999157
+        }
+      },
+      "completion": {
+        "event": "complete",
+        "npu_dispatches": 2616,
+        "passed": true,
+        "plan_cache_hits": 141,
+        "plan_cache_misses": 141,
+        "host_plan_bytes": 595984384
+      }
+    }
+  },
+  "same_model_logits_across_backends": true,
+  "source_sha256": {
+    "fused_kernel.py": "95ebb1585662755bc87527c6690ecb2655b6927a7d1fbace26230e34b192249b",
+    "tiled_kernel.py": "fd728c1d1a2c18ee23f3583f063fa2975c25d59a52b400c24746b5bf70eb05ae",
+    "planned_linear.py": "30900dc913d6dd6f85c825f8203df8f85744b0ffdb896553b7208cb5e087cc53",
+    "test_fused.py": "5b99ad81bad904960fea7b2bf30b989b97bc205c3a02853f86f9c02699cdf176",
+    "trace_model.py": "0bb59133c458fa23d387e355e9e718ecd080284b5f9dc11b4dbbe08a627510cc"
+  },
+  "limitations": [
+    "NPU kernel is AIE C++; GL frontend/lowering is not implemented.",
+    "Model timing sums instrumented linear calls, not generation TPS or uninstrumented end-to-end latency.",
+    "Matrix timing uses six alternating warm samples per backend, one session.",
+    "Output byte counts are allocated XRT buffer sizes, not hardware bus counters."
+  ]
+}

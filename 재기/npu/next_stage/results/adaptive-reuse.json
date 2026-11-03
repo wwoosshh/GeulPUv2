@@ -1,0 +1,15 @@
+{
+  "complete": true,
+  "policy_checks": 11,
+  "tile_checks": 8,
+  "linear_checks": 5,
+  "model_hashes": [
+    "645fae6a1f271c1397d37dd97dc9504b18ba07ea8c45ce7d131ca24517c895a8",
+    "1f5f26e598dbc5a22c108ed6f70924083b299900c4581fffacd71610c6973ba4"
+  ],
+  "selections": {
+    "2048": 8,
+    "4096": 453,
+    "8192": 1
+  }
+}

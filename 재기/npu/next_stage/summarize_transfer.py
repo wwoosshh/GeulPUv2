@@ -1,0 +1,39 @@
+import hashlib
+import json
+from pathlib import Path
+from statistics import median
+
+here=Path(__file__).resolve().parent
+d=json.loads((here/'results/transfer-diagnostic.json').read_text())
+assert d['complete'] and len(d['runs'])==6
+def med(mode,fn):return median(fn(r) for r in d['runs'] if r['mode']==mode)*1000
+rows=[('전체',lambda r:r['seconds']),
+      ('할당·패딩',lambda r:r['stages']['allocate_pad']),
+      ('호스트 입력 패킹·복사',lambda r:r['stages']['pack_copy']),
+      ('명시적 업로드 동기화',lambda r:r['stages']['upload_sync']),
+      ('호출 전체(아래 실행 대기 포함)',lambda r:r['stages']['dispatch_wait']),
+      ('런타임 실행·완료 대기',lambda r:r['stages']['runtime_wait_ns']/1e9),
+      ('호출 전체−실행 대기',lambda r:r['stages']['dispatch_wait']-r['stages']['runtime_wait_ns']/1e9),
+      ('명시적 다운로드 동기화',lambda r:r['stages']['download_sync']),
+      ('반환 버퍼 복사',lambda r:r['stages']['output_copy']),
+      ('복원·검사·재요청',lambda r:r['stages']['decode_replay']),
+      ('출력 순서 재배치',lambda r:r['stages']['scatter']),
+      ('CPU FP32 후처리 작업(중첩됨)',lambda r:r['profile']['finalization_seconds']),
+      ('호출자 후처리 제출·대기',lambda r:r['profile']['post_wait_seconds'])]
+lines=['# 전송·실행 대기·호스트 처리 분해 진단', '',
+       '과거 벤치마크 스크립트는 반복하지 않았다. 새 계측 코드를 추가하고 동일 세션·동일 입력의 비압축/압축 진단을 A/B/B/A/A/B 순서로 각 3회 수행했다. Qwen3-0.6B-Q8_0 FFN up, M=256 K=1024 N=3072, 새 난수 seed=619, NPU 작업자 4개, 4,096프레임, CPU 후처리 4스레드 중첩이다. 두 경로 워밍업 포함 8회 출력 모두 CPU 기준과 비트 일치했다. 재요청은 압축 측정 3회 모두 0회다.', '',
+       '| 구간 | 비압축 ms | 압축 v3 ms |','|---|---:|---:|']
+for label,fn in rows:lines.append(f'| {label} | {med("plain",fn):.2f} | {med("packed_v3",fn):.2f} |')
+lines+=['','각 열은 실행별 합계의 중앙값이다. 중첩된 작업 시간과 포함 관계가 있는 행을 더하면 전체 시간이 되지 않는다. 계측 자체와 Python 루프·양자화·JoinedPrefill 바깥쪽 패킹 등 표에 따로 나열하지 않은 비용도 있다. 비압축의 복원 행은 reshape·메서드 호출과 스케줄링을 포함하며 압축 해제가 아니다.', '',
+        '## 시간의 정확한 의미', '',
+        '설치된 IRON 소스를 확인했다. CallableDesign은 캐시·인자 검증 등을 거쳐 NPUKernel을 호출한다. XRTHostRuntime.run은 time.time_ns()로 kernel_handle.kernel(...)과 h.wait()를 감싸 npu_time을 반환한다. 따라서 이 값은 호스트에서 본 제출·완료 대기 시간이며 AIE 코어의 순수 연산 사이클 수가 아니다. 명령 처리, 장치 내부 DMA와 FIFO 대기, 스케줄링, 연산이 함께 들어갈 수 있다.', '',
+        '업로드는 A/B _sync_to_device, 다운로드는 C.numpy() 내부 _sync_from_device 시간을 각각 측정했다. 다운로드 후 명시적 copy는 별도로 측정했다. 동기화 호출이 짧다고 해서 물리적인 전체 데이터 이동 비용도 그 시간뿐이라고 결론 내리지 않는다. 장치 내부 전송은 실행 대기 구간에 포함될 수 있다.', '',
+        '런타임 반환값이 (핸들, 결과) 튜플인 점을 처음에 반영하지 못해 워밍업 계측이 중단됐다. 수정 후 위 진단 전체를 완료했다. 실패 실행에서는 성능 표본을 확보하지 않았다.', '',
+        '## 판단과 우선순위', '',
+        '동일 세션의 진단에서도 압축의 전체 지연이 더 크다. 주요 증가 구간은 실행·완료 대기이며 CPU 복원도 추가된다. 이번 결과로는 반환 바이트 절약이 그 비용을 상쇄하지 못한다. 압축은 연구 경로로만 보존하고 비압축 자동 용량 선택을 유지한다.', '',
+        'CPU 후처리 작업은 약 0.3초지만 호출자가 실제로 기다리는 시간은 훨씬 짧다. 이미 중첩으로 상당 부분 숨겨져 있으므로 후처리 작업 시간 전체를 그대로 줄일 수 있는 지연으로 계산하면 안 된다.', '',
+        '다음 후보는 비압축 경로의 반복 호출 준비 비용 축소(미리 로드한 실행 핸들 재사용)와 호스트 패킹·출력 재배치 비용 축소다. 호출 전체와 실행 대기의 차이는 모두 순수 API 오버헤드라고 보장되지는 않지만 조사할 만한 구간이다. 순수 AIE 연산 대 DMA/FIFO 대기를 더 나누려면 장치 이벤트 트레이스가 필요하다. 이 진단만으로 GPU/NPU 성능 한계나 CPU 대비 우열을 일반화하지 않는다.', '',
+        '[원자료](results/transfer-diagnostic.json) · [진단 구현](diagnose_transfer.py)']
+(here/'TRANSFER-DIAGNOSTIC.md').write_text('\n'.join(lines)+'\n',encoding='utf8',newline='\n')
+(here/'results/transfer-diagnostic-sources.json').write_text(json.dumps({n:hashlib.sha256((here/n).read_bytes()).hexdigest() for n in ('diagnose_transfer.py','packed_device_v3.py','reuse_device.py','joined_prefill.py')},indent=2),encoding='utf8',newline='\n')
+print('\n'.join(line for line in lines if line.startswith('|')))

@@ -1,0 +1,161 @@
+[FLM]  Configuring NPU Power Mode to performance (flm default)
+[FLM]  New version detected! (current v1.0.10, latest v1.0.11)
+[FLM]  Download link: https://github.com/ROCm/FastFlowLM/releases/latest/download/flm-setup.msi
+[FLM]  Using user-specified port: 44567
+[FLM]  Loading model: C:\Codex\Agent\GeulNPU\����\npu\models\models\Qwen3-0.6B-NPU2
+[FLM]  Chat format: hermes_json with reasoning
+[FLM]  Model loaded in 5.13 s
+[FLM]  Starting server on port 44567...
+[FLM]  WebServer started on port 44567 with 10 I/O threads
+[FLM]  Press Ctrl+C to stop.
+[🔗 ]  TCP connection established - Remote: 127.0.0.1:65197
+[TCP]  Read 128 bytes from socket
+[🔗 ]  TCP connection established - Remote: 127.0.0.1:65199
+[TCP]  Read 128 bytes from socket
+================================================
+[⬇️ ]  Incoming Request: GET
+================================================
+[⬇️ ]  Incoming Request: GET
+[LOG]  Time stamp: 13:35:41 11:03:2026
+[LOG]  [LOG]  Target: /v1/models
+Time stamp: 13:35:41 11:03:2026
+[LOG]  Target: /v1/models
+[LOG]  Version: 11
+[LOG]  Version: 11
+[LOG[LOG]  ]  Keep-Alive: 0Keep-Alive: 0
+
+[🔴 ]  Client disconnected; cancelling active request
+================================================
+================================================
+[🔒 ]  TCP connection closed - Remote: 127.0.0.1:65197
+[🔒 ]  TCP connection closed - Remote: 127.0.0.1:65199
+[🔗 ]  TCP connection established - Remote: 127.0.0.1:65200
+[TCP]  Read 416 bytes from socket
+================================================
+[⬇️ ]  Incoming Request: POST
+[LOG]  Time stamp: 13:35:41 11:03:2026
+[LOG]  Target: /v1/chat/completions
+[LOG]  Version: 11
+[LOG]  Keep-Alive: 0
+[LOG]  Body: 
+{
+    "max_tokens": 8,
+    "messages": [
+        {
+            "content": "Say hello. /no_think",
+            "role": "user"
+        }
+    ],
+    "model": "qwen3:0.6b",
+    "stream": true,
+    "stream_options": {
+        "include_usage": true
+    },
+    "temperature": 0,
+    "think": false,
+    "top_k": 1,
+    "top_p": 1
+}
+[🟢 ]  NPU Locked!
+[FLM]  Prompt cache miss.
+[FLM]  Clearing context...
+[FLM]  Start prefill...
+[FLM]  Prefill chunk 1/1 with 20 tokens
+[31m[FLM]  Creating checkpoint at context length 20[0m
+[FLM]  Start generating...
+
+[FLM]  Model RAW Output: 
+Hello! How can I assist you today
+ChatCompletionChunk: {"id":"chatcmpl-ba376e86b16bbb917c116dee","object":"chat.completion.chunk","created":1793680541,"model":"qwen3:0.6b","system_fingerprint":"fp_1f33518b5887d82a","choices":[{"index":0,"delta":{"content":null},"finish_reason":"length"}],"usage":null}
+Usage: {"prompt_tokens":20,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens":8,"total_tokens":28,"active_kv_tokens":31,"max_kv_token_capacity":1024,"kv_token_occupancy_rate_percentage":3.02734375,"load_duration":5.8e-06,"prefill_duration_ttft":0.529632704,"decoding_duration":0.188634,"prefill_speed_tps":37.76201856296246,"decoding_speed_tps":42.41016995875611}
+[🔒 ]  Closing TCP connection (streaming, non-keep-alive)
+[🔵 ]  NPU Lock Released!
+[🔗 ]  TCP connection established - Remote: 127.0.0.1:65201
+[TCP]  Read 519 bytes from socket
+================================================
+[⬇️ ]  Incoming Request: POST
+[LOG]  Time stamp: 13:35:42 11:03:2026
+[LOG]  Target: /v1/chat/completions
+[LOG]  Version: 11
+[LOG]  Keep-Alive: 0
+[LOG]  Body: 
+{
+    "max_tokens": 64,
+    "messages": [
+        {
+            "content": "Explain wh... /no_think",
+            "role": "user"
+        }
+    ],
+    "model": "qwen3:0.6b",
+    "stream": true,
+    "stream_options": {
+        "include_usage": true
+    },
+    "temperature": 0,
+    "think": false,
+    "top_k": 1,
+    "top_p": 1
+}
+[🟢 ]  NPU Locked!
+[FLM]  Prompt cache miss.
+[FLM]  Clearing context...
+[FLM]  Start prefill...
+[FLM]  Prefill chunk 1/1 with 37 tokens
+[31m[FLM]  Creating checkpoint at context length 37[0m
+[FLM]  Start generating...
+
+[FLM]  Model RAW Output: 
+**Why Exact Arithmetic Matters in Matrix Multiplication**
+
+Matrix multiplication is a fundamental operation in linear algebra, and its success depends on **exact arithmetic**. While the mathematical structure of matrix multiplication is sound, the outcome of the operation is only valid if the **dimensions of the matrices are compatible**. If the dimensions do not
+ChatCompletionChunk: {"id":"chatcmpl-b2c880e93145d606d46175b8","object":"chat.completion.chunk","created":1793680542,"model":"qwen3:0.6b","system_fingerprint":"fp_0642b328372891e1","choices":[{"index":0,"delta":{"content":null},"finish_reason":"length"}],"usage":null}
+Usage: {"prompt_tokens":37,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens":64,"total_tokens":101,"active_kv_tokens":104,"max_kv_token_capacity":1024,"kv_token_occupancy_rate_percentage":10.15625,"load_duration":4.2e-06,"prefill_duration_ttft":0.552291904,"decoding_duration":1.040419,"prefill_speed_tps":66.99355853675523,"decoding_speed_tps":61.51367862370833}
+[🔒 ]  Closing TCP connection (streaming, non-keep-alive)
+[🔵 ]  NPU Lock Released!
+[🔗 ]  TCP connection established - Remote: 127.0.0.1:65202
+[TCP]  Read 519 bytes from socket
+================================================
+[⬇️ ]  Incoming Request: POST
+[LOG]  Time stamp: 13:35:44 11:03:2026
+[LOG]  Target: /v1/chat/completions
+[LOG]  Version: 11
+[LOG]  Keep-Alive: 0
+[LOG]  Body: 
+{
+    "max_tokens": 64,
+    "messages": [
+        {
+            "content": "Explain wh... /no_think",
+            "role": "user"
+        }
+    ],
+    "model": "qwen3:0.6b",
+    "stream": true,
+    "stream_options": {
+        "include_usage": true
+    },
+    "temperature": 0,
+    "think": false,
+    "top_k": 1,
+    "top_p": 1
+}
+[🟢 ]  NPU Locked!
+[FLM]  Prompt cache miss.
+[FLM]  Clearing context...
+[FLM]  Start prefill...
+[FLM]  Prefill chunk 1/1 with 37 tokens
+[31m[FLM]  Creating checkpoint at context length 37[0m
+[FLM]  Start generating...
+
+[FLM]  Model RAW Output: 
+Exact arithmetic is crucial in matrix multiplication because it ensures the accuracy and reliability of the resulting matrix. Here's why:
+
+### **Why Exact Arithmetic Matters:**
+
+1. **Precision in Results:**  
+   Matrix multiplication involves combining elements from two matrices. If the arithmetic operations (addition, multiplication, subtraction, or division)
+ChatCompletionChunk: {"id":"chatcmpl-3011fb7b59a6c2b77406b7bf","object":"chat.completion.chunk","created":1793680544,"model":"qwen3:0.6b","system_fingerprint":"fp_27680338de2f7d62","choices":[{"index":0,"delta":{"content":null},"finish_reason":"length"}],"usage":null}
+Usage: {"prompt_tokens":37,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens":64,"total_tokens":101,"active_kv_tokens":104,"max_kv_token_capacity":1024,"kv_token_occupancy_rate_percentage":10.15625,"load_duration":6.3e-06,"prefill_duration_ttft":0.541525504,"decoding_duration":0.973574,"prefill_speed_tps":68.32549847919998,"decoding_speed_tps":65.73717046675446}
+[🔒 ]  Closing TCP connection (streaming, non-keep-alive)
+[🔵 ]  NPU Lock Released!

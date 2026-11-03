@@ -1,0 +1,333 @@
+{
+  "complete": true,
+  "checks": 17,
+  "reset_checks": 7,
+  "scenarios": [
+    {
+      "name": "prefill17",
+      "chunks": [
+        17
+      ],
+      "steps": [
+        {
+          "input_tokens": [
+            9666,
+            21518,
+            9243,
+            28009,
+            26165,
+            17105,
+            6257,
+            18611,
+            8911,
+            2771,
+            13840,
+            223,
+            396,
+            2922,
+            21422,
+            15099,
+            18956
+          ],
+          "position": 17,
+          "logit_hash": "45b012826337f8fc86103ed7ae24705ca1002d07e3bda932da29f88e96f602d8",
+          "kv_hash": "4371792df2946a5fd7efa52a953add8f79d6e2c1886c2578d5ff1f0d1b167954",
+          "token": 850,
+          "kv_bytes": 3899392
+        },
+        {
+          "input_tokens": [
+            850
+          ],
+          "position": 18,
+          "logit_hash": "c7e522213ff2041e4cfa5382967bab8cbe524205dab672d6e73c77bb913b120e",
+          "kv_hash": "7f361167cc6ad0c87da8d5558849aa9b3a6089355fda438791533be0e086a8a0",
+          "token": 271,
+          "kv_bytes": 4128768
+        },
+        {
+          "input_tokens": [
+            271
+          ],
+          "position": 19,
+          "logit_hash": "bd1f8fa5212310f7676d25da520238435bf0c6bd9602a81047be4e5759ba5932",
+          "kv_hash": "53699c540a4486a97a6fd41957862a44e7936b73d646f6810d64e19c8b09e85b",
+          "token": 220,
+          "kv_bytes": 4358144
+        },
+        {
+          "input_tokens": [
+            220
+          ],
+          "position": 20,
+          "logit_hash": "e16effb2090b73c3972faf1b4421df8198b57554edbb14b356c1b8109755fd47",
+          "kv_hash": "dbe79936261785d2c900e9f22b0da2bb6526d11b7f38b4a38036e256ed3327f4",
+          "token": 16,
+          "kv_bytes": 4587520
+        }
+      ]
+    },
+    {
+      "name": "prefill65",
+      "chunks": [
+        65
+      ],
+      "steps": [
+        {
+          "input_tokens": [
+            9666,
+            21518,
+            9243,
+            28009,
+            26165,
+            17105,
+            6257,
+            18611,
+            8911,
+            2771,
+            13840,
+            223,
+            396,
+            2922,
+            21422,
+            15099,
+            18956,
+            21391,
+            9022,
+            25421,
+            13984,
+            882,
+            18614,
+            17159,
+            9008,
+            16445,
+            16529,
+            14037,
+            21387,
+            21029,
+            26457,
+            7117,
+            26751,
+            22253,
+            3353,
+            8852,
+            3749,
+            16371,
+            10930,
+            12269,
+            24223,
+            21917,
+            652,
+            7911,
+            24384,
+            15679,
+            17364,
+            8012,
+            4639,
+            7420,
+            26746,
+            24810,
+            21803,
+            4681,
+            13380,
+            22209,
+            8856,
+            5329,
+            17043,
+            15231,
+            20790,
+            14637,
+            25183,
+            619,
+            22384
+          ],
+          "position": 65,
+          "logit_hash": "a12ef1fe8b6c3abfe08673290dae5a7972aa07421d7e524b4088e3895ea82e64",
+          "kv_hash": "ad433ffa092409c5edd533edcc00f52b4974bc730cc605fe114928c2b234e080",
+          "token": 82,
+          "kv_bytes": 14909440
+        },
+        {
+          "input_tokens": [
+            82
+          ],
+          "position": 66,
+          "logit_hash": "65874d5182ce598dcde1070a1a11b32e221d0203b8bc77cbe57a649b91c86638",
+          "kv_hash": "001f12f80c7ea28379ce6ec25bb36917e719a08c55357e9f5e8688748f45cdf0",
+          "token": 11,
+          "kv_bytes": 15138816
+        },
+        {
+          "input_tokens": [
+            11
+          ],
+          "position": 67,
+          "logit_hash": "d34e2294e53f7aaad38bb6fac8d3fc6a96e33b5323cd1b23650dfa64e24eded0",
+          "kv_hash": "07f3be415274de1e49c3d859d9b0e6bda98837bcf7e6535bd5e771a880249e5c",
+          "token": 220,
+          "kv_bytes": 15368192
+        },
+        {
+          "input_tokens": [
+            220
+          ],
+          "position": 68,
+          "logit_hash": "88ab055d735b1ac56e775e7f02ffaf218f2a54a69c2488eea7f119872a92629c",
+          "kv_hash": "c79f81e75c722c85ef31d887d334ff5190895aaaeb59886704d4e14531181a57",
+          "token": 17,
+          "kv_bytes": 15597568
+        }
+      ]
+    },
+    {
+      "name": "chunked17",
+      "chunks": [
+        7,
+        10
+      ],
+      "steps": [
+        {
+          "input_tokens": [
+            9666,
+            21518,
+            9243,
+            28009,
+            26165,
+            17105,
+            6257
+          ],
+          "position": 7,
+          "logit_hash": "65e3eab0e3e8550797b46f240bb31041c05d1b2ef56f871157f3ae331d4554bf",
+          "kv_hash": "b88ada7e324555281e9fd3e4f1e5be7ddb784b09b7aa74976e8dd3ed27f74172",
+          "token": 90,
+          "kv_bytes": 1605632
+        },
+        {
+          "input_tokens": [
+            18611,
+            8911,
+            2771,
+            13840,
+            223,
+            396,
+            2922,
+            21422,
+            15099,
+            18956
+          ],
+          "position": 17,
+          "logit_hash": "45b012826337f8fc86103ed7ae24705ca1002d07e3bda932da29f88e96f602d8",
+          "kv_hash": "4371792df2946a5fd7efa52a953add8f79d6e2c1886c2578d5ff1f0d1b167954",
+          "token": 850,
+          "kv_bytes": 3899392
+        },
+        {
+          "input_tokens": [
+            850
+          ],
+          "position": 18,
+          "logit_hash": "c7e522213ff2041e4cfa5382967bab8cbe524205dab672d6e73c77bb913b120e",
+          "kv_hash": "7f361167cc6ad0c87da8d5558849aa9b3a6089355fda438791533be0e086a8a0",
+          "token": 271,
+          "kv_bytes": 4128768
+        },
+        {
+          "input_tokens": [
+            271
+          ],
+          "position": 19,
+          "logit_hash": "bd1f8fa5212310f7676d25da520238435bf0c6bd9602a81047be4e5759ba5932",
+          "kv_hash": "53699c540a4486a97a6fd41957862a44e7936b73d646f6810d64e19c8b09e85b",
+          "token": 220,
+          "kv_bytes": 4358144
+        },
+        {
+          "input_tokens": [
+            220
+          ],
+          "position": 20,
+          "logit_hash": "e16effb2090b73c3972faf1b4421df8198b57554edbb14b356c1b8109755fd47",
+          "kv_hash": "dbe79936261785d2c900e9f22b0da2bb6526d11b7f38b4a38036e256ed3327f4",
+          "token": 16,
+          "kv_bytes": 4587520
+        }
+      ]
+    },
+    {
+      "name": "reset_repeat17",
+      "chunks": [
+        17
+      ],
+      "steps": [
+        {
+          "input_tokens": [
+            9666,
+            21518,
+            9243,
+            28009,
+            26165,
+            17105,
+            6257,
+            18611,
+            8911,
+            2771,
+            13840,
+            223,
+            396,
+            2922,
+            21422,
+            15099,
+            18956
+          ],
+          "position": 17,
+          "logit_hash": "45b012826337f8fc86103ed7ae24705ca1002d07e3bda932da29f88e96f602d8",
+          "kv_hash": "4371792df2946a5fd7efa52a953add8f79d6e2c1886c2578d5ff1f0d1b167954",
+          "token": 850,
+          "kv_bytes": 3899392
+        },
+        {
+          "input_tokens": [
+            850
+          ],
+          "position": 18,
+          "logit_hash": "c7e522213ff2041e4cfa5382967bab8cbe524205dab672d6e73c77bb913b120e",
+          "kv_hash": "7f361167cc6ad0c87da8d5558849aa9b3a6089355fda438791533be0e086a8a0",
+          "token": 271,
+          "kv_bytes": 4128768
+        },
+        {
+          "input_tokens": [
+            271
+          ],
+          "position": 19,
+          "logit_hash": "bd1f8fa5212310f7676d25da520238435bf0c6bd9602a81047be4e5759ba5932",
+          "kv_hash": "53699c540a4486a97a6fd41957862a44e7936b73d646f6810d64e19c8b09e85b",
+          "token": 220,
+          "kv_bytes": 4358144
+        },
+        {
+          "input_tokens": [
+            220
+          ],
+          "position": 20,
+          "logit_hash": "e16effb2090b73c3972faf1b4421df8198b57554edbb14b356c1b8109755fd47",
+          "kv_hash": "dbe79936261785d2c900e9f22b0da2bb6526d11b7f38b4a38036e256ed3327f4",
+          "token": 16,
+          "kv_bytes": 4587520
+        }
+      ]
+    }
+  ],
+  "selections": {
+    "2048": 84,
+    "4096": 1092
+  },
+  "handle_loads": {
+    "2048": 1,
+    "4096": 1
+  },
+  "routes": {
+    "cpu": 1697,
+    "npu": 700
+  }
+}

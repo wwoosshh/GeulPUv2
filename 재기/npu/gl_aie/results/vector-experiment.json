@@ -1,0 +1,9 @@
+{
+  "source": "native_vector.c",
+  "status": "compile_failed",
+  "target": "aie2p-none-unknown-elf",
+  "optimization": "-O2",
+  "language": "C11 with Clang ext_vector_type, convertvector and reduce_add builtins",
+  "error": "unable to legalize instruction: %38:_(<32 x s32>) = nsw G_MUL %37:_, %19:_ (in function: geul_tile)",
+  "scope": "This specific vector-extension implementation is unsupported by this compiler build; this is not a claim that all native C vector implementations are impossible. No performance numbers assigned."
+}

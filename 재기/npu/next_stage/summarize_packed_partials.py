@@ -1,0 +1,39 @@
+import hashlib
+import json
+from pathlib import Path
+from statistics import median
+
+here=Path(__file__).resolve().parent
+range_data=json.loads((here/'results/partial-range.json').read_text())
+d=json.loads((here/'results/packed-partials.json').read_text())
+old=json.loads((here/'results/batch-capacity.json').read_text())
+assert range_data['complete'] and d['complete']
+chunks=[c for r in range_data['cases'] for c in r['chunks']]
+total={k:sum(c[k] for c in chunks) for k in ('values','tiles','int16_values','int24_values','int16_tiles','int24_tiles')}
+lines=['# 부분합 범위·무손실 압축·비용 시험', '',
+       '세 단계를 순서대로 실행했다. 이전 성능 벤치마크는 반복하지 않았고 새 압축 경로만 측정했다. 현재 구현은 채택하지 않는다. 반환량은 줄었으나 복원·재요청 비용이 크다.', '',
+       '## 1. 범위 분석', '',
+       '실제 Qwen3-0.6B-Q8_0의 첫 FFN up/down 및 attention Q 가중치에 64행 난수 FP32 입력을 사용했다. 실제 모델 실행의 중간 활성값 분포를 수집한 것은 아니므로 모델 전체 압축률로 일반화하지 않는다. 세 선형층 모두 CPU 출력과 비트 일치를 확인했다.', '',
+       f"부분합 {total['values']:,}개, 128원소 타일 {total['tiles']:,}개를 분석했다. INT16 원소 비율 {100*total['int16_values']/total['values']:.4f}%, INT24 원소 비율 {100*total['int24_values']/total['values']:.4f}%. 타일 전체가 INT16에 들어가는 비율은 {100*total['int16_tiles']/total['tiles']:.4f}%, INT24는 {100*total['int24_tiles']/total['tiles']:.4f}%다.", '',
+       '## 2. 무손실 경로', '',
+       '기존 GL 정수 내적 객체 gl.o는 그대로 링크했다. 새 압축은 C++ ABI 래퍼 pack24.cc로 NPU 내부에서 수행한다. GL 언어로 작성된 압축 커널이라고 주장하지 않는다. 타일별 128개 INT32(512바이트)를 INT24 384바이트와 상태·정렬 헤더 32바이트, 총 416바이트로 전송한다. FIFO와 DMA의 실제 출력 크기를 변경했으므로 호스트에서 사후 압축한 결과가 아니다.', '',
+       '범위 초과 플래그가 있는 타일은 해당 입력·가중치만 모아 64프레임 INT32 NPU 경로로 재요청한다. CPU는 INT24 부호 확장 후 넘침 타일을 정확한 INT32 값으로 대체한다. 가중치는 재사용 순서에서 원래 타일 인덱스로 역매핑한다. 원래 순서의 부분합을 복원한 후 기존 ordered FP32 FMA 후처리를 실행한다. 넘친 값을 잘라서 계산에 사용하지 않는다. 모든 타일이 넘칠 경우도 정확성은 유지하지만 재요청 비용이 매우 커진다.', '',
+       '0·양수·음수 극단·무작위 INT8 입력의 정수 부분합 검사 4개, 홀수 크기·깊이 꼬리를 포함한 FP32 비트 비교 10개, 실제 16토큰 모델 첫·다음 출력 전체 로짓 해시 2개가 모두 통과했다. 단계 1의 별도 선형층 비교 3개도 통과했다.', '',
+       '## 3. 추가 비용 포함 측정', '',
+       'NPU 작업자 4개, 가중치 재사용 4회, 4,096프레임 제출 및 CPU 후처리 중첩을 사용했다. 새 경로만 워밍업 후 각 3회 측정했다. 아래 값은 중앙값이다.', '',
+       '| FFN 행 | 압축 전체 ms | CPU 복원 ms | 넘침 재요청 ms | 넘침 타일 | 압축+재요청 횟수 | 반환 MiB | 이전 비압축 ms |', '|---:|---:|---:|---:|---:|---:|---:|---:|']
+for m in (64,256):
+    rows=[r for r in d['runs'] if r['rows']==m]
+    r=rows[0]['metrics']
+    prior=median(x['seconds'] for x in old['linear'] if x['rows']==m and x['frames']==4096)
+    lines.append(f"| {m} | {median(x['seconds'] for x in rows)*1000:.2f} | {median(x['metrics']['decode_seconds'] for x in rows)*1000:.2f} | {median(x['metrics']['replay_seconds'] for x in rows)*1000:.2f} | {r['overflow_tiles']} | {r['packed_calls']}+{r['replay_calls']} | {r['output_bytes']/(1<<20):.3f} | {prior*1000:.2f} |")
+lines+=['','이전 비압축 시간은 다른 세션의 기록이다. 동일 세션의 통제 비교가 아니므로 정확한 인과적 감속 배수는 확정하지 않는다. CPU 복원 시간은 언팩·플래그 검사 시간이고 재요청 시간은 추가 입력 준비·장치 실행·반환을 포함한다. 후처리와 일부 중첩되므로 세부 시간을 무조건 합산하지 않는다. NPU 압축 자체의 사이클 수는 별도 측정하지 않았다. 전체 시간에는 압축을 포함한 장치 실행, 전송, CPU 복원, 재요청, 기존 FP32 후처리가 포함된다.', '',
+        '256행에서 출력 버퍼 전송은 96→79.5MiB로 17.19% 감소한다. 재요청의 입력·가중치를 포함하면 A+B+C 명시적 버퍼 바이트는 192→179.25MiB로 6.64% 감소하는 데 그친다. 제출은 48회에서 압축 48회+재요청 48회로 늘어난다. 이 값은 실제 버퍼 크기와 호출 수의 집계이며 하드웨어 버스 카운터가 아니다.', '',
+        '## 판단', '',
+        '무손실 압축은 정확성 측면에서 가능하지만 현재의 호스트 넘침 재요청 방식은 제출 최소화 방향과 충돌한다. Python/NumPy 복원도 상당한 비용이다. 기존 비압축 자동 용량 선택 경로를 유지하며 압축을 기본으로 활성화하지 않는다.', '',
+        '다음 개선을 한다면 CPU 복원의 native SIMD 구현과 NPU에서의 별도 넘침 버퍼 출력이 후보이다. 다만 가변 길이 DMA 또는 2단계 길이 전달이 필요하며, 최대 크기의 넘침 버퍼를 항상 전송하면 절감 효과가 사라진다. 이를 해결하기 전 추가 모델 성능 벤치마크를 반복할 이유는 없다.', '',
+        '[범위 원자료](results/partial-range.json) · [압축 원자료](results/packed-partials.json) · [장치 래퍼](pack24.cc) · [복원·재요청](packed_device.py) · [시험](test_packed_partials.py)']
+(here/'PACKED-PARTIALS.md').write_text('\n'.join(lines)+'\n',encoding='utf8',newline='\n')
+names=('study_partial_range.py','pack24.cc','build_pack24.py','packed_design.py','packed_device.py','reuse_device.py','test_packed_partials.py')
+(here/'results/packed-partials-sources.json').write_text(json.dumps({n:hashlib.sha256((here/n).read_bytes()).hexdigest() for n in names},indent=2),encoding='utf8',newline='\n')
+print('\n'.join(line for line in lines if line.startswith('|')))

@@ -1,0 +1,201 @@
+[
+  {
+    "rows": 16,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 0,
+    "seconds": 0.8078510999985156,
+    "baseline_calls_by_shape": 8,
+    "calls": 6,
+    "useful_frames": 12288,
+    "submitted_frames": 12288,
+    "profile": {
+      "device_and_transfer_seconds": 0.7560049999956391,
+      "finalization_seconds": 0.03930140000011306,
+      "packing_seconds": 0.011569300004339311
+    }
+  },
+  {
+    "rows": 16,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 1,
+    "seconds": 0.13196799999423092,
+    "baseline_calls_by_shape": 8,
+    "calls": 6,
+    "useful_frames": 12288,
+    "submitted_frames": 12288,
+    "profile": {
+      "device_and_transfer_seconds": 0.06774900000891648,
+      "finalization_seconds": 0.053861599997617304,
+      "packing_seconds": 0.00895519999176031
+    }
+  },
+  {
+    "rows": 16,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 2,
+    "seconds": 0.12909220000437927,
+    "baseline_calls_by_shape": 8,
+    "calls": 6,
+    "useful_frames": 12288,
+    "submitted_frames": 12288,
+    "profile": {
+      "device_and_transfer_seconds": 0.06809220000286587,
+      "finalization_seconds": 0.05061369999748422,
+      "packing_seconds": 0.009227499998814892
+    }
+  },
+  {
+    "rows": 64,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 0,
+    "seconds": 0.48203909999574535,
+    "baseline_calls_by_shape": 48,
+    "calls": 24,
+    "useful_frames": 49152,
+    "submitted_frames": 49152,
+    "profile": {
+      "device_and_transfer_seconds": 0.27184599999600323,
+      "finalization_seconds": 0.17808710000099381,
+      "packing_seconds": 0.029669200004718732
+    }
+  },
+  {
+    "rows": 64,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 1,
+    "seconds": 0.4740504000001238,
+    "baseline_calls_by_shape": 48,
+    "calls": 24,
+    "useful_frames": 49152,
+    "submitted_frames": 49152,
+    "profile": {
+      "device_and_transfer_seconds": 0.26944779999757884,
+      "finalization_seconds": 0.1726146999935736,
+      "packing_seconds": 0.029084700006933417
+    }
+  },
+  {
+    "rows": 64,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 2,
+    "seconds": 0.4669674999968265,
+    "baseline_calls_by_shape": 48,
+    "calls": 24,
+    "useful_frames": 49152,
+    "submitted_frames": 49152,
+    "profile": {
+      "device_and_transfer_seconds": 0.2684761000055005,
+      "finalization_seconds": 0.16724899999826448,
+      "packing_seconds": 0.02838989999872865
+    }
+  },
+  {
+    "rows": 256,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 0,
+    "seconds": 1.8769560000000638,
+    "baseline_calls_by_shape": 768,
+    "calls": 96,
+    "useful_frames": 196608,
+    "submitted_frames": 196608,
+    "profile": {
+      "device_and_transfer_seconds": 1.0713027999736369,
+      "finalization_seconds": 0.6777625999966403,
+      "packing_seconds": 0.11331250002695015
+    }
+  },
+  {
+    "rows": 256,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 1,
+    "seconds": 2.2206834000025992,
+    "baseline_calls_by_shape": 768,
+    "calls": 96,
+    "useful_frames": 196608,
+    "submitted_frames": 196608,
+    "profile": {
+      "device_and_transfer_seconds": 1.1347069999828818,
+      "finalization_seconds": 0.9271036000136519,
+      "packing_seconds": 0.14654480000172043
+    }
+  },
+  {
+    "rows": 256,
+    "outputs": 3072,
+    "depth": 1024,
+    "repeat": 2,
+    "seconds": 2.3005033000008552,
+    "baseline_calls_by_shape": 768,
+    "calls": 96,
+    "useful_frames": 196608,
+    "submitted_frames": 196608,
+    "profile": {
+      "device_and_transfer_seconds": 1.1258339999330929,
+      "finalization_seconds": 1.016892799998459,
+      "packing_seconds": 0.14352610006608302
+    }
+  },
+  {
+    "rows": 5,
+    "outputs": 55,
+    "depth": 1024,
+    "repeat": 0,
+    "seconds": 0.01217499999620486,
+    "baseline_calls_by_shape": 2,
+    "calls": 1,
+    "useful_frames": 128,
+    "submitted_frames": 2048,
+    "profile": {
+      "device_and_transfer_seconds": 0.01119029999972554,
+      "finalization_seconds": 0.00031090000265976414,
+      "packing_seconds": 0.00039989999640965834
+    }
+  },
+  {
+    "rows": 5,
+    "outputs": 55,
+    "depth": 1024,
+    "repeat": 1,
+    "seconds": 0.01180480000039097,
+    "baseline_calls_by_shape": 2,
+    "calls": 1,
+    "useful_frames": 128,
+    "submitted_frames": 2048,
+    "profile": {
+      "device_and_transfer_seconds": 0.010944300003757235,
+      "finalization_seconds": 0.00033850000181701034,
+      "packing_seconds": 0.00043229999573668465
+    }
+  },
+  {
+    "rows": 5,
+    "outputs": 55,
+    "depth": 1024,
+    "repeat": 2,
+    "seconds": 0.011727700002666097,
+    "baseline_calls_by_shape": 2,
+    "calls": 1,
+    "useful_frames": 128,
+    "submitted_frames": 2048,
+    "profile": {
+      "device_and_transfer_seconds": 0.010596599997370504,
+      "finalization_seconds": 0.00041849999979604036,
+      "packing_seconds": 0.0006046000053174794
+    }
+  },
+  {
+    "full_length": 256,
+    "prefill": 378.5469413999963,
+    "next_token": 10.260705700005929,
+    "first_hash": "19418308043c290e35306a4feda952902e8ab41043e74164a8b1c3cb27baab63",
+    "next_hash": "c3f764a24b66f62b47b90beb1803adfb705e93df70b95d62161addb23b67f072"
+  }
+]

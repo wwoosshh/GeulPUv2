@@ -1,0 +1,231 @@
+{
+  "rounds": [
+    {
+      "name": "baseline",
+      "repeat": 0,
+      "step": 0,
+      "wall": 9.334343000024091,
+      "cpu": 4.234375,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f",
+      "token": 16
+    },
+    {
+      "name": "baseline",
+      "repeat": 0,
+      "step": 1,
+      "wall": 7.360484600008931,
+      "cpu": 2.78125,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c",
+      "token": 17
+    },
+    {
+      "name": "baseline",
+      "repeat": 0,
+      "step": 2,
+      "wall": 7.288351299997885,
+      "cpu": 2.8125,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "token": 18
+    },
+    {
+      "name": "baseline",
+      "repeat": 0,
+      "step": 3,
+      "wall": 7.30031019996386,
+      "cpu": 2.640625,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+      "token": 19
+    },
+    {
+      "name": "baseline",
+      "repeat": 1,
+      "step": 0,
+      "wall": 8.272979600005783,
+      "cpu": 3.875,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f",
+      "token": 16
+    },
+    {
+      "name": "baseline",
+      "repeat": 1,
+      "step": 1,
+      "wall": 6.94034199998714,
+      "cpu": 2.765625,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c",
+      "token": 17
+    },
+    {
+      "name": "baseline",
+      "repeat": 1,
+      "step": 2,
+      "wall": 5.931243000028189,
+      "cpu": 3.828125,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "token": 18
+    },
+    {
+      "name": "baseline",
+      "repeat": 1,
+      "step": 3,
+      "wall": 7.060302699974272,
+      "cpu": 4.90625,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+      "token": 19
+    },
+    {
+      "name": "optimized",
+      "repeat": 0,
+      "step": 0,
+      "wall": 5.664525500033051,
+      "cpu": 3.9375,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f",
+      "token": 16
+    },
+    {
+      "name": "optimized",
+      "repeat": 0,
+      "step": 1,
+      "wall": 3.7116024999995716,
+      "cpu": 3.25,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c",
+      "token": 17
+    },
+    {
+      "name": "optimized",
+      "repeat": 0,
+      "step": 2,
+      "wall": 3.2158174000214785,
+      "cpu": 2.71875,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "token": 18
+    },
+    {
+      "name": "optimized",
+      "repeat": 0,
+      "step": 3,
+      "wall": 3.1463377999607474,
+      "cpu": 2.65625,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+      "token": 19
+    },
+    {
+      "name": "optimized",
+      "repeat": 1,
+      "step": 0,
+      "wall": 5.630572399997618,
+      "cpu": 3.78125,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f",
+      "token": 16
+    },
+    {
+      "name": "optimized",
+      "repeat": 1,
+      "step": 1,
+      "wall": 3.2174683999619447,
+      "cpu": 2.734375,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c",
+      "token": 17
+    },
+    {
+      "name": "optimized",
+      "repeat": 1,
+      "step": 2,
+      "wall": 3.2270526999491267,
+      "cpu": 2.828125,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "token": 18
+    },
+    {
+      "name": "optimized",
+      "repeat": 1,
+      "step": 3,
+      "wall": 3.2044512999709696,
+      "cpu": 2.671875,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+      "token": 19
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 0,
+      "step": 0,
+      "wall": 2.4171339999884367,
+      "cpu": 3.234375,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f",
+      "token": 16
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 0,
+      "step": 1,
+      "wall": 1.6573327000369318,
+      "cpu": 2.078125,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c",
+      "token": 17
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 0,
+      "step": 2,
+      "wall": 1.6651091999956407,
+      "cpu": 1.984375,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "token": 18
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 0,
+      "step": 3,
+      "wall": 1.7392025999724865,
+      "cpu": 2.171875,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+      "token": 19
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 1,
+      "step": 0,
+      "wall": 2.3715936000226066,
+      "cpu": 3.03125,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f",
+      "token": 16
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 1,
+      "step": 1,
+      "wall": 1.6739418000215665,
+      "cpu": 2.0625,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c",
+      "token": 17
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 1,
+      "step": 2,
+      "wall": 1.6464189999969676,
+      "cpu": 2.21875,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "token": 18
+    },
+    {
+      "name": "cpu_cached",
+      "repeat": 1,
+      "step": 3,
+      "wall": 1.7298071999684907,
+      "cpu": 2.15625,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+      "token": 19
+    }
+  ],
+  "frame_ms": {
+    "128/512": 2.063050022115931,
+    "128/1024": 3.1325999880209565,
+    "128/2048": 5.232850002357736,
+    "512/512": 2.1253999730106443,
+    "512/1024": 3.1746999884489924,
+    "512/2048": 5.017499992391095,
+    "1024/1024": 3.2649500062689185,
+    "1024/2048": 5.070799990789965,
+    "2048/2048": 4.963250015862286
+  }
+}

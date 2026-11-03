@@ -1,0 +1,72 @@
+[
+  {
+    "backend": "old_warm",
+    "seconds": 9.705459299999347,
+    "profile": {
+      "packing_seconds": 0.1940304001182085,
+      "device_and_transfer_seconds": 9.340667699972983,
+      "finalization_seconds": 1.2113730999917607
+    }
+  },
+  {
+    "backend": "new_warm",
+    "seconds": 2.650186799997755,
+    "profile": {
+      "device_and_transfer_seconds": 1.1783989000177826,
+      "finalization_seconds": 1.265858800004935,
+      "packing_seconds": 0.1920014999777777
+    }
+  },
+  {
+    "backend": "cpu",
+    "seconds": 0.35812759999680566,
+    "profile": {
+      "packing_seconds": 0.00812450000375975,
+      "cpu_dot_and_post_seconds": 0.3372970999989775
+    }
+  },
+  {
+    "backend": "old",
+    "seconds": 8.87797970000247,
+    "profile": {
+      "packing_seconds": 0.1707420999664464,
+      "device_and_transfer_seconds": 8.574418600088393,
+      "finalization_seconds": 1.00835549999465
+    }
+  },
+  {
+    "backend": "new",
+    "seconds": 2.435790099996666,
+    "profile": {
+      "device_and_transfer_seconds": 1.1522617000009632,
+      "finalization_seconds": 1.1080555000153254,
+      "packing_seconds": 0.16091919998143567
+    }
+  },
+  {
+    "backend": "new",
+    "seconds": 2.3982822000034503,
+    "profile": {
+      "device_and_transfer_seconds": 1.1361639999740873,
+      "finalization_seconds": 1.092365600001358,
+      "packing_seconds": 0.15375010002026102
+    }
+  },
+  {
+    "backend": "old",
+    "seconds": 8.891952500001935,
+    "profile": {
+      "packing_seconds": 0.17174679993331665,
+      "device_and_transfer_seconds": 8.549883099978615,
+      "finalization_seconds": 1.1579195999875083
+    }
+  },
+  {
+    "backend": "cpu",
+    "seconds": 0.5095302000045194,
+    "profile": {
+      "packing_seconds": 0.01644230000238167,
+      "cpu_dot_and_post_seconds": 0.4830096000005142
+    }
+  }
+]

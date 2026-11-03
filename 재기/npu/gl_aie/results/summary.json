@@ -1,0 +1,231 @@
+{
+  "benchmark_passed": true,
+  "kernel_checks": 128,
+  "linear_checks": 204,
+  "frontend_commit": "0899bd753e1626e31c3094f5787d0f46ad4f7cc4",
+  "text_equal_to_handwritten_aie_cpp": true,
+  "microbenchmarks": [
+    {
+      "frames": 128,
+      "median_seconds": {
+        "gl": 0.0028728000179398805,
+        "c": 0.01030385002377443,
+        "c_unrolled": 0.009685500030172989,
+        "aie_cpp": 0.0029366000089794397
+      },
+      "c_over_gl": 3.5866924113859637,
+      "c_unrolled_over_gl": 3.3714494464249474,
+      "aie_cpp_over_gl": 1.0222082952663412,
+      "sample_range_seconds": {
+        "gl": [
+          0.00224459997843951,
+          0.0031729000038467348
+        ],
+        "c": [
+          0.009908699954394251,
+          0.010981799976434559
+        ],
+        "c_unrolled": [
+          0.0091400999808684,
+          0.01002770004561171
+        ],
+        "aie_cpp": [
+          0.0023368000402115285,
+          0.0035536999930627644
+        ]
+      }
+    },
+    {
+      "frames": 2048,
+      "median_seconds": {
+        "gl": 0.019392500020330772,
+        "c": 0.1387030500045512,
+        "c_unrolled": 0.1271274500177242,
+        "aie_cpp": 0.01909799998975359
+      },
+      "c_over_gl": 7.152406851057741,
+      "c_unrolled_over_gl": 6.5554956753613975,
+      "aie_cpp_over_gl": 0.9848137150822002,
+      "sample_range_seconds": {
+        "gl": [
+          0.017787699995096773,
+          0.020324899989645928
+        ],
+        "c": [
+          0.13760269997874275,
+          0.14267269999254495
+        ],
+        "c_unrolled": [
+          0.12634129996877164,
+          0.13007840001955628
+        ],
+        "aie_cpp": [
+          0.018243299971800297,
+          0.02157039998564869
+        ]
+      }
+    }
+  ],
+  "matrices": [
+    {
+      "shape_M_N_K": [
+        1,
+        1024,
+        1024
+      ],
+      "median_seconds": {
+        "gl": 0.029916449973825365,
+        "c": 0.14973774997633882,
+        "c_unrolled": 0.13960585003951564,
+        "aie_cpp": 0.03165354998782277
+      },
+      "c_over_gl": 5.005197812820306,
+      "c_unrolled_over_gl": 4.66652460976019,
+      "aie_cpp_over_gl": 1.0580650450009021,
+      "sample_range_seconds": {
+        "gl": [
+          0.02629379997961223,
+          0.03777480003191158
+        ],
+        "c": [
+          0.14549550000810996,
+          0.15924789995187894
+        ],
+        "c_unrolled": [
+          0.13641939999070019,
+          0.14579959999537095
+        ],
+        "aie_cpp": [
+          0.025165700004436076,
+          0.04018449998693541
+        ]
+      }
+    },
+    {
+      "shape_M_N_K": [
+        32,
+        256,
+        1024
+      ],
+      "median_seconds": {
+        "gl": 0.18333965001511388,
+        "c": 1.1456527999835089,
+        "c_unrolled": 1.060191999975359,
+        "aie_cpp": 0.1791553999937605
+      },
+      "c_over_gl": 6.248799972559484,
+      "c_unrolled_over_gl": 5.782666214798384,
+      "aie_cpp_over_gl": 0.9771776044024932,
+      "sample_range_seconds": {
+        "gl": [
+          0.15059510001447052,
+          0.2079790999996476
+        ],
+        "c": [
+          1.1139363999827765,
+          1.2035608000005595
+        ],
+        "c_unrolled": [
+          1.0158261000178754,
+          1.07698990002973
+        ],
+        "aie_cpp": [
+          0.15208410000195727,
+          0.22085510002216324
+        ]
+      }
+    },
+    {
+      "shape_M_N_K": [
+        16,
+        1024,
+        3072
+      ],
+      "median_seconds": {
+        "gl": 0.4008767500054091,
+        "c": 1.3777281999937259,
+        "c_unrolled": 1.3249376499734353,
+        "aie_cpp": 0.4396129499946255
+      },
+      "c_over_gl": 3.436787491355225,
+      "c_unrolled_over_gl": 3.3050997593538605,
+      "aie_cpp_over_gl": 1.096628701935679,
+      "sample_range_seconds": {
+        "gl": [
+          0.26153249997878447,
+          0.6165138999931514
+        ],
+        "c": [
+          1.2276869000052102,
+          1.454298899974674
+        ],
+        "c_unrolled": [
+          1.1485761000076309,
+          1.374992500001099
+        ],
+        "aie_cpp": [
+          0.27396930003305897,
+          0.5128368000150658
+        ]
+      }
+    }
+  ],
+  "models": {
+    "gl": {
+      "complete": true,
+      "linear_checks": 282,
+      "residual_checks": 56,
+      "logit_checks": 2,
+      "different_bits_elements": 0,
+      "logit_sha256": [
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838",
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838"
+      ],
+      "linear_seconds_by_repeat": {
+        "0": 14.362902299675625,
+        "1": 11.493654700170737
+      }
+    },
+    "c_unrolled": {
+      "complete": true,
+      "linear_checks": 282,
+      "residual_checks": 56,
+      "logit_checks": 2,
+      "different_bits_elements": 0,
+      "logit_sha256": [
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838",
+        "3942df4c34d105117006a99831baa9ea86ac511e8471530f692897861bdc2838"
+      ],
+      "linear_seconds_by_repeat": {
+        "0": 53.4654865997727,
+        "1": 51.987160199845675
+      }
+    }
+  },
+  "all_model_checks_complete": true,
+  "same_model_logits": true,
+  "source_sha256": {
+    "bench.py": "bdcf5f2754b146aab56322df5efe40467942f9673364d94e0bad2a736d9cd240",
+    "build.py": "bf1e050450e86eaad4374d6730a0ad099c11e0f4ceef02fe5841989223805a7b",
+    "generated.cc": "1af754a4d95f977794661a04685d69581096a1ff97e089eae7b3a10ec8340ab6",
+    "lower_gl.py": "863bee91c34c49358f03209e7f597d4fa6b0ca1c0bef970dceaadc0948e44fbf",
+    "model.py": "a1614dfd5d9a029efbff53fbb390a076cc2ecd4089c98f4669ff68554310bf52",
+    "native.c": "460b111d23312164a024f1b94076a80cf0f27e40555e65168272cf8680d939ce",
+    "native_aie.cc": "369761e09a099f58c4e29e1cf872f47307c68ad75d4122997c61e7ec4b2f4794",
+    "native_unrolled.c": "750f46fdf530aca23a89be59cbad408761c79b75f2e7c8bfcf681c5dd91fbb06",
+    "native_vector.c": "8c22955ff1c24fb617c53c50d78f4c0aa0350f32531b60a63ee200a087ea63aa",
+    "run.ps1": "fd39559bdb16eeeb9701efe0d78590cdb3e41707e2ab31daa801976492ebf8ac",
+    "runtime.py": "31852498bfe4fe9e3f17e6e9e4680c1027fa78e375232b54d979d457b1bebca3",
+    "summarize.py": "90312af0f48620b8d4914db9f1e04a4d3751075202032718a15fda1ea35a756e",
+    "test_lower.py": "b89b0a5db31f517b6e393ddc40de973b5c03f6604414bc81024de0d965a5560d",
+    "tile.gl": "2f87ac7389cf890017c3e8460127b5bcab0e051cec34b1e3b5a76f27ea8eabee"
+  },
+  "limitations": [
+    "Restricted GL backend, not general-purpose GL NPU support.",
+    "GL uses explicit dot32 AIE intrinsic; portable C variants rely on scalar loops and compiler optimization.",
+    "Handwritten AIE C++ is the equivalent intrinsic-enabled control and has identical kernel text bytes.",
+    "Runtime and ordered FP32 finalization are shared Python/NumPy, outside language comparison.",
+    "Measured warm host-visible latency includes transfers/synchronization; not device cycles.",
+    "Model sums are instrumented linear calls; not autoregressive generation TPS."
+  ]
+}

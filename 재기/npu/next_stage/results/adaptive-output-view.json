@@ -1,0 +1,39 @@
+{
+  "complete": true,
+  "policy_checks": 11,
+  "tile_checks": 16,
+  "linear_checks": 5,
+  "model_hashes": [
+    "645fae6a1f271c1397d37dd97dc9504b18ba07ea8c45ce7d131ca24517c895a8",
+    "1f5f26e598dbc5a22c108ed6f70924083b299900c4581fffacd71610c6973ba4"
+  ],
+  "selections": {
+    "2048": 12,
+    "4096": 456,
+    "8192": 2
+  },
+  "transitions": [
+    2048,
+    2048,
+    4096,
+    4096,
+    4096,
+    2048,
+    8192,
+    2048,
+    2048,
+    8192,
+    2048,
+    4096,
+    4096,
+    4096,
+    2048,
+    2048
+  ],
+  "handle_loads": {
+    "2048": 1,
+    "4096": 1,
+    "8192": 1
+  },
+  "preserved_outputs": 16
+}

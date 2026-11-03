@@ -1,0 +1,81 @@
+{
+  "complete": true,
+  "mode": "hybrid",
+  "length": 16,
+  "output_tokens": 4,
+  "runs": [
+    {
+      "repeat": 0,
+      "prefill_seconds": 9.060602500016103,
+      "prefill_cpu_seconds": 12.015625,
+      "decode_seconds": [
+        1.7685599999967963,
+        1.8802436999976635,
+        1.8157659000135027
+      ],
+      "hashes": [
+        "23834d61e00676571cc2f0a7640d9ddec4c03ef63882a148c03ad959130b432b",
+        "080876d8b0e710293281a82368a5b063d34b0f34e8092d7d287e362a06b9089e",
+        "4450c4587eeeb17fbcfcd8c9a3a75643a6e36c5ef6d3387c3a43a4393cf38895",
+        "3c7041eec249436c9ba2f9c3f585ff68bbcc35319061f605ed8c0c084049a78b"
+      ],
+      "tokens": [
+        57727,
+        6,
+        304,
+        279
+      ],
+      "resources": {
+        "wall_seconds": 14.527029100019718,
+        "cpu_seconds": 18.125,
+        "average_cpu_cores": 1.2476742405627452,
+        "logical_cpu_percent": 7.797964003517157,
+        "peak_sampled_rss_bytes": 2287714304,
+        "peak_sampled_private_bytes": 2127872000,
+        "start_memory": {
+          "rss": 2254426112,
+          "private": 2093932544
+        }
+      }
+    },
+    {
+      "repeat": 1,
+      "prefill_seconds": 8.343405799998436,
+      "prefill_cpu_seconds": 11.359375,
+      "decode_seconds": [
+        1.7459976999962237,
+        1.7476237999799196,
+        1.756620699976338
+      ],
+      "hashes": [
+        "23834d61e00676571cc2f0a7640d9ddec4c03ef63882a148c03ad959130b432b",
+        "080876d8b0e710293281a82368a5b063d34b0f34e8092d7d287e362a06b9089e",
+        "4450c4587eeeb17fbcfcd8c9a3a75643a6e36c5ef6d3387c3a43a4393cf38895",
+        "3c7041eec249436c9ba2f9c3f585ff68bbcc35319061f605ed8c0c084049a78b"
+      ],
+      "tokens": [
+        57727,
+        6,
+        304,
+        279
+      ],
+      "resources": {
+        "wall_seconds": 13.595484799996484,
+        "cpu_seconds": 17.84375,
+        "average_cpu_cores": 1.3124761832696554,
+        "logical_cpu_percent": 8.202976145435347,
+        "peak_sampled_rss_bytes": 2288881664,
+        "peak_sampled_private_bytes": 2133733376,
+        "start_memory": {
+          "rss": 2255548416,
+          "private": 2097692672
+        }
+      }
+    }
+  ],
+  "pid": 31872,
+  "logical_cpus": 16,
+  "selections": {
+    "4096": 420
+  }
+}

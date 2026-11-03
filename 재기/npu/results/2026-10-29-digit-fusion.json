@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "scope": "CPU verification of exact two-digit integer fusion; not an NPU implementation or speed measurement",
+  "exponent_cases": 199,
+  "partial_sum_pairs_checked": 1646327,
+  "linear_fixtures": [
+    {
+      "shape_M_N_K": [
+        1,
+        1024,
+        1024
+      ],
+      "elements": 1024,
+      "different_bits_elements": 0,
+      "max_abs": 0.0
+    },
+    {
+      "shape_M_N_K": [
+        32,
+        256,
+        1024
+      ],
+      "elements": 8192,
+      "different_bits_elements": 0,
+      "max_abs": 0.0
+    },
+    {
+      "shape_M_N_K": [
+        16,
+        1024,
+        3072
+      ],
+      "elements": 16384,
+      "different_bits_elements": 0,
+      "max_abs": 0.0
+    }
+  ]
+}

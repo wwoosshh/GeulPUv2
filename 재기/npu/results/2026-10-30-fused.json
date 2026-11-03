@@ -1,0 +1,342 @@
+{
+  "scope": "Actual NPU digit fusion versus original planned backend",
+  "passed": true,
+  "kernel_checks": 16,
+  "linear_checks": 124,
+  "benchmarks": [
+    {
+      "shape_M_N_K": [
+        1,
+        1024,
+        1024
+      ],
+      "samples_seconds": {
+        "planned": [
+          0.02454439998837188,
+          0.025813099986407906,
+          0.024206799978855997,
+          0.02533420000690967,
+          0.0222434000170324,
+          0.027011400001356378
+        ],
+        "fused": [
+          0.01966109999921173,
+          0.018778300000121817,
+          0.020645000011427328,
+          0.020021600008476526,
+          0.023038599989376962,
+          0.021577200008323416
+        ]
+      },
+      "median_seconds": {
+        "planned": 0.024939299997640774,
+        "fused": 0.020333300009951927
+      },
+      "speedup": 1.2265249607999924,
+      "profiles": {
+        "planned": [
+          {
+            "packing_seconds": 0.0027436999953351915,
+            "device_and_transfer_seconds": 0.012192700000014156,
+            "finalization_seconds": 0.009233099990524352
+          },
+          {
+            "packing_seconds": 0.0023636000405531377,
+            "device_and_transfer_seconds": 0.012284700002055615,
+            "finalization_seconds": 0.010912999976426363
+          },
+          {
+            "packing_seconds": 0.0021963999897707254,
+            "device_and_transfer_seconds": 0.012419800012139603,
+            "finalization_seconds": 0.009346200007712469
+          },
+          {
+            "packing_seconds": 0.003031100000953302,
+            "device_and_transfer_seconds": 0.01274320000084117,
+            "finalization_seconds": 0.009198399988235906
+          },
+          {
+            "packing_seconds": 0.0021646000386681408,
+            "device_and_transfer_seconds": 0.011748599994461983,
+            "finalization_seconds": 0.0080702000122983
+          },
+          {
+            "packing_seconds": 0.0027825999713968486,
+            "device_and_transfer_seconds": 0.012509799998952076,
+            "finalization_seconds": 0.011396300018532202
+          }
+        ],
+        "fused": [
+          {
+            "packing_seconds": 0.0020197000121697783,
+            "device_and_transfer_seconds": 0.009229799994500354,
+            "finalization_seconds": 0.008060799998929724
+          },
+          {
+            "packing_seconds": 0.0020944000279996544,
+            "device_and_transfer_seconds": 0.008863800001563504,
+            "finalization_seconds": 0.007487599999876693
+          },
+          {
+            "packing_seconds": 0.002156999980797991,
+            "device_and_transfer_seconds": 0.009149199991952628,
+            "finalization_seconds": 0.008860200003255159
+          },
+          {
+            "packing_seconds": 0.002135399990947917,
+            "device_and_transfer_seconds": 0.009720300004119053,
+            "finalization_seconds": 0.007638800016138703
+          },
+          {
+            "packing_seconds": 0.0023893999750725925,
+            "device_and_transfer_seconds": 0.00999630001024343,
+            "finalization_seconds": 0.010109900002134964
+          },
+          {
+            "packing_seconds": 0.0025467999803368002,
+            "device_and_transfer_seconds": 0.009339000011095777,
+            "finalization_seconds": 0.00891490001231432
+          }
+        ]
+      },
+      "dispatches": {
+        "planned": 1,
+        "fused": 1
+      },
+      "allocated_output_bytes_per_call": {
+        "planned": 2097152,
+        "fused": 1048576
+      }
+    },
+    {
+      "shape_M_N_K": [
+        32,
+        256,
+        1024
+      ],
+      "samples_seconds": {
+        "planned": [
+          0.1440561999916099,
+          0.14960350000183098,
+          0.13417530001606792,
+          0.15066489999298938,
+          0.17297720001079142,
+          0.15401609998662025
+        ],
+        "fused": [
+          0.13755859999218956,
+          0.11735369998496026,
+          0.11430200000177138,
+          0.1251926000113599,
+          0.1361031999986153,
+          0.12983839999651536
+        ]
+      },
+      "median_seconds": {
+        "planned": 0.15013419999741018,
+        "fused": 0.12751550000393763
+      },
+      "speedup": 1.1773800047270653,
+      "profiles": {
+        "planned": [
+          {
+            "packing_seconds": 0.003924700082279742,
+            "device_and_transfer_seconds": 0.09395329997641966,
+            "finalization_seconds": 0.04495300000417046
+          },
+          {
+            "packing_seconds": 0.004068899987032637,
+            "device_and_transfer_seconds": 0.09058680001180619,
+            "finalization_seconds": 0.05371810001088306
+          },
+          {
+            "packing_seconds": 0.003694900020491332,
+            "device_and_transfer_seconds": 0.0907487999938894,
+            "finalization_seconds": 0.038829299999633804
+          },
+          {
+            "packing_seconds": 0.0036511000071186572,
+            "device_and_transfer_seconds": 0.09331299999030307,
+            "finalization_seconds": 0.052365200011990964
+          },
+          {
+            "packing_seconds": 0.00497959996573627,
+            "device_and_transfer_seconds": 0.09723099999246188,
+            "finalization_seconds": 0.06923520000418648
+          },
+          {
+            "packing_seconds": 0.00394720007898286,
+            "device_and_transfer_seconds": 0.0989529000071343,
+            "finalization_seconds": 0.04983420000644401
+          }
+        ],
+        "fused": [
+          {
+            "packing_seconds": 0.004332700016675517,
+            "device_and_transfer_seconds": 0.0811655999859795,
+            "finalization_seconds": 0.05129430000670254
+          },
+          {
+            "packing_seconds": 0.003733300050953403,
+            "device_and_transfer_seconds": 0.07189239998115227,
+            "finalization_seconds": 0.040802799980156124
+          },
+          {
+            "packing_seconds": 0.0036125000042375177,
+            "device_and_transfer_seconds": 0.0740765999944415,
+            "finalization_seconds": 0.035879100003512576
+          },
+          {
+            "packing_seconds": 0.0033399999083485454,
+            "device_and_transfer_seconds": 0.07412780003505759,
+            "finalization_seconds": 0.04706750001059845
+          },
+          {
+            "packing_seconds": 0.004159800009801984,
+            "device_and_transfer_seconds": 0.07945450002443977,
+            "finalization_seconds": 0.05162519999430515
+          },
+          {
+            "packing_seconds": 0.003949200036004186,
+            "device_and_transfer_seconds": 0.07419700003811158,
+            "finalization_seconds": 0.05072459997609258
+          }
+        ]
+      },
+      "dispatches": {
+        "planned": 8,
+        "fused": 8
+      },
+      "allocated_output_bytes_per_call": {
+        "planned": 2097152,
+        "fused": 1048576
+      }
+    },
+    {
+      "shape_M_N_K": [
+        16,
+        1024,
+        3072
+      ],
+      "samples_seconds": {
+        "planned": [
+          0.3211130000127014,
+          0.3954913000052329,
+          0.31833280000137165,
+          0.26881420001154765,
+          0.2682896000042092,
+          0.27794930001255125
+        ],
+        "fused": [
+          0.401756800012663,
+          0.377149100007955,
+          0.27815369999734685,
+          0.22421899999608286,
+          0.22763490001671016,
+          0.2301535999868065
+        ]
+      },
+      "median_seconds": {
+        "planned": 0.29814105000696145,
+        "fused": 0.2541536499920767
+      },
+      "speedup": 1.1730740440527063,
+      "profiles": {
+        "planned": [
+          {
+            "packing_seconds": 0.014570599974831566,
+            "device_and_transfer_seconds": 0.0955033999925945,
+            "finalization_seconds": 0.2075716000108514
+          },
+          {
+            "packing_seconds": 0.02201530002639629,
+            "device_and_transfer_seconds": 0.10234809998655692,
+            "finalization_seconds": 0.2654571000020951
+          },
+          {
+            "packing_seconds": 0.016367399919545278,
+            "device_and_transfer_seconds": 0.0962794000224676,
+            "finalization_seconds": 0.2012125999899581
+          },
+          {
+            "packing_seconds": 0.011357499985024333,
+            "device_and_transfer_seconds": 0.0868927999981679,
+            "finalization_seconds": 0.16658590000588447
+          },
+          {
+            "packing_seconds": 0.011495599988847971,
+            "device_and_transfer_seconds": 0.08665720000863075,
+            "finalization_seconds": 0.1655114000022877
+          },
+          {
+            "packing_seconds": 0.01219329991727136,
+            "device_and_transfer_seconds": 0.09010150001267903,
+            "finalization_seconds": 0.17271509999409318
+          }
+        ],
+        "fused": [
+          {
+            "packing_seconds": 0.012009200028842315,
+            "device_and_transfer_seconds": 0.07368269999278709,
+            "finalization_seconds": 0.31270010001026094
+          },
+          {
+            "packing_seconds": 0.017039600032148883,
+            "device_and_transfer_seconds": 0.0792329000250902,
+            "finalization_seconds": 0.277588700002525
+          },
+          {
+            "packing_seconds": 0.011005599924828857,
+            "device_and_transfer_seconds": 0.06951530001242645,
+            "finalization_seconds": 0.19578939999337308
+          },
+          {
+            "packing_seconds": 0.010337499988963827,
+            "device_and_transfer_seconds": 0.06813780002994463,
+            "finalization_seconds": 0.14420500001870096
+          },
+          {
+            "packing_seconds": 0.011694100045133382,
+            "device_and_transfer_seconds": 0.0733242999704089,
+            "finalization_seconds": 0.1406245999969542
+          },
+          {
+            "packing_seconds": 0.010598800028674304,
+            "device_and_transfer_seconds": 0.07055370003217831,
+            "finalization_seconds": 0.14762319999863394
+          }
+        ]
+      },
+      "dispatches": {
+        "planned": 8,
+        "fused": 8
+      },
+      "allocated_output_bytes_per_call": {
+        "planned": 2097152,
+        "fused": 1048576
+      }
+    }
+  ],
+  "rejections": [
+    {
+      "backend": "reference",
+      "input": 3.4028234663852886e+38,
+      "reason": "outside digit contract range"
+    },
+    {
+      "backend": "fused",
+      "input": 3.4028234663852886e+38,
+      "reason": "outside digit contract range"
+    },
+    {
+      "backend": "reference",
+      "input": -3.4028234663852886e+38,
+      "reason": "outside digit contract range"
+    },
+    {
+      "backend": "fused",
+      "input": -3.4028234663852886e+38,
+      "reason": "outside digit contract range"
+    }
+  ]
+}

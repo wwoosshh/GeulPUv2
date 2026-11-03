@@ -1,0 +1,97 @@
+{
+  "native_post": true,
+  "native_linear": true,
+  "model": {
+    "complete": true,
+    "linear_checks": 282,
+    "residual_checks": 56,
+    "logit_checks": 2,
+    "different_bits_elements": 0,
+    "linear_seconds": {
+      "0": 8.388851800060365,
+      "1": 8.389111100346781
+    },
+    "finalization_seconds": {
+      "0": 2.5452731997938827,
+      "1": 2.9456628000480123
+    }
+  },
+  "device_scalar_compatible": false,
+  "device_vector_difference": {
+    "elements": 256,
+    "different_bits_elements": 84,
+    "max_abs": 2.384185791015625e-07,
+    "first": {
+      "index": [
+        0
+      ],
+      "reference_hex": "a8800000",
+      "actual_hex": "00000000"
+    }
+  },
+  "overlap": {
+    "serial": 0.06449479999719188,
+    "two_slots": 0.06324719998519868
+  },
+  "post_pipeline": [
+    {
+      "serial": 0.07050050000543706,
+      "post_pipeline": 0.053328100009821355
+    },
+    {
+      "serial": 0.29914784998982213,
+      "post_pipeline": 0.21389979997184128
+    }
+  ],
+  "gl_host": true,
+  "generation": {
+    "passed": true,
+    "scope": "Qwen3 Q8_0 cached FP32 K/V greedy decode prototype; GL NPU linears + native CPU post; CPU reference attention",
+    "rounds": [
+      {
+        "repeat": 0,
+        "prefill_seconds": 7.9893940999754705,
+        "decode_seconds": [
+          4.646940899954643,
+          4.6598324999795295,
+          4.627632800024003
+        ],
+        "decode_tokens_per_second": 0.21529442711444743,
+        "generated_token_ids": [
+          16,
+          17,
+          18,
+          19
+        ],
+        "kv_bytes": 1376256,
+        "last_logits_sha256": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+        "different_bits_elements": 0
+      },
+      {
+        "repeat": 1,
+        "prefill_seconds": 5.576730800035875,
+        "decode_seconds": [
+          4.582915300037712,
+          4.612775999994483,
+          4.659617299970705
+        ],
+        "decode_tokens_per_second": 0.21652350637642037,
+        "generated_token_ids": [
+          16,
+          17,
+          18,
+          19
+        ],
+        "kv_bytes": 1376256,
+        "last_logits_sha256": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+        "different_bits_elements": 0
+      }
+    ],
+    "limitations": [
+      "Fixed token IDs, no tokenizer/chat template or EOS stopping.",
+      "Only 3 decode steps per round, no reliable p95 or long-context inference.",
+      "FP32 K/V projections are cached, but CPU reference attention re-quantizes history each step.",
+      "GL device kernel is integrated through Python prototype; production GL engine ABI is not implemented."
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "complete": true,
+  "checks": 16,
+  "runs": [
+    {
+      "mode": "output_view",
+      "seconds": 0.40391429999726824,
+      "stages": {
+        "allocate_pad": 0.003962500049965456,
+        "pack_copy": 0.03875159996096045,
+        "upload_sync": 0.003363299911143258,
+        "dispatch_wait": 0.23777289999998175,
+        "runtime_wait_ns": 231795600.0,
+        "download_sync": 0.0019508000405039638,
+        "output_copy": 0.0005679999303538352,
+        "decode_replay": 9.790010517463088e-05,
+        "scatter": 0.039262899925233796,
+        "final_copy": 0.00013549995492212474
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.32863789997645654,
+        "finalization_seconds": 0.24137179998797365,
+        "packing_seconds": 0.04373600007966161,
+        "post_wait_seconds": 0.019707499945070595
+      },
+      "handle_loads_during_run": 0
+    },
+    {
+      "mode": "output_view",
+      "seconds": 0.4021390000125393,
+      "stages": {
+        "allocate_pad": 0.0044559000234585255,
+        "pack_copy": 0.03995900001609698,
+        "upload_sync": 0.0035156999656464905,
+        "dispatch_wait": 0.23660640002344735,
+        "runtime_wait_ns": 230818500.0,
+        "download_sync": 0.001869499945314601,
+        "output_copy": 0.0005083999130874872,
+        "decode_replay": 0.00010090004070661962,
+        "scatter": 0.037660099973436445,
+        "final_copy": 0.00011430002632550895
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.32760029993369244,
+        "finalization_seconds": 0.23706800004583783,
+        "packing_seconds": 0.04363220001687296,
+        "post_wait_seconds": 0.0199630000279285
+      },
+      "handle_loads_during_run": 0
+    },
+    {
+      "mode": "output_view",
+      "seconds": 0.4114998999866657,
+      "stages": {
+        "allocate_pad": 0.005007700063288212,
+        "pack_copy": 0.038950599962845445,
+        "upload_sync": 0.0034327000321354717,
+        "dispatch_wait": 0.23917119996622205,
+        "runtime_wait_ns": 233481700.0,
+        "download_sync": 0.002089800051180646,
+        "output_copy": 0.0005870999884791672,
+        "decode_replay": 0.00010500004282221198,
+        "scatter": 0.0408778999990318,
+        "final_copy": 0.0001467999827582389
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.33312420002766885,
+        "finalization_seconds": 0.26186410000082105,
+        "packing_seconds": 0.04522279996308498,
+        "post_wait_seconds": 0.021100700017996132
+      },
+      "handle_loads_during_run": 0
+    }
+  ],
+  "model": [
+    "23834d61e00676571cc2f0a7640d9ddec4c03ef63882a148c03ad959130b432b",
+    "080876d8b0e710293281a82368a5b063d34b0f34e8092d7d287e362a06b9089e"
+  ]
+}

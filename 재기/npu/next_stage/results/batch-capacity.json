@@ -1,0 +1,177 @@
+{
+  "complete": true,
+  "checks": 20,
+  "linear": [
+    {
+      "rows": 64,
+      "frames": 4096,
+      "seconds": 0.20059089999995194,
+      "calls": 12,
+      "output_bytes": 25165824,
+      "profile": {
+        "device_and_transfer_seconds": 0.1375438000250142,
+        "finalization_seconds": 0.08135349999065511,
+        "packing_seconds": 0.028180399967823178,
+        "post_wait_seconds": 0.02931769998394884
+      }
+    },
+    {
+      "rows": 64,
+      "frames": 8192,
+      "seconds": 0.15516119997482747,
+      "calls": 6,
+      "output_bytes": 25165824,
+      "profile": {
+        "device_and_transfer_seconds": 0.11195859996951185,
+        "finalization_seconds": 0.08206499999505468,
+        "packing_seconds": 0.018491500057280064,
+        "post_wait_seconds": 0.01975279996986501
+      }
+    },
+    {
+      "rows": 64,
+      "frames": 8192,
+      "seconds": 0.15633740002522245,
+      "calls": 6,
+      "output_bytes": 25165824,
+      "profile": {
+        "device_and_transfer_seconds": 0.1079191000026185,
+        "finalization_seconds": 0.06309260003035888,
+        "packing_seconds": 0.019204799988074228,
+        "post_wait_seconds": 0.02483609999762848
+      }
+    },
+    {
+      "rows": 64,
+      "frames": 4096,
+      "seconds": 0.15256329998373985,
+      "calls": 12,
+      "output_bytes": 25165824,
+      "profile": {
+        "device_and_transfer_seconds": 0.11126080004032701,
+        "finalization_seconds": 0.06173059999127872,
+        "packing_seconds": 0.01606779993744567,
+        "post_wait_seconds": 0.019786100019700825
+      }
+    },
+    {
+      "rows": 64,
+      "frames": 4096,
+      "seconds": 0.14710309999645688,
+      "calls": 12,
+      "output_bytes": 25165824,
+      "profile": {
+        "device_and_transfer_seconds": 0.10774960002163425,
+        "finalization_seconds": 0.0572000999818556,
+        "packing_seconds": 0.0156340999819804,
+        "post_wait_seconds": 0.01912889999221079
+      }
+    },
+    {
+      "rows": 64,
+      "frames": 8192,
+      "seconds": 0.14340959998662584,
+      "calls": 6,
+      "output_bytes": 25165824,
+      "profile": {
+        "device_and_transfer_seconds": 0.10338090002187528,
+        "finalization_seconds": 0.0575883999990765,
+        "packing_seconds": 0.016094899969175458,
+        "post_wait_seconds": 0.019441099982941523
+      }
+    },
+    {
+      "rows": 256,
+      "frames": 4096,
+      "seconds": 0.6948724999965634,
+      "calls": 48,
+      "output_bytes": 100663296,
+      "profile": {
+        "device_and_transfer_seconds": 0.5496772999758832,
+        "finalization_seconds": 0.46541750003234483,
+        "packing_seconds": 0.0761336000286974,
+        "post_wait_seconds": 0.0440303000214044
+      }
+    },
+    {
+      "rows": 256,
+      "frames": 8192,
+      "seconds": 0.49405000000842847,
+      "calls": 24,
+      "output_bytes": 100663296,
+      "profile": {
+        "device_and_transfer_seconds": 0.3936359000217635,
+        "finalization_seconds": 0.31459779996657744,
+        "packing_seconds": 0.06353219991433434,
+        "post_wait_seconds": 0.023475000052712858
+      }
+    },
+    {
+      "rows": 256,
+      "frames": 8192,
+      "seconds": 0.5102009999973234,
+      "calls": 24,
+      "output_bytes": 100663296,
+      "profile": {
+        "device_and_transfer_seconds": 0.3908266999933403,
+        "finalization_seconds": 0.32669089996488765,
+        "packing_seconds": 0.054161000007297844,
+        "post_wait_seconds": 0.03746940000564791
+      }
+    },
+    {
+      "rows": 256,
+      "frames": 4096,
+      "seconds": 0.5950888000079431,
+      "calls": 48,
+      "output_bytes": 100663296,
+      "profile": {
+        "device_and_transfer_seconds": 0.470034900092287,
+        "finalization_seconds": 0.3456027999636717,
+        "packing_seconds": 0.06957139991573058,
+        "post_wait_seconds": 0.040030499978456646
+      }
+    },
+    {
+      "rows": 256,
+      "frames": 4096,
+      "seconds": 0.5394728000101168,
+      "calls": 48,
+      "output_bytes": 100663296,
+      "profile": {
+        "device_and_transfer_seconds": 0.43187179989763536,
+        "finalization_seconds": 0.27721960001508705,
+        "packing_seconds": 0.06834360014181584,
+        "post_wait_seconds": 0.02605679997941479
+      }
+    },
+    {
+      "rows": 256,
+      "frames": 8192,
+      "seconds": 0.600342100020498,
+      "calls": 24,
+      "output_bytes": 100663296,
+      "profile": {
+        "device_and_transfer_seconds": 0.4590429999807384,
+        "finalization_seconds": 0.45733160004601814,
+        "packing_seconds": 0.06976750007015653,
+        "post_wait_seconds": 0.043604399950709194
+      }
+    }
+  ],
+  "model": [
+    {
+      "length": 64,
+      "frames": 8192,
+      "prefill": 32.52640269999392,
+      "decode": 6.122465899999952,
+      "hashes": [
+        "645fae6a1f271c1397d37dd97dc9504b18ba07ea8c45ce7d131ca24517c895a8",
+        "1f5f26e598dbc5a22c108ed6f70924083b299900c4581fffacd71610c6973ba4"
+      ]
+    }
+  ],
+  "baseline_source": "reuse-overlap.json and long-overlap.json; not rerun",
+  "idle_sleep_inhibited": true,
+  "winner": 8192
+}

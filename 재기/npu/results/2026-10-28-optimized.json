@@ -1,0 +1,77 @@
+{
+  "passed": true,
+  "all_linear_hashes_match": true,
+  "saved_logits_bit_equal": true,
+  "warm_speedup": 2.8223940054971073,
+  "warm_seconds_reduction": 0.6456908574591909,
+  "runs": [
+    {
+      "backend": "dot",
+      "tokens": [
+        9707,
+        1879,
+        13
+      ],
+      "linear_calls": 282,
+      "elements": 2976000,
+      "npu_dispatches": 13936,
+      "logit_hash": "7086db93d0958747cb113f2a88c8586b9e408230cffd03746515e41bbbdf0e52",
+      "repetitions": [
+        {
+          "repeat": 0,
+          "cpu_seconds": 7.985563799957163,
+          "hybrid_seconds": 51.25359590006701,
+          "profile": {
+            "packing_seconds": null,
+            "device_and_transfer_seconds": null,
+            "finalization_seconds": null
+          }
+        },
+        {
+          "repeat": 1,
+          "cpu_seconds": 7.9755721999245,
+          "hybrid_seconds": 42.7490651000262,
+          "profile": {
+            "packing_seconds": null,
+            "device_and_transfer_seconds": null,
+            "finalization_seconds": null
+          }
+        }
+      ]
+    },
+    {
+      "backend": "tiled",
+      "tokens": [
+        9707,
+        1879,
+        13
+      ],
+      "linear_calls": 282,
+      "elements": 2976000,
+      "npu_dispatches": 9094,
+      "logit_hash": "7086db93d0958747cb113f2a88c8586b9e408230cffd03746515e41bbbdf0e52",
+      "repetitions": [
+        {
+          "repeat": 0,
+          "cpu_seconds": 8.045312299916986,
+          "hybrid_seconds": 22.82649770002172,
+          "profile": {
+            "packing_seconds": 1.6621823004679754,
+            "device_and_transfer_seconds": 16.38716930024384,
+            "finalization_seconds": 4.615367199920001
+          }
+        },
+        {
+          "repeat": 1,
+          "cpu_seconds": 8.05889530008426,
+          "hybrid_seconds": 15.146384600011515,
+          "profile": {
+            "packing_seconds": 1.6805075005831895,
+            "device_and_transfer_seconds": 8.578796100307954,
+            "finalization_seconds": 4.710609299901989
+          }
+        }
+      ]
+    }
+  ]
+}

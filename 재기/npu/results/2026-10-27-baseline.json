@@ -1,0 +1,383 @@
+{
+  "format": "geulpu-npu-benchmark/1",
+  "at": "2026-10-27T11:15:10.620Z",
+  "model": "qwen3:0.6b",
+  "base": "http://127.0.0.1:44560",
+  "repeats": 5,
+  "node": "v24.19.0",
+  "platform": "win32",
+  "request_options": {
+    "temperature": 0,
+    "top_k": 1,
+    "top_p": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "repetition_penalty": 1,
+    "think": false
+  },
+  "metadata": {
+    "cpu": "AMD Ryzen AI 7 350 w/ Radeon 860M              ",
+    "power_scheme": "전원 구성표 GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (균형 조정)",
+    "model_files": [
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\models\\models\\Qwen3-0.6B-NPU2\\config.json",
+        "Hash": "8A5EC72F5C96766168A4024F88D70841AE341900A0C84FD4FD23F8EEAE16C6A7"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\models\\models\\Qwen3-0.6B-NPU2\\model.q4nx",
+        "Hash": "DB8DEC4DFF653817218FF920C5D25D28D1805512906485E654F03980053FA667"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\models\\models\\Qwen3-0.6B-NPU2\\tokenizer_config.json",
+        "Hash": "51015F78470AC7F7B8C128A6B6EE31A0081285A453DB4CABA9D46104063908A2"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\models\\models\\Qwen3-0.6B-NPU2\\tokenizer.json",
+        "Hash": "AEB13307A71ACD8FE81861D94AD54AB689DF773318809EED3CBE794B4492DAE4"
+      }
+    ],
+    "backend": "flm NPU",
+    "runtime": "FastFlowLM 1.0.10",
+    "npu_driver": {
+      "DeviceName": "NPU Compute Accelerator Device",
+      "DriverVersion": "32.0.203.329"
+    },
+    "pmode": "performance",
+    "computer": {
+      "Manufacturer": "HP",
+      "Model": "HP OmniBook X Flip Laptop 14-fk0xxx",
+      "TotalPhysicalMemory": 33582993408
+    },
+    "battery": {
+      "BatteryStatus": 2,
+      "EstimatedChargeRemaining": 92
+    },
+    "context": 32768,
+    "kernels": [
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\gemma_npu.dll",
+        "Hash": "74E1413CBCE75F83A779B71BE18394DA2D880706B3AE8149F1D213A329BABD0E"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\gemma_text_npu.dll",
+        "Hash": "5C1F73EED9289360C1FEFB91F16F071D43725CC09B678D71EDE804A3AA9E840D"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\gemma4_12b_npu.dll",
+        "Hash": "89048404D8A39F5A36FBB2959158E491B163DEC024156D92C71B048DFEBB084A"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\gemma4e_npu.dll",
+        "Hash": "5915CA6A0596287796B33D37992369E48B4FC02415C59D754057587CE263261C"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\gpt_oss_npu.dll",
+        "Hash": "C0BC1F0767EC62DAFE5B02CC7BBA5DE43EC2DF96752B4E3E57BB046D9E291E30"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\hunyuan_npu.dll",
+        "Hash": "0BA3EF7A7255C79B24B9672F070E14BB4B570A05ADC48BBE7A9E3CED328F3CB7"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\lfm2_npu.dll",
+        "Hash": "BB59843FF22C1B025E08437D5E91D74051001BD001C1AF57093FCB4C081382FC"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\llama_npu.dll",
+        "Hash": "DB0FED9541B1E366B327479D1A700FB811A649F3C2DC63E86A7FC9D7008E96F5"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\minicpm_v_4_7_npu.dll",
+        "Hash": "B727D89E8C880C5AB52BBD71DC3EA846CA22E557759AF0E90B3C5A0CC0C7B5A2"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\nanbeige_npu.dll",
+        "Hash": "96F8A2DFA19C87984CBEAEA370C888CFAD7D4BC6D5D6341DB03F01288CA4EBE0"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\phi4_npu.dll",
+        "Hash": "CA657BBBDC00D4A5693753A4B91442D5F8BBA2860C7892C99AE69A9772BC40A6"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\q4_npu_eXpress.dll",
+        "Hash": "C8A601860BA99F9A2191099C4B20F8229F7EB99E2048C744190099D34982ED9D"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen2_npu.dll",
+        "Hash": "DD6F725346B66620E5092DB90ACDC550D1003CFE1FC9A9074BBF5180412F1626"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen2vl_npu.dll",
+        "Hash": "B9D1C0E581089D151997C92BA9E2D0D45BA22AD774F3CEF0FE05A79B239100DC"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen3_5_omni_npu.dll",
+        "Hash": "C7A267CFE9A003F8E03549C76DE3912BE5CB3E0400925EC6CDC27E339B72A57B"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen3_5vl_npu.dll",
+        "Hash": "0A936AF77396DC2EAA88A68691F7F034B1C1FB673B2EE16187A063A4167A9F11"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen3_6_moe_npu.dll",
+        "Hash": "7137D08BEE6A507E0259099A51C582A92D12DBB303DA713BA03C8C87A26DF351"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen3_8mtp_npu.dll",
+        "Hash": "FE720304868850CAF895565943BD5FE2F833CE7E37370F0ACEE37AD3BCFEAEAE"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen3_npu.dll",
+        "Hash": "2B983CF825AF046622161D04AC1ED05AC67433DE8D43173A987EB0A6C821586A"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\qwen3vl_npu.dll",
+        "Hash": "5AE92FF4444FB88A8E3DD8BDE3658CEC1955714E1B44D0225CAD8837BDB17D45"
+      },
+      {
+        "Path": "C:\\Codex\\Agent\\GeulNPU\\빌드\\npu\\flm-1.0.10\\whisper_npu.dll",
+        "Hash": "3E64790FA5C4DB946AD9809665C964B3EB7877BD0E30AFAD0815CB1861345BF6"
+      }
+    ],
+    "runtime_hash": "F1EDF82FACC62978DD9A0FF10596303DB3A444811AA34EA878E46BAE817C300A"
+  },
+  "scope": "HTTP end-to-end; first visible/reasoning output is not exact first model token; no NPU-only power measurement",
+  "cache_policy": "uncontrolled; repeated prompts may reuse cache; never interpret as uncached prefill throughput",
+  "cases": [
+    {
+      "id": "short",
+      "attempted": 5,
+      "success": 5,
+      "errors": [],
+      "first_output_ms": {
+        "n": 5,
+        "median": 601.6647999999986,
+        "p95": 619.4712,
+        "min": 599.4594999999972,
+        "max": 619.4712
+      },
+      "total_ms": {
+        "n": 5,
+        "median": 2433.142200000002,
+        "p95": 2438.842499999999,
+        "min": 2415.7523000000074,
+        "max": 2438.842499999999
+      },
+      "output_tokens_per_total_second": {
+        "n": 5,
+        "median": 52.60687188771782,
+        "p95": 52.98556478658826,
+        "min": 52.48391398788567,
+        "max": 52.98556478658826
+      },
+      "native_prefill_tps": {
+        "n": 5,
+        "median": 746.7112686386545,
+        "p95": 761.2565322232977,
+        "min": 732.5018219846808,
+        "max": 761.2565322232977
+      },
+      "native_decode_tps": {
+        "n": 5,
+        "median": 75.67395639406504,
+        "p95": 76.27215095212075,
+        "min": 75.02060136045172,
+        "max": 76.27215095212075
+      },
+      "native_prefill_seconds": {
+        "n": 5,
+        "median": 0.539699904,
+        "p95": 0.55016928,
+        "min": 0.529387904,
+        "max": 0.55016928
+      },
+      "native_decode_seconds": {
+        "n": 5,
+        "median": 1.691467,
+        "p95": 1.706198,
+        "min": 1.678201,
+        "max": 1.706198
+      },
+      "cached_tokens": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "prompt_tokens": [
+        403
+      ],
+      "completion_tokens": [
+        128,
+        128,
+        128,
+        128,
+        128
+      ],
+      "distinct_outputs": 1,
+      "repeat_text_equal": true,
+      "token_id_equality": null,
+      "logit_bit_equality": null,
+      "energy_joules": null
+    },
+    {
+      "id": "medium",
+      "attempted": 5,
+      "success": 5,
+      "errors": [],
+      "first_output_ms": {
+        "n": 5,
+        "median": 1519.5829999999987,
+        "p95": 1546.8583000000035,
+        "min": 1505.5692000000054,
+        "max": 1546.8583000000035
+      },
+      "total_ms": {
+        "n": 5,
+        "median": 4209.494200000001,
+        "p95": 4253.883100000003,
+        "min": 4204.0625,
+        "max": 4253.883100000003
+      },
+      "output_tokens_per_total_second": {
+        "n": 5,
+        "median": 30.407453703107603,
+        "p95": 30.44674050397681,
+        "min": 30.090154569597814,
+        "max": 30.44674050397681
+      },
+      "native_prefill_tps": {
+        "n": 5,
+        "median": 2097.475776225496,
+        "p95": 2118.4920493349077,
+        "min": 2092.7343815283757,
+        "max": 2118.4920493349077
+      },
+      "native_decode_tps": {
+        "n": 5,
+        "median": 49.561496912086426,
+        "p95": 49.69011613123625,
+        "min": 49.34104646962886,
+        "max": 49.69011613123625
+      },
+      "native_prefill_seconds": {
+        "n": 5,
+        "median": 1.419801856,
+        "p95": 1.423018624,
+        "min": 1.405716864,
+        "max": 1.423018624
+      },
+      "native_decode_seconds": {
+        "n": 5,
+        "median": 2.58265,
+        "p95": 2.594189,
+        "min": 2.575965,
+        "max": 2.594189
+      },
+      "cached_tokens": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "prompt_tokens": [
+        2978
+      ],
+      "completion_tokens": [
+        128,
+        128,
+        128,
+        128,
+        128
+      ],
+      "distinct_outputs": 2,
+      "repeat_text_equal": false,
+      "token_id_equality": null,
+      "logit_bit_equality": null,
+      "energy_joules": null
+    },
+    {
+      "id": "long",
+      "attempted": 5,
+      "success": 5,
+      "errors": [],
+      "first_output_ms": {
+        "n": 5,
+        "median": 8671.730599999995,
+        "p95": 8728.455600000001,
+        "min": 8652.622899999995,
+        "max": 8728.455600000001
+      },
+      "total_ms": {
+        "n": 5,
+        "median": 14362.0236,
+        "p95": 14418.801900000006,
+        "min": 14328.003299999997,
+        "max": 14418.801900000006
+      },
+      "output_tokens_per_total_second": {
+        "n": 5,
+        "median": 8.912393097585497,
+        "p95": 8.933554614689406,
+        "min": 8.877297911971448,
+        "max": 8.933554614689406
+      },
+      "native_prefill_tps": {
+        "n": 5,
+        "median": 1413.704008668136,
+        "p95": 1419.0905316378596,
+        "min": 1405.3934745089625,
+        "max": 1419.0905316378596
+      },
+      "native_decode_tps": {
+        "n": 5,
+        "median": 22.667789902880916,
+        "p95": 22.736767911599447,
+        "min": 22.589621233820406,
+        "max": 22.736767911599447
+      },
+      "native_prefill_seconds": {
+        "n": 5,
+        "median": 8.464996864,
+        "p95": 8.515053056,
+        "min": 8.432865792,
+        "max": 8.515053056
+      },
+      "native_decode_seconds": {
+        "n": 5,
+        "median": 5.646779,
+        "p95": 5.666319,
+        "min": 5.629648,
+        "max": 5.666319
+      },
+      "cached_tokens": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "prompt_tokens": [
+        11967
+      ],
+      "completion_tokens": [
+        128,
+        128,
+        128,
+        128,
+        128
+      ],
+      "distinct_outputs": 3,
+      "repeat_text_equal": false,
+      "token_id_equality": null,
+      "logit_bit_equality": null,
+      "energy_joules": null
+    }
+  ],
+  "raw_log_sha256": "8d1eea0c986f13495d4f24fed3e8a2532f89c97b84d35483af9e837335f1e79a",
+  "harness_sha256": "60c13918a049bc030b0950bff72dbf4e78bb5144275a619cc82a1d24704c04cd",
+  "request_options_sha256": "6cd9866e72d6db5bf3b79644a84c9b955ab31ec25bed12f619c02a841f579735",
+  "raw_log_path": "빌드/npu/results/20261027-201457-992-performance/requests.jsonl"
+}

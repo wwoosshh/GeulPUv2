@@ -1,0 +1,124 @@
+**********************************************************************
+** Visual Studio 2026 Developer PowerShell v18.10.1
+** Copyright (c) 2026 Microsoft Corporation
+**********************************************************************
+Failed to find real location of C:\Codex\Agent\GeulNPU\빌드\npu\dev\python\cpython-3.13.18-windows-x86_64-none\python.exe
+{
+  "target": "aie2p-none-unknown-elf",
+  "optimization": "-O2",
+  "kernels": {
+    "gl": {
+      "source": "generated.cc",
+      "source_sha256": "1af754a4d95f977794661a04685d69581096a1ff97e089eae7b3a10ec8340ab6",
+      "object": "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\gl.o",
+      "object_sha256": "dc6d28ebeede84632e12cc17e7fd5c383d23fd8fdf7d4b21eee10f11c638115f",
+      "text_sha256": "94761b62c6744a76f13a5f73a995098850c65a8f149ab5bd3ab14ec407562847",
+      "text_bytes": 320,
+      "compile_seconds": 8.04031459998805
+    },
+    "c": {
+      "source": "native.c",
+      "source_sha256": "460b111d23312164a024f1b94076a80cf0f27e40555e65168272cf8680d939ce",
+      "object": "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\c.o",
+      "object_sha256": "2b0b4279752b7f9f22a3bdcd4eec1c9979868088a2cd27ca31fb5fa95ef98306",
+      "text_sha256": "61c240538b7fbbfd8aeb6bdde3f272466d6a5a88c1a19448c4a323999d6d770b",
+      "text_bytes": 1520,
+      "compile_seconds": 0.1663509999634698
+    },
+    "c_unrolled": {
+      "source": "native_unrolled.c",
+      "source_sha256": "750f46fdf530aca23a89be59cbad408761c79b75f2e7c8bfcf681c5dd91fbb06",
+      "object": "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\c_unrolled.o",
+      "object_sha256": "15b82924a3f17a203fdaf8cf64cc5dfb3ae63139ba56de1bf7e0e52c10dfafac",
+      "text_sha256": "6b938cd57a50ec19e3e1aede1e9026c7324f5941b1ac301d0b2411618e39261b",
+      "text_bytes": 1504,
+      "compile_seconds": 0.19141420000232756
+    },
+    "aie_cpp": {
+      "source": "native_aie.cc",
+      "source_sha256": "369761e09a099f58c4e29e1cf872f47307c68ad75d4122997c61e7ec4b2f4794",
+      "object": "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\aie_cpp.o",
+      "object_sha256": "9d2a46da578e288d8d5353cf072a0a007cfbdcf718ef9cc74aceee1af63d74f9",
+      "text_sha256": "94761b62c6744a76f13a5f73a995098850c65a8f149ab5bd3ab14ec407562847",
+      "text_bytes": 320,
+      "compile_seconds": 7.332640299980994
+    }
+  },
+  "commands": [
+    [
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\\clang++.exe",
+      "--target=aie2p-none-unknown-elf",
+      "-O2",
+      "-DNDEBUG",
+      "-x",
+      "c++",
+      "-std=c++20",
+      "-D__AIE_API_AIE_ADF_HPP__",
+      "-Wno-attributes",
+      "-Wno-macro-redefined",
+      "-I",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\include",
+      "-c",
+      "C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\gl_aie\\generated.cc",
+      "-o",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\gl.o"
+    ],
+    [
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\\clang.exe",
+      "--target=aie2p-none-unknown-elf",
+      "-O2",
+      "-DNDEBUG",
+      "-x",
+      "c",
+      "-std=c11",
+      "-D__AIE_API_AIE_ADF_HPP__",
+      "-Wno-attributes",
+      "-Wno-macro-redefined",
+      "-I",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\include",
+      "-c",
+      "C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\gl_aie\\native.c",
+      "-o",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\c.o"
+    ],
+    [
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\\clang.exe",
+      "--target=aie2p-none-unknown-elf",
+      "-O2",
+      "-DNDEBUG",
+      "-x",
+      "c",
+      "-std=c11",
+      "-D__AIE_API_AIE_ADF_HPP__",
+      "-Wno-attributes",
+      "-Wno-macro-redefined",
+      "-I",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\include",
+      "-c",
+      "C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\gl_aie\\native_unrolled.c",
+      "-o",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\c_unrolled.o"
+    ],
+    [
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\\clang++.exe",
+      "--target=aie2p-none-unknown-elf",
+      "-O2",
+      "-DNDEBUG",
+      "-x",
+      "c++",
+      "-std=c++20",
+      "-D__AIE_API_AIE_ADF_HPP__",
+      "-Wno-attributes",
+      "-Wno-macro-redefined",
+      "-I",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\include",
+      "-c",
+      "C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\gl_aie\\native_aie.cc",
+      "-o",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\aie_cpp.o"
+    ]
+  ],
+  "compiler": "clang version 22.0.0 (https://github.com/Xilinx/llvm-aie 4f5df13df8199bc73bd955e0ef9e966303f8f23a)\nTarget: x86_64-pc-windows-msvc\nThread model: posix\nInstalledDir: C:\\Codex\\Agent\\GeulNPU\\\u936e\ub6ae\ubc76\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\nBuild config: +assertions\n",
+  "gl_source_sha256": "2f87ac7389cf890017c3e8460127b5bcab0e051cec34b1e3b5a76f27ea8eabee",
+  "gl_vs_aie_cpp_text_equal": true
+}

@@ -1,0 +1,148 @@
+{
+  "complete": true,
+  "checks": 26,
+  "runs": [
+    {
+      "mode": "handle",
+      "seconds": 0.5648242000024766,
+      "stages": {
+        "allocate_pad": 0.005978699948173016,
+        "pack_copy": 0.06600340001750737,
+        "upload_sync": 0.004566799849271774,
+        "dispatch_wait": 0.24877929998910986,
+        "runtime_wait_ns": 239322700.0,
+        "download_sync": 0.002949599933344871,
+        "output_copy": 0.024805699998978525,
+        "decode_replay": 0.007706199976382777,
+        "scatter": 0.058156499959295616,
+        "final_copy": 0.00041200005216524005
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.4260869999998249,
+        "finalization_seconds": 0.3473936000082176,
+        "packing_seconds": 0.07476929997210391,
+        "post_wait_seconds": 0.039458800019929186
+      },
+      "handle_loads_during_run": 0
+    },
+    {
+      "mode": "handle_lean",
+      "seconds": 0.543303599988576,
+      "stages": {
+        "allocate_pad": 0.00047490003635175526,
+        "pack_copy": 0.0896136001101695,
+        "upload_sync": 0.0043484999623615295,
+        "dispatch_wait": 0.24536250007804483,
+        "runtime_wait_ns": 236134200.0,
+        "download_sync": 0.0027640998596325517,
+        "output_copy": 0.0008237999572884291,
+        "decode_replay": 0.00016979998326860368,
+        "scatter": 0.05526399990776554,
+        "final_copy": 0.0002814999606925994
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.40346900004078634,
+        "finalization_seconds": 0.3662624999997206,
+        "packing_seconds": 0.07059579997439869,
+        "post_wait_seconds": 0.04182749998290092
+      },
+      "handle_loads_during_run": 0
+    },
+    {
+      "mode": "handle_lean",
+      "seconds": 0.5559990000037942,
+      "stages": {
+        "allocate_pad": 0.0004897000326309353,
+        "pack_copy": 0.08997759982594289,
+        "upload_sync": 0.004001500055892393,
+        "dispatch_wait": 0.2509345999278594,
+        "runtime_wait_ns": 240681500.0,
+        "download_sync": 0.002787500066915527,
+        "output_copy": 0.0008376999176107347,
+        "decode_replay": 0.00016779990983195603,
+        "scatter": 0.06083340008626692,
+        "final_copy": 0.00031880001188255847
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.4153671000676695,
+        "finalization_seconds": 0.3223737000080291,
+        "packing_seconds": 0.0784555999271106,
+        "post_wait_seconds": 0.03754530000151135
+      },
+      "handle_loads_during_run": 0
+    },
+    {
+      "mode": "handle",
+      "seconds": 0.5001396000152454,
+      "stages": {
+        "allocate_pad": 0.007504699984565377,
+        "pack_copy": 0.05586119997315109,
+        "upload_sync": 0.00371740001719445,
+        "dispatch_wait": 0.24304889995255508,
+        "runtime_wait_ns": 234130300.0,
+        "download_sync": 0.00279709993628785,
+        "output_copy": 0.021334600052796304,
+        "decode_replay": 0.006686599983368069,
+        "scatter": 0.049403399927541614,
+        "final_copy": 0.00025509996339678764
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.3959959000349045,
+        "finalization_seconds": 0.29604939999990165,
+        "packing_seconds": 0.06424699994386174,
+        "post_wait_seconds": 0.024412000027950853
+      },
+      "handle_loads_during_run": 0
+    },
+    {
+      "mode": "handle",
+      "seconds": 0.4736274000024423,
+      "stages": {
+        "allocate_pad": 0.00469509995309636,
+        "pack_copy": 0.0556536999065429,
+        "upload_sync": 0.00462699998752214,
+        "dispatch_wait": 0.24041670007864013,
+        "runtime_wait_ns": 231989500.0,
+        "download_sync": 0.001993299985770136,
+        "output_copy": 0.018321799900149927,
+        "decode_replay": 0.005548100016312674,
+        "scatter": 0.044872800062876195,
+        "final_copy": 0.00021419994300231338
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.3815300000424031,
+        "finalization_seconds": 0.25640260000363924,
+        "packing_seconds": 0.0518223999242764,
+        "post_wait_seconds": 0.0259578000404872
+      },
+      "handle_loads_during_run": 0
+    },
+    {
+      "mode": "handle_lean",
+      "seconds": 0.4469985000032466,
+      "stages": {
+        "allocate_pad": 0.0002035000070463866,
+        "pack_copy": 0.06623670007684268,
+        "upload_sync": 0.003377300046849996,
+        "dispatch_wait": 0.23651520011480898,
+        "runtime_wait_ns": 230488500.0,
+        "download_sync": 0.002284600050188601,
+        "output_copy": 0.0004700999998021871,
+        "decode_replay": 0.00011170009383931756,
+        "scatter": 0.045103399927029386,
+        "final_copy": 0.00013090006541460752
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.3570938999764621,
+        "finalization_seconds": 0.2695964000595268,
+        "packing_seconds": 0.050646700081415474,
+        "post_wait_seconds": 0.024660199938807636
+      },
+      "handle_loads_during_run": 0
+    }
+  ],
+  "model": [
+    "23834d61e00676571cc2f0a7640d9ddec4c03ef63882a148c03ad959130b432b",
+    "080876d8b0e710293281a82368a5b063d34b0f34e8092d7d287e362a06b9089e"
+  ]
+}

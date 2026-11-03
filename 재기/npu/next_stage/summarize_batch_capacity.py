@@ -1,0 +1,35 @@
+import hashlib
+import json
+from pathlib import Path
+from statistics import median
+
+here=Path(__file__).resolve().parent
+d=json.loads((here/'results/batch-capacity.json').read_text())
+old=json.loads((here/'results/reuse-overlap.json').read_text())
+long=json.loads((here/'results/long-overlap.json').read_text())
+assert d['complete'] and d['checks']==20 and len(d['model'])==1
+lines=['# NPU 제출 용량 확대 시험', '',
+       '기존 2,048프레임 경로는 재실행하지 않았다. 새 4,096·8,192프레임 경로만 워밍업 후 각 3회 교대 측정했다. NPU 작업자 4개, CPU 후처리 4스레드, 장치 가중치 4회 재사용과 후처리 중첩을 유지했다. ReuseDevice의 프레임 용량을 선택 가능하게 했으며 기본값은 2,048이다. 장치 그래프 반복 횟수와 호스트 버퍼만 함께 늘리고 GL 정수 커널과 FMA 순서는 유지했다.', '',
+       '| FFN 행 | 제출 용량 | 중앙값 ms | 제출 횟수 | 반환 MiB | 측정 |','|---:|---:|---:|---:|---:|---|']
+for m in (64,256):
+    rows=[r for r in old['linear'] if r['rows']==m and r['mode']=='combined']
+    lines.append(f"| {m} | 2048 | {median(r['seconds'] for r in rows)*1000:.2f} | {rows[0]['calls']} | {rows[0]['output_bytes']/(1<<20):.0f} | 이전 자료 |")
+    for f in (4096,8192):
+        rows=[r for r in d['linear'] if r['rows']==m and r['frames']==f]
+        lines.append(f"| {m} | {f} | {median(r['seconds'] for r in rows)*1000:.2f} | {rows[0]['calls']} | {rows[0]['output_bytes']/(1<<20):.0f} | 이번 시험 |")
+model=d['model'][0]
+previous=median(r['prefill'] for r in long['runs'] if r['length']==64 and r['mode']=='combined')
+lines+=['','Qwen3-0.6B-Q8_0 첫 FFN up(K=1024,N=3072) 기준이다. 이전 자료와의 시간 차이는 서로 다른 세션의 관찰값이므로 통제된 속도 향상률로 해석하지 않는다. 이번 동일 세션의 두 새 용량끼리는 직접 비교할 수 있으나 각 3표본뿐이다.', '',
+        f"전체 모델 64토큰은 선택한 {model['frames']}프레임 경로에서 첫 출력 {model['prefill']:.3f}초, 다음 CPU 출력 {model['decode']:.3f}초였다. 이전 2,048 경로의 첫 출력 중앙값은 {previous:.3f}초다. 새 모델 경로는 정확성 통합 검증용 1회이며, 전체 모델의 안정적 성능 개선을 입증하는 반복 시험은 아니다.", '',
+        '홀수 크기와 깊이 꼬리를 포함한 선형층 20회에서 CPU 출력과 uint32 비트가 일치했다. 모델 첫·다음 출력 전체 로짓 해시 2개도 기존 CPU 기준과 일치했다. 실행 중 SetThreadExecutionState로 자동 절전을 억제하고 finally에서 해제했다. 덮개 닫힘이나 수동 절전을 막는 설정은 아니다.', '',
+        '## 부분합 반환량을 유지한 이유', '',
+        'GL 커널은 깊이 32개마다 s0 + 256*s1을 반환한다. 임의 INT8 입력에서 각 내적의 절댓값 상한은 32×128×128=524,288이고 결합값 상한은 134,742,016이다. 따라서 범용 경로의 무손실 고정 폭은 보수적으로 부호 포함 29비트가 필요하며 INT16·INT24 축소는 안전하지 않다. 이 상한은 검증된 실제 데이터의 분포와 별개다. 여러 깊이 블록을 단순 정수 합산하면 블록별 스케일과 ordered FP32 FMA 반올림 지점이 사라지므로 기존 계약을 보존하지 못한다.', '',
+        '이번 변경은 제출 횟수를 줄였으며 반환 바이트는 줄이지 않았다. 고정 29비트 포장으로 줄일 수 있는 이론상 비율은 32비트 대비 9.375%뿐이며 장치 포장과 CPU 복원 비용을 추가로 검증해야 한다. 더 큰 반환량 절감은 데이터 의존 무손실 압축 또는 정확한 순차 FMA 후처리의 장치 구현이 필요하다. 어느 쪽도 이번에 구현·측정했다고 주장하지 않는다.', '',
+        '## 적용 판단', '',
+        '이번 새 용량끼리의 결과로 큰 입력의 제출 용량 후보를 좁혔다. 작은 입력·꼬리에서는 큰 버퍼 패딩과 전송 낭비가 생길 수 있으므로 모든 호출에 큰 용량을 강제하지 않는다. 기본 경로는 그대로 유지한다. 다음 구현은 입력 프레임 수와 출력 청크 크기에 따른 제출 용량 선택이며, 이미 측정한 경로를 다시 벤치마킹할 필요 없이 새 선택 로직의 경계 정확성부터 검증할 수 있다.', '',
+        '[원자료](results/batch-capacity.json) · [구현](reuse_device.py) · [시험](bench_batch_capacity.py)', '',
+        '재현 명령: viability.ps1 bench_batch_capacity. 보고서만 재생성: summarize_batch_capacity.py.']
+(here/'BATCH-CAPACITY.md').write_text('\n'.join(lines)+'\n',encoding='utf8',newline='\n')
+sources=('reuse_device.py','joined_prefill.py','bench_batch_capacity.py')
+(here/'results/batch-capacity-sources.json').write_text(json.dumps({n:hashlib.sha256((here/n).read_bytes()).hexdigest() for n in sources},indent=2),encoding='utf8',newline='\n')
+print('\n'.join(lines[:15]))

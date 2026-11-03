@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "scope": "Compiled GL x86 host calls native post.dll through its FFI, 256 FP32 bit comparisons",
+  "exit_code": 0,
+  "stdout": "GL host -> native post.dll: 256 bit-exact results PASS\n",
+  "stderr": ""
+}

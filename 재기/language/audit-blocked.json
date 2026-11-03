@@ -1,0 +1,231 @@
+{
+  "complete": false,
+  "backend": "geul-opt",
+  "error": "[WinError 4551] \uc560\ud50c\ub9ac\ucf00\uc774\uc158 \uc81c\uc5b4 \uc815\ucc45\uc5d0\uc11c \uc774 \ud30c\uc77c\uc744 \ucc28\ub2e8\ud588\uc2b5\ub2c8\ub2e4",
+  "partial_samples": [
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 0,
+      "ms": 1.8344
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 1,
+      "ms": 1.8343
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 2,
+      "ms": 2.6986
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 3,
+      "ms": 1.8387
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 4,
+      "ms": 2.1852
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 5,
+      "ms": 2.857
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 6,
+      "ms": 1.8333
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 0,
+      "rep": 7,
+      "ms": 1.842
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 0,
+      "ms": 1.5046
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 1,
+      "ms": 2.8682
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 2,
+      "ms": 1.824
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 3,
+      "ms": 2.69
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 4,
+      "ms": 1.8127
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 5,
+      "ms": 1.9584
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 6,
+      "ms": 2.2524
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 1,
+      "rep": 7,
+      "ms": 1.8215
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 0,
+      "ms": 2.8608
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 1,
+      "ms": 3.1923
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 2,
+      "ms": 3.2254
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 3,
+      "ms": 3.2562
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 4,
+      "ms": 3.1161
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 5,
+      "ms": 3.5599
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 6,
+      "ms": 3.6113
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 2,
+      "rep": 7,
+      "ms": 3.3214
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 0,
+      "ms": 1.3738
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 1,
+      "ms": 1.4078
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 2,
+      "ms": 1.0032
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 3,
+      "ms": 1.2269
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 4,
+      "ms": 1.193
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 5,
+      "ms": 1.3753
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 6,
+      "ms": 0.9972
+    },
+    {
+      "round": 0,
+      "backend": "geul",
+      "mode": 3,
+      "rep": 7,
+      "ms": 1.006
+    }
+  ]
+}

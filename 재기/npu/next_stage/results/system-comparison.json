@@ -1,0 +1,19 @@
+{
+  "complete": true,
+  "pairs": [
+    {
+      "length": 16,
+      "all_logits_match": true
+    },
+    {
+      "length": 64,
+      "all_logits_match": true
+    },
+    {
+      "length": 256,
+      "all_logits_match": true
+    }
+  ],
+  "energy_measurement": "unavailable: amd-smi LoadLibraryA failure; CPU time is not energy",
+  "throughput_scope": "sequential back-to-back requests; not concurrent or saturated serving throughput"
+}

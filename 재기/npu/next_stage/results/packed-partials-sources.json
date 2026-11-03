@@ -1,0 +1,9 @@
+{
+  "study_partial_range.py": "72398dc816f28d2e3a85c9bc8844a50b750101ddf4b07b86fabca15aaaa1dbbf",
+  "pack24.cc": "e7b21d285e8173720876e8d6ec8ea0cbcae0f3fb1a1d8249b93288a531281790",
+  "build_pack24.py": "9db1f6faa71ff704eacc7f0e0b63243b7b976a3eedc79c3c2e63f716cdd97edb",
+  "packed_design.py": "374b238460ef074eec0273bd1a820a1a9d8c6fe91bcdada297a0a5c7559d9753",
+  "packed_device.py": "4ad23aa0f372733a91f98f072cfafa3b05249f9506f9d1663628a315339ac453",
+  "reuse_device.py": "6ae38529f12b3844df9259455a97a30bd4487a399975731dc07471f396446fab",
+  "test_packed_partials.py": "162930fe18ff98cbf115f11aed5614c2b2f1dd7b78cbaa79d376e3b8d2128c56"
+}

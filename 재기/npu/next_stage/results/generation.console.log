@@ -1,0 +1,6 @@
+**********************************************************************
+** Visual Studio 2026 Developer PowerShell v18.10.1
+** Copyright (c) 2026 Microsoft Corporation
+**********************************************************************
+{"repeat": 0, "prefill_seconds": 7.9893940999754705, "decode_seconds": [4.646940899954643, 4.6598324999795295, 4.627632800024003], "decode_tokens_per_second": 0.21529442711444743, "generated_token_ids": [16, 17, 18, 19], "kv_bytes": 1376256, "last_logits_sha256": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54", "different_bits_elements": 0}
+{"repeat": 1, "prefill_seconds": 5.576730800035875, "decode_seconds": [4.582915300037712, 4.612775999994483, 4.659617299970705], "decode_tokens_per_second": 0.21652350637642037, "generated_token_ids": [16, 17, 18, 19], "kv_bytes": 1376256, "last_logits_sha256": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54", "different_bits_elements": 0}

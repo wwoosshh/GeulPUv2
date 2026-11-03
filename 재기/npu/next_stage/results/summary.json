@@ -1,0 +1,786 @@
+{
+  "post": {
+    "passed": true,
+    "fma_elements": 403456,
+    "fixtures": [
+      {
+        "shape": [
+          1,
+          1024,
+          1024
+        ],
+        "median_seconds": {
+          "numpy": 0.013146899989806116,
+          "native": 0.0020910000312142074
+        },
+        "samples": {
+          "numpy": [
+            0.016331199964042753,
+            0.012961500033270568,
+            0.014699999999720603,
+            0.012261099996976554,
+            0.013325300009455532,
+            0.011418299982324243,
+            0.015117300034034997,
+            0.013146899989806116,
+            0.017369500012136996,
+            0.012502200028393418,
+            0.013017199991736561
+          ],
+          "native": [
+            0.0024967999779619277,
+            0.001909599988721311,
+            0.001794799987692386,
+            0.002273899968713522,
+            0.0021529000368900597,
+            0.002029300027061254,
+            0.0022060999763198197,
+            0.0020910000312142074,
+            0.0021148999803699553,
+            0.001825000043027103,
+            0.0016078000189736485
+          ]
+        },
+        "elements": 1024,
+        "different_bits_elements": 0,
+        "max_abs": 0.0
+      },
+      {
+        "shape": [
+          32,
+          256,
+          1024
+        ],
+        "median_seconds": {
+          "numpy": 0.06257549999281764,
+          "native": 0.013219299959018826
+        },
+        "samples": {
+          "numpy": [
+            0.06465840002056211,
+            0.05955629999516532,
+            0.06561430002329871,
+            0.06373649998567998,
+            0.06846080004470423,
+            0.07080520002637058,
+            0.05534509994322434,
+            0.05990580003708601,
+            0.05388590000802651,
+            0.05729650001740083,
+            0.06257549999281764
+          ],
+          "native": [
+            0.013739600020926446,
+            0.012176699994597584,
+            0.013227299961727113,
+            0.01279369997791946,
+            0.013298800040502101,
+            0.011845700035337359,
+            0.014342700014822185,
+            0.012502100027631968,
+            0.01201870001386851,
+            0.013219299959018826,
+            0.014310200000181794
+          ]
+        },
+        "elements": 8192,
+        "different_bits_elements": 0,
+        "max_abs": 0.0
+      },
+      {
+        "shape": [
+          16,
+          1024,
+          3072
+        ],
+        "median_seconds": {
+          "numpy": 0.2574982000514865,
+          "native": 0.069151800009422
+        },
+        "samples": {
+          "numpy": [
+            0.32436149998102337,
+            0.2545816999627277,
+            0.2561549000092782,
+            0.24866829998791218,
+            0.2574832999962382,
+            0.2562389000086114,
+            0.27939590002642944,
+            0.2574982000514865,
+            0.2592053000116721,
+            0.27765789994737133,
+            0.2874069000245072
+          ],
+          "native": [
+            0.07074880000436679,
+            0.06914289999986067,
+            0.066738500026986,
+            0.06883319996995851,
+            0.06961950002005324,
+            0.06935540004633367,
+            0.07093849999364465,
+            0.06968059996142983,
+            0.0689783000270836,
+            0.069151800009422,
+            0.0691101000411436
+          ]
+        },
+        "elements": 16384,
+        "different_bits_elements": 0,
+        "max_abs": 0.0
+      }
+    ]
+  },
+  "linear": {
+    "passed": true,
+    "rows": [
+      {
+        "case": 0,
+        "samples": {
+          "numpy": [
+            0.026395499997306615,
+            0.025328600022476166,
+            0.027769400039687753,
+            0.026963899959810078,
+            0.027934700017794967,
+            0.029560399998445064,
+            0.025547700002789497,
+            0.027518399991095066
+          ],
+          "native": [
+            0.022276600007899106,
+            0.021272299985866994,
+            0.021063700027298182,
+            0.021350299997720867,
+            0.02154850005172193,
+            0.021262000023853034,
+            0.02133339998545125,
+            0.021675000025425106
+          ]
+        },
+        "median_seconds": {
+          "numpy": 0.027241149975452572,
+          "native": 0.02134184999158606
+        },
+        "profiles": {
+          "numpy": [
+            {
+              "packing_seconds": 0.002074900025036186,
+              "device_and_transfer_seconds": 0.017780299996957183,
+              "finalization_seconds": 0.006431000016164035
+            },
+            {
+              "packing_seconds": 0.0015759999514557421,
+              "device_and_transfer_seconds": 0.01621319999685511,
+              "finalization_seconds": 0.007433399965520948
+            },
+            {
+              "packing_seconds": 0.001656999986153096,
+              "device_and_transfer_seconds": 0.017382899997755885,
+              "finalization_seconds": 0.008618100022431463
+            },
+            {
+              "packing_seconds": 0.0016065000090748072,
+              "device_and_transfer_seconds": 0.016847799997776747,
+              "finalization_seconds": 0.008396799967158586
+            },
+            {
+              "packing_seconds": 0.0018122999463230371,
+              "device_and_transfer_seconds": 0.017108900006860495,
+              "finalization_seconds": 0.00888809998286888
+            },
+            {
+              "packing_seconds": 0.002053599979262799,
+              "device_and_transfer_seconds": 0.018640799971763045,
+              "finalization_seconds": 0.008709400019142777
+            },
+            {
+              "packing_seconds": 0.0018640000489540398,
+              "device_and_transfer_seconds": 0.01737050001975149,
+              "finalization_seconds": 0.006197500042617321
+            },
+            {
+              "packing_seconds": 0.001721200067549944,
+              "device_and_transfer_seconds": 0.017160899995360523,
+              "finalization_seconds": 0.008511100022587925
+            }
+          ],
+          "native": [
+            {
+              "packing_seconds": 0.0019499000045470893,
+              "device_and_transfer_seconds": 0.0184921000036411,
+              "finalization_seconds": 0.0016558000352233648
+            },
+            {
+              "packing_seconds": 0.0017410999862477183,
+              "device_and_transfer_seconds": 0.017719499999657273,
+              "finalization_seconds": 0.001567100000102073
+            },
+            {
+              "packing_seconds": 0.0016808999935165048,
+              "device_and_transfer_seconds": 0.01750090002315119,
+              "finalization_seconds": 0.001660300011280924
+            },
+            {
+              "packing_seconds": 0.0016373999533243477,
+              "device_and_transfer_seconds": 0.017650800000410527,
+              "finalization_seconds": 0.0017094999784603715
+            },
+            {
+              "packing_seconds": 0.0017521000117994845,
+              "device_and_transfer_seconds": 0.01782359997741878,
+              "finalization_seconds": 0.0017152000218629837
+            },
+            {
+              "packing_seconds": 0.001778600038960576,
+              "device_and_transfer_seconds": 0.017525100032798946,
+              "finalization_seconds": 0.0017024999833665788
+            },
+            {
+              "packing_seconds": 0.0019172000465914607,
+              "device_and_transfer_seconds": 0.01750690001063049,
+              "finalization_seconds": 0.0016217000083997846
+            },
+            {
+              "packing_seconds": 0.0019005000358447433,
+              "device_and_transfer_seconds": 0.017872299998998642,
+              "finalization_seconds": 0.0016713999793864787
+            }
+          ]
+        }
+      },
+      {
+        "case": 1,
+        "samples": {
+          "numpy": [
+            0.2104571999516338,
+            0.1771537999738939,
+            0.1815753999981098,
+            0.17980859999079257,
+            0.17560939997201785,
+            0.16874990001088008,
+            0.19583199999760836,
+            0.1700513000250794
+          ],
+          "native": [
+            0.15391819999786094,
+            0.15311930002644658,
+            0.15573820000281557,
+            0.16029899998102337,
+            0.14849360001971945,
+            0.1533460000064224,
+            0.15310649998718873,
+            0.1621459000161849
+          ]
+        },
+        "median_seconds": {
+          "numpy": 0.17848119998234324,
+          "native": 0.15363210000214167
+        },
+        "profiles": {
+          "numpy": [
+            {
+              "packing_seconds": 0.003778100130148232,
+              "device_and_transfer_seconds": 0.13894989993423223,
+              "finalization_seconds": 0.06703519995789975
+            },
+            {
+              "packing_seconds": 0.0039061999414116144,
+              "device_and_transfer_seconds": 0.14019789994927123,
+              "finalization_seconds": 0.032385500031523407
+            },
+            {
+              "packing_seconds": 0.003285899991169572,
+              "device_and_transfer_seconds": 0.1434426999767311,
+              "finalization_seconds": 0.033950199955143034
+            },
+            {
+              "packing_seconds": 0.004092900024261326,
+              "device_and_transfer_seconds": 0.1420987999299541,
+              "finalization_seconds": 0.032847800001036376
+            },
+            {
+              "packing_seconds": 0.003433800011407584,
+              "device_and_transfer_seconds": 0.1399869000306353,
+              "finalization_seconds": 0.03152610000688583
+            },
+            {
+              "packing_seconds": 0.0038149001775309443,
+              "device_and_transfer_seconds": 0.13565169996581972,
+              "finalization_seconds": 0.028695999993942678
+            },
+            {
+              "packing_seconds": 0.0030078000854700804,
+              "device_and_transfer_seconds": 0.1361147001152858,
+              "finalization_seconds": 0.056003900012001395
+            },
+            {
+              "packing_seconds": 0.00383750005858019,
+              "device_and_transfer_seconds": 0.13654160010628402,
+              "finalization_seconds": 0.029022200033068657
+            }
+          ],
+          "native": [
+            {
+              "packing_seconds": 0.003957199864089489,
+              "device_and_transfer_seconds": 0.13883999997051433,
+              "finalization_seconds": 0.010457399999722838
+            },
+            {
+              "packing_seconds": 0.0030538999708369374,
+              "device_and_transfer_seconds": 0.13753940007882193,
+              "finalization_seconds": 0.01176249998388812
+            },
+            {
+              "packing_seconds": 0.00392630003625527,
+              "device_and_transfer_seconds": 0.13991560006979853,
+              "finalization_seconds": 0.011102399963419884
+            },
+            {
+              "packing_seconds": 0.004120300116483122,
+              "device_and_transfer_seconds": 0.14245030004531145,
+              "finalization_seconds": 0.012995400000363588
+            },
+            {
+              "packing_seconds": 0.0029917999636381865,
+              "device_and_transfer_seconds": 0.1342966000083834,
+              "finalization_seconds": 0.010521400021389127
+            },
+            {
+              "packing_seconds": 0.003302999888546765,
+              "device_and_transfer_seconds": 0.13738710014149547,
+              "finalization_seconds": 0.011867500026710331
+            },
+            {
+              "packing_seconds": 0.00390850001713261,
+              "device_and_transfer_seconds": 0.13649020000593737,
+              "finalization_seconds": 0.011979900009464473
+            },
+            {
+              "packing_seconds": 0.0038697998970746994,
+              "device_and_transfer_seconds": 0.14371539995772764,
+              "finalization_seconds": 0.013708300015423447
+            }
+          ]
+        }
+      },
+      {
+        "case": 2,
+        "samples": {
+          "numpy": [
+            0.4414783000247553,
+            0.37446119997184724,
+            0.39920689997961745,
+            0.33469679998233914,
+            0.3567780999583192,
+            0.3593233999563381,
+            0.3846942000091076,
+            0.36437650001607835
+          ],
+          "native": [
+            0.24260250001680106,
+            0.2356090999674052,
+            0.23186709999572486,
+            0.23637589998543262,
+            0.2375395999988541,
+            0.2214434000197798,
+            0.2204395000007935,
+            0.22679149999748915
+          ]
+        },
+        "median_seconds": {
+          "numpy": 0.3694188499939628,
+          "native": 0.23373809998156503
+        },
+        "profiles": {
+          "numpy": [
+            {
+              "packing_seconds": 0.017232000129297376,
+              "device_and_transfer_seconds": 0.14357609988655895,
+              "finalization_seconds": 0.278257800033316
+            },
+            {
+              "packing_seconds": 0.014587899902835488,
+              "device_and_transfer_seconds": 0.14371750003192574,
+              "finalization_seconds": 0.2133521999930963
+            },
+            {
+              "packing_seconds": 0.018599400005768985,
+              "device_and_transfer_seconds": 0.14834130002418533,
+              "finalization_seconds": 0.22996080003213137
+            },
+            {
+              "packing_seconds": 0.014027100056409836,
+              "device_and_transfer_seconds": 0.14073240000288934,
+              "finalization_seconds": 0.17726119997678325
+            },
+            {
+              "packing_seconds": 0.01610220002476126,
+              "device_and_transfer_seconds": 0.14099519985029474,
+              "finalization_seconds": 0.19719039998017251
+            },
+            {
+              "packing_seconds": 0.014520499971695244,
+              "device_and_transfer_seconds": 0.1423742999904789,
+              "finalization_seconds": 0.20000000001164153
+            },
+            {
+              "packing_seconds": 0.015104100049939007,
+              "device_and_transfer_seconds": 0.14072249992750585,
+              "finalization_seconds": 0.22621029999572784
+            },
+            {
+              "packing_seconds": 0.014191600086633116,
+              "device_and_transfer_seconds": 0.14195480005582795,
+              "finalization_seconds": 0.20571920002112165
+            }
+          ],
+          "native": [
+            {
+              "packing_seconds": 0.018207099987193942,
+              "device_and_transfer_seconds": 0.14599910005927086,
+              "finalization_seconds": 0.07619300001533702
+            },
+            {
+              "packing_seconds": 0.018019999901298434,
+              "device_and_transfer_seconds": 0.14645989995915443,
+              "finalization_seconds": 0.06921410001814365
+            },
+            {
+              "packing_seconds": 0.015926399966701865,
+              "device_and_transfer_seconds": 0.1392884999513626,
+              "finalization_seconds": 0.07454390003113076
+            },
+            {
+              "packing_seconds": 0.016891899926122278,
+              "device_and_transfer_seconds": 0.14272010000422597,
+              "finalization_seconds": 0.07483719999436289
+            },
+            {
+              "packing_seconds": 0.01659079984528944,
+              "device_and_transfer_seconds": 0.14588570001069456,
+              "finalization_seconds": 0.07325180002953857
+            },
+            {
+              "packing_seconds": 0.015158499940298498,
+              "device_and_transfer_seconds": 0.1410371000529267,
+              "finalization_seconds": 0.0631689999718219
+            },
+            {
+              "packing_seconds": 0.0156443000305444,
+              "device_and_transfer_seconds": 0.138793199963402,
+              "finalization_seconds": 0.06397499999729916
+            },
+            {
+              "packing_seconds": 0.015238600026350468,
+              "device_and_transfer_seconds": 0.14093199995113537,
+              "finalization_seconds": 0.06865239999024197
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "device": {
+    "scope": "AIE scalar FP32 fused multiply-add capability and contract probe",
+    "compatible": false,
+    "error": "RuntimeError('[aiecc] Compilation failed with exit code 1:\\nld.lld: error: undefined symbol: fmaf\\n>>> referenced by fp_probe.cc\\n>>>               C:\\\\Users\\\\junso\\\\.npu\\\\cache\\\\fe0fc4c31273ccd12eda5646\\\\fp_probe.o:(fp_probe)\\n>>> referenced by fp_probe.cc\\n>>>               C:\\\\Users\\\\junso\\\\.npu\\\\cache\\\\fe0fc4c31273ccd12eda5646\\\\fp_probe.o:(fp_probe)\\n>>> referenced by fp_probe.cc\\n>>>               C:\\\\Users\\\\junso\\\\.npu\\\\cache\\\\fe0fc4c31273ccd12eda5646\\\\fp_probe.o:(fp_probe)\\n>>> referenced 1 more times\\nclang: error: ld.lld command failed with exit code 1 (use -v to see invocation)\\nError: Command failed with exit code 1\\nError linking ELF file\\nCompilation failed\\n')",
+    "traceback": "Traceback (most recent call last):\n  File \"C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\next_stage/test_device.py\", line 39, in <module>\n    probe(a,b)\n    ~~~~~^^^^^\n  File \"C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\python\\aie\\utils\\callabledesign.py\", line 346, in __call__\n    kernel = self._compile_and_build_kernel(compilable, cache_key, trace_config)\n  File \"C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\python\\aie\\utils\\callabledesign.py\", line 228, in _compile_and_build_kernel\n    xclbin_path, inst_path = compilable.compile()\n                             ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\python\\aie\\utils\\compile\\jit\\compilabledesign.py\", line 303, in compile\n    compile_mlir_module(\n    ~~~~~~~~~~~~~~~~~~~^\n        mlir_module=mlir_module,\n        ^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n        options=list(self.aiecc_flags) if self.aiecc_flags else None,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\python\\aie\\utils\\compile\\utils.py\", line 258, in compile_mlir_module\n    raise RuntimeError(\n    ...<2 lines>...\n    )\nRuntimeError: [aiecc] Compilation failed with exit code 1:\nld.lld: error: undefined symbol: fmaf\n>>> referenced by fp_probe.cc\n>>>               C:\\Users\\junso\\.npu\\cache\\fe0fc4c31273ccd12eda5646\\fp_probe.o:(fp_probe)\n>>> referenced by fp_probe.cc\n>>>               C:\\Users\\junso\\.npu\\cache\\fe0fc4c31273ccd12eda5646\\fp_probe.o:(fp_probe)\n>>> referenced by fp_probe.cc\n>>>               C:\\Users\\junso\\.npu\\cache\\fe0fc4c31273ccd12eda5646\\fp_probe.o:(fp_probe)\n>>> referenced 1 more times\nclang: error: ld.lld command failed with exit code 1 (use -v to see invocation)\nError: Command failed with exit code 1\nError linking ELF file\nCompilation failed\n\n"
+  },
+  "device-vector": {
+    "scope": "AIE vector MAC",
+    "compatible": false,
+    "difference": {
+      "elements": 256,
+      "different_bits_elements": 84,
+      "max_abs": 2.384185791015625e-07,
+      "first": {
+        "index": [
+          0
+        ],
+        "reference_hex": "a8800000",
+        "actual_hex": "00000000"
+      }
+    }
+  },
+  "overlap": {
+    "passed": true,
+    "scope": "serial versus two independent XRT buffer slots; hardware DMA overlap not directly measured",
+    "checks": 128,
+    "samples": {
+      "serial": [
+        0.09146530000725761,
+        0.06362180004362017,
+        0.06477799999993294,
+        0.06421159999445081,
+        0.06564079999225214,
+        0.06385430000955239,
+        0.06614900002023205,
+        0.0633866999996826
+      ],
+      "two_slots": [
+        0.09027300000889227,
+        0.06269350001821294,
+        0.06321689998731017,
+        0.06192360003478825,
+        0.06327749998308718,
+        0.06348930002423003,
+        0.06356450001476333,
+        0.06312279996927828
+      ]
+    },
+    "median_seconds": {
+      "serial": 0.06449479999719188,
+      "two_slots": 0.06324719998519868
+    },
+    "post_pipeline": [
+      {
+        "shape": [
+          3,
+          8193,
+          1024
+        ],
+        "samples": {
+          "serial": [
+            0.0701190999825485,
+            0.06833549996372312,
+            0.07088190002832562,
+            0.06827470002463087,
+            0.07279000000562519,
+            0.07124200003454462
+          ],
+          "post_pipeline": [
+            0.05161929997848347,
+            0.051401900011114776,
+            0.052980200038291514,
+            0.055753600026946515,
+            0.0536759999813512,
+            0.05377659999066964
+          ]
+        },
+        "median_seconds": {
+          "serial": 0.07050050000543706,
+          "post_pipeline": 0.053328100009821355
+        }
+      },
+      {
+        "shape": [
+          16,
+          8193,
+          1024
+        ],
+        "samples": {
+          "serial": [
+            0.2821205999935046,
+            0.2996794999926351,
+            0.29390049999346957,
+            0.29861619998700917,
+            0.30569030001061037,
+            0.3005747999995947
+          ],
+          "post_pipeline": [
+            0.21019620000151917,
+            0.21167319995583966,
+            0.21797320002224296,
+            0.21318109997082502,
+            0.21461849997285753,
+            0.21471690002363175
+          ]
+        },
+        "median_seconds": {
+          "serial": 0.29914784998982213,
+          "post_pipeline": 0.21389979997184128
+        }
+      }
+    ]
+  },
+  "host": {
+    "passed": true,
+    "scope": "Compiled GL x86 host calls native post.dll through its FFI, 256 FP32 bit comparisons",
+    "exit_code": 0,
+    "stdout": "GL host -> native post.dll: 256 bit-exact results PASS\n",
+    "stderr": ""
+  },
+  "generation": {
+    "passed": true,
+    "scope": "Qwen3 Q8_0 cached FP32 K/V greedy decode prototype; GL NPU linears + native CPU post; CPU reference attention",
+    "rounds": [
+      {
+        "repeat": 0,
+        "prefill_seconds": 7.9893940999754705,
+        "decode_seconds": [
+          4.646940899954643,
+          4.6598324999795295,
+          4.627632800024003
+        ],
+        "decode_tokens_per_second": 0.21529442711444743,
+        "generated_token_ids": [
+          16,
+          17,
+          18,
+          19
+        ],
+        "kv_bytes": 1376256,
+        "last_logits_sha256": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+        "different_bits_elements": 0
+      },
+      {
+        "repeat": 1,
+        "prefill_seconds": 5.576730800035875,
+        "decode_seconds": [
+          4.582915300037712,
+          4.612775999994483,
+          4.659617299970705
+        ],
+        "decode_tokens_per_second": 0.21652350637642037,
+        "generated_token_ids": [
+          16,
+          17,
+          18,
+          19
+        ],
+        "kv_bytes": 1376256,
+        "last_logits_sha256": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54",
+        "different_bits_elements": 0
+      }
+    ],
+    "limitations": [
+      "Fixed token IDs, no tokenizer/chat template or EOS stopping.",
+      "Only 3 decode steps per round, no reliable p95 or long-context inference.",
+      "FP32 K/V projections are cached, but CPU reference attention re-quantizes history each step.",
+      "GL device kernel is integrated through Python prototype; production GL engine ABI is not implemented."
+    ]
+  },
+  "generation-profile": {
+    "passed": true,
+    "scope": "Qwen3 Q8_0 cached FP32 K/V greedy decode prototype; GL NPU linears + native CPU post; CPU reference attention",
+    "rounds": [
+      {
+        "repeat": 0,
+        "prefill_seconds": 6.6505991000449285,
+        "decode_seconds": [
+          4.632591400004458,
+          4.576422299956903
+        ],
+        "decode_tokens_per_second": 0.2171785236901528,
+        "generated_token_ids": [
+          16,
+          17,
+          18
+        ],
+        "kv_bytes": 1146880,
+        "profiles": [
+          {
+            "linear_seconds": 5.434204899764154,
+            "attention_seconds": 0.9027609001495875,
+            "linear_calls": 141,
+            "packing_seconds": 0.9948295996291563,
+            "device_and_transfer_seconds": 3.2981366991298273,
+            "finalization_seconds": 1.340393399412278
+          },
+          {
+            "linear_seconds": 3.5608293006080203,
+            "attention_seconds": 0.8482477000216022,
+            "linear_calls": 141,
+            "packing_seconds": 0.4572096999036148,
+            "device_and_transfer_seconds": 2.676170400576666,
+            "finalization_seconds": 0.6476115998229943
+          },
+          {
+            "linear_seconds": 3.549426500336267,
+            "attention_seconds": 0.8196613999898545,
+            "linear_calls": 141,
+            "packing_seconds": 0.4586353992926888,
+            "device_and_transfer_seconds": 2.6693307001842186,
+            "finalization_seconds": 0.6473992998944595
+          }
+        ],
+        "last_logits_sha256": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+        "different_bits_elements": 0
+      },
+      {
+        "repeat": 1,
+        "prefill_seconds": 5.527150300040375,
+        "decode_seconds": [
+          4.583264100016095,
+          4.666187399998307
+        ],
+        "decode_tokens_per_second": 0.21622903801343094,
+        "generated_token_ids": [
+          16,
+          17,
+          18
+        ],
+        "kv_bytes": 1146880,
+        "profiles": [
+          {
+            "linear_seconds": 4.3725836999947205,
+            "attention_seconds": 0.8498635001014918,
+            "linear_calls": 141,
+            "packing_seconds": 0.5660354994470254,
+            "device_and_transfer_seconds": 2.6927918000146747,
+            "finalization_seconds": 1.3238545995554887
+          },
+          {
+            "linear_seconds": 3.541561099817045,
+            "attention_seconds": 0.8261775999562815,
+            "linear_calls": 141,
+            "packing_seconds": 0.46615110064158216,
+            "device_and_transfer_seconds": 2.6568453001673333,
+            "finalization_seconds": 0.6508503998629749
+          },
+          {
+            "linear_seconds": 3.5953965998487547,
+            "attention_seconds": 0.8417747000930831,
+            "linear_calls": 141,
+            "packing_seconds": 0.4618128997972235,
+            "device_and_transfer_seconds": 2.6923595000989735,
+            "finalization_seconds": 0.660908799385652
+          }
+        ],
+        "last_logits_sha256": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+        "different_bits_elements": 0
+      }
+    ],
+    "limitations": [
+      "Fixed token IDs, no tokenizer/chat template or EOS stopping.",
+      "Only 3 decode steps per round, no reliable p95 or long-context inference.",
+      "FP32 K/V projections are cached, but CPU reference attention re-quantizes history each step.",
+      "GL device kernel is integrated through Python prototype; production GL engine ABI is not implemented."
+    ]
+  },
+  "model": {
+    "complete": true,
+    "linear_checks": 282,
+    "residual_checks": 56,
+    "logit_checks": 2,
+    "different_bits_elements": 0,
+    "linear_seconds": {
+      "0": 8.388851800060365,
+      "1": 8.389111100346781
+    },
+    "finalization_seconds": {
+      "0": 2.5452731997938827,
+      "1": 2.9456628000480123
+    }
+  },
+  "source_sha256": {
+    "cached_qwen.py": "d43e4337f03bbf2778a6b8be80674be92d42a3a90968157029189d99652dec20",
+    "host_smoke.gl": "71bfef89ad9b6846e34b342803a26f2a81e8822402918ecd1cff5b6f330c0d0e",
+    "native_post.py": "293d2c7702263695a80e07634384bf6629838c7837dec6291442342264a41996",
+    "post.c": "46bbcbbd35868c9d11b66eafa4cc4276da2154ada07dd6cc1580c649721eee7c",
+    "run.ps1": "53719c12302a00f87e780579e19a1a07df4e5a2524be4b6603a26dc62074943f",
+    "run_host.py": "e42ad8d61fd2a79c830f407372c17628f1459156892f7607b46338be41d10252",
+    "summarize.py": "083d21a2f2b2ad225e8e8e5282e9ce6a5902f7b71180e335795c7d1b9f83a0a4",
+    "test_device.py": "e3f80e6da0a63c904d32be0dd1beed5804fb6bc241fef5206cd03ebd9f8d37ab",
+    "test_device_vector.py": "8acd371bfdd6d770d2c92da6f57b072d0d1e62a022a7e6eee46325f103bcc738",
+    "test_generation.py": "4cbb638304a682d77ac583ec29906a7bbdbbe2d54c57ac37c99cdc265328c353",
+    "test_generation_profile.py": "423257f3fefb956be4e28f5b60ec2386a1a82e2490cf8f4c04f1da5d17bca229",
+    "test_host.py": "c327de9ac7590d7dd8b2b7797f1474949c0b6f7e3a87147535726d78b24d9237",
+    "test_model.py": "abbb7155fd1b7ea4244f7bc992f02de8eed7e05da28424458082188f921a9fb9",
+    "test_overlap.py": "f04234c04eb2ad22d35cf9b5226df8107a036caab2281159cad1ac79a0de723d",
+    "test_post.py": "6105b4d01136a793c162408fdbb928d63dafcf846f1f082928c5a3a82cc66b02",
+    "planned_linear.py": "fd09fa1ab9d662865d98d6789a529502577e4b7f413ac37e2d55bbe9799cc678",
+    "post.dll": "b04289b662faf0c507fdd31d62c27dc59ff124675e4d47335bd59aee5ce9f994"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "target": "aie2p-none-unknown-elf",
+  "optimization": "-O2",
+  "kernels": {
+    "gl": {
+      "source": "generated.cc",
+      "source_sha256": "c8df2977e691f98bc5cd4a7067c4fb081627a684b64706bca726d950149f26e2",
+      "object": "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\gl.o",
+      "object_sha256": "5cecc612bb72867b3fc15a2f5de137dc7c13220df1c5754ddd3813094f7489f6",
+      "text_sha256": "1b165df16ad3f125359b98178467cc4edad5cb1c1cdfb157fc8cd73373526b44",
+      "text_bytes": 304,
+      "compile_seconds": 8.204047800041735
+    },
+    "c": {
+      "source": "native.c",
+      "source_sha256": "460b111d23312164a024f1b94076a80cf0f27e40555e65168272cf8680d939ce",
+      "object": "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\c.o",
+      "object_sha256": "2b0b4279752b7f9f22a3bdcd4eec1c9979868088a2cd27ca31fb5fa95ef98306",
+      "text_sha256": "61c240538b7fbbfd8aeb6bdde3f272466d6a5a88c1a19448c4a323999d6d770b",
+      "text_bytes": 1520,
+      "compile_seconds": 1.2043393999920227
+    },
+    "aie_cpp": {
+      "source": "native_aie.cc",
+      "source_sha256": "d23e4b4ceda80235d4eb152cf13fb7a2e66356dea3c4264733989eaf4024b87d",
+      "object": "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\aie_cpp.o",
+      "object_sha256": "3c982bbb5ac33ae28848fc99bcef9d8aa3c1e722fb6c40c5028ce458c62fe5ce",
+      "text_sha256": "1b165df16ad3f125359b98178467cc4edad5cb1c1cdfb157fc8cd73373526b44",
+      "text_bytes": 304,
+      "compile_seconds": 7.418474600010086
+    }
+  },
+  "commands": [
+    [
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\\clang++.exe",
+      "--target=aie2p-none-unknown-elf",
+      "-O2",
+      "-DNDEBUG",
+      "-x",
+      "c++",
+      "-std=c++20",
+      "-D__AIE_API_AIE_ADF_HPP__",
+      "-Wno-attributes",
+      "-Wno-macro-redefined",
+      "-I",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\include",
+      "-c",
+      "C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\gl_aie\\generated.cc",
+      "-o",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\gl.o"
+    ],
+    [
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\\clang.exe",
+      "--target=aie2p-none-unknown-elf",
+      "-O2",
+      "-DNDEBUG",
+      "-x",
+      "c",
+      "-std=c11",
+      "-D__AIE_API_AIE_ADF_HPP__",
+      "-Wno-attributes",
+      "-Wno-macro-redefined",
+      "-I",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\include",
+      "-c",
+      "C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\gl_aie\\native.c",
+      "-o",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\c.o"
+    ],
+    [
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\\clang++.exe",
+      "--target=aie2p-none-unknown-elf",
+      "-O2",
+      "-DNDEBUG",
+      "-x",
+      "c++",
+      "-std=c++20",
+      "-D__AIE_API_AIE_ADF_HPP__",
+      "-Wno-attributes",
+      "-Wno-macro-redefined",
+      "-I",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\mlir_aie\\include",
+      "-c",
+      "C:\\Codex\\Agent\\GeulNPU\\\uc7ac\uae30\\npu\\gl_aie\\native_aie.cc",
+      "-o",
+      "C:\\Codex\\Agent\\GeulNPU\\\ube4c\ub4dc\\npu\\gl-aie\\aie_cpp.o"
+    ]
+  ],
+  "compiler": "clang version 22.0.0 (https://github.com/Xilinx/llvm-aie 4f5df13df8199bc73bd955e0ef9e966303f8f23a)\nTarget: x86_64-pc-windows-msvc\nThread model: posix\nInstalledDir: C:\\Codex\\Agent\\GeulNPU\\\u936e\ub6ae\ubc76\\npu\\dev\\mlir-aie\\ironenv\\Lib\\site-packages\\llvm-aie\\bin\nBuild config: +assertions\n",
+  "gl_source_sha256": "2f87ac7389cf890017c3e8460127b5bcab0e051cec34b1e3b5a76f27ea8eabee",
+  "gl_vs_aie_cpp_text_equal": true
+}

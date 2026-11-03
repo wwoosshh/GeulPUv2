@@ -1,0 +1,8 @@
+{
+  "pack24_fused.cc": "1dbd1d55b0a43df05a5d7d96879682475e685534fbf47fc4c80c204644569b69",
+  "build_pack24_v3.py": "ea0486adc44391ed2c292b12e4fcbe63a88d5348ae3f91e01a7587852fc30ff7",
+  "packed_device_v3.py": "acf0e093012fbb4349f88734ef8ad10b10c12be94d1bf978b75af347c81981fa",
+  "packed_design_v3.py": "3a866f9c62ac1b73ba55a80caed7ba2fadc55f82722d4321aed3d583b916afa3",
+  "test_packed_partials_v3.py": "72db77903844f09f916652cbfa1eedaad5d6df185f9e628db04c95ad1b43293a",
+  "unpack24.c": "51364614f7c9002182977aaa822cf1e4dddebca67e33619ce9d56be582523dfd"
+}

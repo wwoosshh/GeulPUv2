@@ -1,0 +1,41 @@
+C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmpvi_jef95\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmpsnbpamli\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmp93w8_2pd\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmpr7bnqimw\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmp4gkkukpn\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmpskovnman\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmpiakqev1k\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmpdnioshs1\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmpkg1hw94e\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmps9bgar1b\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmppsjs7cfq\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.C:\Codex\Agent\GeulNPU\geul-lang\ref\geul\source.py:7: ResourceWarning: unclosed file <_io.BufferedReader name='C:\\Users\\junso\\AppData\\Local\\Temp\\tmplcyu4l8y\\kernel.gl'>
+  raw = open(path, "rb").read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.
+----------------------------------------------------------------------
+Ran 8 tests in 0.081s
+
+OK

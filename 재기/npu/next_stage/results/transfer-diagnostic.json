@@ -1,0 +1,167 @@
+{
+  "complete": true,
+  "runs": [
+    {
+      "mode": "plain",
+      "seconds": 0.5497605000273325,
+      "stages": {
+        "allocate_pad": 0.006297699932474643,
+        "pack_copy": 0.05161030002636835,
+        "upload_sync": 0.0033383001282345504,
+        "dispatch_wait": 0.302724899869645,
+        "runtime_wait_ns": 228698000.0,
+        "download_sync": 0.0024988000513985753,
+        "output_copy": 0.020433099969523028,
+        "decode_replay": 0.006348699971567839,
+        "scatter": 0.04807139988406561,
+        "final_copy": 0.00019709995831362903
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.44685700003174134,
+        "finalization_seconds": 0.30593199987197295,
+        "packing_seconds": 0.05677979992469773,
+        "post_wait_seconds": 0.03017580002779141
+      },
+      "metrics": {}
+    },
+    {
+      "mode": "packed_v3",
+      "seconds": 0.7116241999901831,
+      "stages": {
+        "allocate_pad": 0.006795799999963492,
+        "pack_copy": 0.047241600055713207,
+        "upload_sync": 0.003871299879392609,
+        "dispatch_wait": 0.43613179997191764,
+        "runtime_wait_ns": 350766600.0,
+        "download_sync": 0.0022176999773364514,
+        "output_copy": 0.024389600032009184,
+        "decode_replay": 0.04073680011788383,
+        "scatter": 0.043875399889657274,
+        "final_copy": 0.00025640003150328994
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.6116494000016246,
+        "finalization_seconds": 0.30547700001625344,
+        "packing_seconds": 0.05612649998511188,
+        "post_wait_seconds": 0.025330300006316975
+      },
+      "metrics": {
+        "corrected_tiles": 1945,
+        "packed_calls": 48,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 81788928,
+        "decode_seconds": 0.034523399983299896,
+        "replay_seconds": 0.0
+      }
+    },
+    {
+      "mode": "packed_v3",
+      "seconds": 0.7305187000019941,
+      "stages": {
+        "allocate_pad": 0.005457499937620014,
+        "pack_copy": 0.05638600009842776,
+        "upload_sync": 0.004239300003973767,
+        "dispatch_wait": 0.4400415998243261,
+        "runtime_wait_ns": 350405300.0,
+        "download_sync": 0.002155199908884242,
+        "output_copy": 0.023493500077165663,
+        "decode_replay": 0.04278539997176267,
+        "scatter": 0.05057929997565225,
+        "final_copy": 0.00028459998429752886
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.6330860999878496,
+        "finalization_seconds": 0.3156679999665357,
+        "packing_seconds": 0.059887200040975586,
+        "post_wait_seconds": 0.02352339998469688
+      },
+      "metrics": {
+        "corrected_tiles": 1945,
+        "packed_calls": 48,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 81788928,
+        "decode_seconds": 0.03613489988492802,
+        "replay_seconds": 0.0
+      }
+    },
+    {
+      "mode": "plain",
+      "seconds": 0.5768007999868132,
+      "stages": {
+        "allocate_pad": 0.007111500017344952,
+        "pack_copy": 0.05664789993898012,
+        "upload_sync": 0.004083699983311817,
+        "dispatch_wait": 0.32406390001415275,
+        "runtime_wait_ns": 242039400.0,
+        "download_sync": 0.0025811000377871096,
+        "output_copy": 0.025674600066849962,
+        "decode_replay": 0.007943800010252744,
+        "scatter": 0.04882080003153533,
+        "final_copy": 0.00022779993014410138
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.4824313000717666,
+        "finalization_seconds": 0.3349216000060551,
+        "packing_seconds": 0.054818699980387464,
+        "post_wait_seconds": 0.02518999995663762
+      },
+      "metrics": {}
+    },
+    {
+      "mode": "plain",
+      "seconds": 0.5332679999992251,
+      "stages": {
+        "allocate_pad": 0.005183200031751767,
+        "pack_copy": 0.04942590001155622,
+        "upload_sync": 0.0037057999579701573,
+        "dispatch_wait": 0.31023630005074665,
+        "runtime_wait_ns": 228364000.0,
+        "download_sync": 0.002035099925706163,
+        "output_copy": 0.02018680001492612,
+        "decode_replay": 0.006499000126495957,
+        "scatter": 0.04152959995553829,
+        "final_copy": 0.0001569000305607915
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.4430605001107324,
+        "finalization_seconds": 0.2767675999784842,
+        "packing_seconds": 0.05067379988031462,
+        "post_wait_seconds": 0.025915900012478232
+      },
+      "metrics": {}
+    },
+    {
+      "mode": "packed_v3",
+      "seconds": 0.6779423999832943,
+      "stages": {
+        "allocate_pad": 0.004908200033241883,
+        "pack_copy": 0.045306799991521984,
+        "upload_sync": 0.003899200033629313,
+        "dispatch_wait": 0.4284054998715874,
+        "runtime_wait_ns": 350185800.0,
+        "download_sync": 0.0017952999623958021,
+        "output_copy": 0.02382300014141947,
+        "decode_replay": 0.036332800111267716,
+        "scatter": 0.03954750005505048,
+        "final_copy": 0.00015000003622844815
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.5894759999937378,
+        "finalization_seconds": 0.29209049994824454,
+        "packing_seconds": 0.04798489992390387,
+        "post_wait_seconds": 0.02538020006613806
+      },
+      "metrics": {
+        "corrected_tiles": 1945,
+        "packed_calls": 48,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 81788928,
+        "decode_seconds": 0.03145860007498413,
+        "replay_seconds": 0.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "complete": true,
+  "cases": [
+    {
+      "name": "ffn_up",
+      "shape": [
+        64,
+        3072,
+        1024
+      ],
+      "chunks": [
+        {
+          "values": 2097152,
+          "tiles": 16384,
+          "minimum": -11745587,
+          "maximum": 10714244,
+          "int16_values": 38869,
+          "int24_values": 2096963,
+          "int16_tiles": 0,
+          "int24_tiles": 16201
+        },
+        {
+          "values": 2097152,
+          "tiles": 16384,
+          "minimum": -11552953,
+          "maximum": 10982827,
+          "int16_values": 39190,
+          "int24_values": 2096950,
+          "int16_tiles": 0,
+          "int24_tiles": 16187
+        },
+        {
+          "values": 2097152,
+          "tiles": 16384,
+          "minimum": -11422178,
+          "maximum": 10620145,
+          "int16_values": 39102,
+          "int24_values": 2096959,
+          "int16_tiles": 0,
+          "int24_tiles": 16199
+        }
+      ]
+    },
+    {
+      "name": "ffn_down",
+      "shape": [
+        64,
+        1024,
+        3072
+      ],
+      "chunks": [
+        {
+          "values": 1966080,
+          "tiles": 15360,
+          "minimum": -11697627,
+          "maximum": 13003391,
+          "int16_values": 38178,
+          "int24_values": 1965948,
+          "int16_tiles": 0,
+          "int24_tiles": 15231
+        },
+        {
+          "values": 1966080,
+          "tiles": 15360,
+          "minimum": -10834051,
+          "maximum": 11437541,
+          "int16_values": 36520,
+          "int24_values": 1965934,
+          "int16_tiles": 0,
+          "int24_tiles": 15216
+        },
+        {
+          "values": 1966080,
+          "tiles": 15360,
+          "minimum": -11496151,
+          "maximum": 11692639,
+          "int16_values": 36188,
+          "int24_values": 1965887,
+          "int16_tiles": 0,
+          "int24_tiles": 15170
+        },
+        {
+          "values": 393216,
+          "tiles": 3072,
+          "minimum": -10747293,
+          "maximum": 10037903,
+          "int16_values": 7251,
+          "int24_values": 393182,
+          "int16_tiles": 0,
+          "int24_tiles": 3038
+        }
+      ]
+    },
+    {
+      "name": "attn_q",
+      "shape": [
+        64,
+        2048,
+        1024
+      ],
+      "chunks": [
+        {
+          "values": 2097152,
+          "tiles": 16384,
+          "minimum": -12796996,
+          "maximum": 10867252,
+          "int16_values": 39504,
+          "int24_values": 2096986,
+          "int16_tiles": 0,
+          "int24_tiles": 16223
+        },
+        {
+          "values": 2097152,
+          "tiles": 16384,
+          "minimum": -11035390,
+          "maximum": 11094016,
+          "int16_values": 38969,
+          "int24_values": 2096990,
+          "int16_tiles": 0,
+          "int24_tiles": 16222
+        }
+      ]
+    }
+  ]
+}

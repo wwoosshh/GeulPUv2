@@ -1,0 +1,90 @@
+{
+  "checks": 84,
+  "tiles": {
+    "1": {
+      "seconds": 0.011697050002112519,
+      "runtime_seconds": 0.01100140000198735
+    },
+    "2": {
+      "seconds": 0.0070649499975843355,
+      "runtime_seconds": 0.0063718999990669545
+    },
+    "4": {
+      "seconds": 0.0053197000015643425,
+      "runtime_seconds": 0.004633849999663653
+    }
+  },
+  "linear": {
+    "16": {
+      "1": {
+        "seconds": 0.14271559999906458,
+        "device_seconds": 0.07170620000033523,
+        "post_seconds": 0.05873739999879035
+      },
+      "2": {
+        "seconds": 0.130295599999954,
+        "device_seconds": 0.04815775000679423,
+        "post_seconds": 0.06346670000129961
+      },
+      "4": {
+        "seconds": 0.1188729500026966,
+        "device_seconds": 0.03643195000040578,
+        "post_seconds": 0.06636435000109486
+      }
+    },
+    "64": {
+      "1": {
+        "seconds": 0.546090899999399,
+        "device_seconds": 0.28413834998355014,
+        "post_seconds": 0.21897919999901205
+      },
+      "2": {
+        "seconds": 0.43541144999835524,
+        "device_seconds": 0.17490335000184132,
+        "post_seconds": 0.21980810000604833
+      },
+      "4": {
+        "seconds": 0.3812237999991339,
+        "device_seconds": 0.11831065000296803,
+        "post_seconds": 0.22347915000500507
+      }
+    },
+    "256": {
+      "1": {
+        "seconds": 3.1019252500009316,
+        "device_seconds": 1.2614591499368544,
+        "post_seconds": 1.5913313999844831
+      },
+      "2": {
+        "seconds": 2.270902849999402,
+        "device_seconds": 0.7755291500034218,
+        "post_seconds": 1.2924629499939329
+      },
+      "4": {
+        "seconds": 2.010123100000783,
+        "device_seconds": 0.5314732000260847,
+        "post_seconds": 1.2882365000041318
+      }
+    }
+  },
+  "model": {
+    "cpu": {
+      "prefill": 9.120927649997611,
+      "decode": 2.2950672000006307
+    },
+    "1": {
+      "prefill": 27.24925814999733,
+      "decode": 2.7071389499978977
+    },
+    "4": {
+      "prefill": 17.57696809999834,
+      "decode": 2.3556062999996357
+    }
+  },
+  "hashes": {
+    "\uc7ac\uae30\\npu\\next_stage\\multi_device.py": "0b5e9334f0ac99b93c936700f7c2ca0dd328a6b0a62f82c4814ec4a6e98a9f09",
+    "\uc7ac\uae30\\npu\\next_stage\\bench_multi.py": "df29246f6dcd383f76834d3e7fee614221224c7d839727691dde7063705a2f67",
+    "\uc7ac\uae30\\npu\\next_stage\\bench_multi_model.py": "6e832598c9839822278d9bd1e1b1918242430d16f879194ee61780389e2e41d2",
+    "\ube4c\ub4dc\\npu\\gl-aie\\gl.o": "dc6d28ebeede84632e12cc17e7fd5c383d23fd8fdf7d4b21eee10f11c638115f"
+  }
+}

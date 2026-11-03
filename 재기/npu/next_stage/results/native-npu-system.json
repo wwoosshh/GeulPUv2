@@ -1,0 +1,78 @@
+{
+  "complete": true,
+  "scope": "FastFlowLM Qwen3 0.6B Q4_1; distinct weights/quantization and no Geul bit contract",
+  "runs": [
+    {
+      "first_visible_seconds": 0.6407724000164308,
+      "total_seconds": 1.757186200004071,
+      "usage": {
+        "prompt_tokens": 37,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens": 64,
+        "total_tokens": 101,
+        "active_kv_tokens": 104,
+        "max_kv_token_capacity": 1024,
+        "kv_token_occupancy_rate_percentage": 10.15625,
+        "load_duration": 4.2e-06,
+        "prefill_duration_ttft": 0.552291904,
+        "decoding_duration": 1.040419,
+        "prefill_speed_tps": 66.99355853675523,
+        "decoding_speed_tps": 61.51367862370833
+      },
+      "finish": "length",
+      "output_hash": "743c4f419e7cffd1841289a3cc0c1fcc37652ea51b7e2acf033fded2e9001e04",
+      "output": "**Why Exact Arithmetic Matters in Matrix Multiplication**\n\nMatrix multiplication is a fundamental operation in linear algebra, and its success depends on **exact arithmetic**. While the mathematical structure of matrix multiplication is sound, the outcome of the operation is only valid if the **dimensions of the matrices are compatible**. If the dimensions do not",
+      "resources": {
+        "wall_seconds": 1.7574415000271983,
+        "cpu_seconds": 0.453125,
+        "average_cpu_cores": 0.25783219526396034,
+        "logical_cpu_percent": 1.6114512203997522,
+        "peak_sampled_rss_bytes": 2085232640,
+        "peak_sampled_private_bytes": 2069377024,
+        "start_memory": {
+          "rss": 2085150720,
+          "private": 2069364736
+        }
+      },
+      "prompt": "Explain why exact arithmetic matters in matrix multiplication. Example number 1. Provide a detailed explanation. /no_think"
+    },
+    {
+      "first_visible_seconds": 0.6166628000210039,
+      "total_seconds": 1.6498365000006743,
+      "usage": {
+        "prompt_tokens": 37,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "completion_tokens": 64,
+        "total_tokens": 101,
+        "active_kv_tokens": 104,
+        "max_kv_token_capacity": 1024,
+        "kv_token_occupancy_rate_percentage": 10.15625,
+        "load_duration": 6.3e-06,
+        "prefill_duration_ttft": 0.541525504,
+        "decoding_duration": 0.973574,
+        "prefill_speed_tps": 68.32549847919998,
+        "decoding_speed_tps": 65.73717046675446
+      },
+      "finish": "length",
+      "output_hash": "12538775979ef243dd2304a516575e6a811216caed8db2abfa24c092ab2aeb8b",
+      "output": "Exact arithmetic is crucial in matrix multiplication because it ensures the accuracy and reliability of the resulting matrix. Here's why:\n\n### **Why Exact Arithmetic Matters:**\n\n1. **Precision in Results:**  \n   Matrix multiplication involves combining elements from two matrices. If the arithmetic operations (addition, multiplication, subtraction, or division)",
+      "resources": {
+        "wall_seconds": 1.650069799972698,
+        "cpu_seconds": 0.546875,
+        "average_cpu_cores": 0.33142537364725333,
+        "logical_cpu_percent": 2.071408585295333,
+        "peak_sampled_rss_bytes": 2085289984,
+        "peak_sampled_private_bytes": 2069393408,
+        "start_memory": {
+          "rss": 2085232640,
+          "private": 2069377024
+        }
+      },
+      "prompt": "Explain why exact arithmetic matters in matrix multiplication. Example number 2. Provide a detailed explanation. /no_think"
+    }
+  ]
+}

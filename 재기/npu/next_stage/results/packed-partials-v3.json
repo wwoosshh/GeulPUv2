@@ -1,0 +1,163 @@
+{
+  "complete": true,
+  "integer_checks": 7,
+  "linear_checks": 10,
+  "runs": [
+    {
+      "rows": 64,
+      "seconds": 0.23938210000051185,
+      "metrics": {
+        "corrected_tiles": 548,
+        "packed_calls": 12,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 20447232,
+        "decode_seconds": 0.01078010001219809,
+        "replay_seconds": 0.0
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.17162290000123903,
+        "finalization_seconds": 0.12651309999637306,
+        "packing_seconds": 0.018024799996055663,
+        "post_wait_seconds": 0.040907799993874505
+      }
+    },
+    {
+      "rows": 64,
+      "seconds": 0.25603349998709746,
+      "metrics": {
+        "corrected_tiles": 548,
+        "packed_calls": 12,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 20447232,
+        "decode_seconds": 0.013735100044868886,
+        "replay_seconds": 0.0
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.18565900000976399,
+        "finalization_seconds": 0.1268634000152815,
+        "packing_seconds": 0.024161499983165413,
+        "post_wait_seconds": 0.038671899994369596
+      }
+    },
+    {
+      "rows": 64,
+      "seconds": 0.24042349998489954,
+      "metrics": {
+        "corrected_tiles": 548,
+        "packed_calls": 12,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 20447232,
+        "decode_seconds": 0.011706399993272498,
+        "replay_seconds": 0.0
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.1723049000138417,
+        "finalization_seconds": 0.12118060002103448,
+        "packing_seconds": 0.021731199987698346,
+        "post_wait_seconds": 0.03924179999739863
+      }
+    },
+    {
+      "rows": 256,
+      "seconds": 0.7076916999940295,
+      "metrics": {
+        "corrected_tiles": 1995,
+        "packed_calls": 48,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 81788928,
+        "decode_seconds": 0.032993199856719,
+        "replay_seconds": 0.0
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.6100321000267286,
+        "finalization_seconds": 0.32654859992908314,
+        "packing_seconds": 0.05310560000361875,
+        "post_wait_seconds": 0.028577699966263026
+      }
+    },
+    {
+      "rows": 256,
+      "seconds": 0.7037231999856886,
+      "metrics": {
+        "corrected_tiles": 1995,
+        "packed_calls": 48,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 81788928,
+        "decode_seconds": 0.03383939992636442,
+        "replay_seconds": 0.0
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.6092192000360228,
+        "finalization_seconds": 0.3102267999202013,
+        "packing_seconds": 0.053685099992435426,
+        "post_wait_seconds": 0.0262848999700509
+      }
+    },
+    {
+      "rows": 256,
+      "seconds": 0.6861461000225972,
+      "metrics": {
+        "corrected_tiles": 1995,
+        "packed_calls": 48,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 81788928,
+        "decode_seconds": 0.03227359993616119,
+        "replay_seconds": 0.0
+      },
+      "profile": {
+        "device_and_transfer_seconds": 0.5971285000268836,
+        "finalization_seconds": 0.2934326999820769,
+        "packing_seconds": 0.04917150002438575,
+        "post_wait_seconds": 0.026164199953200296
+      }
+    }
+  ],
+  "model": [
+    "23834d61e00676571cc2f0a7640d9ddec4c03ef63882a148c03ad959130b432b",
+    "080876d8b0e710293281a82368a5b063d34b0f34e8092d7d287e362a06b9089e"
+  ],
+  "header_cases": [
+    {
+      "exceptions": 1,
+      "metrics": {
+        "corrected_tiles": 16,
+        "packed_calls": 1,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 1703936,
+        "decode_seconds": 0.00013470000703819096,
+        "replay_seconds": 0.0
+      }
+    },
+    {
+      "exceptions": 7,
+      "metrics": {
+        "corrected_tiles": 16,
+        "packed_calls": 1,
+        "overflow_tiles": 0,
+        "replay_calls": 0,
+        "output_bytes": 1703936,
+        "decode_seconds": 0.00012599999899975955,
+        "replay_seconds": 0.0
+      }
+    },
+    {
+      "exceptions": 8,
+      "metrics": {
+        "corrected_tiles": 0,
+        "packed_calls": 1,
+        "overflow_tiles": 16,
+        "replay_calls": 1,
+        "output_bytes": 1736704,
+        "decode_seconds": 0.000169299979461357,
+        "replay_seconds": 0.0029295999847818166
+      }
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "passed": true,
+  "all_linear_hashes_match": true,
+  "saved_logits_bit_equal": true,
+  "warm_speedup": 1.3566275290056133,
+  "warm_seconds_reduction": 0.2628779981097802,
+  "runs": [
+    {
+      "backend": "tiled",
+      "tokens": [
+        9707,
+        1879,
+        13
+      ],
+      "linear_calls": 282,
+      "elements": 2976000,
+      "npu_dispatches": 9094,
+      "logit_hash": "7086db93d0958747cb113f2a88c8586b9e408230cffd03746515e41bbbdf0e52",
+      "plan_cache_hits": null,
+      "plan_cache_misses": null,
+      "host_plan_bytes": null,
+      "repetitions": [
+        {
+          "repeat": 0,
+          "cpu_seconds": 8.138672900066013,
+          "hybrid_seconds": 24.041511800067383,
+          "profile": {
+            "packing_seconds": 1.556117001149687,
+            "device_and_transfer_seconds": 17.51402939982654,
+            "finalization_seconds": 4.805614699842408
+          }
+        },
+        {
+          "repeat": 1,
+          "cpu_seconds": 8.013506099916412,
+          "hybrid_seconds": 15.017085600004066,
+          "profile": {
+            "packing_seconds": 1.5832749998517102,
+            "device_and_transfer_seconds": 8.444386500312248,
+            "finalization_seconds": 4.812657199960086
+          }
+        }
+      ]
+    },
+    {
+      "backend": "planned",
+      "tokens": [
+        9707,
+        1879,
+        13
+      ],
+      "linear_calls": 282,
+      "elements": 2976000,
+      "npu_dispatches": 654,
+      "logit_hash": "7086db93d0958747cb113f2a88c8586b9e408230cffd03746515e41bbbdf0e52",
+      "plan_cache_hits": 141,
+      "plan_cache_misses": 141,
+      "host_plan_bytes": 595984384,
+      "repetitions": [
+        {
+          "repeat": 0,
+          "cpu_seconds": 10.854513999918709,
+          "hybrid_seconds": 20.571211600035895,
+          "profile": {
+            "packing_seconds": 1.5215791998634813,
+            "device_and_transfer_seconds": 13.249391900040791,
+            "finalization_seconds": 5.630413700026111
+          }
+        },
+        {
+          "repeat": 1,
+          "cpu_seconds": 11.394057000070461,
+          "hybrid_seconds": 11.06942420003179,
+          "profile": {
+            "packing_seconds": 0.9372631998412544,
+            "device_and_transfer_seconds": 4.000850400014315,
+            "finalization_seconds": 5.951294799946481
+          }
+        }
+      ]
+    }
+  ]
+}

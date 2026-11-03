@@ -1,0 +1,8 @@
+{
+  "scope": "Actual NPU digit fusion versus original planned backend",
+  "passed": false,
+  "kernel_checks": 16,
+  "linear_checks": 82,
+  "benchmarks": [],
+  "error": "AssertionError()"
+}

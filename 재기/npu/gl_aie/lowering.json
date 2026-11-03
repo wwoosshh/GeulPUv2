@@ -1,0 +1,117 @@
+{
+  "frontend": "upstream GL parser + sema",
+  "backend": "restricted typed AST to AIE C++",
+  "optimizations": [
+    "loop-invariant input vector load hoisting",
+    "common vector load reuse",
+    "exact two-digit integer fusion"
+  ],
+  "buffer_access_proofs": [
+    {
+      "buffer": "a",
+      "min_offset": 0,
+      "max_offset": 96,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "a",
+      "min_offset": 128,
+      "max_offset": 224,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "a",
+      "min_offset": 0,
+      "max_offset": 96,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "b",
+      "min_offset": 0,
+      "max_offset": 992,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "a",
+      "min_offset": 0,
+      "max_offset": 96,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "b",
+      "min_offset": 0,
+      "max_offset": 992,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "a",
+      "min_offset": 0,
+      "max_offset": 96,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "b",
+      "min_offset": 0,
+      "max_offset": 992,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "a",
+      "min_offset": 128,
+      "max_offset": 224,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "b",
+      "min_offset": 0,
+      "max_offset": 992,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "a",
+      "min_offset": 128,
+      "max_offset": 224,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "b",
+      "min_offset": 0,
+      "max_offset": 992,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "a",
+      "min_offset": 128,
+      "max_offset": 224,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "b",
+      "min_offset": 0,
+      "max_offset": 992,
+      "width": 32,
+      "write": false
+    },
+    {
+      "buffer": "dst",
+      "min_offset": 0,
+      "max_offset": 127,
+      "width": 1,
+      "write": true
+    }
+  ],
+  "contract": "signed INT8 dot32 exact INT32; S0+256*S1; no floating-point transformation"
+}

@@ -1,0 +1,98 @@
+{
+  "passed": true,
+  "scope": "Qwen3 Q8_0 cached FP32 K/V greedy decode prototype; GL NPU linears + native CPU post; CPU reference attention",
+  "rounds": [
+    {
+      "repeat": 0,
+      "prefill_seconds": 6.6505991000449285,
+      "decode_seconds": [
+        4.632591400004458,
+        4.576422299956903
+      ],
+      "decode_tokens_per_second": 0.2171785236901528,
+      "generated_token_ids": [
+        16,
+        17,
+        18
+      ],
+      "kv_bytes": 1146880,
+      "profiles": [
+        {
+          "linear_seconds": 5.434204899764154,
+          "attention_seconds": 0.9027609001495875,
+          "linear_calls": 141,
+          "packing_seconds": 0.9948295996291563,
+          "device_and_transfer_seconds": 3.2981366991298273,
+          "finalization_seconds": 1.340393399412278
+        },
+        {
+          "linear_seconds": 3.5608293006080203,
+          "attention_seconds": 0.8482477000216022,
+          "linear_calls": 141,
+          "packing_seconds": 0.4572096999036148,
+          "device_and_transfer_seconds": 2.676170400576666,
+          "finalization_seconds": 0.6476115998229943
+        },
+        {
+          "linear_seconds": 3.549426500336267,
+          "attention_seconds": 0.8196613999898545,
+          "linear_calls": 141,
+          "packing_seconds": 0.4586353992926888,
+          "device_and_transfer_seconds": 2.6693307001842186,
+          "finalization_seconds": 0.6473992998944595
+        }
+      ],
+      "last_logits_sha256": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "different_bits_elements": 0
+    },
+    {
+      "repeat": 1,
+      "prefill_seconds": 5.527150300040375,
+      "decode_seconds": [
+        4.583264100016095,
+        4.666187399998307
+      ],
+      "decode_tokens_per_second": 0.21622903801343094,
+      "generated_token_ids": [
+        16,
+        17,
+        18
+      ],
+      "kv_bytes": 1146880,
+      "profiles": [
+        {
+          "linear_seconds": 4.3725836999947205,
+          "attention_seconds": 0.8498635001014918,
+          "linear_calls": 141,
+          "packing_seconds": 0.5660354994470254,
+          "device_and_transfer_seconds": 2.6927918000146747,
+          "finalization_seconds": 1.3238545995554887
+        },
+        {
+          "linear_seconds": 3.541561099817045,
+          "attention_seconds": 0.8261775999562815,
+          "linear_calls": 141,
+          "packing_seconds": 0.46615110064158216,
+          "device_and_transfer_seconds": 2.6568453001673333,
+          "finalization_seconds": 0.6508503998629749
+        },
+        {
+          "linear_seconds": 3.5953965998487547,
+          "attention_seconds": 0.8417747000930831,
+          "linear_calls": 141,
+          "packing_seconds": 0.4618128997972235,
+          "device_and_transfer_seconds": 2.6923595000989735,
+          "finalization_seconds": 0.660908799385652
+        }
+      ],
+      "last_logits_sha256": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e",
+      "different_bits_elements": 0
+    }
+  ],
+  "limitations": [
+    "Fixed token IDs, no tokenizer/chat template or EOS stopping.",
+    "Only 3 decode steps per round, no reliable p95 or long-context inference.",
+    "FP32 K/V projections are cached, but CPU reference attention re-quantizes history each step.",
+    "GL device kernel is integrated through Python prototype; production GL engine ABI is not implemented."
+  ]
+}

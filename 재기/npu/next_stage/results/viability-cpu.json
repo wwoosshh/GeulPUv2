@@ -1,0 +1,54 @@
+[
+  [
+    {
+      "seconds": 2.3597826999612153,
+      "cpu_seconds": 3.125,
+      "token": 16,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f"
+    },
+    {
+      "seconds": 1.8412227999651805,
+      "cpu_seconds": 2.140625,
+      "token": 17,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c"
+    },
+    {
+      "seconds": 1.6768037999863736,
+      "cpu_seconds": 2.015625,
+      "token": 18,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e"
+    },
+    {
+      "seconds": 1.5919733999762684,
+      "cpu_seconds": 1.9375,
+      "token": 19,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54"
+    }
+  ],
+  [
+    {
+      "seconds": 2.3348424999858253,
+      "cpu_seconds": 3.4375,
+      "token": 16,
+      "hash": "727b03575a0a8e5c99d74f04fc9bc58cef5771cc9624754833d2814493dab92f"
+    },
+    {
+      "seconds": 1.7559934000018984,
+      "cpu_seconds": 2.25,
+      "token": 17,
+      "hash": "483f965f7e07673468a584671d6457809efd77b1dd9514447d630ef11b53c35c"
+    },
+    {
+      "seconds": 1.5802460000268184,
+      "cpu_seconds": 2.03125,
+      "token": 18,
+      "hash": "8cf74305680085403803b307de137470f7b1950189bcc59ca1e36a0389c4924e"
+    },
+    {
+      "seconds": 1.491644699999597,
+      "cpu_seconds": 1.875,
+      "token": 19,
+      "hash": "36779caff2f92f93c40c1e5d47798c3dcfae74f9fc2d7db2104fb0c1be670a54"
+    }
+  ]
+]

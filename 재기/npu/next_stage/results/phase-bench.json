@@ -1,0 +1,155 @@
+{
+  "complete": false,
+  "linear": [
+    {
+      "length": 16,
+      "backend": "cpu",
+      "seconds": 0.022228799993172288
+    },
+    {
+      "length": 16,
+      "backend": "npu",
+      "seconds": 0.1269307000329718
+    },
+    {
+      "length": 16,
+      "backend": "npu",
+      "seconds": 0.12220230000093579
+    },
+    {
+      "length": 16,
+      "backend": "cpu",
+      "seconds": 0.02182570000877604
+    },
+    {
+      "length": 64,
+      "backend": "cpu",
+      "seconds": 0.09448899998096749
+    },
+    {
+      "length": 64,
+      "backend": "npu",
+      "seconds": 0.47658790001878515
+    },
+    {
+      "length": 64,
+      "backend": "npu",
+      "seconds": 0.46551710000494495
+    },
+    {
+      "length": 64,
+      "backend": "cpu",
+      "seconds": 0.0873950999812223
+    },
+    {
+      "length": 256,
+      "backend": "cpu",
+      "seconds": 0.4783668000018224
+    },
+    {
+      "length": 256,
+      "backend": "npu",
+      "seconds": 6.964176499983296
+    },
+    {
+      "length": 256,
+      "backend": "npu",
+      "seconds": 6.8920644000172615
+    },
+    {
+      "length": 256,
+      "backend": "cpu",
+      "seconds": 0.4683447000570595
+    }
+  ],
+  "runs": [
+    {
+      "length": 16,
+      "backend": "cpu",
+      "prefill": 6.942784899962135,
+      "next_token": 1.7568911000271328,
+      "first_token": 57727,
+      "second_token": 6,
+      "prefill_hash": "23834d61e00676571cc2f0a7640d9ddec4c03ef63882a148c03ad959130b432b",
+      "decode_hash": "080876d8b0e710293281a82368a5b063d34b0f34e8092d7d287e362a06b9089e",
+      "prefill_profile": {
+        "linear_seconds": 4.772774699667934,
+        "attention_seconds": 1.0849221997195855,
+        "linear_calls": 141,
+        "packing_seconds": 0.06812269991496578,
+        "cpu_dot_and_post_seconds": 4.623842900036834
+      }
+    },
+    {
+      "length": 16,
+      "backend": "phase",
+      "prefill": 20.575240100035444,
+      "next_token": 2.3031907999538817,
+      "first_token": 57727,
+      "second_token": 6,
+      "prefill_hash": "23834d61e00676571cc2f0a7640d9ddec4c03ef63882a148c03ad959130b432b",
+      "decode_hash": "080876d8b0e710293281a82368a5b063d34b0f34e8092d7d287e362a06b9089e",
+      "prefill_profile": {
+        "linear_seconds": 17.86007249960676,
+        "attention_seconds": 1.4687570999376476,
+        "linear_calls": 141,
+        "packing_seconds": 1.484879401337821,
+        "device_and_transfer_seconds": 9.49536839913344,
+        "finalization_seconds": 6.992661999829579
+      }
+    },
+    {
+      "length": 64,
+      "backend": "phase",
+      "prefill": 107.58337120000215,
+      "next_token": 5.674851900002977,
+      "first_token": 12,
+      "second_token": 5761,
+      "prefill_hash": "645fae6a1f271c1397d37dd97dc9504b18ba07ea8c45ce7d131ca24517c895a8",
+      "decode_hash": "1f5f26e598dbc5a22c108ed6f70924083b299900c4581fffacd71610c6973ba4",
+      "prefill_profile": {
+        "linear_seconds": 96.20425439999235,
+        "attention_seconds": 4.6498955999923055,
+        "linear_calls": 141,
+        "packing_seconds": 4.598498299863422,
+        "device_and_transfer_seconds": 82.5618696998863,
+        "finalization_seconds": 31.198462300038955
+      }
+    },
+    {
+      "length": 64,
+      "backend": "cpu",
+      "prefill": 32.280890900001395,
+      "next_token": 7.841759200004162,
+      "first_token": 12,
+      "second_token": 5761,
+      "prefill_hash": "645fae6a1f271c1397d37dd97dc9504b18ba07ea8c45ce7d131ca24517c895a8",
+      "decode_hash": "1f5f26e598dbc5a22c108ed6f70924083b299900c4581fffacd71610c6973ba4",
+      "prefill_profile": {
+        "linear_seconds": 21.441831400006777,
+        "attention_seconds": 4.331263500011119,
+        "linear_calls": 141,
+        "packing_seconds": 0.43852560000959784,
+        "cpu_dot_and_post_seconds": 20.710933899965312
+      }
+    },
+    {
+      "length": 256,
+      "backend": "cpu",
+      "prefill": 125.96433899999829,
+      "next_token": 8.233350900001824,
+      "first_token": 198,
+      "second_token": 16088,
+      "prefill_hash": "19418308043c290e35306a4feda952902e8ab41043e74164a8b1c3cb27baab63",
+      "decode_hash": "c3f764a24b66f62b47b90beb1803adfb705e93df70b95d62161addb23b67f072",
+      "prefill_profile": {
+        "linear_seconds": 73.67075249998015,
+        "attention_seconds": 27.993411899995408,
+        "linear_calls": 141,
+        "packing_seconds": 1.5137858000016422,
+        "cpu_dot_and_post_seconds": 70.81478289998631
+      }
+    }
+  ],
+  "stopped_case": "256-token original NPU full forward stopped intentionally after CPU baseline; replaced by joined-prefill full model test. Original NPU microbenchmark completed."
+}
