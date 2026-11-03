@@ -1926,10 +1926,12 @@ const modeTip = p => p === 'fast' ? T('빠름 — 활성값 8비트(llama.cpp와
 // GGUF 의 이름(띄어 씀)을 목록의 꼴(하이픈)로 — 한 모델은 어디서나 한 이름
 function prettyName(n) { return String(n || '').trim().replace(/\s+/g, '-'); }
 function catalogOf(m) { return m && m.catalog && S.st ? S.st.catalog.find(c => c.id === m.catalog) : null; }
+// #220 — 변환이 붙인 뜻 없는 general.name(0.17.0 의 GGUF 만들기가 쓴 'Merged' 등)이면 파일에서 온 아이디로 보인다(같은 이름이 줄줄이 보이지 않게)
+const GENERIC_NAMES = new Set(['merged', 'model', 'final', 'unknown', 'untitled']);
 function displayName(m) {
   if (!m) return '';
   const c = catalogOf(m);
-  return c ? c.name : prettyName(m.name || m.id);
+  return c ? c.name : prettyName(m.name && !GENERIC_NAMES.has(String(m.name).trim().toLowerCase()) ? m.name : m.id);
 }
 function modelOf(id) { return S.st ? S.st.models.find(m => m.id === id) : null; }
 function labelById(id) {

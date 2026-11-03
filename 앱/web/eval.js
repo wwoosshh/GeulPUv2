@@ -33,6 +33,14 @@ const EVAL_DICT = {
   "같은 데이터({}) · 답 {}토큰 · 정밀로 잰 버전 — 크기와 품질({})": "Versions measured on the same data ({}) · answers {} tokens · exact — size and quality ({})",
   "형식": "Type",
   "더 작고 같거나 나은 버전 있음 — {}": "A smaller version that is as good or better exists — {}",
+  "짝지은 검정": "Paired test",
+  "정답률 {}": "Accuracy {}",
+  "짝지은 대화 {}개 — A만 맞음 {} · B만 맞음 {} · 둘 다 맞음 {} · 둘 다 틀림 {}": "{} paired conversations — only A right {} · only B right {} · both right {} · both wrong {}",
+  "정답률 A {} · B {} · 부호 검정 p = {}": "Accuracy A {} · B {} · sign test p = {}",
+  "짝지을 대화가 없습니다(같은 데이터의 채점한 대화가 필요합니다).": "There are no conversations to pair (graded conversations of the same data are needed).",
+  "같은 데이터 · 설정의 두 결과를 대화마다 짝지어 한쪽만 맞은 수로 부호 검정을 합니다. 작업 공간이 달라도(예: SFT ↔ DPO) 됩니다.": "Pairs two results of the same data · settings conversation by conversation and runs a sign test on the cases only one side got right. The workspaces may differ (e.g. SFT ↔ DPO).",
+  "조금 더 크고 KL이 훨씬 작은 버전 — {}(+{} · KL × {})":"A slightly larger version with a much smaller KL — {} (+{} · KL × {})",
+  "더 작은 것이 없을 때는 크기가 5 % 안쪽으로 크고 KL이 0.7배 이하인 버전도 짚습니다 — 그만큼의 크기를 쓸 수 있다면 그 버전이 낫습니다.": "When nothing smaller exists, a version at most 5 % larger with a KL of 0.7× or less is pointed out too — if that much size is fine, that version is better.",
   "같은 크기면 다른 런타임과도 맞는 표준 형식(예: Q5_K_M)이 나을 수 있습니다 — 표준 형식 버전을 같은 데이터로 함께 평가하면 여기 나란히 보입니다.": "At the same size a standard type that other runtimes also know (e.g. Q5_K_M) can be the better choice — evaluate standard-type versions on the same data and they show up here side by side.",
   "답 {}토큰(데이터 줄의 값 {}개)": "answers {0} tokens ({1} from the data lines)",
   "데이터 줄의 max_tokens": "max_tokens of the data lines",
@@ -503,7 +511,7 @@ TMX.push(
   [/버전이 없습니다/g, 'The version does not exist'],
   [/바꿀 키가 없습니다/g, 'No keys to change'],
   [/원래 파일을 열 수 없습니다/g, 'Cannot open the original file'],
-  [/새 파일을 만들 수 없습니다\(모델 폴더를 확인하세요\)/g, 'Cannot create the new file (check the model folder)'],
+  [/새 파일을 만들 수 없습니다\(작업 공간의 made 폴더를 확인하세요\)/g, "Cannot create the new file (check the workspace's made folder)"],
   [/새 파일의 크기가 맞지 않습니다\(디스크 공간을 확인하세요\)/g, 'The new file has the wrong size (check the disk space)'],
   [/GGUF 버전 3만 다룹니다/g, 'Only GGUF version 3 is handled'],
   [/GGUF 헤더가 손상되었습니다/g, 'The GGUF header is damaged'],
@@ -1195,6 +1203,8 @@ function evSizeQuality(w, rep, by) {
         hasAcc ? h('th', { class: 'r' }, T('정답률')) : null, h('th', null, ''))),
       h('tbody', null, es.map(e => {
         const u = es.find(x => better(x, e));
+        // #220 — 더 작은 것이 없으면, 크기가 5 % 안쪽으로 크고 KL 이 0.7 배 이하인 버전(고른 무리의 파일보다 조금 큰 표준 Q5_K_M 같은 것)
+        const near = u ? null : es.filter(x => x !== e && x.size > e.size && x.size <= e.size * 1.05 && e.kl > 0 && x.kl <= e.kl * 0.7).sort((a, b) => a.kl - b.kl)[0];
         const m = modelOf(e.v.model);
         const mix = m ? mixOf(m) : '';
         return h('tr', null,
@@ -1205,9 +1215,11 @@ function evSizeQuality(w, rep, by) {
           h('td', { class: 'r num small' }, fmtBytes(e.size)),
           h('td', { class: 'r num small' }, evKL(e.kl)),
           hasAcc ? h('td', { class: 'r num small' }, e.acc === null ? '-' : evPct(e.acc)) : null,
-          h('td', { class: 'small acc' }, u ? T`더 작고 같거나 나은 버전 있음 — ${u.v.id}` : null));
+          h('td', { class: 'small acc' }, u ? T`더 작고 같거나 나은 버전 있음 — ${u.v.id}`
+            : near ? T`조금 더 크고 KL이 훨씬 작은 버전 — ${near.v.id}(+${fmtBytes(near.size - e.size)} · KL × ${(near.kl / e.kl).toFixed(2)})` : null));
       })))),
-    h('p', { class: 'small muted m0' }, T('같은 크기면 다른 런타임과도 맞는 표준 형식(예: Q5_K_M)이 나을 수 있습니다 — 표준 형식 버전을 같은 데이터로 함께 평가하면 여기 나란히 보입니다.')));
+    h('p', { class: 'small muted m0' }, T('같은 크기면 다른 런타임과도 맞는 표준 형식(예: Q5_K_M)이 나을 수 있습니다 — 표준 형식 버전을 같은 데이터로 함께 평가하면 여기 나란히 보입니다.')),
+    h('p', { class: 'small muted m0' }, T('더 작은 것이 없을 때는 크기가 5 % 안쪽으로 크고 KL이 0.7배 이하인 버전도 짚습니다 — 그만큼의 크기를 쓸 수 있다면 그 버전이 낫습니다.')));
 }
 function evImproveCard(w, busy) {
   const qv = w.versions.filter(v => v.made && v.made.kind === 'quantize' && v.made.settings && evBad(v.model) === null);   // #213 — 엔진이 받는 버전만
@@ -1217,7 +1229,7 @@ function evImproveCard(w, busy) {
   const t = EV.tools, st = t && !t.error ? t.state : null;
   const o = EV.impo[w.id] || (EV.impo[w.id] = { base: '', data: 'basic60', max: 64, restore: 'q6_k', ranges: true, pick: null, pickFor: '' });
   if (!qv.some(v => v.id === o.base)) o.base = (qv.find(v => v.id === w.current) || qv[qv.length - 1]).id;
-  const ds = ((EV.list && EV.list.data) || []).filter(d => d.kind === 'chat');
+  const ds = (EV.list && EV.list.data) || [];   // #220 — 텍스트 데이터도(그 분야의 글로 KL 을 잰다 — 정답률은 채점 데이터에서만)
   const R = EV.imp[w.id];
   const rep = R && !R.missing && !R.error && R.base ? R : null;
   const seg = h('div', { class: 'seg-ctl', role: 'radiogroup', 'aria-label': T('되돌릴 형식') }, [['q6_k', 'Q6_K'], ['q5_k', 'Q5_K'], ['bf16', 'BF16']].map(([v, l]) => h('button', {
@@ -1301,13 +1313,15 @@ function evImproveCard(w, busy) {
   return h('div', { class: 'card col g16' },
     h('div', { class: 'row' }, h('span', { class: 'sec' }, T('개선 — 행렬 무리마다 되돌려 측정')), h('span', { class: 'grow' }),
       h('span', { class: 'small muted' }, T('무리 하나만 높은 형식으로 바꾼 시험 파일을 같은 데이터로 잽니다'))),
-    st ? null : h('div', { class: 'small muted' }, T('측정하려면 GGUF 만들기에서 도구 준비를 먼저 하세요.')),
+    // #220 — 도구 상태를 불러오는 동안(EV.tools 가 아직 없음)은 '도구 준비를 먼저'가 아니다
+    st || t === undefined ? null : h('div', { class: 'small muted' }, T('측정하려면 GGUF 만들기에서 도구 준비를 먼저 하세요.')),
     h('div', { class: 'ev-form' },
       h('div', { class: 'row g12 wrap' },
         h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('기준 버전')),
           h('select', { class: 'input', 'data-fk': 'ev-imp-base', onchange: ev => { o.base = ev.target.value; } }, qv.map(v => h('option', { value: v.id, selected: v.id === o.base ? true : null }, `${v.id} · ${v.label || v.file}`)))),
         h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('데이터')),
-          h('select', { class: 'input', 'data-fk': 'ev-imp-data', onchange: ev => { o.data = ev.target.value; } }, ds.map(d => h('option', { value: d.name, selected: d.name === o.data ? true : null }, d.name)))),
+          h('select', { class: 'input', 'data-fk': 'ev-imp-data', onchange: ev => { o.data = ev.target.value; } }, ds.map(d => h('option', { value: d.name, selected: d.name === o.data ? true : null },
+            d.kind === 'text' ? `${d.name} · ${T('텍스트')}` : d.name)))),
         h('label', { class: 'col g4 ev-num' }, h('span', { class: 'small muted' }, T('답의 최대 토큰')),
           h('input', { class: 'input num', type: 'number', min: 8, max: 1024, value: o.max, 'data-fk': 'ev-imp-max',
             onchange: ev => { const x = Math.round(+ev.target.value); o.max = Math.min(1024, Math.max(8, isFinite(x) ? x : 64)); ev.target.value = o.max; } }))),
@@ -1382,6 +1396,7 @@ function evOrigCard(w, dir) {
         h('label', { class: 'col g4 ev-num' }, h('span', { class: 'small muted' }, T('견줄 대화 수(0 = 모두)')), lim),
         h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-origrun', disabled: busy ? true : null, onclick: run }, I('target', 's'), busy ? T('다른 작업 실행 중') : T('견주기')))),
       h('span', { class: 'small muted' }, T('CPU로 대화마다 원래 모델을 한 번 돌립니다 — 대화 수 · 답 길이에 비례해, 짧은 답 60개는 1분 안쪽이고 GSM8K 1,319개는 수십 분입니다. 처음 n개만 견주면 빨리 끝납니다(같은 결과의 기준값 앞쪽).')))
+      : t === undefined ? h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'))     // #220
       : h('div', { class: 'small muted' }, T('원래 모델과 견주려면 작업 공간의 GGUF 만들기에서 도구 준비를 먼저 하세요(파이썬 · transformers).')));
 }
 // 3-2 — 내장 데이터의 출처 · 대화 수 · 라이선스(앱/data/eval/sources.json)
@@ -1678,6 +1693,54 @@ function evTableCard(w) {
     pts.length >= 2 ? evPlot(pts, byAcc) : null,
     pts.length >= 2 ? h('p', { class: 'small muted m0' }, T`크기와 품질의 경계(더 작으면서 ${byAcc ? T('정답률') : 'KL'}이 같거나 나은 버전이 없는 것) — ${fr.map(p => p.id).join(', ')}. 채운 점이 경계입니다.`) : null);
 }
+// #220 — 두 결과의 짝지은 검정(같은 데이터 · 설정 — 대화 아이디로 짝): A 만 맞음 · B 만 맞음 · 부호 검정 p. 기준 모델 자신(결과의 ref_correct)도
+// 고를 수 있어 작업 공간이 다른 두 미세조정(예: SFT ↔ DPO 의 BF16)을 견준다
+const evSignP = (a, b) => {   // 두쪽 정확 부호 검정 — 결과 화면의 p 와 같은 꼴
+  const n = a + b;
+  if (!n) return 1;
+  let lp = -n * Math.LN2, s = 0;
+  for (let i = 0; i <= Math.min(a, b); i++) { s += Math.exp(lp); lp += Math.log(n - i) - Math.log(i + 1); }
+  return Math.min(1, 2 * s);
+};
+function evPairCard(o, cols, order, cells) {
+  const opts = [];
+  for (const w of cols) {
+    const any = order.map(q => cells.get(q)[w.id]).find(x => x && x.r.accuracy);
+    if (any) opts.push({ key: `${w.id}|${any.r.dir}|ref`, w, dir: any.r.dir, side: 'ref', label: `${w.name} · ${T('기준 모델')}` });
+    for (const q of order) {
+      const x = cells.get(q)[w.id];
+      if (x && x.r.accuracy) opts.push({ key: `${w.id}|${x.r.dir}|cand`, w, dir: x.r.dir, side: 'cand', label: `${w.name} · ${q}` });
+    }
+  }
+  if (opts.length < 2) return null;
+  if (!opts.some(p => p.key === o.pa)) o.pa = opts[0].key;
+  if (!opts.some(p => p.key === o.pb) || o.pb === o.pa) o.pb = (opts.find(p => p.key !== o.pa) || opts[1]).key;
+  const A = opts.find(p => p.key === o.pa), B = opts.find(p => p.key === o.pb);
+  const ra = EV.res[evResKey(A.w, A.dir)], rb = EV.res[evResKey(B.w, B.dir)];
+  if (ra === undefined) evFetch('res', evResKey(A.w, A.dir), `/api/eval/result?workspace=${evEnc(A.w.id)}&dir=${evEnc(A.dir)}`);
+  if (rb === undefined) evFetch('res', evResKey(B.w, B.dir), `/api/eval/result?workspace=${evEnc(B.w.id)}&dir=${evEnc(B.dir)}`);
+  let body = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
+  if (ra && rb && !ra.error && !rb.error) {
+    const fa = A.side === 'ref' ? 'ref_correct' : 'cand_correct', fb = B.side === 'ref' ? 'ref_correct' : 'cand_correct';
+    const mb = new Map((rb.items || []).filter(x => x.graded).map(x => [x.id, !!x[fb]]));
+    let both = 0, ao = 0, bo = 0, none = 0;
+    for (const x of (ra.items || []).filter(y => y.graded && mb.has(y.id))) {
+      const a = !!x[fa], b = mb.get(x.id);
+      if (a && b) both++; else if (a) ao++; else if (b) bo++; else none++;
+    }
+    const n = both + ao + bo + none;
+    body = n ? h('div', { class: 'col g4' },
+      h('div', null, T`짝지은 대화 ${fmtNum(n)}개 — A만 맞음 ${ao} · B만 맞음 ${bo} · 둘 다 맞음 ${both} · 둘 다 틀림 ${none}`),
+      h('div', { class: 'small muted' }, T`정답률 A ${evPct((both + ao) / n)} · B ${evPct((both + bo) / n)} · 부호 검정 p = ${evNum(evSignP(ao, bo), 3)}`))
+      : h('div', { class: 'small muted' }, T('짝지을 대화가 없습니다(같은 데이터의 채점한 대화가 필요합니다).'));
+  }
+  const sel = (k, cur) => h('select', { class: 'input', 'data-fk': 'ev-xw-pair-' + k, 'aria-label': k.toUpperCase(), onchange: ev => { o['p' + k] = ev.target.value; renderEval(true); } },
+    opts.map(p => h('option', { value: p.key, selected: p.key === cur ? true : null }, p.label)));
+  return h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('짝지은 검정'))),
+    h('div', { class: 'row g12 wrap' }, h('span', { class: 'small muted' }, 'A'), sel('a', o.pa), h('span', { class: 'small muted' }, 'B'), sel('b', o.pb)),
+    body,
+    h('p', { class: 'small muted m0' }, T('같은 데이터 · 설정의 두 결과를 대화마다 짝지어 한쪽만 맞은 수로 부호 검정을 합니다. 작업 공간이 달라도(예: SFT ↔ DPO) 됩니다.')));
+}
 // 작업 공간 견주기 — 형식(줄) × 작업 공간(칸): 같은 데이터 · 설정의 KL · 기준 모델 대비 정답률 손실
 function evCrossView() {
   const L = EV.list;
@@ -1707,6 +1770,14 @@ function evCrossView() {
       h('div', null, `KL ${evKL((x.r.metrics || {}).kl_mean)}`),
       graded ? h('div', { class: 'muted' }, loss === null ? '-' : T`정답률 ${evPct(acc.cand)} (${dl})`) : null);
   };
+  // #220 — 각 작업 공간의 기준 모델(BF16 등) 자신의 정답률 — 같은 데이터 · 설정 결과의 accuracy.ref(전에는 줄이 없어 차에서 거꾸로 셈해야 했다)
+  const refCell = w => {
+    const x = evByVersion(w, o.key).find(y => y.r.accuracy && typeof y.r.accuracy.ref === 'number');
+    const rm = w.reference.model ? modelOf(w.reference.model) : null;
+    return h('td', { class: 'r num small', 'data-tip': `${evRefLabel(w)}${rm ? ' · ' + quantOf(rm) : ''}`, 'data-tip-pos': 'top' },
+      h('div', { class: 'muted' }, rm ? quantOf(rm) : T('기준 모델')),
+      graded ? h('div', null, x ? T`정답률 ${evPct(x.r.accuracy.ref)}` : '-') : null);
+  };
   return h('div', { class: 'col g24' },
     h('div', { class: 'col g8' }, h('nav', { class: 'ev-crumb' }, h('button', { class: 'dbg-link', 'data-fk': 'ev:xws:back', onclick: () => evGo('ws') }, T('모델 평가')),
       h('span', { class: 'faint' }, '›'), h('span', { class: 'ink' }, T('작업 공간 견주기'))),
@@ -1718,9 +1789,11 @@ function evCrossView() {
         h('button', { class: 'btn sm ghost', 'data-fk': 'ev-xw-csv', disabled: chosen.length ? null : true, onclick: () => labDownload('geulpu-eval-workspaces.csv', evCsv(chosen), 'text/csv') }, I('download', 's'), T('CSV 내보내기'))),
       h('div', { class: 'row g12 wrap' }, wss.map(w => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-xw-' + w.id, 'aria-label': w.name, value: w.id, checked: o.pick.has(w.id) ? true : null,
         onchange: ev => { if (ev.target.checked) o.pick.add(w.id); else o.pick.delete(w.id); renderEval(true); } }), w.name))),
+      graded && cols.length ? evPairCard(o, cols, order, cells) : null,
       cols.length && order.length ? h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
         h('thead', null, h('tr', null, h('th', null, T('형식')), cols.map(w => h('th', { class: 'r' }, w.name)))),
-        h('tbody', null, order.map(q => h('tr', null, h('td', { class: 'mono small' }, q), cols.map(w => cell(cells.get(q)[w.id])))))))
+        h('tbody', null, h('tr', null, h('td', { class: 'small' }, T('기준 모델')), cols.map(refCell)),     // #220 — 저마다의 기준 모델 자신
+          order.map(q => h('tr', null, h('td', { class: 'mono small' }, q), cols.map(w => cell(cells.get(q)[w.id])))))))
         : h('div', { class: 'small muted' }, T('고른 작업 공간에 이 데이터 · 설정의 결과가 없습니다.'))));
 }
 
