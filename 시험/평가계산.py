@@ -4,7 +4,9 @@
     python -I -X utf8 시험/평가계산.py check <시험_평가계산.exe>      (빠른 점검 · CI)
 
 사례(씨앗 고정): 지수(−700 … 10 과 경계) · 로그(10⁻³⁰⁰ … 1) · KL(K 1 · 20 · 64 · 128 — 무작위 분포, 꼬리가 아주 작은 분포, 평가 쪽 합이
-1 을 넘는 분포) · 꼬리 · 백분위수(무작위 · 0 과 음수가 섞임) · 부호 검정(b · c 0 … 60). 모두 비트까지 같아야 한다.
+1 을 넘는 분포) · 꼬리 · 백분위수(무작위 · 0 과 음수가 섞임) · 부호 검정(b · c 0 … 60 과 n 1,000 … 4만의 경계). 모두 비트까지 같아야
+한다. #236 — 부호 검정은 따로 정수로 정확히 계산한 값(math.comb 의 꼴 · Fraction)과도 견준다(상대 오차 10⁻⁹ 안쪽, 정확한 값이 10⁻²⁹⁰
+아래면 둘 다 그 아래) — 참조와 비트가 같아도 둘이 함께 틀릴 수 있어서(2⁻ⁿ 언더플로로 600 · 599 가 p = 0 이던 것).
 이 파일의 함수(지수 · 로그 · KL · 꼬리 · 백분위 · 부호검정)는 평가 결과를 다시 계산하는 시험도 쓴다.
 """
 import os
@@ -12,6 +14,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+from fractions import Fraction
 
 import numpy as np
 
@@ -63,20 +66,39 @@ def 백분위(x, q):
     return LP.비트실수(a[순 - 1])
 
 
+둘로그 = LP.비트실수(0x3FE62E42FEFA39EF)          # ln 2
+
+
 def 부호검정(b, c):
     n = b + c
     if n == 0:
         return 1.0
     m = min(b, c)
-    t = 1.0
-    for _ in range(n):
-        t = t * 0.5
+    lt = 0.0 - float(n) * 둘로그
     s = 0.0
     for i in range(m + 1):
-        s = s + t
-        t = t * float(n - i) / float(i + 1)
+        s = s + 지수(lt)
+        lt = lt + (로그(float(n - i)) - 로그(float(i + 1)))
     p = 2.0 * s
     return 1.0 if p > 1.0 else p
+
+
+def 정확부호검정(b, c):
+    """#236 — 같은 p 를 정수로 정확히(이항 계수의 합 / 2ⁿ — 분수를 float 로 한 번만 반올림)"""
+    n = b + c
+    if n == 0:
+        return 1.0
+    t, s = 1, 0
+    for i in range(min(b, c) + 1):
+        s += t
+        t = t * (n - i) // (i + 1)
+    p = Fraction(2 * s, 1 << n)
+    return 1.0 if p > 1 else float(p)
+
+
+부호경계 = [(500, 500), (600, 599), (700, 700), (511, 511), (512, 511), (511, 512), (537, 537), (538, 537), (0, 1022), (1, 1021),
+          (0, 1075), (1, 1074), (10, 1100), (1000, 1000), (1000, 1100), (450, 550), (3000, 2900), (10000, 10000), (10000, 9800),
+          (20000, 19500)]
 
 
 def _로그소프트(z):
@@ -120,6 +142,8 @@ def 사례들():
     for b in range(0, 61, 3):
         for c in range(0, 61, 7):
             out.append((2, [b, c], 부호검정(b, c)))
+    for b, c in 부호경계:                                        # #236 — n 1,000 … 4만(2⁻ⁿ 이 비정규수 · 0 이 되는 자리)
+        out.append((2, [b, c], 부호검정(b, c)))
     return out
 
 
@@ -154,11 +178,20 @@ def check(exe):
         got = struct.unpack(f"<{len(사례)}Q", open(o, "rb").read())
     이름 = {0: "KL", 1: "백분위", 2: "부호검정", 3: "지수", 4: "로그", 5: "꼬리"}
     다름 = {}
-    for (종류, _, 참), g in zip(사례, got):
+    어긋남 = []                                                   # #236 — 부호 검정을 정확한 값과
+    for (종류, 인자, 참), g in zip(사례, got):
         if g != LP.실수비트(참):
             다름[이름[종류]] = 다름.get(이름[종류], 0) + 1
-    print(f"평가 지표의 계산: 사례 {len(사례)} · 다름 {sum(다름.values())}" + (f" — {다름}" if 다름 else ""))
-    return 0 if not 다름 else 1
+        if 종류 == 2:
+            v = LP.비트실수(g)
+            e = 정확부호검정(*인자)
+            틀림 = abs(v - e) > 1e-9 * e if e > 1e-290 else v > 1e-290
+            if 틀림:
+                어긋남.append(f"{인자[0]}/{인자[1]}: {v!r} (정확 {e!r})")
+    n2 = sum(1 for 종류, _, _ in 사례 if 종류 == 2)
+    print(f"평가 지표의 계산: 사례 {len(사례)} · 다름 {sum(다름.values())}" + (f" — {다름}" if 다름 else "")
+          + f" · 부호 검정 {n2} 사례의 정확한 값과 어긋남 {len(어긋남)}" + (f" — {'; '.join(어긋남[:5])}" if 어긋남 else ""))
+    return 0 if not 다름 and not 어긋남 else 1
 
 
 def main():
