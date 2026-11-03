@@ -450,10 +450,17 @@ TMX.push(
   [/데이터에 대화가 없습니다\(JSONL — 줄마다 messages\)/g, 'The data has no conversations (JSONL — messages on every line)'],
   [/기준 모델의 추론 서버를 시작하지 못했습니다\(기준값 폴더의 server-ref-\*\.log 참고\)/g, "Could not start the reference model's inference server (see server-ref-*.log in the reference folder)"],
   [/평가한 버전이 없습니다 — 작업 기록 참고/g, 'No version was evaluated — see the run log'],
+  [/평가한 버전이 없습니다 — /g, 'No version was evaluated — '],
   [/텍스트 파일을 읽지 못했습니다/g, 'Could not read the text file'],
   [/텍스트를 토큰으로 나누지 못했습니다\(\/tokenize\)/g, 'Could not tokenize the text (/tokenize)'],
   [/텍스트가 짧아 청크\(512 토큰\)를 만들 수 없습니다/g, 'The text is too short for a chunk (512 tokens)'],
   [/기준 모델이 답을 하나도 내지 못했습니다\(run-ref\.jsonl 참고\)/g, 'The reference model gave no answers (see run-ref.jsonl)'],
+  // #218 — 서버가 거절한 까닭(run 로그의 error 에도)
+  [/기준 모델이 답을 하나도 내지 못했습니다 — (.+)\(run-ref\.jsonl 참고\)/g, 'The reference model gave no answers — $1 (see run-ref.jsonl)'],
+  [/답을 하나도 받지 못했습니다 — (.+)\(run-(\S+)\.jsonl 참고\)/g, 'No answers came back — $1 (see run-$2.jsonl)'],
+  [/답을 하나도 받지 못했습니다\(run-(\S+)\.jsonl 참고\)/g, 'No answers came back (see run-$1.jsonl)'],
+  [/\[(\S+)\] 답을 받지 못한 대화 (\d+)개 — 처음 까닭: /g, '[$1] $2 conversations got no answer — first reason: '],
+  [/이 모델의 채팅 틀은 도구를 받지 않는다\(tools\) — 틀이 tools 를 그리지 않거나, GeulPU 가 읽는 호출 꼴\((.+?)\)이 아니다/g, "this model's chat template does not take tools — the template does not render tools, or its call format is not one GeulPU reads ($1)"],
   [/기준 모델의 로그확률을 받지 못했습니다/g, "Could not get the reference model's log-probabilities"],
   // #216 — 서버가 거절한 까닭 · 최대 위치가 512 보다 작은 모델
   [/추론 서버 (\d+) — /g, 'inference server $1 — '],
