@@ -183,9 +183,10 @@ GeulPU 가 직접 돌려 본 파일(앱의 **GeulPU 확인됨** — 앱에서 �
 | 16 GB 이상 | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M |
 
 헤드 크기 64 · 96 · 128 을 받고, RoPE 를 헤드의 일부에만 거는 모델도 받습니다. 미세조정 모델도 돕니다 — 서버가 모델 파일의 채팅 템플릿을
-그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기). Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다. GPU:
-NVIDIA RTX 30 시리즈 이상은 CUDA, 그 밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버처럼 공유 메모리가 32 KB인
-GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음). Qwen3.5 · Qwen3.6 MoE · Gemma 4 는 아직 CUDA 에서만 돕니다. 릴리스는 Windows x64 · Linux
+그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기). Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다.
+메타데이터에 RoPE 늘이기가 이미 든 파일(`rope.scaling.type` — 커뮤니티의 "128K" GGUF 등)은 어느 구조든 받지 않습니다 —
+Qwen2.5 · Qwen3 는 같은 모델의 늘이기 없는 파일이 이 YaRN 으로 131,072 토큰까지 갑니다. GPU: NVIDIA RTX 30 시리즈 이상은 CUDA, 그
+밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버처럼 공유 메모리가 32 KB인 GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음). Qwen3.5 · Qwen3.6 MoE · Gemma 4 는 아직 CUDA 에서만 돕니다. 릴리스는 Windows x64 · Linux
 x86-64용입니다(Linux는 CUDA만 — WSL2와 실제 Linux에서 시험). 아직 안 되는 것: 다른 구조(Phi 등), Gemma 4 의 E2B · E4B · 26B-A4B(MoE) · 31B, 다른 MoE
 모델(Mixtral · Qwen3-30B-A3B 등), 이미지 입력, Q2_K · Q3_K · IQ4_XS 밖의 IQ 형식(IQ4_XS 는 CUDA 에서), macOS
 ([자세히 — 크기 · 라이선스 · GPU 마다](사용안내.md#지원하는-모델)). 앱의 **모델 찾기**는 Hugging Face 의 GGUF 모델 가운데 GeulPU 에서 실행되는

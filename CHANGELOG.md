@@ -6,6 +6,62 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.19.0 — Model evaluation: fixes from the second researcher review · text PPL · paired test (2026-11-03)
+
+0.19.0 fixes what the second outside-researcher review found (#213–#220 — full fine-tuning · DPO · continued pretraining · distillation · merging · structural edits · from-scratch training · tool-call fine-tuning): evaluating a model the engine does not support no longer closes the app, the conversion check stops flagging correct SentencePiece and transformers 5 files, text mode gains absolute PPL and bits per byte, Compare with the original model shows its progress, and Compare workspaces gains a paired test. The engine's refusal messages and the length rule for scoring-only requests changed; existing requests give the same output bits.
+
+### Added
+
+- **Compare with the original model — progress and first n.** While comparing, the job step shows "conversation k/n · about
+  … left" (before, only "comparing"), and the number of conversations to compare can be set (the first n — 0 means all). A
+  GSM8K-size result takes tens of minutes on the CPU in full, so the first few hundred can check the conversion first (#219).
+- **Model evaluation — absolute PPL, bits per byte, and a baseline model for text.** Results now carry the mean NLL and PPL on
+  the same tokens for both the reference model and the evaluated model (before, only the PPL ratio), and text-data results add
+  bits per byte of the text (BPB — comparable across models with different vocabularies). The baseline model (before
+  fine-tuning) also works on text data, so the PPL change from continued pretraining shows directly on the same tokens (#217).
+
+### Fixed
+
+- **Conversion check — SentencePiece tokenizers and the transformers 5 BOS.** Whether the original model adds BOS is now also
+  read from the post_processor in `tokenizer.json` when `tokenizer_config.json` does not say. Models saved with transformers 5
+  were flagged with a BOS problem, and the suggested fixed version turned BOS off (#214). When it cannot be told, the item is
+  "check" and no fix is suggested. A SentencePiece GGUF is compared by vocabulary instead of merges, and the ▁ space mark of
+  user-defined tokens and the UNKNOWN type of `<unk>` count as the same. Special tokens with IDs outside the model's vocabulary
+  (image tokens and the like) are counted apart (false problems with a self-made SentencePiece tokenizer and with Gemma 3).
+- **Why an evaluation request failed is kept.** When the inference server refuses a request (for example, conversations with
+  `tools` rejected with 400 because GeulPU does not read the chat template's tool-call format), that line of the run log
+  (run-*.jsonl) keeps the body the server returned as `error`, and the run log and summary show the first reason — before,
+  there was only `"response": null` (#218). A version that gets no answer at all no longer produces a result; it reports why.
+- **Evaluating a model the engine does not support no longer crashes the app.** Evaluating a GGUF the engine does not
+  support (a size outside the support table, a file with RoPE scaling, …) as the reference model or a version closed the
+  whole app with an access violation (#213). The evaluation request is now refused with the reason, such versions cannot be
+  picked in Run evaluation, and an unsupported reference model shows why. An unsupported baseline model only skips the
+  learned / forgotten counts; the evaluation goes on.
+- **Small model-evaluation fixes** (#220):
+  - The conversion check's fixed-version file is written to the workspace's made folder. Before, it went to the data
+    folder's 모델\ (a non-ASCII path) that llama.cpp's tools could not open.
+  - Each row of the improvement report (`GET /api/eval/improve`) now has the KL reduction against the base version, the size
+    difference, the reduction per MiB and the accuracy difference.
+  - Text data can be used for improvement measurements.
+  - Size and quality also points to a version at most 5 % larger with a KL of 0.7× or less (such as a standard Q5_K_M a
+    little larger than the picked-groups file).
+  - Compare workspaces shows each workspace's reference-model row (accuracy), and adds a paired test of two results
+    (across workspaces too, reference models included): only A right · only B right · sign-test p.
+  - "Set up tools first" no longer flashes while the tool state is loading.
+  - Meaningless model names set by conversion (such as 0.17.0's "Merged") show the file name instead.
+- **Why the engine refuses a GGUF is shown right away.** When Make GGUF produces files the engine does not support, the job
+  summary now names those types and the reason (before, only a run-log line did). For small models whose hidden size or FFN
+  width is not a multiple of 256, Make GGUF warns before quantizing that llama-quantize turns k-quants into fallback types
+  (Q5_0 · Q5_1 · IQ4_NL) and suggests Q8_0 · Q4_0. Q4_0 joins the quantization types (token embeddings and output in Q4_0
+  too — the engine's Q4_0 path). The engine's messages name formats instead of numbers, and "unsupported model size" now
+  states the one condition that failed (SmolLM2-360M: the head count (15) is odd — before, it read "only head size 64 · 96 ·
+  128") (#215).
+- **Text mode measures models whose maximum position is 512.** Model evaluation's text mode failed on models whose context
+  is 512 positions (small from-scratch models like TinyStories ones) with "Could not get the reference model's
+  log-probabilities" (#216). The inference server now takes a prompt that fills the whole context when the request only
+  scores it (echo with max_tokens 0) — the same as llama-perplexity -c 512. Models with fewer than 512 positions get the
+  reason, and a failed scoring step shows why the server refused.
+
 ## 0.18.0 — Model evaluation: transformers 5 models · learned and forgotten · result table · guide (2026-11-02)
 
 0.18.0 fixes and widens 0.17.0's Model evaluation (#196–#202): conversion and comparison for models saved with transformers 5, what a fine-tune learned and forgot against the model before fine-tuning, a result table and workspace comparison, accuracy in Improve, and a Model evaluation guide. Existing requests give the same output bits.
