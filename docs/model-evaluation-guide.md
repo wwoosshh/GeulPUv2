@@ -28,8 +28,9 @@ data and settings a rerun gives bit-identical results, so a before/after compari
   workspace name becomes the name of the files it makes and their model name (`general.name` in the GGUF) — letters and digits in it go
   into the file names as they are.
 - **Reference model** — what every version is compared with. A BF16 or F16 file of the same model is best (Q8_0 if it does not fit in
-  graphics memory); for a fine-tuned model, the BF16 converted with Make GGUF becomes the reference. With a file of another model or
-  another fine-tune as the reference, every KL measures the wrong thing.
+  graphics memory); for a fine-tuned model, the 16-bit file converted with Make GGUF becomes the reference (BF16 when the original
+  weights are bfloat16, F16 when they are float32 or float16). With a file of another model or another fine-tune as the reference,
+  every KL measures the wrong thing.
 - **Baseline model** (optional) — a GGUF of the model before fine-tuning. When one is chosen, every result on graded data counts what
   the fine-tune learned and forgot (section 7).
 - **Version** — a GGUF file to compare (v1, v2, …). Its making settings (type · imatrix · per-matrix types · tool versions) and a note
@@ -52,9 +53,13 @@ transformers 5.22.1).
    - two app-only virtual environments made with your Python (3.10 or later) — one with transformers 4.57.6, the version llama.cpp
      pins, and one with transformers 5.22.1 for folders saved with transformers 5 (it shares torch with the first). Python itself is
      not downloaded.
-3. **Make GGUF** — source 'Original model folder', conversion type BF16, quantization types (choose several — Q8_0 · Q6_K · Q5_K_M ·
-   Q4_K_M · Q4_0 · IQ4_XS). The converted file becomes the reference model and the quantized files become versions. The app picks the
-   environment from the `transformers_version` in the folder's `config.json`. When a made file is not supported by the engine, the job
+3. **Make GGUF** — source 'Original model folder', conversion type (BF16 · F16 · Q8_0), quantization types (choose several — Q8_0 ·
+   Q6_K · Q5_K_M · Q4_K_M · Q4_0 · IQ4_XS). The converted file becomes the reference model and the quantized files become versions. The
+   app picks the environment from the `transformers_version` in the folder's `config.json`. The conversion type defaults to the type the
+   original weights were saved in (`torch_dtype` · `dtype` in `config.json`) — BF16 for bfloat16, F16 for float32 · float16 (the same
+   choice as llama.cpp's `--outtype auto`). Converting a model saved in float32 (common for full fine-tuning) to BF16 puts the KL
+   against the original in the 10⁻⁴ range from rounding alone; F16 keeps it in the 10⁻⁶ range — the card shows the original weights'
+   type and this reason. When a made file is not supported by the engine, the job
    summary names its type and the reason. In small models whose hidden size or FFN width is not a multiple of 256, k-quants turn into
    llama.cpp's fallback types (Q5_0 · Q5_1 · IQ4_NL), which the engine does not take — use Q8_0 · Q4_0 (the card points this out; Q4_0
    makes the token embeddings and output Q4_0 too). You can also use an imatrix (made from a text file, or a
@@ -117,8 +122,9 @@ Built-in data — `basic60` (60 conversations written by GeulPU, six categories)
 
 **Text (.txt)** — one text, split into tokens and scored on the second half of every 512-token chunk (the positions llama-perplexity
 uses). No answer comparison or grading. Set the number of chunks with 'Chunks' on the Run evaluation card or `chunks` in the API
-(default 64 — 1 to 4096), taken from the start. The model's maximum position (context) has to be 512 or more (small models with 512
-work).
+(default 64 — 1 to 4096), taken from the start. Asking for more chunks than the text has measures what there is, and the result
+records the measured number ("201 chunks (requested 4096)" — the same text lines up as the same settings whatever was requested). The
+model's maximum position (context) has to be 512 or more (small models with 512 work).
 
 ## 4. Grading rules
 
@@ -151,7 +157,9 @@ from the weights alone.
   mean negative log-probability difference of that token.
 - **PPL · NLL** — the mean negative log-probability (nat) of the same tokens and its exp, for both the reference model and the evaluated
   model. Text data also gives **BPB** (bits per byte of the text) — divided by bytes, so models with different vocabularies can be
-  compared (measure such a model as the reference model of its own workspace on the same data).
+  compared (measure such a model as the reference model of its own workspace on the same data). The bytes are exactly the bytes the
+  scored tokens stand for (a character cut at a chunk boundary counts with its own bytes — the same as an independent count with the
+  tokenizer).
 
 **(b) Each model's own answers** — both models answer the same conversations greedily with their own GGUF chat templates. Template and
 EOS faults show up here.
@@ -180,7 +188,7 @@ Q8_0, where the KL is small.
 Feeds the result's reference values (the reference model's answers and the top 64 at every position) to the original model
 (transformers, CPU) token by token and compares every position. It uses a Make GGUF virtual environment — the one matching the major
 transformers version that saved the original folder (4.57.6 or 5.22.1). Compute type float32 (default — bfloat16 weights are widened
-exactly) or bfloat16.
+exactly) or bfloat16. Only results on chat data are compared (not text data yet — the card does not appear).
 
 ![The Compare with the original model card — KL 1.1e-6, top-1 100 %, 2,500 positions, 600 conversations; the 9 hyperparameters are the same in config.json, transformers and the GGUF](img/eval/06-original-en.png)
 
@@ -189,11 +197,15 @@ exactly) or bfloat16.
   differed. When only the GGUF differs, it compares and flags it — that difference shows in the KL.
 - **Scale** — with a 16-bit reference model a correct conversion gives a KL far below 10⁻³ (measured on this PC: 3.5 × 10⁻⁶ to
   1.0 × 10⁻⁴ — smaller when the answers are more certain). Above 10⁻³ the screen flags it. With a Q8_0 reference model it is around
-  1.6 × 10⁻³, and the versions' KL is measured on top of that.
+  1.6 × 10⁻³, and the versions' KL is measured on top of that. When the original model was saved in float32 · float16 and the
+  reference model is BF16, rounding alone can put it in the 10⁻⁴ range (the conversion is not wrong — the screen says so); for a
+  reference closer to the original values, make it with conversion type F16 (10⁻⁶ range).
 - **Time** — the original model runs once per conversation on the CPU, so the time grows with the number of conversations and the
   answer length (60 short answers take under a minute; the 1,319 of GSM8K took 24 minutes on this PC). While it runs, the job step
   shows "conversation k/n · about … left", and **Conversations to compare** (the first n — 0 means all) shortens it. The app takes no
   other job meanwhile.
+- **Comparing again** — each number of conversations and compute type keeps its own result. The card shows the one that compared the
+  most and lists the others as "Other comparison" lines — a quick re-check of the first n leaves the full comparison as it was.
 
 ## 7. Against the model before fine-tuning — learned and forgotten
 
@@ -251,21 +263,26 @@ Chat and text data both work — measured on text from the model's field, it sho
 thinking · chunks) to put each version's latest result in one table.
 
 - Columns — version (note) · type · size · KL · top-1 · answers that differ · accuracy (graded data — the tooltip gives the 95 %
-  interval). With graded data, rows for the reference model and the model before fine-tuning (section 7) follow underneath.
+  interval) · PPL · BPB (text data). Rows for the reference model and the model before fine-tuning (section 7) follow underneath —
+  their accuracy with graded data, their PPL · BPB with text data.
 - **By category** — accuracy (graded data) or KL per category (`category`).
 - **Size and quality chart** — size across, **Quality** up (KL on a log scale, or accuracy). Filled points are the frontier — versions
   with no smaller version that is as good or better. An outlined point has a smaller version that is as good or better.
 - **Export CSV** — every result of the workspace (version × data · settings), one row each, plus per-category rows. The columns are
   `workspace` · `version` · `label` · `file` · `type` · `size_bytes` · `data` · `mode` · `max_tokens` · `thinking` · `category` ·
   `items` · `kl_mean` · `kl_p99` · `top1` · `ppl_ratio` · `answers_differ` · `answers_compared` · `near_tie` · `accuracy` ·
-  `accuracy_lo` · `accuracy_hi` · `ref_accuracy` · `ref_only` · `cand_only` · `finished` · `result_dir`.
+  `accuracy_lo` · `accuracy_hi` · `ref_accuracy` · `ref_only` · `cand_only` · `finished` · `result_dir` · `chunks` (text — the
+  measured number) · `nll_ref` · `nll` · `ppl_ref` · `ppl` · `bpb_ref` · `bpb` · `baseline_ppl` · `baseline_bpb`.
 
 ![The Result table — facts600, exact, answers 64 tokens; per version type, size, KL, top-1, answers that differ and accuracy, with rows for the reference model and the model before fine-tuning; below, the size and quality chart (filled v4, v3, v2 and v1 are the frontier, v5 is outlined)](img/eval/08-table-en.png)
 
 **Compare workspaces** (a button above the workspace list once two or more workspaces have results) — lines up workspaces measured
 with the same data and settings, type (row) by workspace (column). The first row is each workspace's reference model (type ·
 accuracy); each cell gives the KL (against that workspace's reference model) and the accuracy (in brackets, the difference from that
-workspace's reference model) — which fine-tune, A or B, loses less at Q4_K_M. The chosen workspaces' results export as one CSV.
+workspace's reference model) — which fine-tune, A or B, loses less at Q4_K_M. With text data each cell also shows that model's PPL ·
+BPB, the reference-model row shows the reference model's PPL · BPB, and a "Before fine-tuning" row (accuracy · PPL · BPB) appears
+when a workspace has a baseline model — which of continued pretraining, merges and vocabulary extension has the lowest BPB shows in one
+table (BPB compares across vocabularies). The chosen workspaces' results export as one CSV.
 **Paired test** — choose two results (across workspaces too, reference models included — for example the BF16 of SFT ↔ DPO) to pair
 them conversation by conversation: only A right · only B right · both right · both wrong, with a sign-test p.
 
@@ -282,7 +299,7 @@ Under the data folder (`--data` · `--자료`, or the `GEULPU_HOME` environment 
 |---|---|
 | `평가\작업공간\<id>\workspace.json` | Name · original folder · reference model · baseline model · versions (making settings · note) |
 | `평가\작업공간\<id>\결과\<time>-<version>\` | `summary.json` (metrics · accuracy · against the model before fine-tuning (`baseline`) · reproduction info · result hash) · `items.jsonl` (per conversation — with a baseline model, also whether it got the conversation right, `base_correct`) · `positions.bin` (per position KL · top-1 · Δp …) · `diverge.jsonl` (where answers split) · `run-<version>.jsonl` (run log of the generated answers — 'Open in debugger'; a request the server refused keeps its body in `error`) |
-| `평가\기준값\<first 16 of the key>\` | `reference.json` · `topk.bin` (reference values) · `run-ref.jsonl` · `original.json` (Compare with the original model) — the baseline model's answers are kept the same way, in that model's key folder |
+| `평가\기준값\<first 16 of the key>\` | `reference.json` · `topk.bin` (reference values) · `run-ref.jsonl` · `original*.json` (Compare with the original model — the full comparison `original.json`, the first n `original-n<n>.json`, with `-bfloat16` at the end for bfloat16) — the baseline model's answers are kept the same way, in that model's key folder |
 | `평가\작업공간\<id>\검증\` · `개선\` | Conversion check and improvement reports |
 | `평가\데이터\` | Imported data |
 | `made\<workspace>\` | Made GGUFs · imatrix · the conversion check's fixed versions (under the model folder when it is an ASCII path — llama.cpp's tools cannot open non-ASCII paths) |
@@ -300,17 +317,17 @@ and end. `POST /api/job/cancel` stops it and `GET /api/job/log?from=<line>` read
 
 | Request | What it does · body (JSON) |
 |---|---|
-| `GET /api/eval` | Workspaces, versions and results, and the data list — each result has `metrics` · `accuracy` · `categories` (per category) · `baseline` (against the model before fine-tuning) |
+| `GET /api/eval` | Workspaces, versions and results, and the data list — each result has `settings` (for text, `chunks` is the measured number and `chunks_requested` a larger request) · `metrics` · `accuracy` · `categories` (per category) · `baseline` (against the model before fine-tuning) · `text` (bytes · BPB); each workspace has `original_dtype` (the type the original weights were saved in) |
 | `POST /api/eval/workspace` | `{"action": "create", "name", "reference": "<model id or empty>", "original_dir"}` · `update` (`id` · `name` · `current` · `baseline`: the baseline model's id, empty to remove it) · `delete` (`id`) |
 | `POST /api/eval/version` | `{"workspace", "model", "label"}` — adds a GGUF from the app's model list as a version (`action: "delete"` with `id` removes one) |
 | `POST /api/eval/data/import` | `{"path", "name"}` — imports JSONL or TXT |
 | `POST /api/eval/tools` | Set up tools — `{"python": "<path, empty for automatic>"}` · `GET` shows what it downloads and the installed tools |
-| `POST /api/eval/make` | `{"workspace", "from": "convert" or "ref", "source_dir", "outtype": "bf16", "quants": ["Q4_K_M"], "imatrix": {"mode": "none" · "text" · "file", "path"}, "tensor_types": ["attn_v=q6_k"], "label"}` |
+| `POST /api/eval/make` | `{"workspace", "from": "convert" or "ref", "source_dir", "outtype": "bf16" · "f16" · "q8_0", "quants": ["Q4_K_M"], "imatrix": {"mode": "none" · "text" · "file", "path"}, "tensor_types": ["attn_v=q6_k"], "label"}` — leaving out `outtype` follows the original weights (bfloat16 → bf16, float32 · float16 → f16) |
 | `POST /api/eval/check` · `GET /api/eval/check?workspace=&version=` | Conversion check `{"workspace", "version": "ref" or "v1", "original_dir"}` · the last report |
 | `POST /api/eval/fix` | A new version with fixed metadata `{"workspace", "from", "changes": [{"key", "type", "value"}]}` |
 | `POST /api/eval/run` | Evaluate `{"workspace", "versions": ["v1"], "data", "mode": "exact" · "fast", "max_tokens", "thinking", "slots", "chunks"}` — `chunks` is the number of text-data chunks (default 64). 400 with the reason when the engine does not support the reference model or a version |
 | `GET /api/eval/result?workspace=&dir=` · `/api/eval/item?workspace=&dir=&i=` · `/api/eval/compare?workspace=&a=&b=` | A result · one conversation · before/after |
-| `POST /api/eval/original` · `GET /api/eval/original?workspace=&dir=` | Compare with the original model `{"workspace", "dir", "original_dir", "dtype": "float32", "limit": 0}` — `limit` is the first n conversations (0 for all) · its values (`conversations` · `conversations_total`) |
+| `POST /api/eval/original` · `GET /api/eval/original?workspace=&dir=` | Compare with the original model `{"workspace", "dir", "original_dir", "dtype": "float32", "limit": 0}` — `limit` is the first n conversations (0 for all), chat-data results only · the values of the comparison that compared the most (`conversations` · `conversations_total` · `original_dtype`) with `file`, and `runs`, a summary of every stored comparison |
 | `POST /api/eval/improve` · `GET /api/eval/improve?workspace=` | Improvement measurement `{"workspace", "base", "data", "max_tokens", "restore": "q6_k", "layer_ranges": true}` · the last report — every row has `kl_mean` · `size` · `size_diff` · `kl_cut` (the share of the base version's KL removed) · `kl_cut_pct_per_mib`, and with graded data `accuracy` · `accuracy_diff` · `accuracy_pp_per_mib` |
 | `POST /api/eval/debug` · `/api/eval/open` | Send a result's run logs to the debugger · open the result folder |
 
