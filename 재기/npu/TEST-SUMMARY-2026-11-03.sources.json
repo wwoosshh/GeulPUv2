@@ -1,0 +1,224 @@
+{
+  "created": "2026-11-03",
+  "repository_head": "594454fd4a6a49c81c246276bf806d2eab41ee2f",
+  "reports": [
+    {
+      "part": 1,
+      "section": 1,
+      "title": "외부 NPU 런타임 초기 기준",
+      "source": "재기/npu/results/2026-10-27.md",
+      "sha256": "1badc83e72ed4cd55fb68451709076be22616a72fa234353a6d97ba918277f37",
+      "table_header_count": 2
+    },
+    {
+      "part": 1,
+      "section": 2,
+      "title": "정확한 선형층 초기 검증",
+      "source": "재기/npu/results/2026-10-28-exact.md",
+      "sha256": "002a1ac405e6003cb94cd30e08374b821ed3e68c3272e379412ce47205cdc526",
+      "table_header_count": 4
+    },
+    {
+      "part": 1,
+      "section": 3,
+      "title": "초기 최적화",
+      "source": "재기/npu/results/2026-10-28-optimized.md",
+      "sha256": "ad14fc6d6bb51047949257806049f8efecfc0e72e2defb52d2d50517aafd2efe",
+      "table_header_count": 2
+    },
+    {
+      "part": 1,
+      "section": 4,
+      "title": "계획·가중치 준비 캐시",
+      "source": "재기/npu/results/2026-10-28-planned.md",
+      "sha256": "07b46f989e56d609f8235b6dd4ffcefb9c4c2e93f544022d76d24c60c2cb0683",
+      "table_header_count": 2
+    },
+    {
+      "part": 1,
+      "section": 5,
+      "title": "자리 결합 및 모델 검증",
+      "source": "재기/npu/FUSION-RESULTS-2026-10-30.md",
+      "sha256": "29c80d014939b5cd4c1c4a8341b92d5ae57c299c420ac2d92b3df8099d644a1b",
+      "table_header_count": 1
+    },
+    {
+      "part": 2,
+      "section": 1,
+      "title": "CPU 데이터 처리: GL/C/Python/NumPy",
+      "source": "재기/language/RESULTS.md",
+      "sha256": "740c1cbe2c5e0eebe2703f892ca6644d859b2a0f347513d33bb2afac11efffa4",
+      "table_header_count": 2
+    },
+    {
+      "part": 2,
+      "section": 2,
+      "title": "GL·C 소스 최적화 후 비교",
+      "source": "재기/language/AUDIT-RESULTS-2026-10-29.md",
+      "sha256": "00bc5222fa3c6685a323f1bfc3b626838f1aa3fb0426d755f03e78c8d76c8250",
+      "table_header_count": 1
+    },
+    {
+      "part": 2,
+      "section": 3,
+      "title": "CPU 정수 행렬 부분합: GL/C/AVX2",
+      "source": "재기/language/MATRIX-DECISION-2026-10-29.md",
+      "sha256": "9287706e6a151448b7cf106286e00f551b20384805c5804ac22a342f4194d8e6",
+      "table_header_count": 2
+    },
+    {
+      "part": 2,
+      "section": 4,
+      "title": "실제 NPU 커널: GL/C/펼친 C/AIE C++",
+      "source": "재기/npu/gl_aie/README.md",
+      "sha256": "c43381dcb6d5081be12508aa07bd59f55a6db6cbd8dbe81f0357df781978f673",
+      "table_header_count": 3
+    },
+    {
+      "part": 3,
+      "section": 1,
+      "title": "네이티브 후처리·FMA 적합성·초기 중첩",
+      "source": "재기/npu/next_stage/RESULTS-2026-10-31.md",
+      "sha256": "7c40b2a07eb00d463de4d6788ab5563117050cc42ca0544ad6307f6da8f67342",
+      "table_header_count": 8
+    },
+    {
+      "part": 3,
+      "section": 2,
+      "title": "초기 실용성 검증 질문",
+      "source": "재기/npu/next_stage/VIABILITY-2026-10-31.md",
+      "sha256": "c1728fccf20d0e991b2cbf5936ffcbb195170f1a52b8302f01d60c2d42303ad1",
+      "table_header_count": 1
+    },
+    {
+      "part": 3,
+      "section": 3,
+      "title": "CPU/NPU 단계 분담 및 묶음 제출",
+      "source": "재기/npu/next_stage/PHASE-BENCH.md",
+      "sha256": "b777ee7008a4c83de8e5c594a89beb07dedcf2c7baa05104924025de4aa01551",
+      "table_header_count": 4
+    },
+    {
+      "part": 3,
+      "section": 4,
+      "title": "NPU 작업자 1·2·4개",
+      "source": "재기/npu/next_stage/MULTIWORKER-2026-11-01.md",
+      "sha256": "d332a13374aeb9c7a83fb710dee5b14c64606bc2e8e693d077542cf00b756d71",
+      "table_header_count": 3
+    },
+    {
+      "part": 3,
+      "section": 5,
+      "title": "CPU 후처리 스레드 1·2·4개",
+      "source": "재기/npu/next_stage/PARALLEL-POST.md",
+      "sha256": "c21ec2dce2873b6f40f4a98c6fd9559255c42c0543825489d2f13afd287b30a9",
+      "table_header_count": 2
+    },
+    {
+      "part": 4,
+      "section": 1,
+      "title": "기본/중첩/재사용/결합 4조합",
+      "source": "재기/npu/next_stage/REUSE-OVERLAP.md",
+      "sha256": "5d3786542f57860c9ae913bc1e1f9562152b37a55020de187a306cd0434e368d",
+      "table_header_count": 3
+    },
+    {
+      "part": 4,
+      "section": 2,
+      "title": "64·256토큰 전체 모델 및 층별 분석",
+      "source": "재기/npu/next_stage/LONG-OVERLAP.md",
+      "sha256": "78dab552765864b64d5c4d0dcba997259ab50d14b976a8e22c84035fe8ac1780",
+      "table_header_count": 4
+    },
+    {
+      "part": 4,
+      "section": 3,
+      "title": "제출 용량 2,048·4,096·8,192",
+      "source": "재기/npu/next_stage/BATCH-CAPACITY.md",
+      "sha256": "a46b49ef57455c611b326605bf8d93dd7961eefeed5f5613647c3e2b0b4b35c6",
+      "table_header_count": 1
+    },
+    {
+      "part": 4,
+      "section": 4,
+      "title": "입력 크기별 자동 용량 정책",
+      "source": "재기/npu/next_stage/ADAPTIVE-REUSE.md",
+      "sha256": "11a360a41d49ae2a6b23ea981d0f64ca74f258159c1ba9adfe926623a4d85b5c",
+      "table_header_count": 0
+    },
+    {
+      "part": 5,
+      "section": 1,
+      "title": "범위 분석·INT24 압축·넘침 재요청",
+      "source": "재기/npu/next_stage/PACKED-PARTIALS.md",
+      "sha256": "8a71a337eff172549aa96a25c69dda841f6f80d6058d26908bce33be51942e8e",
+      "table_header_count": 1
+    },
+    {
+      "part": 5,
+      "section": 2,
+      "title": "SIMD 복원·헤더 내 넘침 보정",
+      "source": "재기/npu/next_stage/PACKED-PARTIALS-V2.md",
+      "sha256": "c493bbf503acedb4e664a71d0bf0db821f3cb93b338c88d0d94659b6c12d1ed2",
+      "table_header_count": 1
+    },
+    {
+      "part": 5,
+      "section": 3,
+      "title": "NPU 내적·압축 융합",
+      "source": "재기/npu/next_stage/PACKED-PARTIALS-V3.md",
+      "sha256": "357f0c0fe439ab1e062da0fc4efc3cd8a1adbf786ffa1826587613b24722d287",
+      "table_header_count": 1
+    },
+    {
+      "part": 5,
+      "section": 4,
+      "title": "실행·전송·호스트 단계별 진단",
+      "source": "재기/npu/next_stage/TRANSFER-DIAGNOSTIC.md",
+      "sha256": "2b1a2b2416349d01130e1f1325062311f1d2f82b5bd79f599947db7b0778f2e2",
+      "table_header_count": 1
+    },
+    {
+      "part": 6,
+      "section": 1,
+      "title": "핸들 재사용과 입력·출력 복사 축소",
+      "source": "재기/npu/next_stage/RETAINED-DEVICE.md",
+      "sha256": "1396c8ea165fce2af42d68bc9bade623d40d8b88025fc66dacc45896ca50b008",
+      "table_header_count": 1
+    },
+    {
+      "part": 6,
+      "section": 2,
+      "title": "연속 입력 유지·출력 중간 복사만 제거",
+      "source": "재기/npu/next_stage/OUTPUT-VIEW.md",
+      "sha256": "d7261b7a5dde68359916dc1bb96889cf382a546b1e6a508c48a3004e1215a1fa",
+      "table_header_count": 1
+    },
+    {
+      "part": 6,
+      "section": 3,
+      "title": "자동 용량＋핸들＋출력 뷰 통합",
+      "source": "재기/npu/next_stage/ADAPTIVE-OUTPUT-VIEW.md",
+      "sha256": "e6438fd8e8a45259ccdef819461ae383e95fd7b0cc583f10a62d0be9217c2488",
+      "table_header_count": 1
+    },
+    {
+      "part": 6,
+      "section": 4,
+      "title": "상태 초기화·KV·분할 입력·연속 생성",
+      "source": "재기/npu/next_stage/MODEL-INTEGRATION.md",
+      "sha256": "30d8629f172d28471be118fd1c6e018357ccb3a8a8a64aa64ba42e585cd925dc",
+      "table_header_count": 1
+    },
+    {
+      "part": 7,
+      "section": 1,
+      "title": "CPU 단독 대 최종 분담 및 별도 FastFlowLM",
+      "source": "재기/npu/next_stage/SYSTEM-COMPARISON.md",
+      "sha256": "4d490a0b39e760472602e22f74b1eee3ffbeb4b64e872b23b1f5d83c3b5e0925",
+      "table_header_count": 3
+    }
+  ],
+  "missing_historical_links": [],
+  "output_sha256": "9ab330b49d957d5288bbd3587002b4c866a68c711cc569ce526061700235d4ea"
+}
