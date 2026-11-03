@@ -334,6 +334,12 @@ const EVAL_DICT = {
   "KL divergence 99 백분위수": "KL divergence, 99th percentile",
   "top-1 일치율": "Top-1 agreement",
   "PPL 비(평가 ÷ 기준)": "PPL ratio (evaluated ÷ reference)",
+  "같은 토큰 {}개": "{} same tokens",
+  "글 {}바이트": "{} bytes of text",
+  "미세조정 전(비교용 모델)": "Before fine-tuning (baseline model)",
+  "미세조정 전 모델을 고르면 텍스트 결과에 그 모델의 같은 토큰 PPL과 PPL 비를 함께 보입니다(이어서 사전학습의 PPL 변화). 그 모델의 값은 한 번 재어 다시 씁니다.": "If you choose the model before fine-tuning, text results also show its PPL on the same tokens and the PPL ratios (the PPL change from continued pretraining). Its values are measured once and reused.",
+  "기준 ÷ 비교용 {} · 평가 ÷ 비교용 {}": "reference ÷ baseline {} · evaluated ÷ baseline {}",
+  "PPL은 청크마다 뒤쪽 255 토큰(llama-perplexity와 같은 위치)의 평균 NLL(nat)의 지수입니다. BPB(bits per byte)는 같은 글의 바이트로 나눈 값이라 어휘가 다른 모델끼리도 견줄 수 있습니다 — 그 모델을 기준 모델로 둔 작업 공간에서 같은 데이터로 재세요.": "PPL is the exponential of the mean NLL (nat) over the last 255 tokens of each chunk (the same positions as llama-perplexity). BPB (bits per byte) divides by the bytes of the same text, so models with different vocabularies can be compared — measure such a model as the reference model of its own workspace on the same data.",
   "Δp 평균(기준 − 평가)": "Mean Δp (reference − evaluated)",
   "기준 모델의 상위 {}개 밖 확률": "Probability outside the reference top {}",
   "KL divergence는 기준 모델의 상위 {}개 토큰과 나머지 확률 하나로 계산한 값입니다 — 모든 어휘로 계산한 값보다 조금 작습니다(아래쪽 값). 위치 {}개.": "KL divergence is computed from the reference model's top {} tokens plus one remainder probability — slightly below the full-vocabulary value (a lower bound). {} positions.",
@@ -1405,12 +1411,13 @@ function evRunCard(w, busy) {
           h('button', { class: 'btn sm needs-conn', onclick: () => evImport(w) }, I('folder', 's'), T('불러오기'))),
         evDataInfo(d)),
       // #199 — 비교용 모델(미세조정 전): 채점 데이터면 결과마다 배운 것 · 잊은 것. 그 모델의 답은 기준값처럼 한 번 만들고 다시 쓴다
-      text ? null : h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('비교용 모델(미세조정 전 — 고름)')),
+      h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('비교용 모델(미세조정 전 — 고름)')),     // #217 — 텍스트 데이터에서도(같은 토큰의 PPL)
         h('select', { class: 'input', 'data-fk': 'ev-base', 'aria-label': T('비교용 모델'), onchange: async ev => {
           try { await api('/api/eval/workspace', { action: 'update', id: w.id, baseline: ev.target.value }); evLoad(); } catch (e) { toast(e.message, 'err'); }
         } }, h('option', { value: '', selected: w.baseline && w.baseline.model ? null : true }, T('없음')),
           evModelOpts(evRunnables().filter(m => m.id !== w.reference.model), (w.baseline && w.baseline.model) || '')),
-        h('span', { class: 'small muted' }, T('미세조정 전 모델을 고르면 채점 데이터의 결과마다 그 모델 대비 정답률과 배운 것(전에 틀리고 지금 맞음) · 잊은 것(전에 맞고 지금 틀림)을 셉니다. 그 모델의 답은 한 번 만들어 다시 씁니다.'))),
+        h('span', { class: 'small muted' }, text ? T('미세조정 전 모델을 고르면 텍스트 결과에 그 모델의 같은 토큰 PPL과 PPL 비를 함께 보입니다(이어서 사전학습의 PPL 변화). 그 모델의 값은 한 번 재어 다시 씁니다.')
+          : T('미세조정 전 모델을 고르면 채점 데이터의 결과마다 그 모델 대비 정답률과 배운 것(전에 틀리고 지금 맞음) · 잊은 것(전에 맞고 지금 틀림)을 셉니다. 그 모델의 답은 한 번 만들어 다시 씁니다.'))),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('계산 방식')), seg),
       h('div', { class: 'row g16 ev-nums' },
         text ? num('chunks', 1, 4096, T('청크 수(512 토큰)')) : num('max', 1, 8192, T('답의 최대 토큰')),
@@ -1824,6 +1831,19 @@ function evResultView(w) {
             h('div', { class: 's' }, T`배운 것 ${bl.cand_learned} · 잊은 것 ${bl.cand_forgotten}`))),
         h('p', { class: 'small muted m0' }, T('배운 것은 미세조정 전 모델이 틀리고 이 모델이 맞은 대화, 잊은 것은 미세조정 전 모델이 맞고 이 모델이 틀린 대화입니다.'))));
     }
+  }
+  // #217 — 텍스트: 절대 PPL(기준 · 평가할 모델) · bits per byte, 비교용 모델(미세조정 전)의 같은 토큰
+  if (!chat && m.positions && typeof m.ppl_ref === 'number') {
+    const tx = s.text || {};
+    const bl = s.baseline && s.baseline.positions ? s.baseline : null;
+    out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, 'PPL'),
+      h('span', { class: 'small muted' }, [T`같은 토큰 ${fmtNum(m.positions)}개`, tx.bytes ? T`글 ${fmtNum(tx.bytes)}바이트` : null].filter(Boolean).join(' · '))),
+      h('div', { class: 'fd-stats ev-stats3' },
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('기준 모델')), h('div', { class: 'v' }, evNum(m.ppl_ref, 3)), h('div', { class: 's' }, `NLL ${evNum(m.nll_ref, 4)} · BPB ${evNum(tx.bpb_ref, 4)}`)),
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('평가할 모델')), h('div', { class: 'v' }, evNum(m.ppl, 3)), h('div', { class: 's' }, `NLL ${evNum(m.nll, 4)} · BPB ${evNum(tx.bpb, 4)}`)),
+        bl ? h('div', { class: 'cell' }, h('div', { class: 'k' }, T('미세조정 전(비교용 모델)')), h('div', { class: 'v' }, evNum(bl.ppl, 3)),
+          h('div', { class: 's' }, T`기준 ÷ 비교용 ${evNum(bl.ref_ppl_ratio, 4)} · 평가 ÷ 비교용 ${evNum(bl.cand_ppl_ratio, 4)}`)) : null),
+      h('p', { class: 'small muted m0' }, T('PPL은 청크마다 뒤쪽 255 토큰(llama-perplexity와 같은 위치)의 평균 NLL(nat)의 지수입니다. BPB(bits per byte)는 같은 글의 바이트로 나눈 값이라 어휘가 다른 모델끼리도 견줄 수 있습니다 — 그 모델을 기준 모델로 둔 작업 공간에서 같은 데이터로 재세요.'))));
   }
   if (m.positions) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('같은 토큰의 확률')),
     h('span', { class: 'small muted' }, chat ? T('기준 모델이 낸 답의 토큰마다') : T('청크마다 뒤쪽 255 토큰'))),
