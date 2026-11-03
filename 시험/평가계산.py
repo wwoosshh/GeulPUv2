@@ -6,9 +6,12 @@
 사례(씨앗 고정): 지수(−700 … 10 과 경계) · 로그(10⁻³⁰⁰ … 1) · KL(K 1 · 20 · 64 · 128 — 무작위 분포, 꼬리가 아주 작은 분포, 평가 쪽 합이
 1 을 넘는 분포) · 꼬리 · 백분위수(무작위 · 0 과 음수가 섞임) · 부호 검정(b · c 0 … 60 과 n 1,000 … 4만의 경계). 모두 비트까지 같아야
 한다. #236 — 부호 검정은 따로 정수로 정확히 계산한 값(math.comb 의 꼴 · Fraction)과도 견준다(상대 오차 10⁻⁹ 안쪽, 정확한 값이 10⁻²⁹⁰
-아래면 둘 다 그 아래) — 참조와 비트가 같아도 둘이 함께 틀릴 수 있어서(2⁻ⁿ 언더플로로 600 · 599 가 p = 0 이던 것).
+아래면 둘 다 그 아래) — 참조와 비트가 같아도 둘이 함께 틀릴 수 있어서(2⁻ⁿ 언더플로로 600 · 599 가 p = 0 이던 것). 같은 까닭으로 다른
+지표도 참조와 따로 견준다: 지수 · 로그는 math.exp · math.log 와 2 ulp 안, KL · 꼬리는 math.fsum 으로 다시 셈한 값과(KL 상대 10⁻⁹ +
+10⁻¹⁵ · 꼬리 10⁻¹³ 안, KL ≥ −10⁻¹⁵), 백분위수는 정렬해 바로 고른 가장 가까운 순위의 값과 같아야 한다.
 이 파일의 함수(지수 · 로그 · KL · 꼬리 · 백분위 · 부호검정)는 평가 결과를 다시 계산하는 시험도 쓴다.
 """
+import math
 import os
 import struct
 import subprocess
@@ -188,10 +191,47 @@ def check(exe):
             틀림 = abs(v - e) > 1e-9 * e if e > 1e-290 else v > 1e-290
             if 틀림:
                 어긋남.append(f"{인자[0]}/{인자[1]}: {v!r} (정확 {e!r})")
-    n2 = sum(1 for 종류, _, _ in 사례 if 종류 == 2)
+        else:
+            왜 = 따로견주기(종류, 인자, LP.비트실수(g))
+            if 왜:
+                어긋남.append(f"{이름[종류]} {왜}")
     print(f"평가 지표의 계산: 사례 {len(사례)} · 다름 {sum(다름.values())}" + (f" — {다름}" if 다름 else "")
-          + f" · 부호 검정 {n2} 사례의 정확한 값과 어긋남 {len(어긋남)}" + (f" — {'; '.join(어긋남[:5])}" if 어긋남 else ""))
+          + f" · 참조와 따로 견준 값과 어긋남 {len(어긋남)}" + (f" — {'; '.join(어긋남[:5])}" if 어긋남 else ""))
     return 0 if not 다름 and not 어긋남 else 1
+
+
+def 따로견주기(종류, 인자, v):
+    """참조(같은 차례의 파이썬)와 따로 — 표준 함수 · 다른 합 · 바로 고른 순위로 다시 셈한 값과 견준다. 틀리면 까닭, 맞으면 None"""
+    def ulp차(a, b):
+        return 0.0 if a == b else abs(a - b) / math.ulp(b)
+    if 종류 == 3:                                               # 지수 — a < −700 은 0
+        a = 인자[0]
+        e = 0.0 if a < -700.0 else math.exp(a)
+        return None if (v == 0.0 if e == 0.0 else ulp차(v, e) <= 2) else f"exp({a!r}) = {v!r} (math {e!r})"
+    if 종류 == 4:
+        x = 인자[0]
+        e = math.log(x)
+        return None if ulp차(v, e) <= 2 else f"log({x!r}) = {v!r} (math {e!r})"
+    if 종류 == 0:                                               # KL — 상위 K 와 나머지 하나, 꼬리가 10⁻¹² 아래면 머리만
+        lr, lq = 인자
+        p = [0.0 if a < -700.0 else math.exp(a) for a in lr]
+        q = [0.0 if b < -700.0 else math.exp(b) for b in lq]
+        e = math.fsum(pi * (a - b) for pi, a, b in zip(p, lr, lq))
+        pt, qt = 1.0 - math.fsum(p), 1.0 - math.fsum(q)
+        if pt >= 바닥:
+            e += pt * (math.log(pt) - math.log(max(qt, 바닥)))
+        if v < -1e-15 or abs(v - e) > 1e-9 * abs(e) + 1e-15:
+            return f"K {len(lr)}: {v!r} (math.fsum {e!r})"
+        return None
+    if 종류 == 5:
+        e = max(0.0, 1.0 - math.fsum(0.0 if a < -700.0 else math.exp(a) for a in 인자[0]))
+        return None if abs(v - e) <= 1e-13 else f"K {len(인자[0])}: {v!r} (math.fsum {e!r})"
+    if 종류 == 1:                                               # 가장 가까운 순위 — ⌈q · n / 100⌉ 째(0 이하는 0)
+        x, q = 인자
+        s = sorted(t if t > 0.0 else 0.0 for t in x)
+        e = s[min(max(-(-q * len(s) // 100), 1), len(s)) - 1]
+        return None if v == e else f"n {len(x)} · q {q}: {v!r} (순위 {e!r})"
+    return None
 
 
 def main():
