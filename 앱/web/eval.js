@@ -115,6 +115,7 @@ const EVAL_DICT = {
   "만들기|make": "Make",
   "기준 모델에서 만듦": "made from the reference model",
   "엔진이 받지 않음 — {}": "Not supported by the engine — {}",
+  "기준 모델을 엔진이 받지 않아 평가할 수 없습니다 — {}": "The engine does not support the reference model, so the workspace cannot be evaluated — {}",
   "기준 모델과 비교할 GGUF 파일을 더하거나, 아래 GGUF 만들기로 원래 모델에서 만드세요.": "Add GGUF files to compare with the reference model, or make them from the original model with Make GGUF below.",
   "양자화": "Quantized",
   "양자화 형식을 하나 이상 고르세요": "Choose at least one quantization type",
@@ -609,6 +610,13 @@ TMX.push(
   [/ · 이어서 평가 못 함: /g, ' · follow-up evaluation failed: '],
   [/엔진이 받지 않는 파일입니다/g, 'The engine does not support this file'],
   [/파일을 열 수 없습니다/g, 'Cannot open the file'],
+  // #213 — 엔진이 받지 않는 기준 모델 · 버전(평가 요청 · 작업 · 커널 모듈 준비)
+  [/기준 모델을 엔진이 받지 않아 평가할 수 없습니다 — /g, 'The engine does not support the reference model, so the workspace cannot be evaluated — '],
+  [/엔진이 받지 않는 버전은 평가할 수 없습니다 — (.+?)\. 평가할 버전에서 빼세요\(버전 카드에 까닭이 보입니다\)/g, 'Versions the engine does not support cannot be evaluated — $1. Remove them from the versions to evaluate (the version card shows why)'],
+  [/엔진이 받지 않는 버전은 개선 측정의 기준 버전으로 쓸 수 없습니다 — /g, 'A version the engine does not support cannot be the base version of an improvement measurement — '],
+  [/\[(\S+)\] 엔진이 받지 않는 버전이라 건너뜁니다 — /g, '[$1] The engine does not support this version — skipped: '],
+  [/\[비교용\] 엔진이 받지 않는 모델이라 배운 것 · 잊은 것을 세지 않습니다 — /g, '[baseline] The engine does not support this model, so learned and forgotten answers are not counted — '],
+  [/엔진이 받지 않는 모델이라 커널 모듈을 만들지 않습니다 — /g, 'The engine does not support this model, so no kernel module is made — '],
 );
 
 // view: ws(작업 공간) · result(결과) · compare(전후 비교) · item(답이 달라진 곳). res · cmp · items 는 받아 둔 응답(결과 폴더는 다시 쓰지 않는다)
@@ -632,6 +640,8 @@ const evDirWhen = d => { const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})
 const evMode = m => (m === 'fast' ? T('빠름') : T('정밀'));
 const evFinish = f => ({ stop: T('끝 토큰'), length: T('최대 길이'), tool_calls: T('도구 호출'), text: '-' })[f] || (f || '-');
 const evRefLabel = w => (w.reference && w.reference.model ? labelById(w.reference.model) : T('아직 없음'));   // #202 — '기준 모델 기준 모델 없음'이 되지 않게
+// #213 — 엔진이 받지 않는 모델(모델 목록의 shape)이면 그 까닭, 아니면 null(목록에 없는 모델은 작업이 알린다)
+const evBad = id => { const m = modelOf(id); return m && m.shape && !m.shape.ok ? (m.shape.reason || '') : null; };
 const evVerLabel = (w, vid) => { const v = w.versions.find(x => x.id === vid); return v ? `${vid} · ${modelOf(v.model) ? labelById(v.model) : v.file}` : vid; };
 const evResults = w => [...(w.results || [])].sort((a, b) => byName(a.dir, b.dir));
 const evLatest = (w, vid) => evResults(w).filter(r => r.version === vid).pop() || null;
@@ -848,9 +858,10 @@ function evOpts(w) {
   if (!o) {
     const ds = (EV.list && EV.list.data) || [];
     const d0 = ds.find(d => d.name === 'basic60') || ds.find(d => d.kind === 'chat') || ds[0];
-    o = EV.opts[w.id] = { versions: new Set(w.current ? [w.current] : w.versions.map(v => v.id)), data: d0 ? d0.name : '', mode: 'exact', max: 512, think: false, chunks: 64, slots: 8, dump: false };
+    const okv = w.versions.filter(v => evBad(v.model) === null).map(v => v.id);   // #213 — 지금 버전을 엔진이 받지 않으면 받는 버전 모두
+    o = EV.opts[w.id] = { versions: new Set(w.current && okv.includes(w.current) ? [w.current] : okv), data: d0 ? d0.name : '', mode: 'exact', max: 512, think: false, chunks: 64, slots: 8, dump: false };
   }
-  for (const v of [...o.versions]) if (!w.versions.some(x => x.id === v)) o.versions.delete(v);
+  for (const v of [...o.versions]) { const x = w.versions.find(y => y.id === v); if (!x || evBad(x.model) !== null) o.versions.delete(v); }   // #213 — 받지 않는 버전은 고르지 않는다
   return o;
 }
 async function evRun(w) {
@@ -1143,8 +1154,8 @@ function evSizeQuality(w, rep, by) {
     h('p', { class: 'small muted m0' }, T('같은 크기면 다른 런타임과도 맞는 표준 형식(예: Q5_K_M)이 나을 수 있습니다 — 표준 형식 버전을 같은 데이터로 함께 평가하면 여기 나란히 보입니다.')));
 }
 function evImproveCard(w, busy) {
-  const qv = w.versions.filter(v => v.made && v.made.kind === 'quantize' && v.made.settings);
-  if (!w.reference.model || !qv.length) return null;
+  const qv = w.versions.filter(v => v.made && v.made.kind === 'quantize' && v.made.settings && evBad(v.model) === null);   // #213 — 엔진이 받는 버전만
+  if (!w.reference.model || evBad(w.reference.model) !== null || !qv.length) return null;
   evToolsNeed();
   evImpNeed(w);
   const t = EV.tools, st = t && !t.error ? t.state : null;
@@ -1332,16 +1343,20 @@ function evRunCard(w, busy) {
     class: o.mode === m ? 'on' : '', role: 'radio', 'aria-checked': o.mode === m ? 'true' : 'false', 'data-fk': 'ev-mode-' + m, disabled: m === 'fast' && !cuda ? true : null,
     onclick: () => { o.mode = m; renderEval(true); },
   }, evMode(m))));
-  const ok = w.versions.length && w.reference.model && ds.length;
+  const refBad = evBad(w.reference.model);   // #213 — 기준 모델을 엔진이 받지 않으면 평가할 수 없다
+  const ok = w.versions.length && w.reference.model && ds.length && refBad === null;
   return h('div', { class: 'card col g16' },
     h('div', { class: 'row' }, h('span', { class: 'sec' }, T('평가 실행')), h('span', { class: 'grow' }),
       h('span', { class: 'small muted' }, T('실행하는 동안 불러온 채팅 모델은 GPU에서 내립니다'))),
     h('div', { class: 'ev-form' },
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('평가할 버전')),
-        w.versions.length ? h('div', { class: 'row g12' }, w.versions.map(v => h('label', { class: 'check', 'data-tip': v.label || v.file, 'data-tip-pos': 'top' }, h('input', {
-          type: 'checkbox', 'data-fk': 'ev-v-' + v.id, value: v.id, 'aria-label': `${v.id} · ${v.label || v.file}`, checked: o.versions.has(v.id) ? true : null,
-          onchange: ev => { if (ev.target.checked) o.versions.add(v.id); else o.versions.delete(v.id); },
-        }), v.id))) : h('span', { class: 'small muted' }, T('먼저 버전을 더하세요'))),
+        w.versions.length ? h('div', { class: 'row g12' }, w.versions.map(v => {
+          const bad = evBad(v.model);   // #213 — 엔진이 받지 않는 버전은 고를 수 없다(까닭은 풍선 도움말 · 버전 카드)
+          return h('label', { class: 'check', 'data-tip': bad !== null ? T`엔진이 받지 않음 — ${TM(bad)}` : (v.label || v.file), 'data-tip-pos': 'top' }, h('input', {
+            type: 'checkbox', 'data-fk': 'ev-v-' + v.id, value: v.id, 'aria-label': `${v.id} · ${v.label || v.file}`, checked: o.versions.has(v.id) ? true : null, disabled: bad !== null ? true : null,
+            onchange: ev => { if (ev.target.checked) o.versions.add(v.id); else o.versions.delete(v.id); },
+          }), v.id);
+        })) : h('span', { class: 'small muted' }, T('먼저 버전을 더하세요'))),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('데이터')),
         h('div', { class: 'row g8 nowrap' },
           h('select', { class: 'input', 'data-fk': 'ev-data', 'aria-label': T('데이터'), onchange: ev => { o.data = ev.target.value; renderEval(true); } },
@@ -1366,6 +1381,7 @@ function evRunCard(w, busy) {
     h('p', { class: 'small muted m0' }, text
       ? T('텍스트 데이터는 같은 토큰의 확률만 비교합니다(llama-perplexity --kl-divergence와 같은 위치).')
       : T('기준 모델이 낸 답을 두 모델이 점수 매기고(같은 토큰의 확률), 두 모델이 저마다의 채팅 템플릿으로 답합니다. 기준 모델의 값은 처음 한 번 만들고, 같은 기준 모델 · 데이터 · 설정이면 다시 씁니다.')),
+    refBad !== null ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T`기준 모델을 엔진이 받지 않아 평가할 수 없습니다 — ${TM(refBad)}`)) : null,
     h('div', null, h('button', { class: 'btn primary needs-conn', 'data-fk': 'ev-run', disabled: busy || !ok ? true : null, onclick: () => evRun(w) },
       I('play', 's'), busy ? T('다른 작업 실행 중') : T('평가 실행'))));
 }
