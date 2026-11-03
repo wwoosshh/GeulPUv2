@@ -220,6 +220,11 @@ const EVAL_DICT = {
   "add_bos_token이 원래 모델과 같습니다({}).": "add_bos_token matches the original model ({}).",
   "add_bos_token이 GGUF {} · 원래 모델 {}로 다릅니다 — 프롬프트 앞에 BOS가 붙는지가 달라집니다.": "add_bos_token differs — GGUF {} · original model {} — so whether a BOS is put in front of the prompt changes.",
   "원래 모델 폴더에 tokenizer_config.json이 없습니다.": "The original model folder has no tokenizer_config.json.",
+  " 원래 모델은 tokenizer.json의 post_processor로 BOS를 붙입니다(transformers 5).": " The original model adds BOS through the post_processor in tokenizer.json (transformers 5).",
+  "원래 모델이 BOS를 붙이는지 tokenizer_config.json · tokenizer.json에서 알 수 없습니다 — GGUF는 {}입니다. 원래 토크나이저로 짧은 글을 나눠 맨 앞에 BOS가 붙는지 확인하세요.": "Whether the original model adds BOS cannot be read from tokenizer_config.json · tokenizer.json — the GGUF has {}. Tokenize a short text with the original tokenizer and check whether it starts with BOS.",
+  "원래 모델 폴더에 tokenizer_config.json · tokenizer.json이 없습니다.": "The original model folder has no tokenizer_config.json · tokenizer.json.",
+  " 어휘 밖의 번호 {}개(모델의 임베딩에 없는 토큰 — 예: 이미지 토큰)는 견주지 않았습니다.": " {} tokens with IDs outside the vocabulary (not in the model's embedding — e.g. image tokens) were not compared.",
+  "어휘 {}개가 GGUF와 같습니다 — SentencePiece GGUF는 병합 없이 점수로 나누므로 병합(원래 {}개)은 견주지 않았습니다.":"The {} vocabulary entries match the GGUF — a SentencePiece GGUF splits by scores without merges, so the merges (original {}) were not compared.",
   "특수 토큰 {}개가 같은 번호 · 글로 있습니다.": "All {} special tokens are present with the same IDs and text.",
   "특수 토큰 {}개 중 {}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).": "{1} of {0} special tokens differ in the GGUF — convert again (this cannot be fixed in the metadata).",
   "원래 모델 폴더에 tokenizer.json이 없습니다.": "The original model folder has no tokenizer.json.",
@@ -905,13 +910,18 @@ function evCheckLine(it) {
     return T('원래 모델 폴더에 끝 토큰 정보(generation_config.json · tokenizer_config.json)가 없습니다.');
   }
   if (it.id === 'bos') {
-    if (c === 'same') return T`add_bos_token이 원래 모델과 같습니다(${String(it.gguf_add_bos)}).`;
-    if (c === 'add_bos_differs') return T`add_bos_token이 GGUF ${String(it.gguf_add_bos)} · 원래 모델 ${String(it.original_add_bos)}로 다릅니다 — 프롬프트 앞에 BOS가 붙는지가 달라집니다.`;
-    return T('원래 모델 폴더에 tokenizer_config.json이 없습니다.');
+    // #214 — 원래 모델의 값은 tokenizer_config.json 의 add_bos_token, 없으면 tokenizer.json 의 post_processor(transformers 5)
+    const pp = it.original_source === 'post_processor' ? T(' 원래 모델은 tokenizer.json의 post_processor로 BOS를 붙입니다(transformers 5).') : '';
+    if (c === 'same') return T`add_bos_token이 원래 모델과 같습니다(${String(it.gguf_add_bos)}).` + (it.original_add_bos && pp ? pp : '');
+    if (c === 'add_bos_differs') return T`add_bos_token이 GGUF ${String(it.gguf_add_bos)} · 원래 모델 ${String(it.original_add_bos)}로 다릅니다 — 프롬프트 앞에 BOS가 붙는지가 달라집니다.` + (it.original_add_bos && pp ? pp : '');
+    if (c === 'original_unknown') return T`원래 모델이 BOS를 붙이는지 tokenizer_config.json · tokenizer.json에서 알 수 없습니다 — GGUF는 ${String(it.gguf_add_bos)}입니다. 원래 토크나이저로 짧은 글을 나눠 맨 앞에 BOS가 붙는지 확인하세요.`;
+    return T('원래 모델 폴더에 tokenizer_config.json · tokenizer.json이 없습니다.');
   }
   if (it.id === 'special_tokens') {
-    if (c === 'all_match') return T`특수 토큰 ${it.count}개가 같은 번호 · 글로 있습니다.`;
-    if (c === 'mismatch') return T`특수 토큰 ${it.count}개 중 ${it.mismatched}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).`;
+    // #214 — GGUF 어휘 밖의 번호(모델의 임베딩에 없는 토큰)는 따로 센다
+    const out = it.outside_vocab ? T` 어휘 밖의 번호 ${it.outside_vocab}개(모델의 임베딩에 없는 토큰 — 예: 이미지 토큰)는 견주지 않았습니다.` : '';
+    if (c === 'all_match') return T`특수 토큰 ${it.count}개가 같은 번호 · 글로 있습니다.` + out;
+    if (c === 'mismatch') return T`특수 토큰 ${it.count}개 중 ${it.mismatched}개가 GGUF와 다릅니다 — 다시 변환해야 합니다(메타데이터로 고칠 수 없음).` + out;
     return T('원래 모델 폴더에 tokenizer.json이 없습니다.');
   }
   if (it.id === 'hparams') {
@@ -921,6 +931,7 @@ function evCheckLine(it) {
     return T('원래 모델 폴더에 config.json이 없습니다.');
   }
   if (c === 'same') return T`어휘 ${fmtNum(it.vocab)}개와 병합 ${fmtNum(it.merges)}개가 GGUF와 같습니다.`;
+  if (c === 'same_vocab_spm') return T`어휘 ${fmtNum(it.vocab)}개가 GGUF와 같습니다 — SentencePiece GGUF는 병합 없이 점수로 나누므로 병합(원래 ${fmtNum(it.merges)}개)은 견주지 않았습니다.`;   // #214
   if (c === 'vocab_differs') return T`어휘 ${fmtNum(it.vocab)}개 중 ${fmtNum(it.vocab_mismatched)}개의 번호 · 글이 GGUF와 다릅니다 — 다시 변환해야 합니다.`;
   if (c === 'merges_differs') return T`병합이 다릅니다(원래 ${fmtNum(it.merges)}개 · GGUF ${fmtNum(it.gguf_merges)}개, 다른 것 ${fmtNum(it.merges_mismatched)}개) — 다시 변환해야 합니다.`;
   if (c === 'type_not_compared') return T`토크나이저 종류 ${it.original_type || '?'}는 비교하지 않습니다(BPE만).`;
