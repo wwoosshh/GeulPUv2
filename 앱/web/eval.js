@@ -25,6 +25,8 @@ const EVAL_DICT = {
   "고른 작업 공간에 이 데이터 · 설정의 결과가 없습니다.": "The chosen workspaces have no results with these data and settings.",
   "텍스트 데이터는 칸마다 그 모델의 PPL · BPB(bits per byte)도 보입니다 — BPB는 같은 글의 바이트로 나눠 어휘가 다른 모델끼리도 견줄 수 있습니다.": "For text data each cell also shows that model's PPL · BPB (bits per byte) — BPB divides by the bytes of the same text, so models with different vocabularies can be compared.",
   "(요청 {})": " (requested {})",
+  "칸마다 버전과 메모를 보입니다 — 같은 형식의 버전이 여럿이면 모두, 앱이 imatrix로 만든 버전은 그 글마다 줄을 따로 둡니다.": "Each cell shows the version and its note — every version when a type has several, and versions the app made with an imatrix get a row per imatrix text.",
+  "* 0.20.0 앞에 만든 결과 — BPB의 바이트를 예전 방식(청크 경계에서 잘린 글자를 대체 문자 3바이트로)으로 세어 0.06 ~ 0.09 % 작습니다. 다시 평가하면 맞춰집니다.": "* Result made before 0.20.0 — BPB counted bytes the old way (a character cut at a chunk boundary as a 3-byte replacement character), so it is 0.06 – 0.09 % lower. Evaluating again corrects it.",
   "고르는 기준": "Choose by",
   "정답률(기준 대비 %p)": "Accuracy (vs base, %p)",
   "기준만 맞음": "Reference only correct",
@@ -705,8 +707,20 @@ const evVerLabel = (w, vid) => { const v = w.versions.find(x => x.id === vid); r
 const evResults = w => [...(w.results || [])].sort((a, b) => byName(a.dir, b.dir));
 const evLatest = (w, vid) => evResults(w).filter(r => r.version === vid).pop() || null;
 const evChat = r => !!(r && r.data && r.data.kind === 'chat');
-const evSameSet = (a, b) => !!(a && b && a.data && b.data && a.data.sha256 === b.data.sha256 && JSON.stringify(evSetKey(a.settings)) === JSON.stringify(evSetKey(b.settings)));
-const evSetKey = s => (s ? [s.mode, s.max_tokens, s.thinking, s.top_k, s.chunks] : null);
+// #241 — 텍스트는 실제로 잰 청크 수(data.items)로 묶는다 — 0.19.0 의 결과는 settings.chunks 에 요청한 수를 적었다
+const evChunksOf = r => (!evChat(r) && r && r.data && r.data.items) || ((r && r.settings) || {}).chunks;
+const evSameSet = (a, b) => !!(a && b && a.data && b.data && a.data.sha256 === b.data.sha256 && JSON.stringify(evSetKey(a)) === JSON.stringify(evSetKey(b)));
+const evSetKey = r => { const s = r.settings; return s ? [s.mode, s.max_tokens, s.thinking, s.top_k, evChunksOf(r)] : null; };
+// #241 — 0.20.0 앞에 만든 텍스트 결과는 BPB 의 바이트를 예전 방식(청크 경계에서 잘린 글자를 대체 문자 3 바이트로)으로 세어 0.06 ~ 0.09 % 작다.
+// r.app 은 결과를 만든 앱의 판(목록 — summary 의 reproduce.geulpu)
+const evOldBytes = r => {
+  const m = String((r && r.app) || '').match(/^(\d+)\.(\d+)\.(\d+)/);
+  return !!(m && r.text && typeof r.text.bytes === 'number' && (+m[1] === 0 && +m[2] < 20));
+};
+const evBpb = (bpb, r) => evNum(bpb, 4) + (typeof bpb === 'number' && evOldBytes(r) ? '*' : '');
+const evOldBytesNote = () => h('p', { class: 'small muted m0' }, T('* 0.20.0 앞에 만든 결과 — BPB의 바이트를 예전 방식(청크 경계에서 잘린 글자를 대체 문자 3바이트로)으로 세어 0.06 ~ 0.09 % 작습니다. 다시 평가하면 맞춰집니다.'));
+// 같은 형식의 결과 가운데 가장 나중의 것(기준 모델 · 미세조정 전 줄 — 예전 바이트 수의 결과보다 새 결과를 먼저)
+const evNewest = xs => xs.slice().sort((a, b) => byName(b.r.dir, a.r.dir))[0];
 // #201 — 답의 최대 토큰: 데이터 줄의 max_tokens 가 실행 설정보다 앞선다(그런 대화의 수를 함께)
 const evMaxLine = r => {
   const s = r.settings || {}, n = r.data && r.data.own_max_tokens;
@@ -1590,10 +1604,14 @@ function evDetailPane() {
 
 // ---------- #198 결과 표 — 버전 × 데이터 · 분야별 · 크기와 품질 그림 · CSV, 작업 공간 견주기 ----------
 // 데이터 · 설정(같은 데이터 · 계산 방식 · 답의 길이 · 생각 · 청크)이 같은 결과끼리 견준다
-const evComboKey = r => { const s = r.settings || {}; return [r.data && r.data.name, s.mode, s.max_tokens, s.thinking ? 1 : 0, s.chunks].join('|'); };
-// #232 — 텍스트는 실제로 잰 청크 수(요청이 더 컸으면 함께)
-const evChunkLine = s => T`청크 ${s.chunks}` + (s.chunks_requested ? T`(요청 ${s.chunks_requested})` : '');
-const evComboLabel = r => { const s = r.settings || {}; return [r.data && r.data.name, evMode(s.mode), evChat(r) ? evMaxLine(r) : evChunkLine(s)].filter(Boolean).join(NB); };
+const evComboKey = r => { const s = r.settings || {}; return [r.data && r.data.name, s.mode, s.max_tokens, s.thinking ? 1 : 0, evChunksOf(r)].join('|'); };
+// #232 — 텍스트는 실제로 잰 청크 수(요청이 더 컸으면 함께 — 0.19.0 의 결과는 settings.chunks 가 요청한 수)
+const evChunkLine = r => {
+  const s = r.settings || {}, n = evChunksOf(r), q = s.chunks_requested || (s.chunks !== n ? s.chunks : null);
+  return T`청크 ${n}` + (q ? T`(요청 ${q})` : '');
+};
+// #241 — 여러 결과를 묶는 설정의 이름에는 잰 청크 수만(요청은 결과마다 다를 수 있다)
+const evComboLabel = r => { const s = r.settings || {}; return [r.data && r.data.name, evMode(s.mode), evChat(r) ? evMaxLine(r) : T`청크 ${evChunksOf(r)}`].filter(Boolean).join(NB); };
 const evVQuant = v => { const m = modelOf(v.model); return m ? `${quantOf(m)}${mixOf(m)}` : (v.quant || ''); };
 const evAccOf = r => (r && r.accuracy && typeof r.accuracy.cand === 'number' ? r.accuracy.cand : null);
 // 버전마다 그 데이터 · 설정의 마지막 결과
@@ -1634,9 +1652,10 @@ function evPlot(pts, byAcc) {
 function evCsv(ws) {
   const q = s => { s = s === null || s === undefined ? '' : String(s); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   // #232 — 끝에 청크(텍스트 — 실제로 잰 수) · NLL · PPL(기준 · 평가) · BPB(텍스트) · 미세조정 전 모델의 PPL · BPB
+  // #241 — 결과를 만든 앱의 판(app — 0.20.0 앞의 텍스트 결과는 BPB 의 바이트를 예전 방식으로 셈)
   const rows = [['workspace', 'version', 'label', 'file', 'type', 'size_bytes', 'data', 'mode', 'max_tokens', 'thinking', 'category', 'items', 'kl_mean', 'kl_p99',
     'top1', 'ppl_ratio', 'answers_differ', 'answers_compared', 'near_tie', 'accuracy', 'accuracy_lo', 'accuracy_hi', 'ref_accuracy', 'ref_only', 'cand_only', 'finished', 'result_dir',
-    'chunks', 'nll_ref', 'nll', 'ppl_ref', 'ppl', 'bpb_ref', 'bpb', 'baseline_ppl', 'baseline_bpb']];
+    'chunks', 'nll_ref', 'nll', 'ppl_ref', 'ppl', 'bpb_ref', 'bpb', 'baseline_ppl', 'baseline_bpb', 'app']];
   for (const w of ws) for (const r of evResults(w)) {
     const v = w.versions.find(x => x.id === r.version) || {};
     const s = r.settings || {}, m = r.metrics || {}, a = r.answers || {}, acc = r.accuracy || {}, tx = r.text || {}, bl = r.baseline || {};
@@ -1644,10 +1663,10 @@ function evCsv(ws) {
     const base = [w.name, r.version, v.label || '', v.file || '', v.id ? evVQuant(v) : '', v.size || '', r.data && r.data.name, s.mode, s.max_tokens, s.thinking ? 1 : 0];
     rows.push(base.concat(['', (r.data && r.data.items) || a.items, m.kl_mean, m.kl_p99, m.top1, m.ppl_ratio, a.differ, a.compared, a.near_tie,
       acc.cand, ci[0], ci[1], acc.ref, acc.ref_only, acc.cand_only, r.finished, r.dir,
-      evChat(r) ? '' : s.chunks, m.nll_ref, m.nll, m.ppl_ref, m.ppl, tx.bpb_ref, tx.bpb, bl.ppl, bl.bpb]));
+      evChat(r) ? '' : evChunksOf(r), m.nll_ref, m.nll, m.ppl_ref, m.ppl, tx.bpb_ref, tx.bpb, bl.ppl, bl.bpb, r.app]));
     for (const c of r.categories || []) {
       rows.push(base.concat([c.name, c.items, c.kl_mean, '', c.top1, '', c.differ, c.compared, '', c.graded ? c.cand_correct / c.graded : '', '', '',
-        c.graded ? c.ref_correct / c.graded : '', '', '', r.finished, r.dir, '', '', '', '', '', '', '', '', '']));
+        c.graded ? c.ref_correct / c.graded : '', '', '', r.finished, r.dir, '', '', '', '', '', '', '', '', '', r.app]));
     }
   }
   return rows.map(r => r.map(q).join(',')).join('\n') + '\n';
@@ -1671,7 +1690,7 @@ function evTableCard(w) {
     class: o.by === v ? 'on' : '', role: 'radio', 'aria-checked': o.by === v ? 'true' : 'false', 'data-fk': 'ev-tbl-by-' + v, onclick: () => { o.by = v; renderEval(true); } }, l))) : null;
   const vcell = v => h('td', { class: 'small' }, h('div', { class: 'ink' }, v.id),
     v.label ? h('div', { class: 'muted ell', style: 'max-width:12em', 'data-tip': v.label, 'data-tip-pos': 'top' }, v.label) : null);
-  let table;
+  let table, oldNote = null;
   const cats = o.cat ? [...new Set(items.flatMap(x => (x.r.categories || []).map(c => c.name)))] : [];
   if (o.cat && cats.length) {
     // 분야별 — 채점 데이터면 정답률, 아니면 KL
@@ -1690,8 +1709,9 @@ function evTableCard(w) {
   } else {
     // #232 — 텍스트 데이터면 PPL · BPB 칸(평가할 모델), 기준 모델 · 미세조정 전 줄에 그 모델의 PPL · BPB
     const text = items.some(x => !evChat(x.r));
-    const tr0 = text ? (items.find(x => typeof (x.r.metrics || {}).ppl_ref === 'number') || {}).r : null;
-    const pplTd = (ppl, bpb, cls) => (text ? [h('td', { class: 'r num small' + (cls || '') }, evNum(ppl, 3)), h('td', { class: 'r num small' + (cls || '') }, evNum(bpb, 4))] : null);
+    const tr0 = text ? (evNewest(items.filter(x => typeof (x.r.metrics || {}).ppl_ref === 'number')) || {}).r : null;
+    const pplTd = (ppl, bpb, cls, r) => (text ? [h('td', { class: 'r num small' + (cls || '') }, evNum(ppl, 3)), h('td', { class: 'r num small' + (cls || '') }, evBpb(bpb, r))] : null);
+    if (text && items.some(x => evOldBytes(x.r))) oldNote = evOldBytesNote();
     table = h('table', { class: 'data ev-table' },
       h('thead', null, h('tr', null, h('th', null, T('버전')), h('th', null, T('형식')), h('th', { class: 'r' }, T('크기')), h('th', { class: 'r' }, 'KL'), h('th', { class: 'r' }, 'top-1'),
         h('th', { class: 'r' }, T('답이 달라진 대화')), graded ? h('th', { class: 'r' }, T('정답률')) : null,
@@ -1702,22 +1722,22 @@ function evTableCard(w) {
           h('td', { class: 'r num small' }, evKL(m.kl_mean)), h('td', { class: 'r num small' }, evPct(m.top1)),
           h('td', { class: 'r num small' }, a.compared ? `${a.differ}/${a.compared}` : '-'),
           graded ? h('td', { class: 'r num small', 'data-tip': acc && acc.cand_ci ? T`95 % 구간 ${evPct(acc.cand_ci[0])} ~ ${evPct(acc.cand_ci[1])}` : null, 'data-tip-pos': 'top' }, acc ? evPct(acc.cand) : '-') : null,
-          pplTd(m.ppl, (x.r.text || {}).bpb));
+          pplTd(m.ppl, (x.r.text || {}).bpb, '', x.r));
       }),
       (graded && ra) || tr0 ? h('tr', null, h('td', { class: 'small muted' }, T('기준 모델')), h('td', { class: 'mono small muted' }, rm ? quantOf(rm) : (w.reference.quant || '')),
         h('td', { class: 'r num small muted' }, rm ? fmtBytes(rm.size) : '-'), h('td', null, ''), h('td', null, ''), h('td', null, ''),
         graded ? h('td', { class: 'r num small muted', 'data-tip': ra && ra.ref_ci ? T`95 % 구간 ${evPct(ra.ref_ci[0])} ~ ${evPct(ra.ref_ci[1])}` : null, 'data-tip-pos': 'top' }, ra ? evPct(ra.ref) : '-') : null,
-        tr0 ? pplTd(tr0.metrics.ppl_ref, (tr0.text || {}).bpb_ref, ' muted') : pplTd(null, null, ' muted')) : null,
+        tr0 ? pplTd(tr0.metrics.ppl_ref, (tr0.text || {}).bpb_ref, ' muted', tr0) : pplTd(null, null, ' muted')) : null,
       // #199 — 비교용 모델(미세조정 전)의 정답률 · #232 텍스트면 PPL · BPB
       (() => {
-        const b = (items.find(x => x.r.baseline) || {}).r;
+        const b = (evNewest(items.filter(x => x.r.baseline)) || {}).r;
         const bl = b && b.baseline;
         if (!bl || !((graded && typeof bl.accuracy === 'number') || (text && typeof bl.ppl === 'number'))) return null;
         const bm = modelOf(bl.model);
         return h('tr', null, h('td', { class: 'small muted' }, T('미세조정 전')), h('td', { class: 'mono small muted' }, bm ? quantOf(bm) : ''),
           h('td', { class: 'r num small muted' }, bm ? fmtBytes(bm.size) : '-'), h('td', null, ''), h('td', null, ''), h('td', null, ''),
           graded ? h('td', { class: 'r num small muted', 'data-tip': Array.isArray(bl.ci) ? T`95 % 구간 ${evPct(bl.ci[0])} ~ ${evPct(bl.ci[1])}` : null, 'data-tip-pos': 'top' }, evPct(bl.accuracy)) : null,
-          pplTd(bl.ppl, bl.bpb, ' muted'));
+          pplTd(bl.ppl, bl.bpb, ' muted', b));
       })()));
   }
   const byAcc = o.by === 'acc';
@@ -1730,6 +1750,7 @@ function evTableCard(w) {
       h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-tbl-cat', 'aria-label': T('분야별'), checked: o.cat ? true : null, onchange: ev => { o.cat = ev.target.checked; renderEval(true); } }), T('분야별')),
       seg),
     h('div', { class: 'list' }, table),
+    oldNote,
     pts.length >= 2 ? evPlot(pts, byAcc) : null,
     pts.length >= 2 ? h('p', { class: 'small muted m0' }, T`크기와 품질의 경계(더 작으면서 ${byAcc ? T('정답률') : 'KL'}이 같거나 나은 버전이 없는 것) — ${fr.map(p => p.id).join(', ')}. 채운 점이 경계입니다.`) : null);
 }
@@ -1742,14 +1763,14 @@ const evSignP = (a, b) => {   // 두쪽 정확 부호 검정 — 결과 화면�
   for (let i = 0; i <= Math.min(a, b); i++) { s += Math.exp(lp); lp += Math.log(n - i) - Math.log(i + 1); }
   return Math.min(1, 2 * s);
 };
-function evPairCard(o, cols, order, cells) {
+// #241 — 고를 것은 그 데이터 · 설정의 결과가 있는 버전 모두(전에는 표의 칸 — 같은 형식이면 하나만)
+function evPairCard(o, cols) {
   const opts = [];
   for (const w of cols) {
-    const any = order.map(q => cells.get(q)[w.id]).find(x => x && x.r.accuracy);
-    if (any) opts.push({ key: `${w.id}|${any.r.dir}|ref`, w, dir: any.r.dir, side: 'ref', label: `${w.name} · ${T('기준 모델')}` });
-    for (const q of order) {
-      const x = cells.get(q)[w.id];
-      if (x && x.r.accuracy) opts.push({ key: `${w.id}|${x.r.dir}|cand`, w, dir: x.r.dir, side: 'cand', label: `${w.name} · ${q}` });
+    const xs = evByVersion(w, o.key).filter(x => x.r.accuracy);
+    if (xs.length) opts.push({ key: `${w.id}|${xs[0].r.dir}|ref`, w, dir: xs[0].r.dir, side: 'ref', label: `${w.name} · ${T('기준 모델')}` });
+    for (const x of xs) {
+      opts.push({ key: `${w.id}|${x.r.dir}|cand`, w, dir: x.r.dir, side: 'cand', label: [w.name, `${x.v.id} ${evRowOf(x.v).label}`, x.v.label].filter(Boolean).join(' · ') });
     }
   }
   if (opts.length < 2) return null;
@@ -1781,6 +1802,11 @@ function evPairCard(o, cols, order, cells) {
     body,
     h('p', { class: 'small muted m0' }, T('같은 데이터 · 설정의 두 결과를 대화마다 짝지어 한쪽만 맞은 수로 부호 검정을 합니다. 작업 공간이 달라도(예: SFT ↔ DPO) 됩니다.')));
 }
+// #241 — 견주기의 줄: 형식(행렬별 형식은 파일 이름의 + 뒤 — evVQuant 에 붙음)에 앱이 imatrix 로 만든 버전은 그 글 · 파일(sha256)마다 따로
+const evRowOf = v => {
+  const q = evVQuant(v), im = v.made && v.made.settings && v.made.settings.imatrix;
+  return im ? { key: `${q}|${im.sha256 || im.file || ''}`, q, label: `${q} · imatrix ${im.file || ''}`.trim() } : { key: q, q, label: q };
+};
 // 작업 공간 견주기 — 형식(줄) × 작업 공간(칸): 같은 데이터 · 설정의 KL · 기준 모델 대비 정답률 손실
 function evCrossView() {
   const L = EV.list;
@@ -1791,50 +1817,55 @@ function evCrossView() {
   const combos = new Map();
   for (const w of chosen) for (const r of evResults(w)) combos.set(evComboKey(r), r);
   if (!combos.has(o.key)) o.key = [...combos.keys()].pop() || '';
-  const cells = new Map();                         // 형식 → { 작업 공간 → {v, r} }
+  // #241 — 줄 → 작업 공간 → 그 줄의 버전 모두(버전 차례). 전에는 같은 형식이면 가장 나중에 평가한 버전 하나만 이름 없이 보였다
+  const rows = new Map();
   for (const w of chosen) for (const x of evByVersion(w, o.key)) {
-    const q = evVQuant(x.v);
-    if (!cells.has(q)) cells.set(q, {});
-    const c = cells.get(q), cur = c[w.id];
-    if (!cur || byName(x.r.dir, cur.r.dir) > 0) c[w.id] = x;
+    const k = evRowOf(x.v);
+    if (!rows.has(k.key)) rows.set(k.key, Object.assign(k, { cells: {} }));
+    const c = rows.get(k.key).cells;
+    (c[w.id] = c[w.id] || []).push(x);
   }
-  const order = [...cells.keys()].sort((a, b) => qRank(a.split('+')[0]) - qRank(b.split('+')[0]) || a.localeCompare(b));
+  const order = [...rows.values()].sort((a, b) => qRank(a.q.split('+')[0]) - qRank(b.q.split('+')[0]) || a.q.localeCompare(b.q) || a.label.localeCompare(b.label));
   const cols = chosen.filter(w => evByVersion(w, o.key).length);      // 이 데이터 · 설정의 결과가 있는 작업 공간만 칸으로
   const graded = cols.some(w => evByVersion(w, o.key).some(x => evAccOf(x.r) !== null));
   const text = cols.some(w => evByVersion(w, o.key).some(x => !evChat(x.r)));      // #232 — 텍스트면 PPL · BPB 도
-  const pplLine = (ppl, bpb) => h('div', { class: 'muted' }, `PPL ${evNum(ppl, 3)} · BPB ${evNum(bpb, 4)}`);
-  const cell = x => {
-    if (!x) return h('td', { class: 'r num small muted' }, '-');
+  const oldBytes = text && cols.some(w => evByVersion(w, o.key).some(x => evOldBytes(x.r)));
+  const pplLine = (ppl, bpb, r) => h('div', { class: 'muted' }, `PPL ${evNum(ppl, 3)} · BPB ${evBpb(bpb, r)}`);
+  // #241 — 칸에는 그 줄의 버전마다 이름(버전 · 메모)과 값
+  const entry = (x, k) => {
     const acc = x.r.accuracy;
     const loss = acc && typeof acc.ref === 'number' && typeof acc.cand === 'number' ? acc.ref - acc.cand : null;
     const dl = loss === null ? '' : `${loss > 0 ? '−' : loss < 0 ? '+' : '±'}${Math.abs(loss * 100).toFixed(2)}%p`;
-    return h('td', { class: 'r num small', 'data-tip': `${x.v.id} · ${x.v.label || x.v.file} · ${fmtBytes(x.v.size)}`, 'data-tip-pos': 'top' },
+    const name = x.v.label ? `${x.v.id} · ${x.v.label}` : x.v.id;
+    return h('div', { class: k ? 'mt8' : null, 'data-tip': `${name} · ${x.v.file || ''} · ${fmtBytes(x.v.size)}`, 'data-tip-pos': 'top' },
+      h('div', { class: 'faint ell', style: 'max-width:16em;margin-left:auto' }, name),
       h('div', null, `KL ${evKL((x.r.metrics || {}).kl_mean)}`),
       graded ? h('div', { class: 'muted' }, loss === null ? '-' : T`정답률 ${evPct(acc.cand)} (${dl})`) : null,
-      text ? pplLine((x.r.metrics || {}).ppl, (x.r.text || {}).bpb) : null);
+      text ? pplLine((x.r.metrics || {}).ppl, (x.r.text || {}).bpb, x.r) : null);
   };
+  const cell = xs => (xs && xs.length ? h('td', { class: 'r num small' }, xs.map(entry)) : h('td', { class: 'r num small muted' }, '-'));
   // #220 — 각 작업 공간의 기준 모델(BF16 등) 자신의 정답률 — 같은 데이터 · 설정 결과의 accuracy.ref(전에는 줄이 없어 차에서 거꾸로 셈해야 했다)
-  // #232 — 텍스트면 기준 모델의 PPL · BPB(같은 데이터 · 설정이면 결과마다 같다)
+  // #232 — 텍스트면 기준 모델의 PPL · BPB(같은 데이터 · 설정이면 결과마다 같다 — #241 가장 나중의 결과)
   const refCell = w => {
     const xs = evByVersion(w, o.key);
     const x = xs.find(y => y.r.accuracy && typeof y.r.accuracy.ref === 'number');
-    const xt = xs.find(y => typeof (y.r.metrics || {}).ppl_ref === 'number');
+    const xt = evNewest(xs.filter(y => typeof (y.r.metrics || {}).ppl_ref === 'number'));
     const rm = w.reference.model ? modelOf(w.reference.model) : null;
     return h('td', { class: 'r num small', 'data-tip': `${evRefLabel(w)}${rm ? ' · ' + quantOf(rm) : ''}`, 'data-tip-pos': 'top' },
       h('div', { class: 'muted' }, rm ? quantOf(rm) : T('기준 모델')),
       graded ? h('div', null, x ? T`정답률 ${evPct(x.r.accuracy.ref)}` : '-') : null,
-      text ? (xt ? pplLine(xt.r.metrics.ppl_ref, (xt.r.text || {}).bpb_ref) : h('div', { class: 'muted' }, '-')) : null);
+      text ? (xt ? pplLine(xt.r.metrics.ppl_ref, (xt.r.text || {}).bpb_ref, xt.r) : h('div', { class: 'muted' }, '-')) : null);
   };
   // #232 — 미세조정 전 모델(비교용)이 있는 작업 공간: 정답률(채점 데이터) · PPL · BPB(텍스트)
   const baseCell = w => {
-    const x = evByVersion(w, o.key).find(y => y.r.baseline);
+    const x = evNewest(evByVersion(w, o.key).filter(y => y.r.baseline));
     const bl = x && x.r.baseline;
     if (!bl) return h('td', { class: 'r num small muted' }, '-');
     const bm = bl.model ? modelOf(bl.model) : null;
     return h('td', { class: 'r num small', 'data-tip': `${bl.file || ''}`, 'data-tip-pos': 'top' },
       h('div', { class: 'muted' }, bm ? quantOf(bm) : T('미세조정 전')),
       graded ? h('div', null, typeof bl.accuracy === 'number' ? T`정답률 ${evPct(bl.accuracy)}` : '-') : null,
-      text ? pplLine(bl.ppl, bl.bpb) : null);
+      text ? pplLine(bl.ppl, bl.bpb, x.r) : null);
   };
   const anyBase = cols.some(w => evByVersion(w, o.key).some(y => y.r.baseline));
   return h('div', { class: 'col g24' },
@@ -1848,14 +1879,16 @@ function evCrossView() {
         h('button', { class: 'btn sm ghost', 'data-fk': 'ev-xw-csv', disabled: chosen.length ? null : true, onclick: () => labDownload('geulpu-eval-workspaces.csv', evCsv(chosen), 'text/csv') }, I('download', 's'), T('CSV 내보내기'))),
       h('div', { class: 'row g12 wrap' }, wss.map(w => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-xw-' + w.id, 'aria-label': w.name, value: w.id, checked: o.pick.has(w.id) ? true : null,
         onchange: ev => { if (ev.target.checked) o.pick.add(w.id); else o.pick.delete(w.id); renderEval(true); } }), w.name))),
-      graded && cols.length ? evPairCard(o, cols, order, cells) : null,
+      graded && cols.length ? evPairCard(o, cols) : null,
       cols.length && order.length ? h('div', { class: 'list' }, h('table', { class: 'data ev-table' },
         h('thead', null, h('tr', null, h('th', null, T('형식')), cols.map(w => h('th', { class: 'r' }, w.name)))),
         h('tbody', null, h('tr', null, h('td', { class: 'small' }, T('기준 모델')), cols.map(refCell)),     // #220 — 저마다의 기준 모델 자신
           anyBase ? h('tr', null, h('td', { class: 'small' }, T('미세조정 전')), cols.map(baseCell)) : null,     // #232
-          order.map(q => h('tr', null, h('td', { class: 'mono small' }, q), cols.map(w => cell(cells.get(q)[w.id])))))))
+          order.map(row => h('tr', null, h('td', { class: 'mono small' }, row.label), cols.map(w => cell(row.cells[w.id])))))))
         : h('div', { class: 'small muted' }, T('고른 작업 공간에 이 데이터 · 설정의 결과가 없습니다.')),
-      text && cols.length ? h('p', { class: 'small muted m0' }, T('텍스트 데이터는 칸마다 그 모델의 PPL · BPB(bits per byte)도 보입니다 — BPB는 같은 글의 바이트로 나눠 어휘가 다른 모델끼리도 견줄 수 있습니다.')) : null));
+      cols.length && order.length ? h('p', { class: 'small muted m0' }, T('칸마다 버전과 메모를 보입니다 — 같은 형식의 버전이 여럿이면 모두, 앱이 imatrix로 만든 버전은 그 글마다 줄을 따로 둡니다.')) : null,
+      text && cols.length ? h('p', { class: 'small muted m0' }, T('텍스트 데이터는 칸마다 그 모델의 PPL · BPB(bits per byte)도 보입니다 — BPB는 같은 글의 바이트로 나눠 어휘가 다른 모델끼리도 견줄 수 있습니다.')) : null,
+      oldBytes ? evOldBytesNote() : null));
 }
 
 // 작업 공간 — 지금 상태 · 버전 · 평가 실행 · 결과
@@ -1929,7 +1962,7 @@ function evWsView(w) {
         h('label', { class: 'check ev-pick' }, h('input', { type: 'checkbox', 'aria-label': T`${r.dir} 고르기`, 'data-fk': 'ev:pick:' + r.dir, checked: pick.includes(r.dir) ? true : null,
           onchange: ev => { EV.pick = pick.filter(d => d !== r.dir); if (ev.target.checked) { EV.pick.push(r.dir); if (EV.pick.length > 2) EV.pick.shift(); } renderEval(true); } })),
         h('div', { class: 'ev-vfile' }, h('div', { class: 'ink' }, `${r.version} · ${evDirWhen(r.dir)}`),
-          h('div', { class: 'small muted' }, [r.data && r.data.name, evMode(s.mode), evChat(r) ? evMaxLine(r) : evChunkLine(s)].filter(Boolean).join(NB))),
+          h('div', { class: 'small muted' }, [r.data && r.data.name, evMode(s.mode), evChat(r) ? evMaxLine(r) : evChunkLine(r)].filter(Boolean).join(NB))),
         h('div', { class: 'ev-vres small' },
           h('div', null, evChat(r) && a.compared ? T`답 ${a.differ}/${a.compared} 달라짐` + (a.near_tie ? T` (마진 작음 ${a.near_tie})` : '') : T`위치 ${fmtNum(m.positions || 0)}개`),
           h('div', { class: 'muted num' }, `KL ${evKL(m.kl_mean)} · top-1 ${evPct(m.top1)}` + (r.accuracy ? T` · 정답률 ${evPct(r.accuracy.cand)}` : ''))));
@@ -1986,14 +2019,16 @@ function evResultView(w) {
   if (!chat && m.positions && typeof m.ppl_ref === 'number') {
     const tx = s.text || {};
     const bl = s.baseline && s.baseline.positions ? s.baseline : null;
+    const rr = { text: s.text, app: (s.reproduce || {}).geulpu };          // #241 — 0.20.0 앞의 바이트 수
     out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, 'PPL'),
       h('span', { class: 'small muted' }, [T`같은 토큰 ${fmtNum(m.positions)}개`, tx.bytes ? T`글 ${fmtNum(tx.bytes)}바이트` : null].filter(Boolean).join(' · '))),
       h('div', { class: 'fd-stats ev-stats3' },
-        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('기준 모델')), h('div', { class: 'v' }, evNum(m.ppl_ref, 3)), h('div', { class: 's' }, `NLL ${evNum(m.nll_ref, 4)} · BPB ${evNum(tx.bpb_ref, 4)}`)),
-        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('평가할 모델')), h('div', { class: 'v' }, evNum(m.ppl, 3)), h('div', { class: 's' }, `NLL ${evNum(m.nll, 4)} · BPB ${evNum(tx.bpb, 4)}`)),
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('기준 모델')), h('div', { class: 'v' }, evNum(m.ppl_ref, 3)), h('div', { class: 's' }, `NLL ${evNum(m.nll_ref, 4)} · BPB ${evBpb(tx.bpb_ref, rr)}`)),
+        h('div', { class: 'cell' }, h('div', { class: 'k' }, T('평가할 모델')), h('div', { class: 'v' }, evNum(m.ppl, 3)), h('div', { class: 's' }, `NLL ${evNum(m.nll, 4)} · BPB ${evBpb(tx.bpb, rr)}`)),
         bl ? h('div', { class: 'cell' }, h('div', { class: 'k' }, T('미세조정 전(비교용 모델)')), h('div', { class: 'v' }, evNum(bl.ppl, 3)),
-          h('div', { class: 's' }, typeof bl.bpb === 'number' ? `BPB ${evNum(bl.bpb, 4)} · ` : null,     // #232 — 미세조정 전 모델의 BPB
+          h('div', { class: 's' }, typeof bl.bpb === 'number' ? `BPB ${evBpb(bl.bpb, rr)} · ` : null,     // #232 — 미세조정 전 모델의 BPB
             T`기준 ÷ 비교용 ${evNum(bl.ref_ppl_ratio, 4)} · 평가 ÷ 비교용 ${evNum(bl.cand_ppl_ratio, 4)}`)) : null),
+      evOldBytes(rr) ? evOldBytesNote() : null,
       h('p', { class: 'small muted m0' }, T('PPL은 청크마다 뒤쪽 255 토큰(llama-perplexity와 같은 위치)의 평균 NLL(nat)의 지수입니다. BPB(bits per byte)는 같은 글의 바이트로 나눈 값이라 어휘가 다른 모델끼리도 견줄 수 있습니다 — 그 모델을 기준 모델로 둔 작업 공간에서 같은 데이터로 재세요.'))));
   }
   if (m.positions) out.push(h('div', { class: 'col g8' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('같은 토큰의 확률')),
