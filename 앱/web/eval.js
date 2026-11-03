@@ -351,7 +351,8 @@ const EVAL_DICT = {
   "견줄 대화 수": "Conversations to compare",
   "견줄 대화 수(0 = 모두)": "Conversations to compare (0 = all)",
   " — 처음 {}/{}개만": " — only the first {}/{}",
-  "CPU로 대화마다 원래 모델을 한 번 돌립니다 — 대화 수 · 답 길이에 비례해, 짧은 답 60개는 1분 안쪽이고 GSM8K 1,319개는 수십 분입니다. 처음 n개만 견주면 빨리 끝납니다(같은 결과의 기준값 앞쪽).": "The original model runs once per conversation on the CPU — the time grows with the number of conversations and answer length: 60 short answers take under a minute, the 1,319 of GSM8K take tens of minutes. Comparing only the first n finishes sooner (the front of the same result's reference values).",
+  "CPU로 대화마다 원래 모델을 한 번 돌립니다 — 대화 수 · 답 길이에 비례해, 짧은 답 60개는 1분 안쪽이고 GSM8K 1,319개는 수십 분입니다. 처음 n개만 견주면 빨리 끝납니다(같은 결과의 기준값 앞쪽). 견준 결과는 대화 수 · 계산 형식마다 따로 남고, 위에는 가장 많이 견준 것이 보입니다.": "The original model runs once per conversation on the CPU — the time grows with the number of conversations and answer length: 60 short answers take under a minute, the 1,319 of GSM8K take tens of minutes. Comparing only the first n finishes sooner (the front of the same result's reference values). Each number of conversations and compute type keeps its own result, and the one that compared the most is shown above.",
+  "다른 견주기 — 대화 {}/{}개 · {} · KL {} · top-1 {} · {}": "Other comparison — {}/{} conversations · {} · KL {} · top-1 {} · {}",
   "Δp 평균(기준 − 평가)": "Mean Δp (reference − evaluated)",
   "기준 모델의 상위 {}개 밖 확률": "Probability outside the reference top {}",
   "KL divergence는 기준 모델의 상위 {}개 토큰과 나머지 확률 하나로 계산한 값입니다 — 모든 어휘로 계산한 값보다 조금 작습니다(아래쪽 값). 위치 {}개.": "KL divergence is computed from the reference model's top {} tokens plus one remainder probability — slightly below the full-vocabulary value (a lower bound). {} positions.",
@@ -635,6 +636,7 @@ TMX.push(
   [/ · 남은 시간 약 (\d+)분/g, ' · about $1 min left'],
   [/ · 처음 (\d+)\/(\d+)개 대화/g, ' · first $1/$2 conversations'],
   [/처음 (\d+)개 대화만 견줌\(모두 (\d+)개\)/g, 'Compared only the first $1 conversations ($2 in all)'],
+  [/더 많이 견준 결과\(대화 (\d+)개\)는 그대로 둡니다 — 이 결과는 따로 남깁니다/g, 'The result that compared more conversations ($1) is kept — this result is stored separately'],   // #231
   [/계산 형식은 float32 · bfloat16 중 하나입니다/g, 'The compute type is float32 or bfloat16'],
   [/이 결과에는 견줄 기준값\(같은 토큰의 확률\)이 없습니다/g, 'This result has no reference values to compare (probabilities of the same tokens)'],
   [/GGUF 만들기 도구\(파이썬 가상 환경\)가 준비되지 않았습니다 — '도구 준비'를 먼저 누르세요/g, "The Make GGUF tools (Python virtual environment) are not set up — press 'Set up tools' first"],
@@ -1380,6 +1382,9 @@ function evOrigCard(w, dir) {
       h('div', null, T`KL divergence ${evKL(O.kl_mean)} · top-1 일치율 ${evPct(O.top1)} · 위치 ${fmtNum(O.positions || 0)}개 · 대화 ${O.conversations}개`
         + (O.conversations_total > O.conversations ? T` — 처음 ${O.conversations}/${O.conversations_total}개만` : '')),
       h('div', { class: 'small muted' }, T`답 토큰의 로그확률 차(절댓값 평균) ${evNum(O.answer_logprob_abs_mean, 6)} · 가장 큰 KL ${evKL(O.kl_max)} · ${O.dtype} · transformers ${O.transformers} · ${String(O.finished || '').replace('T', ' ').slice(0, 16)}`),
+      // #231 — 대화 수 · 계산 형식이 다른 견주기도 남는다(위는 가장 많이 견준 것)
+      (O.runs || []).filter(r => r.file !== O.file).map(r => h('div', { class: 'small muted' },
+        T`다른 견주기 — 대화 ${r.conversations}/${r.conversations_total}개 · ${r.dtype} · KL ${evKL(r.kl_mean)} · top-1 ${evPct(r.top1)} · ${String(r.finished || '').replace('T', ' ').slice(0, 16)}`)),
       O.config_check ? evOrigCfgLine(O.config_check) : null,
       O.reference_16bit !== true ? null : big16
         ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('기준 모델이 16비트인데 KL이 10⁻³보다 큽니다 — 변환이나 원래 모델 폴더의 설정이 다를 수 있습니다. 변환 검증을 보세요.')))
@@ -1395,7 +1400,7 @@ function evOrigCard(w, dir) {
       h('div', { class: 'row g12 wrap' }, h('div', { class: 'col g4' }, h('span', { class: 'small muted' }, T('계산 형식')), seg),
         h('label', { class: 'col g4 ev-num' }, h('span', { class: 'small muted' }, T('견줄 대화 수(0 = 모두)')), lim),
         h('div', { class: 'ev-chkrun' }, h('button', { class: 'btn needs-conn', 'data-fk': 'ev-origrun', disabled: busy ? true : null, onclick: run }, I('target', 's'), busy ? T('다른 작업 실행 중') : T('견주기')))),
-      h('span', { class: 'small muted' }, T('CPU로 대화마다 원래 모델을 한 번 돌립니다 — 대화 수 · 답 길이에 비례해, 짧은 답 60개는 1분 안쪽이고 GSM8K 1,319개는 수십 분입니다. 처음 n개만 견주면 빨리 끝납니다(같은 결과의 기준값 앞쪽).')))
+      h('span', { class: 'small muted' }, T('CPU로 대화마다 원래 모델을 한 번 돌립니다 — 대화 수 · 답 길이에 비례해, 짧은 답 60개는 1분 안쪽이고 GSM8K 1,319개는 수십 분입니다. 처음 n개만 견주면 빨리 끝납니다(같은 결과의 기준값 앞쪽). 견준 결과는 대화 수 · 계산 형식마다 따로 남고, 위에는 가장 많이 견준 것이 보입니다.')))
       : t === undefined ? h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'))     // #220
       : h('div', { class: 'small muted' }, T('원래 모델과 견주려면 작업 공간의 GGUF 만들기에서 도구 준비를 먼저 하세요(파이썬 · transformers).')));
 }
