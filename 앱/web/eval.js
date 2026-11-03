@@ -117,6 +117,7 @@ const EVAL_DICT = {
   "변환한 파일이 이 작업 공간의 기준 모델이 됩니다.": "The converted file becomes this workspace's reference model.",
   "원래 가중치가 {}입니다 — F16이 원래 값에 더 가깝습니다(BF16으로 반올림하면 그것만으로 원래 모델과의 KL이 10⁻⁴ 대, F16은 10⁻⁶ 대).": "The original weights are {} — F16 is closer to the original values (rounding to BF16 alone puts the KL against the original model in the 10⁻⁴ range; F16 in the 10⁻⁶ range).",
   "원래 가중치가 bfloat16입니다 — BF16은 원래 값 그대로입니다.": "The original weights are bfloat16 — BF16 keeps the original values exactly.",
+  "config.json에는 {}로 적혀 있지만 저장된 텐서의 형식을 따릅니다.": "config.json says {}, but the type of the stored tensors is what counts.",
   "원래 모델은 {}로 저장했는데 기준 모델은 BF16입니다 — BF16으로 반올림한 것만으로 KL이 10⁻⁴ 대가 될 수 있습니다(변환이 틀린 것은 아님). 원래 값에 가까운 기준은 GGUF 만들기의 변환 형식 F16으로 만드세요(10⁻⁶ 대).": "The original model was saved as {} but the reference model is BF16 — rounding to BF16 alone can put the KL in the 10⁻⁴ range (the conversion is not wrong). For a reference closer to the original values, make it with Make GGUF's conversion type F16 (10⁻⁶ range).",
   "양자화 형식(여럿 고름 — 고르지 않으면 변환만)": "Quantization types (choose any — none means convert only)",
   "글 파일로 만들기": "Make from a text file",
@@ -1106,12 +1107,15 @@ function evMadeLine(s) {
     (s.tensor_types || []).length ? T`행렬별 ${s.tensor_types.join(', ')}` : null, tool].filter(Boolean).join(NB);
   return '';
 }
-// #233 — 원래 가중치를 저장한 형식(config.json — 작업 공간 목록의 original_dtype)에 따른 변환 형식의 기본과 안내
+// #233 — 원래 가중치를 저장한 형식(작업 공간 목록의 original_dtype — #240 부터 safetensors 의 텐서, 읽지 못하면 config.json)에 따른
+// 변환 형식의 기본과 안내
 const evF16First = w => w.original_dtype === 'float32' || w.original_dtype === 'float16';
+// #240 — config.json 의 torch_dtype 이 저장된 가중치와 다르면(학습 루프가 float32 가중치를 bfloat16 config 와 함께 저장한 폴더 따위) 덧붙인다
+const evCfgDtype = d => d.original_config_dtype ? ' ' + T`config.json에는 ${d.original_config_dtype}로 적혀 있지만 저장된 텐서의 형식을 따릅니다.` : '';
 function evDtypeNote(w, dirv) {
   if (!w.original || String(dirv || '').trim() !== w.original.dir) return null;     // 다른 폴더를 적었으면 모른다
-  if (evF16First(w)) return h('span', { class: 'small muted' }, T`원래 가중치가 ${w.original_dtype}입니다 — F16이 원래 값에 더 가깝습니다(BF16으로 반올림하면 그것만으로 원래 모델과의 KL이 10⁻⁴ 대, F16은 10⁻⁶ 대).`);
-  if (w.original_dtype === 'bfloat16') return h('span', { class: 'small muted' }, T('원래 가중치가 bfloat16입니다 — BF16은 원래 값 그대로입니다.'));
+  if (evF16First(w)) return h('span', { class: 'small muted' }, T`원래 가중치가 ${w.original_dtype}입니다 — F16이 원래 값에 더 가깝습니다(BF16으로 반올림하면 그것만으로 원래 모델과의 KL이 10⁻⁴ 대, F16은 10⁻⁶ 대).` + evCfgDtype(w));
+  if (w.original_dtype === 'bfloat16') return h('span', { class: 'small muted' }, T('원래 가중치가 bfloat16입니다 — BF16은 원래 값 그대로입니다.') + evCfgDtype(w));
   return null;
 }
 function evMakeCard(w, busy) {
@@ -1403,7 +1407,7 @@ function evOrigCard(w, dir) {
       O.config_check ? evOrigCfgLine(O.config_check) : null,
       // #233 — float32 · float16 으로 저장한 원래 모델을 BF16 으로 변환한 기준이면 반올림만으로 KL 이 10⁻⁴ 대가 된다
       (O.original_dtype === 'float32' || O.original_dtype === 'float16') && O.reference_types && O.reference_types.BF16
-        ? h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T`원래 모델은 ${O.original_dtype}로 저장했는데 기준 모델은 BF16입니다 — BF16으로 반올림한 것만으로 KL이 10⁻⁴ 대가 될 수 있습니다(변환이 틀린 것은 아님). 원래 값에 가까운 기준은 GGUF 만들기의 변환 형식 F16으로 만드세요(10⁻⁶ 대).`)) : null,
+        ? h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T`원래 모델은 ${O.original_dtype}로 저장했는데 기준 모델은 BF16입니다 — BF16으로 반올림한 것만으로 KL이 10⁻⁴ 대가 될 수 있습니다(변환이 틀린 것은 아님). 원래 값에 가까운 기준은 GGUF 만들기의 변환 형식 F16으로 만드세요(10⁻⁶ 대).` + evCfgDtype(O))) : null,
       O.reference_16bit !== true ? null : big16
         ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('기준 모델이 16비트인데 KL이 10⁻³보다 큽니다 — 변환이나 원래 모델 폴더의 설정이 다를 수 있습니다. 변환 검증을 보세요.')))
         : h('div', { class: 'small muted' }, T('기준 모델이 16비트면 바르게 변환했을 때 KL은 10⁻³보다 훨씬 작습니다(이 PC의 측정 3.5 × 10⁻⁶ ~ 1.0 × 10⁻⁴ — 답이 확실할수록 작음).')));

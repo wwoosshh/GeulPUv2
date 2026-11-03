@@ -62,8 +62,8 @@ def 로프값(rp):
     return fa["rope_theta"] if isinstance(fa, dict) and 수인가(fa.get("rope_theta")) else None
 
 
-def 저장형식(hf):
-    """#233 — 원래 모델의 가중치를 저장한 형식(config.json 의 torch_dtype — transformers 5 는 dtype, 멀티모달이면 text_config 의 것도) — 모르면 None"""
+def 설정형식(hf):
+    """#233 — config.json 에 적힌 가중치의 형식(torch_dtype — transformers 5 는 dtype, 멀티모달이면 text_config 의 것도) — 없으면 None"""
     try:
         cj = json.load(open(os.path.join(hf, "config.json"), encoding="utf-8"))
     except (OSError, ValueError):
@@ -75,6 +75,47 @@ def 저장형식(hf):
                 if isinstance(v, str) and v:
                     return v.replace("torch.", "")
     return None
+
+
+def 텐서형식(hf):
+    """#240 — safetensors 머리(파일 앞의 JSON — 가중치는 읽지 않는다)에 적힌 2 차원 이상 텐서의 형식 가운데 값(원소)이 가장 많은 것 —
+    float32 · float16 · bfloat16. 다른 형식(FP8 · 정수로 묶은 양자화 …)이 가장 많거나 못 읽으면 None. 나뉜 파일이면 index 의 weight_map 에서
+    이름이 가장 앞인 파일. 앱의 평가도구.gl 텐서형식과 같은 고름"""
+    파일 = os.path.join(hf, "model.safetensors")
+    if not os.path.isfile(파일):
+        try:
+            wm = json.load(open(os.path.join(hf, "model.safetensors.index.json"), encoding="utf-8")).get("weight_map")
+        except (OSError, ValueError, AttributeError):
+            return None
+        이름들 = sorted(v for v in wm.values() if isinstance(v, str)) if isinstance(wm, dict) else []
+        if not 이름들:
+            return None
+        파일 = os.path.join(hf, 이름들[0])
+    try:
+        with open(파일, "rb") as f:
+            n = struct.unpack("<q", f.read(8))[0]
+            if not 0 < n <= 256 << 20:
+                return None
+            머리 = json.loads(f.read(n))
+    except (OSError, ValueError, struct.error):
+        return None
+    수 = {"F32": 0, "F16": 0, "BF16": 0, "": 0}
+    for t in 머리.values() if isinstance(머리, dict) else ():
+        sh = t.get("shape") if isinstance(t, dict) else None           # __metadata__ 에는 없다
+        if isinstance(sh, list) and len(sh) >= 2 and all(isinstance(x, int) for x in sh):
+            d = t.get("dtype")
+            수[d if d in 수 else ""] += math.prod(sh)
+    큰 = max(수["F32"], 수["F16"], 수["BF16"])
+    if 큰 == 0 or 수[""] > 큰:
+        return None
+    if 수["F32"] == 큰:
+        return "float32"
+    return "bfloat16" if 수["BF16"] == 큰 else "float16"
+
+
+def 저장형식(hf):
+    """원래 모델의 가중치를 저장한 형식 — safetensors 의 텐서가 먼저(#240), 읽지 못하면 config.json(#233) — 모르면 None"""
+    return 텐서형식(hf) or 설정형식(hf)
 
 
 def 원래설정값(cj, 이름):
@@ -231,12 +272,16 @@ def main():
         sys.exit(f"topk.bin 의 길이가 reference.json 과 맞지 않는다({쪽} · {len(topk)})")
     if 쪽 > len(topk):
         sys.exit(f"topk.bin 이 reference.json 보다 짧다({쪽} · {len(topk)})")
-    out = {"format": "geulpu-eval-original/1", "hf_dir": a.hf, "dtype": a.dtype, "original_dtype": 저장형식(a.hf), "torch": torch.__version__,
+    저장 = 저장형식(a.hf)
+    out = {"format": "geulpu-eval-original/1", "hf_dir": a.hf, "dtype": a.dtype, "original_dtype": 저장, "torch": torch.__version__,
            "transformers": transformers.__version__, "reference_key": ref["key"], "reference_model": ref["model"], "top_k": K,
            "conversations": len(대화), "conversations_total": 전체, "positions": 합n, "kl_mean": 합kl / max(합n, 1), "kl_max": 큰kl, "top1": 합top1 / max(합n, 1),
            "answer_logprob_abs_mean": 합d / max(합n, 1), "config_check": 설정,
            "reference_types": 형식들, "reference_16bit": None if 형식들 is None else all(x in ("F32", "F16", "BF16") for x in 형식들),
            "seconds": round(time.time() - t0, 1), "finished": time.strftime("%Y-%m-%dT%H:%M:%S"), "items": 줄}
+    적힌 = 설정형식(a.hf)
+    if 저장 and 적힌 and 적힌 != 저장:                    # #240 — config.json 이 가중치와 다르다
+        out["original_config_dtype"] = 적힌
     with open(a.out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False)
     print(f"원래 모델과 견줌 — 대화 {len(대화)} · 위치 {합n} · KL {out['kl_mean']:.3g} · top-1 {out['top1'] * 100:.2f} %", flush=True)
