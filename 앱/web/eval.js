@@ -115,6 +115,8 @@ const EVAL_DICT = {
   "만들기|make": "Make",
   "기준 모델에서 만듦": "made from the reference model",
   "엔진이 받지 않음 — {}": "Not supported by the engine — {}",
+  "낱말표 · 출력도 Q4_0으로 만듭니다 — 엔진은 Q4_0 파일의 행렬이 모두 같은 형식이어야 받습니다.": "Makes the token embeddings and output Q4_0 too — the engine takes a Q4_0 file only when every matrix has the same type.",
+  "이 모델은 너비({})나 FFN({})이 256의 배수가 아니라 k-양자화(Q6_K · Q5_K_M · Q4_K_M · IQ4_XS)는 llama-quantize가 대체 형식으로 바꿔 엔진이 받지 않습니다 — Q8_0 · Q4_0을 고르세요.": "This model's hidden size ({}) or FFN ({}) is not a multiple of 256, so llama-quantize turns k-quants (Q6_K · Q5_K_M · Q4_K_M · IQ4_XS) into fallback types the engine does not support — choose Q8_0 · Q4_0.",
   "기준 모델을 엔진이 받지 않아 평가할 수 없습니다 — {}": "The engine does not support the reference model, so the workspace cannot be evaluated — {}",
   "기준 모델과 비교할 GGUF 파일을 더하거나, 아래 GGUF 만들기로 원래 모델에서 만드세요.": "Add GGUF files to compare with the reference model, or make them from the original model with Make GGUF below.",
   "양자화": "Quantized",
@@ -581,7 +583,15 @@ TMX.push(
   [/ · 변환 검증 못 함: /g, ' · conversion check failed: '],
   [/ · 변환 검증 문제 (\d+) · 확인 필요 (\d+) · 통과 (\d+)/g, ' · conversion check $1 problems · $2 to check · $3 passed'],
   [/GGUF 를 읽지 못했습니다/g, 'Could not read the GGUF'],
-  [/(\S+): 형식 (\d+) — 이 길의 행렬은 (.+?) 여야 한다/g, '$1: type $2 — matrices on this path must be $3'],   // 엔진의 모델 확인(엔진/가중치K.gl)
+  [/(\S+): 형식 (\S+) — 이 길의 행렬은 (.+?) 여야 한다/g, '$1: type $2 — matrices on this path must be $3'],   // 엔진의 모델 확인(엔진/가중치K.gl)
+  // #215 — 엔진의 형식 알림(번호 대신 이름) · 만들기 작업의 요약
+  [/(\S+): 형식 (\S+) — 이 파일의 형식\((\S+)\)과 같아야 한다\(Q8_0 · Q4_0 파일은 모든 행렬이 같은 형식\)/g, "$1: type $2 — must match the file's type ($3) (every matrix of a Q8_0 · Q4_0 file has the same type)"],
+  [/가중치 형식\((\S+)\)은 받지 않는다\((.+?)\)/g, 'Weight type $1 is not supported ($2)'],
+  [/(\S+): 형식 (\S+) — 이 행렬은 Q8_0 이어야 한다/g, '$1: type $2 — this matrix must be Q8_0'],
+  [/ — llama\.cpp 가 k-양자화를 쓸 수 없는 행렬\(깊이가 256 의 배수가 아님\)에 대신 넣는 형식이다\. 너비가 256 의 배수가 아닌 모델은 Q8_0 · Q4_0 으로 만들 것/g, ' — llama.cpp puts this type in place of a k-quant in matrices whose depth is not a multiple of 256. Make models whose hidden size is not a multiple of 256 as Q8_0 · Q4_0'],
+  [/너비\((\d+)\)나 FFN\((\d+)\)이 256 의 배수가 아니라 k-양자화 형식은 llama-quantize 가 Q5_0 · Q5_1 · Q8_0 · IQ4_NL 같은 대체 형식으로 바꿔 엔진이 받지 않습니다 — 이 모델은 Q8_0 · Q4_0 을 쓰세요/g, 'The hidden size ($1) or FFN ($2) is not a multiple of 256, so llama-quantize turns k-quant types into fallback types such as Q5_0 · Q5_1 · Q8_0 · IQ4_NL that the engine does not support — use Q8_0 · Q4_0 for this model'],
+  [/ · 엔진이 받지 않음\(([^)]+)\) — 까닭은 버전 카드에/g, ' · not supported by the engine ($1) — the version cards show why'],
+  [/ · 엔진이 받지 않음\(([^)]+)\): /g, ' · not supported by the engine ($1): '],
   // 2-3 — 원래 모델과 견주기(원래비교일 · data/orig_compare.py)
   [/원래 모델에 기준 모델의 답을 넣어 견주는 중\(transformers · CPU · (\S+)\)/g, "Feeding the reference model's answers to the original model (transformers · CPU · $1)"],
   [/원래 모델과 견주기 — 위치 (\d+) · KL (\S+) · top-1 ([\d.]+) %/g, 'Compared with the original model — $1 positions · KL $2 · top-1 $3 %'],
@@ -1013,7 +1023,7 @@ function evCheckCard(w, busy) {
     body);
 }
 // ---------- 4-1 GGUF 만들기 ----------
-const EV_QUANTS = ['Q8_0', 'Q6_K', 'Q5_K_M', 'Q4_K_M', 'IQ4_XS'];
+const EV_QUANTS = ['Q8_0', 'Q6_K', 'Q5_K_M', 'Q4_K_M', 'Q4_0', 'IQ4_XS'];   // #215 — Q4_0(낱말표 · 출력도 Q4_0 — 엔진의 Q4_0 길)
 const evMB = n => `${((n || 0) / 1048576).toFixed(1)} MB`;
 function evToolsNeed() {
   if (EV.tools !== undefined || EVF.has('tools')) return;
@@ -1102,8 +1112,15 @@ function evMakeCard(w, busy) {
       conv ? h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('변환 형식')), seg('outtype', [['bf16', 'BF16'], ['f16', 'F16'], ['q8_0', 'Q8_0']], T('변환 형식')),
         w.reference.model ? null : h('span', { class: 'small muted' }, T('변환한 파일이 이 작업 공간의 기준 모델이 됩니다.'))) : null,
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, conv ? T('양자화 형식(여럿 고름 — 고르지 않으면 변환만)') : T('양자화 형식(여럿 고름)')),
-        h('div', { class: 'row g12 wrap' }, EV_QUANTS.map(q => h('label', { class: 'check' }, h('input', { type: 'checkbox', 'data-fk': 'ev-mk-q-' + q, value: q, 'aria-label': q, checked: o.quants.has(q) ? true : null,
-          onchange: ev => { if (ev.target.checked) o.quants.add(q); else o.quants.delete(q); } }), q)))),
+        h('div', { class: 'row g12 wrap' }, EV_QUANTS.map(q => h('label', { class: 'check', 'data-tip': q === 'Q4_0' ? T('낱말표 · 출력도 Q4_0으로 만듭니다 — 엔진은 Q4_0 파일의 행렬이 모두 같은 형식이어야 받습니다.') : null, 'data-tip-pos': 'top' },
+          h('input', { type: 'checkbox', 'data-fk': 'ev-mk-q-' + q, value: q, 'aria-label': q, checked: o.quants.has(q) ? true : null,
+            onchange: ev => { if (ev.target.checked) o.quants.add(q); else o.quants.delete(q); } }), q))),
+        // #215 — 너비 · FFN 이 256 의 배수가 아닌 모델(기준 모델의 모양)은 k-양자화가 대체 형식으로 바뀌어 엔진이 받지 않는다
+        (() => {
+          const rm = w.reference.model ? modelOf(w.reference.model) : null, s = rm && rm.shape;
+          return s && s.ok && s.width > 0 && (s.width % 256 || (s.ffn > 0 && s.ffn % 256))
+            ? h('span', { class: 'small acc' }, T`이 모델은 너비(${s.width})나 FFN(${s.ffn})이 256의 배수가 아니라 k-양자화(Q6_K · Q5_K_M · Q4_K_M · IQ4_XS)는 llama-quantize가 대체 형식으로 바꿔 엔진이 받지 않습니다 — Q8_0 · Q4_0을 고르세요.`) : null;
+        })()),
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, 'imatrix'),
         seg('imode', [['none', T('없음')], ['text', T('글 파일로 만들기')], ['file', T('imatrix 파일')]], 'imatrix'),
         o.imode !== 'none' ? h('input', { class: 'input mono', type: 'text', value: o.ipath, placeholder: o.imode === 'text' ? 'C:\\data\\calibration.txt' : 'C:\\data\\imatrix.gguf',
