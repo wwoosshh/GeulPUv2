@@ -37,6 +37,9 @@
 외부 "kernel32.dll" "CreateThread" [공허 참조 보안을 정수 스택을 공허 참조 함수를 공허 참조 인자를 중간정수 플래그를 공허 참조 번호를 앱스레드만들기]는 -> 공허 참조.
 외부 "kernel32.dll" "GlobalMemoryStatusEx" [공허 참조 칸을 메모리상태]는 -> 중간정수.
 외부 "kernel32.dll" "GetFileAttributesExW" [공허 참조 경로를 중간정수 수준을 공허 참조 칸을 파일속성W]는 -> 중간정수.
+외부 "kernel32.dll" "GetErrorMode" [오류모드읽기]는 -> 중간정수.
+외부 "kernel32.dll" "SetErrorMode" [중간정수 모드를 오류모드쓰기]는 -> 중간정수.
+외부 "kernel32.dll" "SearchPathW" [공허 참조 길을 공허 참조 이름을 공허 참조 확장을 중간정수 길이를 공허 참조 버퍼를 공허 참조 파일부분을 경로찾기W]는 -> 중간정수.
 외부 "shell32.dll" "ShellExecuteW" [공허 참조 창을 공허 참조 동작을 공허 참조 파일을 공허 참조 인자를 공허 참조 폴더를 중간정수 보임을 셸실행W]는 -> 공허 참조.
 외부 "advapi32.dll" "RegGetValueW" [공허 참조 뿌리를 공허 참조 아래를 공허 참조 값이름을 중간정수 깃발을 공허 참조 형을 공허 참조 자료를 공허 참조 길이를 등록값읽기W]는 -> 중간정수.
 외부 "bcrypt.dll" "BCryptOpenAlgorithmProvider" [공허 참조 핸들칸을 공허 참조 이름을 공허 참조 구현을 중간정수 깃발을 해시알고열기]는 -> 중간정수.
@@ -376,6 +379,10 @@
 공허 참조 앱일객체 = 없음.
 
 [일객체준비]는 {
+    (* 0.19.0 — SEM_FAILCRITICALERRORS 를 띄우는 프로그램이 물려받는다: DLL 이 없어 뜨지 못하는 프로그램(NVIDIA 드라이버가 없는 PC 의
+       server-cuda · device-cuda — nvcuda.dll)이 윈도의 오류 창 없이 끝 코드 0xC0000135 로 곧 끝난다. 전에는 확인을 누를 때까지 그 자식과
+       관리자가 기다렸다 *)
+    오류모드쓰기(오류모드읽기() | 1).
     앱일객체 = 일객체만들기(없음, 없음).
     앱일객체 == 없음이면 { 반환. }
     정수[18] 정보.                 (* JOBOBJECT_EXTENDED_LIMIT_INFORMATION 144 바이트 *)
@@ -517,6 +524,15 @@
         }
     }
     반환 없음.
+}
+
+(* 0.19.0 — NVIDIA 드라이버의 nvcuda.dll 이 DLL 을 찾는 길(시스템 폴더 · PATH)에 있는가. 없으면 CUDA 프로그램(server-cuda · device-cuda)은
+   뜨지 못하므로 띄우지 않고 Vulkan 으로 간다(모델보기.gl · 벤치.gl) *)
+[쿠다드라이버있음]는 -> 참거짓 {
+    공허 참조 w = 넓게("nvcuda.dll").
+    중간정수 n = 경로찾기W(없음, w, 없음, 0, 없음, 없음).
+    해제(w).
+    반환 n > 0.
 }
 
 (* 끝났는가(기다리지 않음) — 끝났으면 끝코드를 채운다 *)
