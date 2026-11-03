@@ -6,6 +6,47 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.20.0 — Model evaluation: fixes from the third researcher review · text results across workspaces · sign test (2026-11-03)
+
+0.20.0 fixes what the third outside-researcher review on 0.19.0 (#231–#233) and an external review (#236) found: comparing with the original model again keeps the larger result, original models saved in float32 convert to F16, text results' PPL · BPB line up across workspaces, in the result table and in the CSV, and the sign test's p no longer drops to 0 for large samples. The inference server's `/detokenize` gains `n_bytes` (the server build hashes change); existing requests give the same output bits.
+
+### Fixed
+
+- **Original models saved in float32 convert to F16.** Converting a model whose weights are saved in float32 (common for full
+  fine-tuning) with Make GGUF's default conversion type BF16 made the reference model differ from the original by KL 3.6 × 10⁻⁴
+  from BF16 rounding alone (F16: 2.0 × 10⁻⁶), so Q8_0 · Q6_K comparisons were measured against the rounded model rather than
+  the trained one, and the screen did not point it out (#233). The default conversion type now follows the original weights'
+  type (torch_dtype · dtype in config.json): bfloat16 → BF16, float32 · float16 → F16 (the same choice as llama.cpp's
+  `--outtype auto`). The Make GGUF card shows the original weights' type and why, and the API picks the same way when `outtype`
+  is left out. Compare with the original model notes that a float32 · float16 original compared with a BF16 reference can reach
+  a KL in the 10⁻⁴ range from rounding alone (the result keeps `original_dtype`).
+- **Compare with the original model — comparing again keeps the larger result.** Comparing the same result again with
+  "Conversations to compare" overwrote the full comparison, so 24 minutes of GSM8K (1,319 conversations) turned into the values
+  of the first 200 (#231). Each number of conversations and compute type (float32 · bfloat16) now keeps its own result; the card
+  shows the one that compared the most and lists the others as "Other comparison" lines. `GET /api/eval/original` adds `file`
+  and `runs` (a summary of every stored comparison) to the result.
+- **The sign test's p no longer drops to 0 for large samples.** With 1,075 or more conversations right on one side only, the
+  sign test returned p = 0 (the first term 2⁻ⁿ vanished in double precision), so even a near-even 600 / 599 counted as a clear
+  difference (#236 — external review); from 1,023 to 1,074 it lost precision. Terms are now summed in log space and stay within
+  10⁻¹⁰ relative error of the exact value up to 40,000. The result's accuracy p and the better / worse verdict of comparing two
+  results use it — the verdict is computed when comparing, so it is right at once; a p already written in a result is right
+  after evaluating again. The quick check now also compares the sign test with exact values (including n 1,000 – 40,000).
+- **Text results' PPL · BPB compared across workspaces and in the result table.** There was no place to see which model —
+  continued pretraining, merges, vocabulary extension — has the lowest PPL · BPB, so results had to be opened one by one (#232).
+  For text data, each cell of Compare workspaces now shows the evaluated model's PPL · BPB, the reference-model row shows that
+  model's PPL · BPB, and a before-fine-tuning row appears when there is a baseline model (accuracy · PPL · BPB); the workspace's
+  result table gains PPL · BPB columns and the reference / before-fine-tuning rows. The CSV adds `chunks` · `nll_ref` · `nll` ·
+  `ppl_ref` · `ppl` · `bpb_ref` · `bpb` · `baseline_ppl` · `baseline_bpb`. The result screen's before-fine-tuning cell shows BPB
+  too.
+- **Text results record the chunks actually measured.** Asking for more chunks than the text has (4096 for a 201-chunk text) kept
+  the requested number in the result's settings, so the same measurement split into different settings and did not line up in the
+  result table or Compare workspaces. `settings.chunks` is now the measured number, `chunks_requested` keeps a larger request,
+  and the screen shows "201 chunks (requested 4096)".
+- **Exact bytes for BPB.** Characters cut at chunk boundaries were counted as replacement characters (3 bytes), so the BPB
+  denominator was 0.06–0.09 % too large. The inference server's `/detokenize` now also returns `n_bytes`, the byte count before
+  cleaning, and evaluation divides by it (ko-heldout, 64 chunks: 49,172 → 49,126 bytes — the same as an independent count with the
+  tokenizer).
+
 ## 0.19.0 — Model evaluation: fixes from the second researcher review · text PPL · paired test (2026-11-03)
 
 0.19.0 fixes what the second outside-researcher review found (#213–#220 — full fine-tuning · DPO · continued pretraining · distillation · merging · structural edits · from-scratch training · tool-call fine-tuning): evaluating a model the engine does not support no longer closes the app, the conversion check stops flagging correct SentencePiece and transformers 5 files, text mode gains absolute PPL and bits per byte, Compare with the original model shows its progress, and Compare workspaces gains a paired test. On PCs without the NVIDIA driver, the app no longer shows nvcuda.dll error boxes at startup. The engine's refusal messages and the length rule for scoring-only requests changed; existing requests give the same output bits.

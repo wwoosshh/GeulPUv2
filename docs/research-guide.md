@@ -549,7 +549,8 @@ Things you will use:
   ids; `"geulpu": {"echo_from": n}` scores from token n on (earlier ones are `null`). The response's `geulpu` has `prompt_entropy`,
   `prompt_top_ids`, `prompt_top_logprobs` and `prompt_logit_hashes`.
 - **`/tokenize`** (`{"prompt": "…"}` or `{"messages": […]}` — the prompt with the chat template applied), **`/detokenize`**,
-  **`/tokenizer_info`** — in the same shape as vLLM.
+  **`/tokenizer_info`** — in the same shape as vLLM. `/detokenize` also returns `n_bytes` (the bytes the tokens stand for, before
+  cleaning to UTF-8 — from 0.20.0).
 - **Leave `model` out** of a request and the response's `model` names the model that is actually loaded (put it in and the name you sent
   comes back — the request's `model` does not pick a model). Leave it out when you want a record of which model answered.
 - In a generation response, `geulpu.tokens` and `logit_hashes` include the step that sampled the end token, while the log-prob arrays
