@@ -8,7 +8,7 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ## 0.19.0 — Model evaluation: fixes from the second researcher review · text PPL · paired test (2026-11-03)
 
-0.19.0 fixes what the second outside-researcher review found (#213–#220 — full fine-tuning · DPO · continued pretraining · distillation · merging · structural edits · from-scratch training · tool-call fine-tuning): evaluating a model the engine does not support no longer closes the app, the conversion check stops flagging correct SentencePiece and transformers 5 files, text mode gains absolute PPL and bits per byte, Compare with the original model shows its progress, and Compare workspaces gains a paired test. The engine's refusal messages and the length rule for scoring-only requests changed; existing requests give the same output bits.
+0.19.0 fixes what the second outside-researcher review found (#213–#220 — full fine-tuning · DPO · continued pretraining · distillation · merging · structural edits · from-scratch training · tool-call fine-tuning): evaluating a model the engine does not support no longer closes the app, the conversion check stops flagging correct SentencePiece and transformers 5 files, text mode gains absolute PPL and bits per byte, Compare with the original model shows its progress, and Compare workspaces gains a paired test. On PCs without the NVIDIA driver, the app no longer shows nvcuda.dll error boxes at startup. The engine's refusal messages and the length rule for scoring-only requests changed; existing requests give the same output bits.
 
 ### Added
 
@@ -61,6 +61,12 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
   log-probabilities" (#216). The inference server now takes a prompt that fills the whole context when the request only
   scores it (echo with max_tokens 0) — the same as llama-perplexity -c 512. Models with fewer than 512 positions get the
   reason, and a failed scoring step shows why the server refused.
+- **No error boxes at startup on PCs without the NVIDIA driver.** On Windows PCs without the NVIDIA driver (Intel or AMD
+  GPUs), starting the app showed "The code execution cannot proceed because nvcuda.dll was not found" (server-cuda.exe ·
+  device-cuda.exe) two times more than the number of models, and the app came up only after every box was closed (#229). The
+  app starts these two programs to try CUDA first; without nvcuda.dll they cannot start, and Windows showed a box each time.
+  Now the app skips the CUDA programs when nvcuda.dll is missing and goes straight to Vulkan, and a program the app starts
+  that cannot load returns an error code without a box.
 
 ## 0.18.0 — Model evaluation: transformers 5 models · learned and forgotten · result table · guide (2026-11-02)
 
