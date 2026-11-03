@@ -453,6 +453,11 @@ TMX.push(
   [/텍스트가 짧아 청크\(512 토큰\)를 만들 수 없습니다/g, 'The text is too short for a chunk (512 tokens)'],
   [/기준 모델이 답을 하나도 내지 못했습니다\(run-ref\.jsonl 참고\)/g, 'The reference model gave no answers (see run-ref.jsonl)'],
   [/기준 모델의 로그확률을 받지 못했습니다/g, "Could not get the reference model's log-probabilities"],
+  // #216 — 서버가 거절한 까닭 · 최대 위치가 512 보다 작은 모델
+  [/추론 서버 (\d+) — /g, 'inference server $1 — '],
+  [/추론 서버가 응답하지 않았습니다/g, 'the inference server did not answer'],
+  [/기준 모델의 최대 위치\((\d+)\)가 텍스트 모드의 청크\(512 토큰 — llama-perplexity -c 512 와 같음\)보다 작아 텍스트로 잴 수 없습니다/g, "The reference model's maximum position ($1) is below the text-mode chunk (512 tokens — the same as llama-perplexity -c 512), so it cannot be measured on text"],
+  [/\[(\S+)\] 모델의 최대 위치\((\d+)\)가 텍스트 모드의 청크\(512 토큰\)보다 작아 건너뜁니다\./g, "[$1] The model's maximum position ($2) is below the text-mode chunk (512 tokens) — skipped."],
   [/이미 이 작업 공간에 있는 모델입니다\(기준 모델 또는 버전\)/g, 'The model is already in this workspace (reference model or version)'],
   [/기준 모델이 앱의 모델 목록에 없습니다/g, "The reference model is not in the app's model list"],
   [/모델이 앱의 모델 목록에 없습니다/g, "The model is not in the app's model list"],
