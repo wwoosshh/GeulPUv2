@@ -75,6 +75,27 @@
     반환 판.
 }
 
+(* #233 — 원래 모델의 가중치를 저장한 형식(config.json 의 torch_dtype — transformers 5 는 dtype, 멀티모달이면 text_config 의 것도):
+   float32 · bfloat16 · float16, 모르면 "" *)
+[문자열 폴더를 저장한형식]는 -> 문자열 {
+    제이슨 참조 c = 제파일읽기(잇기3(폴더, "\\", "config.json")).
+    c == 없음이면 { 반환 문자열_복제(""). }
+    문자열 형식 = 제글값(c, "torch_dtype", "").
+    글자수(형식) == 0이면 { 형식 = 제글값(c, "dtype", ""). }
+    글자수(형식) == 0이면 { 형식 = 제글값(제찾기(c, "text_config"), "torch_dtype", ""). }
+    글자수(형식) == 0이면 { 형식 = 제글값(제찾기(c, "text_config"), "dtype", ""). }
+    잠그기(). 제놓기(c). 풀기().
+    반환 형식.
+}
+
+(* #233 — 변환 형식을 정하지 않으면 원래 가중치에 맞춘다: bfloat16 은 BF16, float32 · float16 은 F16(llama.cpp convert_hf_to_gguf.py 의
+   --outtype auto 와 같은 고름). float32 를 BF16 으로 반올림하면 그것만으로 원래 모델과의 KL 이 10⁻⁴ 대, F16 은 10⁻⁶ 대다 *)
+[문자열 폴더를 원래맞춘변환형식]는 -> 문자열 {
+    문자열 형식 = 저장한형식(폴더).
+    (문자열_같은가(형식, "float32") 또는 문자열_같은가(형식, "float16"))이면 { 반환 "f16". }
+    반환 "bf16".
+}
+
 (* 원래 모델 폴더를 읽을 파이썬 — transformers 5 로 저장한 폴더(config.json 의 transformers_version 이 5 이상)면 transformers 5 환경,
    아니면 llama.cpp 가 정한 환경(transformers 4.57.6). 4.x 는 5.x 가 쓴 tokenizer_config.json 을 읽지 못하고(변환이 멈춤) config.json 의
    rope_parameters 를 몰라 rope_theta 의 기본값을 쓴다(견주기가 조용히 틀림 — #196). 칸[0] 파이썬 · 칸[1] 그 환경의 transformers 판 ·
@@ -667,7 +688,8 @@
     문자열 바탕삼음 = 제글값(o, "based_on", 없음).             (* 4-2 — 개선 측정의 기준 버전에서 고른 무리로 다시 만든 것이면 그 버전 *)
     문자열 메모 = 평가메모(제글보기(o, "label", 없음)).         (* #200 — 만든 버전들의 메모(행렬별 형식이면 파일 이름의 꼬리도) *)
     문자열 원본 = 제글값(o, "source_dir", w→원래폴더).
-    문자열 형식0 = 제글값(o, "outtype", "bf16").
+    문자열 형식0 = 제글값(o, "outtype", 없음).
+    형식0 == 없음이면 { 형식0 = 원래맞춘변환형식(원본). }          (* #233 — 정하지 않으면 원래 가중치에 맞춤 *)
     제이슨 참조 이매 = 제찾기(o, "imatrix").
     문자열 이매방식 = 제글값(이매, "mode", "none").
     문자열 이매경로 = 제글값(이매, "path", "").

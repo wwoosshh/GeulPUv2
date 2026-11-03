@@ -62,6 +62,21 @@ def 로프값(rp):
     return fa["rope_theta"] if isinstance(fa, dict) and 수인가(fa.get("rope_theta")) else None
 
 
+def 저장형식(hf):
+    """#233 — 원래 모델의 가중치를 저장한 형식(config.json 의 torch_dtype — transformers 5 는 dtype, 멀티모달이면 text_config 의 것도) — 모르면 None"""
+    try:
+        cj = json.load(open(os.path.join(hf, "config.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    for d in (cj, cj.get("text_config")):
+        if isinstance(d, dict):
+            for k in ("torch_dtype", "dtype"):
+                v = d.get(k)
+                if isinstance(v, str) and v:
+                    return v.replace("torch.", "")
+    return None
+
+
 def 원래설정값(cj, 이름):
     """config.json 의 값(멀티모달이면 text_config 를 먼저) — rope 는 transformers 4 의 rope_theta 와 5 의 rope_parameters 둘 다"""
     for d in (cj.get("text_config"), cj):
@@ -216,7 +231,7 @@ def main():
         sys.exit(f"topk.bin 의 길이가 reference.json 과 맞지 않는다({쪽} · {len(topk)})")
     if 쪽 > len(topk):
         sys.exit(f"topk.bin 이 reference.json 보다 짧다({쪽} · {len(topk)})")
-    out = {"format": "geulpu-eval-original/1", "hf_dir": a.hf, "dtype": a.dtype, "torch": torch.__version__,
+    out = {"format": "geulpu-eval-original/1", "hf_dir": a.hf, "dtype": a.dtype, "original_dtype": 저장형식(a.hf), "torch": torch.__version__,
            "transformers": transformers.__version__, "reference_key": ref["key"], "reference_model": ref["model"], "top_k": K,
            "conversations": len(대화), "conversations_total": 전체, "positions": 합n, "kl_mean": 합kl / max(합n, 1), "kl_max": 큰kl, "top1": 합top1 / max(합n, 1),
            "answer_logprob_abs_mean": 합d / max(합n, 1), "config_check": 설정,
