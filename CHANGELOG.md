@@ -6,6 +6,43 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.21.0 — Model evaluation: fixes from the fourth researcher review · accuracy interval · original weight type (2026-11-05)
+
+0.21.0 fixes what the fourth outside-researcher review on 0.20.0 (#240 · #241) and an external review found: Make GGUF reads the original weights' type from the stored tensors rather than config.json, Compare workspaces shows every version of a type with its name, and the 95 % accuracy interval no longer collapses to zero width when the number of graded conversations is a power of two. The workspace list (`GET /api/eval`) gains each result's app version (`app`) and, for workspaces whose config.json disagrees with the tensors, `original_config_dtype`; the CSV gains an `app` column at the end. The engine did not change: the build hashes and the output bits of existing requests are the same as 0.20.0.
+
+### Fixed
+
+- **The 95 % accuracy interval no longer collapses when the number of conversations is a power of two.** With 16 · 32 · 64 ·
+  128 · 256 · 512 · 1024 graded conversations, the bootstrap 95 % interval was [accuracy, accuracy] — the resampled conversation
+  numbers came from the low bits of a linear congruential generator (x % n), whose period equals n, so every resample was a
+  permutation of the original conversations. Numbers now come from the high bits of two steps (64 conversations at accuracy 0.5:
+  [0.39, 0.63] — matching the width of the normal approximation). Intervals for other numbers of conversations change in the last
+  digits because the draw changed (evaluating the same result again gives the same interval). The quick check now checks the
+  interval's properties (contains the point estimate · width of the normal approximation) besides its bits against the reference,
+  and recomputes exp · log · KL · tail · percentile with standard functions, a different sum and a direct rank (external review —
+  a check against a reference alone misses errors both share).
+- **Compare workspaces shows every version of a type.** When a workspace had several versions of one type (Q4_K_M made
+  without an imatrix and with two texts, say), the comparison cell showed only the last-evaluated one without saying which,
+  and the paired test could not pick the others. Each cell now shows the version and its note, every version of the row is in
+  the cell, and versions the app made with an imatrix get a row per imatrix text (for example "Q4_K_M · imatrix
+  ko_imatrix.txt"). The paired test can pick every version with a result for that data and setting.
+- **Setting names, grouping and old BPB for text results.** The name of a setting that groups several results shows only the
+  measured number of chunks ("201 chunks" — the requested number can differ per result). Text results from 0.19.0 (whose
+  settings recorded the requested number of chunks) are grouped by the measured number too, together with new results of the
+  same setting. BPB from text results made before 0.20.0 carries a * and the reason (bytes counted the old way — evaluating
+  again corrects it), and the reference-model and before-fine-tuning rows use the latest result. Each result in the workspace
+  list (`GET /api/eval`) has the app version that made it (`app`), and the CSV gains an `app` column at the end.
+- **The original weights' type now comes from the stored tensors, not config.json.** Make GGUF's default conversion type and
+  its note, the workspace's `original_dtype` and the rounding notice of Compare with the original model took the original
+  model's type from config.json's `torch_dtype` · `dtype` alone, so a folder whose weights are float32 but whose config says
+  bfloat16 (a training loop that saves its float32 master weights, or DeepSpeed `zero_to_fp32.py` weights next to the config
+  from training) was converted to BF16 and called "the original values exactly". The type now comes from the safetensors
+  header (the weights are not read) — the type holding the most values among tensors of two or more dimensions (like llama.cpp's
+  `--outtype auto`, the tensors rather than the config) — and config.json only when the header cannot be read. When the two
+  differ, the notes on the card and the comparison also give config.json's value, and the workspace list (`GET /api/eval`) and
+  the comparison result keep `original_config_dtype`. Comparisons already made keep the type they recorded (comparing again
+  updates it).
+
 ## 0.20.0 — Model evaluation: fixes from the third researcher review · text results across workspaces · sign test (2026-11-03)
 
 0.20.0 fixes what the third outside-researcher review on 0.19.0 (#231–#233) and an external review (#236) found: comparing with the original model again keeps the larger result, original models saved in float32 convert to F16, text results' PPL · BPB line up across workspaces, in the result table and in the CSV, and the sign test's p no longer drops to 0 for large samples. The inference server's `/detokenize` gains `n_bytes` (the server build hashes change); existing requests give the same output bits.
