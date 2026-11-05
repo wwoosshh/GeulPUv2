@@ -9,6 +9,16 @@ import sys
 
 MODELS = [
     {
+        "key": "qwen3-8b-q4_k_m",
+        "name": "Qwen3-8B Q4_K_M",
+        "repo": "Qwen/Qwen3-8B-GGUF",
+        "file": "Qwen3-8B-Q4_K_M.gguf",
+        "size": 5027783488,
+        "sha256": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785",
+        "license": "Apache-2.0",
+        "backends": "CUDA and Vulkan; with the default settings on CUDA it uses the 8-bit KV cache and fast attention",
+    },
+    {
         "key": "qwen3-8b-q8_0",
         "name": "Qwen3-8B Q8_0",
         "repo": "Qwen/Qwen3-8B-GGUF",
