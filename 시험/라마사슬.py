@@ -2,8 +2,9 @@
 """llama.cpp 재현 7단계(문서/라마재현.md) — GPU 없는 시험: llama-server(b12008) 한 슬롯의 프롬프트 캐시 셈 흉내(앱/라마사슬.gl)가 서버
 코드(tools/server/server-context.cpp — get_available_slot 의 LCP 비율 · 남기는 몫, n_past, 체크포인트 되살리기 · 지우기, 프롬프트의
 덩어리 나눔 · create_checkpoint, 생성 걸음, 9단계 — 채팅 API 의 사용자 메시지 자리에서 끊음, 10단계 — 되돌릴 수 있는 메모리(dense):
-체크포인트 없이 n_past = 겹치는 앞, 프롬프트 전부가 캐시면 n_past − 1)를 옮긴 파이썬 참조와 같은 cache_n · 되살림 · 슬롯의 토큰 수 ·
-ubatch 사슬을 내는가.
+체크포인트 없이 n_past = 겹치는 앞, 프롬프트 전부가 캐시면 n_past − 1, 16단계 — 캐시 끝이 ubatch 가운데면 그 ubatch 를 남기고
+n_past 부터 이어 셈: 시작이 n_past 앞인 이력을 차례대로 남김)를 옮긴 파이썬 참조와 같은 cache_n · 되살림 · 슬롯의 토큰 수 · ubatch 사슬
+(위치 · 크기 · 토큰의 합 셈)을 내는가.
 
   python -I -X utf8 시험/라마사슬.py <시험_라마사슬 실행 파일>
       정한 무작위 대화(잇기 · 같은 프롬프트 · 생성 잇기 · 앞을 고침 · 다른 프롬프트)를 설정 여섯으로 견준다(빠른 점검 4w).
@@ -29,7 +30,7 @@ class 슬롯:
     def __init__(self, nb, nu, cp, ms, sp, ram, 슬롯수=4, 되돌림=0):
         self.nb, self.nu, self.cp, self.ms, self.sp, self.ram, self.슬롯수 = nb, nu, cp, ms, F32(sp), ram, 슬롯수
         self.되돌림 = 되돌림                                           # 10단계 — 1: dense(PART — 체크포인트 없음)
-        self.tokens, self.cps, self.hist = [], [], []                 # cps: [n_tokens, 작업], hist: [(p0, T)]
+        self.tokens, self.cps, self.hist = [], [], []                 # cps: [n_tokens, 작업], hist: [(p0, T, 토큰들)]
         self.램 = []                                                  # 이 사슬에서 RAM 캐시에 저장했을 슬롯의 토큰들(위 집합)
         self.되살림 = -1
 
@@ -102,10 +103,15 @@ class 슬롯:
                 return -1, []
             n_past -= 1
         self.tokens = self.tokens[:n_past]
-        h = [(p0, T) for p0, T in self.hist if p0 + T <= n_past]
-        if (h[-1][0] + h[-1][1] if h else 0) != n_past:
-            return -1, []
-        self.hist = h
+        if self.되돌림:
+            # 16단계 — dense: 캐시 [0, n_past) 를 쓴 이력은 시작이 n_past 앞인 ubatch 들(차례대로). 가운데에 걸린 ubatch 는 다 셈한 뒤
+            # n_past 부터 덮어 쓴다(서버: 그 ubatch 를 다 셈했고 seq_rm 으로 n_past 뒤를 지웠다)
+            self.hist = [e for e in self.hist if e[0] < n_past]
+        else:
+            h = [e for e in self.hist if e[0] + e[1] <= n_past]
+            if (h[-1][0] + h[-1][1] if h else 0) != n_past:
+                return -1, []
+            self.hist = h
         cache_n = n_past
         o1, o2 = min(self.nb, 4 + self.nu), min(self.nb, 4)
         last_user = 사용자[-1] if 사용자 else -1
@@ -132,11 +138,12 @@ class 슬롯:
                 if do:
                     self.체크만들기(b0, task)
             for u0 in range(b0, b1, self.nu):
-                self.hist.append((u0, min(self.nu, b1 - u0)))
+                T = min(self.nu, b1 - u0)
+                self.hist.append((u0, T, list(prompt[u0:u0 + T])))
         self.tokens = list(prompt)
-        사슬 = [T for _, T in self.hist]
+        사슬 = list(self.hist)
         for i, t in enumerate(gen[:-1]):
-            self.hist.append((n + i, 1))
+            self.hist.append((n + i, 1, [t]))
             self.tokens.append(t)
         return cache_n, 사슬
 
@@ -198,6 +205,16 @@ def 설정풀기(설정):
     return 설정 if len(설정) == 8 else (*설정, 0)
 
 
+def 토큰셈(사슬):
+    # 16단계 — 사슬 토큰의 합 셈: Σ (i + 1)·(토큰 + 1) mod 1,000,000,007(차례대로 이은 토큰)
+    k, v = 0, 0
+    for _, _, tk in 사슬:
+        for t in tk:
+            k += 1
+            v = (v + k * (t + 1)) % 1000000007
+    return v
+
+
 def 참조출력(cases):
     out = []
     for 설정, reqs in cases:
@@ -212,7 +229,10 @@ def 참조출력(cases):
                 멈춤 = True
                 out += [0, 0, 0]
             else:
-                out += [s.되살림, len(s.tokens), len(사슬), *사슬]
+                out += [s.되살림, len(s.tokens), len(사슬)]
+                for p0, T, _ in 사슬:
+                    out += [p0, T]
+                out.append(토큰셈(사슬))
     return out
 
 
