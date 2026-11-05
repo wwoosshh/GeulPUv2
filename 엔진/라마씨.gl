@@ -1,0 +1,8 @@
+(* llama.cpp 를 돌린 컴퓨터의 C 런타임 셈 — 재현 호스트와 앱이 llama.cpp 의 호스트(CPU)가 낸 값과 같은 비트를 내려고 그 함수를 그대로
+   부른다(문서/라마재현.md 4단계): RoPE 의 theta_scale(powf) · 눈금(sqrtf), llama-server 의 로그 확률(expf · logf).
+   윈도: ucrtbase.dll — llama.cpp 의 MSVC 빌드(llama-server-impl.dll · ggml-cuda.dll)가 api-ms-win-crt-math 로 가져오는 것.
+   리눅스 대상이면 컴파일러가 엔진/리눅스/라마씨.gl(libm.so.6 — glibc)을 대신 포함한다(D-50). 다른 OS 에서 돈 실행은 그 OS 의 판으로 *)
+외부 "ucrtbase.dll" "powf" [짧은실수 x를 짧은실수 y를 씨거듭]는 -> 짧은실수.
+외부 "ucrtbase.dll" "sqrtf" [짧은실수 x를 씨제곱근]는 -> 짧은실수.
+외부 "ucrtbase.dll" "expf" [짧은실수 x를 씨지수]는 -> 짧은실수.
+외부 "ucrtbase.dll" "logf" [짧은실수 x를 씨로그]는 -> 짧은실수.

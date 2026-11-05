@@ -7,7 +7,8 @@
      8 RoPE 의 θ 눈금(호스트 powf) · 9 진동수 눈금 · 10 attn 눈금 · 11 회전 차원 · 12 어텐션 눈금 · 13 (쓰지 않음) · 14 방식 — 4 … 12 는
      짧은실수의 비트. 방식 0(1단계): 머리 뒤에 층마다의 상태 — GDN 층은 합성곱 상태(짧은실수 [채널][3]) · 재귀 상태([v머리][128][128]),
      어텐션 층은 K · V 캐시(반실수 [KV 칸][KV머리 · 256]) — llama.cpp 가 프롬프트를 마친 뒤의 기록. 방식 1(2단계): 상태 0 에서
-     프롬프트부터, KV 칸 = 캐시 크기.
+     프롬프트부터, KV 칸 = 캐시 크기. 방식 2(4단계 — 영수증): 방식 1 과 같고, 1 · 4 … 12 를 호스트가 GGUF 와 llama.cpp 의 셈으로 채운다
+     (머리에는 표시 · KV 칸 · 방식만 — 아래 GGUF상수).
    토큰: 방식 0 — 중간정수 걸음 수 뒤에 걸음마다 넣는 토큰. 방식 1 — ubatch 수 · ubatch 마다 토큰 수 · 프롬프트 토큰 수 · 프롬프트
      토큰들 · 걸음 수 · 걸음마다 넣는 토큰(서버가 낸 토큰). ubatch 나눔은 llama-server 의 실행 모양(시험/라마재현.py 가 만든다).
    로짓 출력: 짧은실수 [줄][어휘수] — 방식 0 은 걸음마다, 방식 1 은 프롬프트 끝 + 걸음마다.
@@ -21,6 +22,7 @@
 포함 "표준/시간.gl"
 포함 "파일.gl"
 포함 "gguf.gl"
+포함 "라마씨.gl"
 
 묶음 라마가중는 정수 주소, 정수 형식, 정수 K, 정수 R.
 묶음 라마계획는 정수 표, 정수 타일, 정수 J, 정수 ntx, 정수 ntiles, 정수 nseg, 정수 열, 정수 iterj.
@@ -494,6 +496,40 @@
     }
 }
 
+(* 짧은실수의 비트(부호 없는 32 비트) *)
+합침 라마비트32는 짧은실수 f, 중간정수 i.
+[짧은실수 x를 라마비트]는 -> 정수 {
+    라마비트32 u.
+    u의 f = x.
+    반환 (u의 i 으로 정수) & 4294967295.
+}
+
+(* 방식 2(4단계 — 영수증): 머리의 상수를 GGUF 와 llama.cpp b12008 의 셈으로 — llama.cpp 의 호스트가 CPU 에서 낸 값과 같은 비트(C 런타임은
+   라마씨.gl). src/models/models.h 의 build_gdn_l2_norm(rms_norm(x, eps / n) · 1 / sqrtf(n), n = 머리 차원) · qwen35.cpp 의 kq_scale
+   (1 / sqrtf(n_embd_head)) · ggml-cuda/rope.cu 의 theta_scale(powf(freq_base, −2 / n_dims)). RoPE 늘림(rope.scaling)이 있는 파일은
+   아직 받지 않는다(진동수 · attn 눈금 1) *)
+[GGUF 참조 g를 GGUF상수]는 {
+    층수 = 메타정수(g, "qwen35.block_count").
+    메타있음(g, "qwen35.rope.scaling.type")이면 { "RoPE 늘림(rope.scaling)이 있는 GGUF 는 아직 받지 않는다\n"을 쓰다. 1로 종료하다. }
+    짧은실수 실일 = 1.0 으로 짧은실수.
+    짧은실수 eps = 메타실수(g, "qwen35.attention.layer_norm_rms_epsilon") 으로 짧은실수.
+    짧은실수 nk = 메타정수(g, "qwen35.ssm.state_size") 으로 짧은실수.
+    eps비트 = 라마비트(eps).
+    l2eps비트 = 라마비트(eps / nk).
+    l2눈금비트 = 라마비트(실일 / 씨제곱근(nk)).
+    gdn눈금비트 = l2눈금비트.
+    회전수 = 메타정수(g, "qwen35.rope.dimension_count").
+    짧은실수 fb = 메타실수(g, "qwen35.rope.freq_base") 으로 짧은실수.
+    짧은실수 거듭지수 = (-2.0 으로 짧은실수) / (회전수 으로 짧은실수).
+    세타비트 = 라마비트(씨거듭(fb, 거듭지수)).
+    fs비트 = 라마비트(실일).
+    af비트 = 라마비트(실일).
+    짧은실수 nh = 메타정수(g, "qwen35.attention.key_length") 으로 짧은실수.
+    fa눈금비트 = 라마비트(실일 / 씨제곱근(nh)).
+    파일에_쓰기(표준출력(), "상수(GGUF): 층 %lld · eps %08llx · l2 eps %08llx · l2 눈금 %08llx · θ %08llx · 회전 %lld · 어텐션 눈금 %08llx\n",
+        층수, eps비트, l2eps비트, l2눈금비트, 세타비트, 회전수, fa눈금비트).
+}
+
 [정수 argc를 문자열 참조 argv를 시작하기]는 -> 정수 {
     argc < 6이면 { "사용법: 라마재현 <모델.gguf> <모듈(.ptx · 라마재현V 는 .spvs)> <머리> <토큰> <로짓 출력>\n"을 쓰다. 반환 3. }
     쿠다열기().
@@ -529,6 +565,10 @@
     fa눈금비트 = 머리[12] 으로 정수. 방식 = 머리[14] 으로 정수.
     (* 가중치 · 상태 *)
     GGUF 참조 g = GGUF열기(argv[1]).
+    방식 == 2이면 {
+        GGUF상수(g).
+        방식 = 1.
+    }
     가중올림(g, "token_embd.weight"). 가중올림(g, "output_norm.weight"). 가중올림(g, "output.weight").
     어휘수 = 가중얻기("output.weight")→R.
     너비 = 가중얻기("output.weight")→K.
