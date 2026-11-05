@@ -266,6 +266,15 @@ def 시험_GDN(P, R, M):
         P.놓기()
 
 
+def 로프인자(M, D):
+    """11단계 — RoPE 의 freq_factors: GGUF 의 rope_freqs.weight(F32, 머리 차원 / 2 칸 — llama3), 없으면 1."""
+    try:
+        _, _, raw = M.원("rope_freqs.weight")
+        return np.frombuffer(bytes(raw), f32)[:D // 2].copy()
+    except (KeyError, ValueError):
+        return np.ones(D // 2, f32)
+
+
 def 시험_RoPE(P, R, M):
     """ROPE(IMRoPE) 노드: q(머리 16) · k(머리 4), 위치 · θ 눈금(호스트의 powf — float64 의 거듭제곱을 짧은실수로) · 진동수 눈금 · attn."""
     for n, rec in R.연산("ROPE"):
@@ -277,7 +286,11 @@ def 시험_RoPE(P, R, M):
         D = rec["ne"][0]                                                # 10단계 — 머리 크기(256 · 128)
         H = x.size // D
         px, py = P.올림(x), P.올림(np.zeros(x.size, f32))
-        P.띄우기("라마RoPE" if D == 256 else f"라마RoPE{D}", (H, 1), D, [(1, px), (1, py), (0, op[1]), (0, pos), (0, 비트(ts)), (0, op[6]), (0, op[8])])
+        if op[2] == 0:                                                  # 11단계 — 보통 RoPE(llama) · freq_factors
+            pf = P.올림(로프인자(M, D))
+            P.띄우기(f"라마RoPE보통{D}", (H, 1), D, [(1, px), (1, pf), (1, py), (0, op[1]), (0, pos), (0, 비트(ts)), (0, op[6]), (0, op[8])])
+        else:
+            P.띄우기("라마RoPE" if D == 256 else f"라마RoPE{D}", (H, 1), D, [(1, px), (1, py), (0, op[1]), (0, pos), (0, 비트(ts)), (0, op[6]), (0, op[8])])
         견주기(f"ROPE {H}×{D} 위치 {pos} ({n['name']})", P.받음(py, x.size), R.배열(rec))
         P.놓기()
 
@@ -465,7 +478,12 @@ def 시험_RoPE여럿(P, R, M):
         ts = f32(np.power(np.float64(fb), -2.0 / op[1]))
         D = x.shape[3]
         px, py = P.올림(x.reshape(-1)), P.올림(np.zeros(x.size, f32))
-        P.띄우기("라마RoPE여럿" if D == 256 else f"라마RoPE여럿{D}", (T * H, 1), D, [(1, px), (1, py), (0, op[1]), (0, int(pos[0])), (0, H), (0, 비트(ts)), (0, op[6]), (0, op[8])])
+        if op[2] == 0:                                                  # 11단계 — 보통 RoPE(llama) · freq_factors
+            pf = P.올림(로프인자(M, D))
+            P.띄우기(f"라마RoPE보통여럿{D}", (T * H, 1), D, [(1, px), (1, pf), (1, py), (0, op[1]), (0, int(pos[0])), (0, H), (0, 비트(ts)),
+                                                         (0, op[6]), (0, op[8])])
+        else:
+            P.띄우기("라마RoPE여럿" if D == 256 else f"라마RoPE여럿{D}", (T * H, 1), D, [(1, px), (1, py), (0, op[1]), (0, int(pos[0])), (0, H), (0, 비트(ts)), (0, op[6]), (0, op[8])])
         견주기(f"ROPE {T}×{H}×{D} 위치 {pos[0]}… ({n['name']})", P.받음(py, x.size), R.배열(rec))
         P.놓기()
 
