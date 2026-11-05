@@ -88,6 +88,8 @@ $progs = @(
     @('엔진/장치C.gl', (Join-Path $Bin 'device-cuda.exe'), 'device-cuda'),
     @('엔진/진단.gl', (Join-Path $Bin 'diag-cuda.exe'), 'diag-cuda'),
     @('엔진/진단V.gl', (Join-Path $Bin 'diag-vulkan.exe'), 'diag-vulkan'),
+    @('엔진/라마재현.gl', (Join-Path $Bin 'replay-llama-cuda.exe'), 'replay-llama-cuda'),        # llama.cpp 재현 4단계(문서/라마재현.md)
+    @('엔진/라마재현V.gl', (Join-Path $Bin 'replay-llama-vulkan.exe'), 'replay-llama-vulkan'),
     @('커널/커널생성.gl', (Join-Path $Bin 'kernel-gen.exe'), 'kernel-gen')
 )
 foreach ($p in $progs) { Say ('빌드: ' + $p[0]); Run $Comp @($p[0], '-o', $p[1]) $Root $p[2] }

@@ -65,6 +65,8 @@ run device-vulkan "$ROOT" "$COMP" 엔진/장치V.gl -o "$DIST/bin/device-vulkan"
 run device-cuda "$ROOT" "$COMP" 엔진/장치C.gl -o "$DIST/bin/device-cuda"
 run diag-cuda "$ROOT" "$COMP" 엔진/진단.gl -o "$DIST/bin/diag-cuda"
 run diag-vulkan "$ROOT" "$COMP" 엔진/진단V.gl -o "$DIST/bin/diag-vulkan"
+run replay-llama-cuda "$ROOT" "$COMP" 엔진/라마재현.gl -o "$DIST/bin/replay-llama-cuda"      # llama.cpp 재현 4단계(문서/라마재현.md)
+run replay-llama-vulkan "$ROOT" "$COMP" 엔진/라마재현V.gl -o "$DIST/bin/replay-llama-vulkan"
 run kernel-gen "$ROOT" "$COMP" 커널/커널생성.gl -o "$DIST/bin/kernel-gen"
 run kernel-diag-ptx "$ROOT" "$DIST/bin/ptx-backend" 커널/진단.gl -o "$DIST/kernels/diag.ptx"
 run kernel-diag-vulkan "$ROOT" "$DIST/bin/spirv-backend" 커널/진단V.gl -o "$DIST/kernels/diag-vulkan.spvs"

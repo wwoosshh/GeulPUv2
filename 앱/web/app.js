@@ -1234,6 +1234,73 @@ const DICT = {
   "lines(JSONL 글)가 있어야 합니다": "lines (JSONL text) is required",
   "text(JSONL 글)가 있어야 합니다": "text (JSONL text) is required",
   "실행 이름은 1 ~ 64 바이트, / \\ : * ? \" < > | 와 앞의 점 없이": "Run names are 1–64 bytes, without / \\ : * ? \" < > | or a leading dot",
+  // llama.cpp 재현 검증(문서/라마재현.md 4단계) — 화면
+  "이 실행 로그에 점수 줄이 없습니다": "This run log has no score lines",
+  "llama.cpp의 실행은 벤치마크 화면의 llama.cpp 재현 검증으로 다시 계산합니다": "llama.cpp runs are recomputed with the llama.cpp replay check on the Benchmark page",
+  "영수증 {} — {}에서 다시 계산: ": "Receipt {} — recomputed on {}: ",
+  "llama-server의 응답과 비트까지 같음(값 {}개)": "bit-identical to the llama-server response ({0} {0|value|values})",
+  "llama-server의 응답과 다름(다른 값 {}개 · 스텝 {}부터)": "differs from the llama-server response ({0} {0|value differs|values differ}, from step {1})",
+  "다시 계산한 값이 llama-server와 다른 스텝이 {}개 있습니다 — 처음은 스텝 {}": "{0} {0|step differs|steps differ} from llama-server in the recomputation — the first is step {1}",
+  "llama-server가 낸 토큰 · 로그 확률을 영수증만으로 다시 계산해 {}개 스텝 모두 비트까지 같습니다. 엔트로피는 다시 계산한 로짓의 분포(온도 1)입니다.": "Recomputed from the receipt alone, the tokens and log probabilities llama-server returned are bit-identical at all {} steps. Entropy comes from the distribution of the recomputed logits (temperature 1).",
+  "토큰을 누르면 그 스텝의 대안과 수치가 보입니다.": "Click a token to see that step's alternatives and numbers.",
+  "llama.cpp의 실행입니다 — 분기와 요청 고쳐 다시 생성은 GeulPU 서버의 실행에서만 됩니다.": "This is a llama.cpp run — branching and regenerating an edited request work only on runs of the GeulPU server.",
+  "llama-server와": "vs llama-server",
+  "비트까지 같음": "Bit-identical",
+  "토큰만 같음": "Token identical",
+  "서버가 로그 확률을 적지 않은 스텝 {}개(글자가 덜 끝난 스텝)는 토큰만 견줬습니다.": "At {0} {0|step|steps} where the server wrote no log probabilities (an unfinished character), only the token was compared.",
+  "llama-server는 글이 UTF-8 글자 가운데서 끝난 스텝의 로그 확률을 적지 않고 그 바이트를 다음 스텝에 합칩니다 — 이 스텝은 토큰만 견줍니다": "llama-server leaves out the log probabilities of a step whose text ends inside a UTF-8 character and merges its bytes into the next step — only the token is compared at this step",
+  "llama.cpp 재현 검증": "llama.cpp replay check",
+  "요청마다 10초~수십 분": "10 s to tens of minutes per request",
+  "고치지 않은 llama-server로 돌린 요청의 기록(영수증)만으로 이 PC의 GPU에서 다시 계산해, 서버가 낸 토큰과 로그 확률이 비트까지 같은지 봅니다. 다시 계산한 실행은 디버거에서 스텝마다 봅니다.": "Recomputes a request that ran on an unmodified llama-server on this PC's GPU, from its record (receipt) alone, and checks that the tokens and log probabilities the server returned are bit-identical. The recomputed run opens step by step in the debugger.",
+  "llama-server의 포트": "llama-server port",
+  "llama-server를 띄운 명령줄": "Command line that started llama-server",
+  "기록기 설정을 저장했습니다": "Saved the recorder settings",
+  "검증할 영수증": "Receipt to check",
+  "프롬프트 {} · 생성 {} 토큰": "prompt {} · {} generated tokens",
+  "영수증 없음": "No receipts",
+  "다시 계산할 백엔드": "Backend to recompute on",
+  "다시 계산할 Vulkan 장치": "Vulkan device to recompute on",
+  "첫 장치": "First device",
+  "기록기 — llama-server 대신 이 주소로 /completion 요청을 보내면 그 서버로 넘기고 영수증을 남깁니다.": "Recorder — send /completion requests to this address instead of llama-server; the app forwards them to that server and keeps a receipt.",
+  "llama-server를 띄운 명령줄 — n_batch · n_ubatch · flash attention · 프롬프트 캐시를 읽습니다": "Command line that started llama-server — n_batch, n_ubatch, flash attention and the prompt cache are read from it",
+  "영수증 {}개": "{0} {0|receipt|receipts}",
+  "검증": "Check",
+  "llama-server의 응답과 비트까지 같습니다": "Bit-identical to the llama-server response",
+  "llama-server의 응답과 다릅니다": "Differs from the llama-server response",
+  "스텝 {}개 · 토큰과 상위 {}개 로그 확률": "{0} {0|step|steps} · tokens and top-{1} log probabilities",
+  "영수증 {}": "Receipt {}",
+  "다시 계산 {}초": "recomputed in {} s",
+  "값": "Value",
+  "llama-server": "llama-server",
+  "다시 계산": "Recomputed",
+  "생성 토큰": "Generated token",
+  "고른 토큰의 로그 확률": "Log probability of the chosen token",
+  "상위 {}위": "Top-list rank {}",
+  "디버거에서 열기": "Open in the debugger",
+  // llama.cpp 재현 검증 — 관리자의 문구(TM)
+  "영수증 읽는 중": "Reading the receipt",
+  "재현 모듈 준비 중": "Preparing the replay module",
+  "서버의 로그 확률과 대조하는 중": "Comparing with the server's log probabilities",
+  "영수증이 없습니다": "Receipt not found",
+  "영수증을 읽지 못했습니다": "Could not read the receipt",
+  "영수증 이름이 맞지 않습니다": "Invalid receipt name",
+  "layer 는 cuda · vulkan 가운데 하나": "layer must be cuda or vulkan",
+  "영수증의 꼴이 geulpu-llama-receipt/1 이 아닙니다": "The receipt is not in the geulpu-llama-receipt/1 format",
+  "윈도에서 돈 llama-server 의 영수증만 받습니다(로그 확률은 그 OS 의 C 런타임으로 셈한다)": "Only receipts from llama-server on Windows are accepted (log probabilities are computed with that OS's C runtime)",
+  "슬롯이 하나인 서버의 영수증만 받습니다": "Only receipts from a server with one slot are accepted",
+  "프롬프트 캐시를 끈 서버(--no-cache-prompt)의 영수증만 받습니다": "Only receipts from a server with the prompt cache off (--no-cache-prompt) are accepted",
+  "flash attention 을 켠 서버(-fa on)의 영수증만 받습니다": "Only receipts from a server with flash attention on (-fa on) are accepted",
+  "/completion 요청의 영수증만 받습니다": "Only receipts of /completion requests are accepted",
+  "온도 0(가장 높은 토큰 고르기)인 요청의 영수증만 받습니다": "Only receipts of requests at temperature 0 (greedy) are accepted",
+  "응답에 생성 토큰(tokens)이 없습니다": "The response has no generated tokens (tokens)",
+  "영수증에 프롬프트 토큰이 없습니다": "The receipt has no prompt tokens",
+  "재현 모듈을 만들지 못했습니다": "Could not build the replay module",
+  "입력 파일을 쓰지 못했습니다": "Could not write the input files",
+  "로짓 파일을 읽지 못했습니다": "Could not read the logits file",
+  "n_ubatch 는 1 … 512, n_batch 는 n_ubatch 이상": "n_ubatch must be 1…512 and n_batch at least n_ubatch",
+  "llama-server 기록기가 꺼져 있습니다 — 기록기 설정에 llama-server 의 포트를 적으세요(POST /api/llama/recorder)": "The llama-server recorder is off — set the llama-server port in the recorder settings (POST /api/llama/recorder)",
+  "llama-server 에 연결하지 못했습니다 — 기록기 설정의 포트를 확인하세요": "Could not connect to llama-server — check the port in the recorder settings",
+  "포트는 0(끔) … 65535, 앱의 포트가 아닌 것": "The port must be 0 (off) … 65535 and not the app's port",
 };
 function T(s, ...v) {
   if (typeof s === 'string') {
@@ -1257,6 +1324,16 @@ function T(s, ...v) {
 }
 // 관리자 · 서버 문구 → 영어(사전에 통째로 있으면 그것, 아니면 아래 바꾸기를 차례로). 영어 화면이 아니면 그대로
 const TMX = [
+  // llama.cpp 재현 검증(문서/라마재현.md 4단계) — 관리자의 문구
+  [/llama\.cpp 빌드 (\S*) 는 아직 재현하지 못합니다\(받는 빌드: b12008\)/g, 'llama.cpp build $1 cannot be replayed yet (supported build: b12008)'],
+  [/원래 실행의 GPU\((.*?)\)의 일 나누기는 아직 옮기지 않았습니다\(받는 것: RTX 4070 Ti — sm_89, SM 60\)/g, "The work split of the original run's GPU ($1) is not ported yet (supported: RTX 4070 Ti — sm_89, 60 SMs)"],
+  [/영수증의 모델 파일이 없습니다: /g, "The receipt's model file is missing: "],
+  [/모델 파일의 SHA-256 이 영수증과 다릅니다 — 다른 파일로 돈 실행입니다\(파일 (\w*)…, 영수증 (\w*)…\)/g, 'The SHA-256 of the model file differs from the receipt — the run used a different file (file $1…, receipt $2…)'],
+  [/재현 호스트가 없습니다: /g, 'Replay host missing: '],
+  [/재현 호스트 실패\(종료 코드 (-?\d+)\): /g, 'Replay host failed (exit code $1): '],
+  [/다시 계산하는 중\((\w+) — 프롬프트 (\d+) 토큰 · 걸음 (\d+)\)/g, 'Recomputing ($1 — prompt $2 tokens · $3 steps)'],
+  [/결과: 영수증과 비트까지 같습니다 — 걸음 (\d+) · 값 (\d+)\(토큰과 상위 (\d+) 로그 확률\) · (\w+) · ([\d.]+)초/g, 'Result: bit-identical to the receipt — $1 steps · $2 values (tokens and top-$3 log probabilities) · $4 · $5 s'],
+  [/결과: 영수증과 다릅니다 — 걸음 (-?\d+) 에서 처음 갈림 · 다른 값 (\d+)\(토큰 (\d+)\) \/ (\d+) · (\w+)/g, 'Result: differs from the receipt — first divergence at step $1 · $2 values differ ($3 tokens) / $4 · $5'],
   // 디버거(디버거 v1) — 관리자의 문구
   [/이미 기록 중입니다\((.*?)\) — 먼저 멈추세요/g, 'Already recording ($1) — stop it first'],
   [/같은 이름의 실행이 있습니다\((.*?)\)/g, 'A run with the same name exists ($1)'],
@@ -4709,8 +4786,10 @@ const BENCH = [
     desc: T('DeepSeek-R1-Distill-Qwen-7B Q8_0으로 수학 문제 32개를 풀어 기준 PC의 출력과 비트 단위로 비교합니다. 빌드와 커널의 해시도 함께 확인합니다.') },
   { kind: 'pair', title: T('파일 쌍 재현성'), needModel: false, time: T('파일마다 1~20분'),
     desc: T('같은 모델을 다르게 양자화한 GGUF 파일들(Liu · Tsai, arXiv:2610.19498)을 정밀 모드로 돌려, 문제 32개의 스텝마다 로짓 해시가 기준 PC와 같은지 보고 파일끼리의 차이(답이 처음 갈리는 스텝 · 토큰마다의 로그확률 차)를 잽니다.') },
+  { kind: 'llama-verify', title: T('llama.cpp 재현 검증'), needModel: false, time: T('요청마다 10초~수십 분'),
+    desc: T('고치지 않은 llama-server로 돌린 요청의 기록(영수증)만으로 이 PC의 GPU에서 다시 계산해, 서버가 낸 토큰과 로그 확률이 비트까지 같은지 봅니다. 다시 계산한 실행은 디버거에서 스텝마다 봅니다.') },
 ];
-const KIND = { '진단': ['pulse', T('하드웨어 진단')], '속도': ['bolt', T('속도 측정')], '교차검증': ['shield', T('재현성 검증')], '파일쌍': ['shield', T('파일 쌍 재현성')] };
+const KIND = { '진단': ['pulse', T('하드웨어 진단')], '속도': ['bolt', T('속도 측정')], '교차검증': ['shield', T('재현성 검증')], '파일쌍': ['shield', T('파일 쌍 재현성')], '라마재현': ['shield', T('llama.cpp 재현 검증')] };
 const pairTitle = c => (EN && c.title_en) || c.title || c.label;
 const R1_REF = 'deepseek-r1-distill-qwen-7b-q8_0';
 function benchModel(runnables) {
@@ -4744,12 +4823,12 @@ function renderBench() {
   const st = S.st;
   const page = $('#page-bench');
   const j0 = st.job;
-  const j = j0 && (j0.state === 'running' || (['diag', 'speed', 'crosscheck', 'pair'].includes(j0.kind) && jobKey(j0) !== S.jobHide)) ? j0 : null;
+  const j = j0 && (j0.state === 'running' || (['diag', 'speed', 'crosscheck', 'pair', 'llama-verify'].includes(j0.kind) && jobKey(j0) !== S.jobHide)) ? j0 : null;
   const runnables = sortedModels().filter(runnable);
   const hasR1 = st.models.some(m => m.catalog === R1_REF && runnable(m));
   const sel = benchModel(runnables);
   const pairs = (st.pair_catalog || []).map(c => [c.id, c.installed, dlStateOf(c), c.download && c.download.state, c.download && c.download.total ? Math.floor(20 * c.download.received / c.download.total) : 0]);
-  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], runnables.map(m => m.id), hasR1, sel, S.results && S.results.length, pairs];
+  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], runnables.map(m => m.id), hasR1, sel, S.results && S.results.length, pairs, S.llama ? S.llama.v : 0];
   if (changed('bench', struct)) {
     const busy = !!(j && j.state === 'running');
     const r1c = st.catalog.find(c => c.id === R1_REF);
@@ -4839,7 +4918,59 @@ function pairFiles() {
     h('label', { class: 'check' }, h('input', { type: 'checkbox', class: 'pair-quick' }), T('빠른 확인 — 문제 4개(전체 검증 아님)')),
     h('div', { class: 'small muted' }, T('파일은 Hugging Face에서 받고, 받은 뒤 SHA-256을 확인합니다. 그래픽 메모리가 파일 크기보다 1 GB 이상 커야 그 파일을 돌립니다(7B Q8_0은 약 9 GB).')));
 }
+// llama.cpp 재현 4단계(문서/라마재현.md) — 기록기(앱의 /llama/… 를 사용자의 llama-server 로 넘기고 /llama/completion 을 영수증으로)와
+// 재현 검증(영수증만으로 이 PC 의 GPU 에서 다시 계산 — 결과 폴더 · 디버거의 실행 로그)
+function llamaLoad() {
+  const L = S.llama;
+  L.at = Date.now();
+  Promise.all([api('/api/llama/recorder'), api('/api/llama/receipts'), L.vk ? null : api('/api/device').catch(() => null)]).then(([rec, rs, dev]) => {
+    L.rec = rec;
+    L.list = (rs.receipts || []).slice().sort((a, b) => String(b.recorded || '').localeCompare(String(a.recorded || '')) || String(b.name).localeCompare(String(a.name)));
+    if (dev) L.vk = ((dev.vulkan || {})['장치들'] || []).map(v => v['이름']);
+    L.v++;
+    if (S.view === 'bench') renderBench();
+  }).catch(() => { });
+}
+function llamaCard(b, busy) {
+  const L = S.llama || (S.llama = { v: 0, at: 0, rec: null, list: null, vk: null, sel: '', layer: 'cuda', dev: '' });
+  if (Date.now() - L.at > 15000) llamaLoad();
+  const rec = L.rec || {}, list = L.list || [];
+  if (!list.some(r => r.name === L.sel)) L.sel = list.length ? list[0].name : '';
+  const port = h('input', { type: 'number', class: 'input lab-num', min: '0', max: '65535', value: rec.port ? String(rec.port) : '', placeholder: '8080', 'aria-label': T('llama-server의 포트'), 'data-fk': 'llama-port' });
+  const args = h('input', { type: 'text', class: 'input', value: rec.args || '', placeholder: 'llama-server -m … -np 1 -fa on --no-cache-prompt -ngl 99', 'aria-label': T('llama-server를 띄운 명령줄'), spellcheck: 'false', 'data-fk': 'llama-args' });
+  const save = async () => {
+    try { await api('/api/llama/recorder', { port: parseInt(port.value || '0', 10) || 0, args: args.value.trim() }); toast(T('기록기 설정을 저장했습니다'), 'ok'); llamaLoad(); }
+    catch (e) { toast(e.message, 'err'); }
+  };
+  const sel = h('select', { class: 'input', 'aria-label': T('검증할 영수증'), 'data-fk': 'llama-receipt', disabled: list.length ? null : true, onchange: ev => { L.sel = ev.target.value; } },
+    list.length ? list.map(r => h('option', { value: r.name, selected: r.name === L.sel ? true : null }, `${r.name} · ${r.model} · ` + T`프롬프트 ${fmtNum(r.prompt_tokens)} · 생성 ${fmtNum(r.tokens)} 토큰`))
+      : h('option', { value: '' }, T('영수증 없음')));
+  const lay = h('select', { class: 'input', 'aria-label': T('다시 계산할 백엔드'), 'data-fk': 'llama-layer', onchange: ev => { L.layer = ev.target.value; L.v++; renderBench(); } },
+    h('option', { value: 'cuda', selected: L.layer === 'cuda' ? true : null }, 'CUDA'), h('option', { value: 'vulkan', selected: L.layer === 'vulkan' ? true : null }, 'Vulkan'));
+  const dev = L.layer === 'vulkan' ? h('select', { class: 'input', 'aria-label': T('다시 계산할 Vulkan 장치'), 'data-fk': 'llama-dev', onchange: ev => { L.dev = ev.target.value; } },
+    h('option', { value: '' }, T('첫 장치')), (L.vk || []).map(n => h('option', { value: n, selected: n === L.dev ? true : null }, n))) : null;
+  const url = `http://127.0.0.1:${(S.st && S.st.app && S.st.app.port) || location.port}/llama/completion`;
+  return h('div', { class: 'card bench-card', 'data-kind': b.kind },
+    h('div', null, h('h2', null, b.title), h('div', { class: 'eyebrow' }, b.time)),
+    h('p', null, b.desc),
+    h('div', { class: 'col g8' },
+      h('div', { class: 'small muted' }, T('기록기 — llama-server 대신 이 주소로 /completion 요청을 보내면 그 서버로 넘기고 영수증을 남깁니다.')),
+      h('div', { class: 'row g8' }, h('span', { class: 'mono small' }, url),
+        h('button', { class: 'icon-btn sm', 'aria-label': T('주소 복사'), 'data-tip': T('주소 복사'), 'data-tip-pos': 'top', onclick: () => copyText(url).then(ok => { if (ok) toast(T('복사했습니다'), 'ok'); }) }, I('copy', 's'))),
+      h('div', { class: 'row g8' }, h('span', { class: 'small muted nw' }, T('llama-server의 포트')), port, h('button', { class: 'btn sm needs-conn', 'data-fk': 'llama-save', onclick: save }, T('저장'))),
+      h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('llama-server를 띄운 명령줄 — n_batch · n_ubatch · flash attention · 프롬프트 캐시를 읽습니다')), args)),
+    h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T`영수증 ${fmtNum(list.length)}개`), sel, h('div', { class: 'row g8' }, lay, dev)),
+    h('div', null, h('button', {
+      class: 'btn run needs-conn', 'data-fk': 'llama-run', disabled: busy || !L.sel ? true : null, onclick: async () => {
+        if (S.streaming) { toast(T('채팅의 답이 끝난 뒤 실행할 수 있습니다')); return; }
+        if (S.st.server.state === 'ready' && !(await confirmBox(T('채팅 모델을 내립니다'), h('p', { class: 'muted m0' }, T('측정하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?')), T('계속')))) return;
+        try { await api('/api/llama/verify', { receipt: L.sel, layer: L.layer, device: L.layer === 'vulkan' ? L.dev : '' }); resetSig(); refresh(); }
+        catch (e) { toast(e.message, 'err'); }
+      },
+    }, I('play', 's'), busy ? T('다른 작업 실행 중') : T('검증'))));
+}
 function benchCard(b, runnables, hasR1, busy, r1c) {
+  if (b.kind === 'llama-verify') return llamaCard(b, busy);
   const extra = b.kind === 'crosscheck' ? h('div', { class: 'col g12' },
     h('label', { class: 'check' }, h('input', { type: 'checkbox', class: 'cc-quick' }), T('빠른 확인 — 문제 2개 · 64토큰(전체 검증 아님)')),
     h('select', { class: 'input cc-mod', 'aria-label': T('검증할 경로') }, h('option', { value: 'both' }, T('모든 경로(권장)')), h('option', { value: 'coop' }, T('텐서 코어 경로만')), h('option', { value: 'base' }, T('기본 경로만')))) : b.kind === 'pair' ? pairFiles() : null;
@@ -4901,6 +5032,8 @@ function stampText(s) { return String(s || '').replace(/^(\d{4})(\d{2})(\d{2})-(
 function headText(t) { return String(t || '').split('\n')[0].replace(/^결과(\([^)]*\))?: /, ''); }
 function resultVerdict(x) {
   const t = x.headline || '';
+  if (/영수증과 다릅니다/.test(t)) return ['err', T('불일치')];                 // llama.cpp 재현 검증(라마재현.gl 의 결과말)
+  if (/영수증과 비트까지 같습니다/.test(t)) return ['ok', T('일치')];
   if (/다른 출력이 있거나|끝나지 못한/.test(t)) return ['err', T('불일치')];
   if (isQuick(x) && /앞부분이 같습니다/.test(t)) return ['', T('앞부분 일치')];
   if (/똑같은 출력|앞부분이 같습니다/.test(t)) return ['ok', T('일치')];
@@ -4924,7 +5057,7 @@ function resultsTable(rs) {
     h('thead', null, h('tr', null, h('th', null, T('종류')), h('th', { class: 'c-model' }, T('모델', 'th')), h('th', { class: 'c-date' }, T('일시')), h('th', { class: 'c-res' }, T('결과')), h('th', { class: 'r' }, h('span', { class: 'sr' }, T('동작'))))),
     h('tbody', null, rs.map(x => {
       const k = KIND[x.kind] || ['terminal', x.kind];
-      const v = x.kind === '교차검증' || x.kind === '파일쌍' ? resultVerdict(x) : null;
+      const v = x.kind === '교차검증' || x.kind === '파일쌍' || x.kind === '라마재현' ? resultVerdict(x) : null;
       const sum = resultSummary(x);
       const vt = v ? h('span', { class: 'tag ' + v[0] }, v[0] === 'err' ? I('alert') : null, v[1]) : null;
       return h('tr', { class: 'clk', onclick: e => { if (!e.target.closest('a, button')) openResult(x.name); } },
@@ -4990,7 +5123,24 @@ async function openResult(name) {
   if (kind === '진단') title = T('하드웨어 진단 결과');
   if (kind === '속도') title = T('속도 측정 결과');
   const parts = [h('div', { class: 'row g8 muted' }, I(k[0], 's'), h('span', { class: 'eyebrow' }, eyebrow))];
-  if (summary && summary.runs) {
+  if (kind === '라마재현' && summary && summary.format === 'geulpu-llama-verify/1') {   // llama.cpp 재현 4단계 — 영수증과 비트 대조
+    const s = summary, diffs = s.differences || [];
+    const hex32 = v => (v === undefined || v === null || v < 0 ? '-' : '0x' + (v >>> 0).toString(16).padStart(8, '0'));
+    const side = (d, id, v) => (d.what === 'top' ? `#${id} · ${hex32(v)}` : d.what === 'token' ? `#${v}` : hex32(v));
+    parts.push(h('h2', { class: 'mt8' }, s.same ? T('llama-server의 응답과 비트까지 같습니다') : T('llama-server의 응답과 다릅니다')),
+      h('div', { class: 'res-head' },
+        h('span', { class: 'big' }, `${fmtNum(s.values - s.mismatches)}/${fmtNum(s.values)}`),
+        h('span', { class: 'muted' }, T`스텝 ${fmtNum(s.steps)}개 · 토큰과 상위 ${s.n_probs}개 로그 확률`), h('span', { class: 'grow' }),
+        h('span', { class: 'tag ' + (s.same ? 'ok' : 'err') }, s.same ? null : I('alert'), s.same ? T('일치') : T('불일치'))),
+      h('div', { class: 'small muted' }, [T`영수증 ${s.receipt}`, T`프롬프트 ${fmtNum(s.prompt_tokens)} 토큰`, (LAYER[s.layer] || s.layer) + (s.vulkan_device ? ` (${s.vulkan_device})` : ''),
+        T`다시 계산 ${fmtNum(s.seconds, 1)}초`].join(NB)),
+      diffs.length ? h('div', { class: 'list' }, h('table', { class: 'data' },
+        h('thead', null, h('tr', null, [T('스텝'), T('값'), T('llama-server'), T('다시 계산')].map(t => h('th', null, t)))),
+        h('tbody', null, diffs.map(d => h('tr', null, h('td', { class: 'num' }, d.step + 1),
+          h('td', null, d.what === 'token' ? T('생성 토큰') : d.what === 'logprob' ? T('고른 토큰의 로그 확률') : T`상위 ${d.rank + 1}위`),
+          h('td', { class: 'mono small' }, side(d, d.server_id, d.server)), h('td', { class: 'mono small' }, side(d, d.replay_id, d.replay))))))) : null,
+      s.run_log ? h('div', null, h('button', { class: 'btn sm primary', 'data-fk': 'llama-debug', onclick: () => { closeModal(); show('debug'); dbgSelect(s.run_log); } }, I('bug', 's'), T('디버거에서 열기'))) : null);
+  } else if (summary && summary.runs) {
     const runs = summary.runs;
     const allSame = runs.every(r => r.same === r.total && r.total > 0);
     const nProb = runs[0] ? runs[0].total : 0;
@@ -5890,15 +6040,17 @@ function labLensBox(an, toks, i, ctx) {
 }
 function labDetail(an, toks, i, canBranch, onBranch, lensCtx) {
   const ids = an.topIds[i] || [], lps = an.topLp[i] || [];
-  if (ids.some(id => LAB.texts[id] === undefined)) labTexts(ids).then(() => document.querySelectorAll('.lab-detail-holder').forEach(x => x._render && x._render()));
+  // 후보의 글 — llama.cpp 재현의 실행은 영수증의 글(an.texts)만: 지금 서버의 어휘는 다른 모델의 것일 수 있다
+  const tx = id => (an.texts ? an.texts[id] : LAB.texts[id]);
+  if (!an.texts && ids.some(id => LAB.texts[id] === undefined)) labTexts(ids).then(() => document.querySelectorAll('.lab-detail-holder').forEach(x => x._render && x._render()));
   const st = labStep(an, toks, i);
-  const txt = id => (LAB.texts[id] === undefined ? '…' : tokShow(LAB.texts[id]));
+  const txt = id => (tx(id) === undefined ? (an.texts ? '?' : '…') : tokShow(tx(id)));
   const rows = ids.map((id, q) => h('div', { class: 'alt' + (id === toks[i] ? ' chosen' : '') },
     h('span', { class: 'alt-t' }, txt(id)),
     h('span', { class: 'alt-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${Math.max(1, Math.round(Math.exp(lps[q]) * 100))}%` })),
     h('span', { class: 'alt-p' }, pct(lps[q])),
     canBranch && id !== toks[i] ? h('button', {
-      class: 'icon-btn sm needs-conn', 'aria-label': T`이 토큰으로 분기: ${LAB.texts[id] === undefined ? id : LAB.texts[id]}`,
+      class: 'icon-btn sm needs-conn', 'aria-label': T`이 토큰으로 분기: ${tx(id) === undefined ? id : tx(id)}`,
       'data-tip': T('여기서 분기 — 이 토큰을 고른 뒤 같은 설정으로 이어 생성(지금 답은 버전으로 남음)'), 'data-tip-pos': 'left',
       disabled: (S.streaming || LAB.busy) ? true : null, onclick: () => (onBranch || labBranch)(i, id),
     }, I('forward', 's')) : h('span', { class: 'alt-go' }, id === toks[i] ? h('span', { role: 'img', 'aria-label': T('고른 토큰'), 'data-tip': T('고른 토큰'), 'data-tip-pos': 'left' }, I('check', 's')) : '')));
@@ -5911,7 +6063,11 @@ function labDetail(an, toks, i, canBranch, onBranch, lensCtx) {
       h('div', { class: 'k' }, T('순위')), h('div', { class: 'v' }, st.rank > ids.length ? T`${ids.length}위 밖` : T`${st.rank}위`),
       h('div', { class: 'k' }, T('엔트로피')), h('div', { class: 'v' }, nat(an.ent[i]) + ' nat'),
       h('div', { class: 'k' }, T('마진')), h('div', { class: 'v' }, isFinite(st.margin) ? nat(st.margin) + ' nat' : '-'),
-      h('div', { class: 'k' }, T('로짓 해시')), h('div', { class: 'v mono small' }, an.hashes[i] || '-')),
+      an.mism ? h('div', { class: 'k' }, T('llama-server와')) : h('div', { class: 'k' }, T('로짓 해시')),
+      an.mism ? h('div', { class: 'v' }, an.mism.has(i) ? h('span', { class: 'tag err' }, I('alert'), T('다름'))
+        : an.nos && an.nos.has(i) ? h('span', { class: 'tag dim', 'data-tip': T('llama-server는 글이 UTF-8 글자 가운데서 끝난 스텝의 로그 확률을 적지 않고 그 바이트를 다음 스텝에 합칩니다 — 이 스텝은 토큰만 견줍니다'), 'data-tip-pos': 'left' }, T('토큰만 같음'))
+          : h('span', { class: 'tag ok' }, I('check'), T('비트까지 같음')))
+        : h('div', { class: 'v mono small' }, an.hashes[i] || '-')),
     h('div', { class: 'eyebrow' }, T`대안 상위 ${ids.length}개`),
     h('div', { class: 'alts' }, rows),
     lensCtx && an.prompt && ((modelOf(lensCtx.model) || {}).shape || {}).layer_lens_ok ? labLensBox(an, toks, i, lensCtx) : null);
@@ -6544,7 +6700,7 @@ function bigParse(s) {
 const bigStringify = (v, sp) => JSON.stringify(v, null, sp).replace(/"\\u0001N:(-?\d+)"/g, '$1');
 const bigShow = v => (typeof v === 'string' && v.startsWith(BIG) ? v.slice(BIG.length) : v);
 
-const dbgG = x => ((x && x.response) || {}).geulpu || {};
+const dbgG = x => ((x && x.response) || {}).geulpu || (x && x.llama) || {};   // llama.cpp 재현의 실행 로그는 프롬프트 · 생성 토큰을 "llama" 칸에
 const dbgFinish = r => (((r && r.choices) || [])[0] || {}).finish_reason || null;
 const dbgKey = x => (x.type === 'branch' ? 'b' + x.b : 'r' + x.i);
 const dbgEq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -6556,6 +6712,20 @@ function dbgFirstDiff(a, b) {
 const dbgStamp = () => { const d = new Date(), p = x => String(x).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
 const dbgWhen = ms => (ms > 0 ? new Date(ms).toLocaleString(EN ? 'en-US' : 'ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-');
 const dbgIsHeader = x => !!x && typeof x === 'object' && (String(x.format || '').startsWith('geulpu-run-log/') || x.geulrun === 1);
+// llama.cpp 재현 4단계(문서/라마재현.md) — 앱의 재현 검증이 만든 실행 로그(머리의 server.engine 이 llama.cpp). 점수 줄은 영수증만으로 다시
+// 계산한 값(고른 토큰의 로그 확률 · 상위 후보는 llama-server 의 셈 그대로, 엔트로피는 다시 계산한 로짓의 분포)이라 GeulPU 서버를 쓰지 않는다
+const dbgLlama = run => ((run && run.header && run.header.server) || {}).engine === 'llama.cpp';
+function dbgLlamaAn(run, x) {
+  const sc = dbgScoreFor(run, x.i, dbgServerOf(run, x));
+  if (!sc) return null;
+  const g = dbgG(x), texts = {};
+  (sc.top_ids || []).forEach((ids, i) => (ids || []).forEach((id, q) => { const t = ((sc.top_text || [])[i] || [])[q]; if (t !== null && t !== undefined && texts[id] === undefined) texts[id] = t; }));
+  const raw = (sc.token_text || []).map(t => (t === null || t === undefined ? '' : t));
+  return {
+    prompt: g.prompt_tokens || [], raw, strs: tokTexts(sc.text, sc.text_offset || [], raw), lp: sc.logprobs || [], ent: sc.entropy || [], topIds: sc.top_ids || [], topLp: sc.top_logprobs || [],
+    hashes: [], k: sc.k, same: null, texts, mism: new Set(sc.mismatch_steps || []), nos: new Set(sc.no_server_steps || []),
+  };
+}
 
 // ---- 실행 로그 ----
 function dbgParse(text, name) {
@@ -6868,6 +7038,11 @@ const BK = { low_margin: '마진이 작은 스텝', low_prob: '저확률 샘플'
 async function dbgObserve(run, x) {
   const key = run.name + '|' + dbgKey(x);
   if (DBG.an[key]) return DBG.an[key];
+  if (dbgLlama(run)) {
+    const an = dbgLlamaAn(run, x);
+    if (!an) throw new Error(T('이 실행 로그에 점수 줄이 없습니다'));
+    return (DBG.an[key] = an);
+  }
   await dbgNotRecording();
   const sv = dbgServerOf(run, x);
   await dbgEnsure(sv);
@@ -7113,6 +7288,8 @@ function dbgRunHead(run) {
   const sv = run.reqs.length ? dbgServerOf(run, run.reqs[0]) : dbgServerOf(run, null);
   const now = dbgNowServer(), diff = dbgDiff(sv, now);
   const busy = !!(DBG.busy || DBG.prog);
+  const llama = dbgLlama(run), rp = hd.replay || {};
+  const llamaTip = T('llama.cpp의 실행은 벤치마크 화면의 llama.cpp 재현 검증으로 다시 계산합니다');
   const tabs = h('div', { class: 'seg-ctl', role: 'tablist', 'aria-label': T('실행 보기') }, [['reqs', T('요청')], ['cmp', T('비교')]].map(([k, t]) => h('button', {
     role: 'tab', class: (DBG.view === k || (k === 'reqs' && DBG.view === 'req')) ? 'on' : '', 'aria-selected': DBG.view === k ? 'true' : 'false', 'data-fk': 'dbg:tab:' + k,
     onclick: () => { DBG.view = k; DBG.err = ''; renderDebug(true); },
@@ -7120,20 +7297,24 @@ function dbgRunHead(run) {
   const scoredModels = new Set(run.scores.map(s => (s.server || {}).sha256)).size;
   return h('div', { class: 'col g12' },
     h('div', null, h('div', { class: 'eyebrow' }, T('실행 로그')), h('div', { class: 'fd-title' }, run.name),
-      h('div', { class: 'fd-sub' }, [hm.id ? (modelOf(hm.id) ? labelById(hm.id) : hm.id) : (hm.file || T('모델 모름')), hs.precision === 'fast' ? T('빠름') : hs.precision === 'exact' ? T('정밀') : null,
-        hs.kv8 ? T('KV 8비트') : null, hs.fast_attention ? T('빠른 어텐션') : null, LAYER[hs.layer] || hs.layer || null, hs.context ? T`문맥 ${fmtCtx(hs.context)}` : null, hs.yarn ? `YaRN ×${hs.yarn}` : null].filter(Boolean).join(NB)),
+      h('div', { class: 'fd-sub' }, (llama ? [hm.file || T('모델 모름'), ('llama.cpp ' + (hs.build_info || '')).trim(), hs.backend || null, hs.context ? T`문맥 ${fmtCtx(hs.context)}` : null]
+        : [hm.id ? (modelOf(hm.id) ? labelById(hm.id) : hm.id) : (hm.file || T('모델 모름')), hs.precision === 'fast' ? T('빠름') : hs.precision === 'exact' ? T('정밀') : null,
+          hs.kv8 ? T('KV 8비트') : null, hs.fast_attention ? T('빠른 어텐션') : null, LAYER[hs.layer] || hs.layer || null, hs.context ? T`문맥 ${fmtCtx(hs.context)}` : null, hs.yarn ? `YaRN ×${hs.yarn}` : null]).filter(Boolean).join(NB)),
       h('div', { class: 'small muted' }, [hd.created ? T`만든 때 ${hd.created}` : null, hd.app ? `GeulPU ${hd.app}` : null, hd.commit ? T`커밋 ${String(hd.commit).slice(0, 7)}` : null,
         (hd.build || {}).server ? T`서버 빌드 ${String(hd.build.server).slice(0, 12)}` : null].filter(Boolean).join(NB))),
     h('div', { class: 'row g8' }, h('span', { class: 'tag' }, T`요청 ${fmtNum(run.reqs.length)}개`), h('span', { class: 'tag' }, T`분기 ${fmtNum(run.branches.length)}개`),
       h('span', { class: 'tag', 'data-tip': T('echo 스코어링 줄 — 모델(서버)마다 요청마다 하나'), 'data-tip-pos': 'top' }, T`점수 ${fmtNum(run.scores.length)}개 · 모델 ${scoredModels}개`),
       h('span', { class: 'tag dim' }, fmtBytes(run.bytes))),
-    diff.length || !now.ready ? h('div', { class: 'note-line' }, I('info', 's'), h('span', { class: 'grow' }, !now.ready ? T`이 실행은 ${dbgSvLabel(sv)}로 계산했습니다 — 지금 불러온 모델이 없습니다.`
-      : T`이 실행은 ${dbgSvLabel(sv)}로 계산했습니다 — 지금 서버와 다른 것: ${diff.join(', ')}.`),
-    h('button', { class: 'btn sm needs-conn', disabled: busy ? true : null, onclick: () => dbgRun(() => dbgMatch(sv)) }, I('refresh', 's'), T('이 실행의 설정으로 불러오기'))) : null,
+    llama ? h('div', { class: 'note-line' + (rp.same === false ? ' err' : '') }, I(rp.same ? 'check' : 'alert', 's'), h('span', { class: 'grow' },
+      T`영수증 ${rp.receipt || '-'} — ${(LAYER[rp.layer] || rp.layer || '-') + (rp.vulkan_device ? ` (${rp.vulkan_device})` : '')}에서 다시 계산: `
+      + (rp.same ? T`llama-server의 응답과 비트까지 같음(값 ${fmtNum(rp.values || 0)}개)` : T`llama-server의 응답과 다름(다른 값 ${fmtNum(rp.mismatches || 0)}개 · 스텝 ${(rp.first_divergence || 0) + 1}부터)`)))
+      : diff.length || !now.ready ? h('div', { class: 'note-line' }, I('info', 's'), h('span', { class: 'grow' }, !now.ready ? T`이 실행은 ${dbgSvLabel(sv)}로 계산했습니다 — 지금 불러온 모델이 없습니다.`
+        : T`이 실행은 ${dbgSvLabel(sv)}로 계산했습니다 — 지금 서버와 다른 것: ${diff.join(', ')}.`),
+      h('button', { class: 'btn sm needs-conn', disabled: busy ? true : null, onclick: () => dbgRun(() => dbgMatch(sv)) }, I('refresh', 's'), T('이 실행의 설정으로 불러오기'))) : null,
     h('div', { class: 'row g8' }, tabs, h('span', { class: 'grow' }),
-      h('button', { class: 'btn sm needs-conn', disabled: busy || !run.reqs.length ? true : null, 'data-tip': T('기록한 요청과 분기를 같은 시드로 다시 보내 토큰 · 스텝마다 로짓 해시를 비교합니다'), 'data-tip-pos': 'top',
+      h('button', { class: 'btn sm needs-conn', disabled: busy || !run.reqs.length || llama ? true : null, 'data-tip': llama ? llamaTip : T('기록한 요청과 분기를 같은 시드로 다시 보내 토큰 · 스텝마다 로짓 해시를 비교합니다'), 'data-tip-pos': 'top',
         onclick: () => dbgRun(() => dbgReplay(run)) }, I('refresh', 's'), T('재생')),
-      h('button', { class: 'btn sm needs-conn', disabled: busy || !run.reqs.length ? true : null, 'data-tip': T('요청마다 답을 지금 모델로 echo 스코어링해 점수 줄을 덧붙입니다(중단점 · 비교에 씀)'), 'data-tip-pos': 'top',
+      h('button', { class: 'btn sm needs-conn', disabled: busy || !run.reqs.length || llama ? true : null, 'data-tip': llama ? llamaTip : T('요청마다 답을 지금 모델로 echo 스코어링해 점수 줄을 덧붙입니다(중단점 · 비교에 씀)'), 'data-tip-pos': 'top',
         onclick: () => dbgRun(() => dbgScoreRun(run, now.ready ? now : sv)) }, I('gauge', 's'), T('점수 매기기')),
       h('a', { class: 'btn sm', href: '/api/debug/run?name=' + encodeURIComponent(run.name), download: run.name + '.jsonl', 'data-tip': T('실행 로그 파일(JSONL)을 받습니다 — 다른 GeulPU에서 불러오기로 엽니다'), 'data-tip-pos': 'top' }, I('download', 's'), T('내보내기')),
       h('button', { class: 'icon-btn sm needs-conn', 'aria-label': T('실행 로그 지우기'), 'data-tip': T('지우기'), 'data-tip-pos': 'top', disabled: busy || ((DBG.rec || {}).recording && DBG.rec.name === run.name) ? true : null,
@@ -7206,6 +7387,7 @@ function dbgReqView(run) {
   const back = h('button', { class: 'btn sm ghost', 'data-fk': 'dbg:back', onclick: () => { DBG.view = 'reqs'; DBG.err = ''; renderDebug(true); } }, I('chevL', 's'), T('요청 목록'));
   if (!x) return h('div', { class: 'col g12' }, back, labNote(T('이 요청이 실행 로그에 없습니다.')));
   const g = dbgG(x), o = x.request || {}, sv = dbgServerOf(run, x), toks = Array.isArray(g.tokens) ? g.tokens : [];
+  const llama = dbgLlama(run);
   const out = [h('div', { class: 'row g8' }, back, h('span', { class: 'grow' }))];
   out.push(h('div', null, h('div', { class: 'sec' }, T`요청 ${x.i}`),
     h('div', { class: 'small muted' }, [x.path, `HTTP ${x.status}`, dbgFinish(x.response), o.temperature !== undefined ? T`온도 ${o.temperature}` : T('온도 기본값'),
@@ -7225,13 +7407,16 @@ function dbgReqView(run) {
   if (x.status !== 200 || !toks.length) { out.push(labNote(x.status !== 200 ? T('오류로 끝난 요청입니다 — 재생은 같은 오류(상태 · 코드)가 나오는지 봅니다.') : T('응답에 토큰이 없습니다.'))); return h('div', { class: 'col g16' }, out); }
   // 답의 글
   const msg = ((((x.response || {}).choices || [])[0]) || {}).message || {};
-  const txt = dbgText(run.name + '|r' + x.i + '|all', toks, sv);
+  const txt = llama ? String((x.response || {}).content || '') : dbgText(run.name + '|r' + x.i + '|all', toks, sv);
   out.push(h('div', { class: 'col g8' }, h('div', { class: 'eyebrow' }, T('답')),
     h('pre', { class: 'dbg-ans' }, txt !== null ? txt : (msg.content || T('(이 실행의 모델과 어휘가 같은 모델을 불러오면 답의 글이 보입니다)')))));
   // 관찰
-  const key = run.name + '|' + dbgKey(x), an = DBG.an[key];
+  const key = run.name + '|' + dbgKey(x);
+  let an = DBG.an[key];
+  if (!an && llama) { an = dbgLlamaAn(run, x); if (an) DBG.an[key] = an; }   // 영수증에서 다시 계산한 점수 줄 그대로(서버 없이)
   out.push(labSec(T('관찰 — 토큰마다')));
-  if (!an) {
+  if (!an && llama) out.push(labNote(T('이 실행 로그에 점수 줄이 없습니다')));
+  else if (!an) {
     out.push(labNote(T('토큰마다 확률 · 순위 · 대안 · 엔트로피를 이 실행의 모델로 다시 계산합니다(echo 스코어링 — 생성과 같은 비트). 그 스텝의 대안 토큰으로 분기할 수 있습니다.')),
       h('div', null, h('button', { class: 'btn primary needs-conn', disabled: (DBG.busy || DBG.prog) ? true : null, onclick: () => dbgRun(() => dbgObserve(run, x)) }, I('play', 's'), T('토큰마다 확률 계산하기'))));
   } else {
@@ -7241,9 +7426,13 @@ function dbgReqView(run) {
       labKpi(nat(sm.minM), T`가장 작은 마진 (스텝 ${sm.minAt + 1})`), labKpi(fmtNum(sm.frag), T`마진이 작은 스텝 (마진 < ${LAB.delta})`), labKpi(fmtNum(sm.notTop), T('1위가 아닌 토큰'))),
       an.same === true ? h('div', { class: 'note-line' }, I('check', 's'), h('span', null, T`로짓 해시 ${fmtNum(toks.length)}개가 생성 때와 같습니다 — 이 값은 생성할 때와 같은 계산입니다.`))
         : an.same === false ? h('div', { class: 'note-line err' }, I('alert', 's'), h('span', null, T('로짓 해시가 생성 때와 다릅니다 — 다른 계산입니다(모델 · 계산 방식 · 빌드를 확인하세요).'))) : null);
+    if (llama) out.push(h('div', { class: 'note-line' + (an.mism.size ? ' err' : '') }, I(an.mism.size ? 'alert' : 'check', 's'), h('span', null, an.mism.size
+      ? T`다시 계산한 값이 llama-server와 다른 스텝이 ${fmtNum(an.mism.size)}개 있습니다 — 처음은 스텝 ${Math.min(...an.mism) + 1}`
+      : T`llama-server가 낸 토큰 · 로그 확률을 영수증만으로 다시 계산해 ${fmtNum(toks.length)}개 스텝 모두 비트까지 같습니다. 엔트로피는 다시 계산한 로짓의 분포(온도 1)입니다.`
+        + (an.nos.size ? ' ' + T`서버가 로그 확률을 적지 않은 스텝 ${fmtNum(an.nos.size)}개(글자가 덜 끝난 스텝)는 토큰만 견줬습니다.` : ''))));
     const bks = dbgBreaks(toks, { logprobs: an.lp, top_logprobs: an.topLp.map(v => (v || []).slice(0, 2)), token_text: an.raw }, LAB.delta, DBG.prob, dbgToolCall(x));
-    const holder = labDetailHolder(() => (DBG.step >= 0 && DBG.step < an.lp.length ? labDetail(an, toks, DBG.step, true, (i, id) => dbgBranchToken(run, x, i, id))
-      : labNote(T('토큰을 누르면 그 스텝의 대안과 수치가 보입니다. 대안의 화살표 단추가 그 토큰으로 분기합니다(같은 시드 · 같은 스텝 번호의 난수).'))));
+    const holder = labDetailHolder(() => (DBG.step >= 0 && DBG.step < an.lp.length ? labDetail(an, toks, DBG.step, !llama, (i, id) => dbgBranchToken(run, x, i, id))
+      : labNote(llama ? T('토큰을 누르면 그 스텝의 대안과 수치가 보입니다.') : T('토큰을 누르면 그 스텝의 대안과 수치가 보입니다. 대안의 화살표 단추가 그 토큰으로 분기합니다(같은 시드 · 같은 스텝 번호의 난수).'))));
     const strip = labStrip(an, toks, DBG.step, i => { DBG.step = i; holder._render(); }, T('답의 토큰'));
     if (bks.length) out.push(h('div', { class: 'row g8 dbg-bks' }, h('span', { class: 'small muted' }, T`중단점 ${fmtNum(bks.length)}개`),
       bks.slice(0, 40).map(b => h('button', { class: 'dbg-chip' + (b.kinds.includes('tool_call') ? ' tool' : '') + (b.kinds.includes('low_prob') ? ' low' : ''), onclick: () => strip._go(b.step),
@@ -7252,6 +7441,7 @@ function dbgReqView(run) {
       h('span', null, h('i', { class: 'lg b3' }), T('짙을수록 확률이 낮음')), h('span', null, h('i', { class: 'lg frag' }), T('밑줄 = 마진이 작음')), h('span', null, h('i', { class: 'lg pick' }), T('테두리 = 1위가 아닌 토큰'))),
       holder);
   }
+  if (llama) { out.push(labNote(T('llama.cpp의 실행입니다 — 분기와 요청 고쳐 다시 생성은 GeulPU 서버의 실행에서만 됩니다.'))); return h('div', { class: 'col g16' }, out); }
   // 분기들
   const mine = run.branches.filter(b => b.of === x.i);
   out.push(labSec(T`분기 ${fmtNum(mine.length)}개`));

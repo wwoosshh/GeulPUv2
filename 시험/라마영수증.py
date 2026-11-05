@@ -7,6 +7,11 @@ partial_sort 자리 옮김, 같은 C 런타임의 expf · logf(윈도 ucrtbase �
       정한 무작위 로짓(같은 값 · 아주 작은 값 · 모두 같은 줄 · n_probs 1 · 5 · 20)으로 글 쪽과 참조를 견준다(빠른 점검 4u).
   python -I -X utf8 시험/라마영수증.py <실행 파일> --서버 <로짓.bin> <서버 응답.json>
       하네스의 로짓(llama.cpp 가 낸 것)으로 셈한 글 쪽 값을 llama-server 가 실제로 돌려준 로그 확률(completion_probabilities)과 견준다.
+  python -I -X utf8 시험/라마영수증.py --칸 <영수증.json …>
+      서버의 로그 확률 칸 규칙: llama-server 는 생성한 글이 UTF-8 글자 가운데서 끝나는 걸음의 칸을 적지 않고 그 바이트를 다음 칸에 합친다
+      (server-context.cpp process_token — validate_utf8). 모델 파일의 어휘로 토큰 바이트(llama.cpp 의 token_to_piece, special = false)를
+      셈해 그 규칙으로 찾은 칸이 영수증의 completion_probabilities 와 수 · 번호까지 맞는가, 이은 바이트가 응답의 글과 같은가(앱/라마재현.gl 의
+      라마조각넣기 · 라마UTF8길이 와 같은 셈 — 모델 파일이 든다, GPU 없이).
 마지막 줄 "모두 같음: True|False".
 """
 import ctypes
@@ -111,8 +116,120 @@ def 정한로짓(V, 씨):
     return np.array(줄, F32)
 
 
+def gguf어휘(path):
+    """GGUF 의 tokenizer.ggml.model · tokens · token_type — 사상해 머리만 읽는다"""
+    import mmap
+    import struct
+    f = open(path, "rb")
+    m = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+    assert m[:4] == b"GGUF"
+    nkv = struct.unpack_from("<Q", m, 16)[0]
+    폭 = {0: 1, 1: 1, 7: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 10: 8, 11: 8, 12: 8}
+
+    def 글(o):
+        n = struct.unpack_from("<Q", m, o)[0]
+        return bytes(m[o + 8:o + 8 + n]), o + 8 + n
+
+    def 건너(t, o):
+        if t in 폭:
+            return o + 폭[t]
+        if t == 8:
+            return 글(o)[1]
+        et, n = struct.unpack_from("<IQ", m, o)
+        o += 12
+        if et in 폭:
+            return o + n * 폭[et]
+        for _ in range(n):
+            o = 건너(et, o)
+        return o
+
+    o, 꼴, 토큰, 형 = 24, None, None, None
+    for _ in range(nkv):
+        k, o = 글(o)
+        t = struct.unpack_from("<I", m, o)[0]
+        o += 4
+        if k == b"tokenizer.ggml.tokens":
+            n = struct.unpack_from("<Q", m, o + 4)[0]
+            p, 토큰 = o + 12, []
+            for _ in range(n):
+                s, p = 글(p)
+                토큰.append(s)
+        elif k == b"tokenizer.ggml.token_type":
+            n = struct.unpack_from("<Q", m, o + 4)[0]
+            형 = list(struct.unpack_from("<%di" % n, m, o + 12))
+        elif k == b"tokenizer.ggml.model":
+            꼴 = 글(o)[0]
+        o = 건너(t, o)
+    return 꼴, 토큰, 형
+
+
+def _바이트표():
+    t, n = {}, 0
+    for b in range(256):
+        if 33 <= b <= 126 or 161 <= b <= 172 or 174 <= b <= 255:
+            t[b] = b
+        else:
+            t[256 + n] = b
+            n += 1
+    return t
+
+
+_표 = _바이트표()
+
+
+def 조각(토큰, 형, i):
+    """llama.cpp token_to_piece(special = false) — BPE: 형 4 는 글 그대로, 형 1 은 GPT-2 바이트 표를 되돌림, 나머지는 빈 조각"""
+    if 형[i] == 4:
+        return 토큰[i]
+    if 형[i] != 1:
+        return b""
+    out = bytearray()
+    for ch in 토큰[i].decode("utf-8"):
+        out += bytes([_표[ord(ch)]]) if ord(ch) in _표 else b"[UNK_BYTE_0x" + ch.encode().hex().encode() + 토큰[i] + b"]"
+    return bytes(out)
+
+
+def utf8길이(b):
+    """server-common.cpp validate_utf8"""
+    n = len(b)
+    for i in range(1, min(4, n) + 1):
+        c = b[n - i]
+        if (c & 0xE0) == 0xC0 and i < 2 or (c & 0xF0) == 0xE0 and i < 3 or (c & 0xF8) == 0xF0 and i < 4:
+            return n - i
+    return n
+
+
+def 칸맞추기(paths):
+    어휘 = {}
+    나쁨 = 0
+    for path in paths:
+        d = json.load(open(path, encoding="utf-8"))
+        mp = d["model"]["path"]
+        if mp not in 어휘:
+            어휘[mp] = gguf어휘(mp)
+        꼴, 토큰, 형 = 어휘[mp]
+        if 꼴 != b"gpt2":
+            print(f"{os.path.basename(path)}: 토크나이저 {꼴!r} — 건너뜀")
+            continue
+        r = d["response"]
+        tk, cps = r["tokens"], r["completion_probabilities"]
+        글, 걸음들 = b"", []
+        for k, t in enumerate(tk):
+            글 += 조각(토큰, 형, t)
+            if utf8길이(글) == len(글):
+                걸음들.append(k)
+        맞음 = len(걸음들) == len(cps) and all(cps[j]["id"] == tk[k] for j, k in enumerate(걸음들))
+        글같음 = 글 == r["content"].encode("utf-8") and b"".join(bytes(c["bytes"]) for c in cps) == 글
+        나쁨 += (not 맞음) + (not 글같음)
+        print(f"{os.path.basename(path)}: 걸음 {len(tk)} · 서버의 칸 {len(cps)} · 규칙의 칸 {len(걸음들)} · 칸 맞음 {맞음} · 글 같음 {글같음}")
+    print(f"모두 같음: {나쁨 == 0}")
+    return 0 if 나쁨 == 0 else 1
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
+    if sys.argv[1] == "--칸":
+        return 칸맞추기(sys.argv[2:])
     exe = os.path.abspath(sys.argv[1])
     나쁨 = 전체 = 0
     if "--서버" in sys.argv:
