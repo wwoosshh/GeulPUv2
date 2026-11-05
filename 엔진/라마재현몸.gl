@@ -1,6 +1,7 @@
 (* llama.cpp 실행의 비트 재현 — 재현 호스트의 몸(문서/라마재현.md 1 · 2 · 3단계). 머리 둘이 GPU 층을 먼저 포함한다: 라마재현.gl(쿠다.gl —
    PTX 모듈) · 라마재현V.gl(벌칸.gl — SPIR-V 묶음 .spvs, 장치는 환경 변수 GEULPU_VULKAN). 대상: Qwen3.5(qwen35) · Qwen3(qwen3 — 10단계,
-   모든 층 어텐션 · 머리 차원 128), llama.cpp b12008 CUDA, RTX 4070 Ti(SM 60) — 어느 장치에서 돌든 일 나누기는 4070 Ti 의 것(아래).
+   모든 층 어텐션 · 머리 차원 128) · Llama(llama — 11단계, 보통 RoPE · rope_freqs), llama.cpp b12008 CUDA, RTX 4070 Ti(SM 60) — 어느
+   장치에서 돌든 일 나누기는 4070 Ti 의 것(아래).
    구조마다의 그래프는 llama.cpp 의 src/models/<구조>.cpp 를 그대로 옮긴다(재현 호스트 — GeulPU 엔진의 구조표와 따로).
      라마재현 <모델.gguf> <모듈(.ptx · V 는 .spvs)> <머리> <토큰> <로짓 출력>
    머리: 시험/라마재현.py 가 만든 파일 — 중간정수 16:
@@ -13,7 +14,7 @@
    토큰: 방식 0 — 중간정수 걸음 수 뒤에 걸음마다 넣는 토큰. 방식 1 — ubatch 수 · ubatch 마다 토큰 수 · 프롬프트 토큰 수 · 프롬프트
      토큰들 · 걸음 수 · 걸음마다 넣는 토큰(서버가 낸 토큰). ubatch 나눔은 llama-server 의 실행 모양(시험/라마재현.py 가 만든다).
    로짓 출력: 짧은실수 [줄][어휘수] — 방식 0 은 걸음마다, 방식 1 은 프롬프트 끝 + 걸음마다.
-   셈은 llama.cpp 의 그래프(src/models/qwen35.cpp · qwen3.cpp)의 차례 그대로, 판마다의 셈은 커널/생성라마.gl · 생성라마프롬프트.gl. 일 나누기(MMQ 의
+   셈은 llama.cpp 의 그래프(src/models/qwen35.cpp · qwen3.cpp · llama.cpp)의 차례 그대로, 판마다의 셈은 커널/생성라마.gl · 생성라마프롬프트.gl. 일 나누기(MMQ 의
    타일 폭 · stream-k 블록, flash attention 의 설정 · stream-k 블록 · vec 의 병렬 블록 수)는 llama.cpp 의 규칙을 SM 60 으로 셈한다. *)
 포함 "표준/입출력.gl"
 포함 "표준/문자열.gl"
@@ -48,8 +49,11 @@
 공허 참조 fFA64_128 = 없음. 공허 참조 fFA32_128 = 없음. 공허 참조 fFA16_128 = 없음. 공허 참조 fFA8_128 = 없음.
 공허 참조 fFA합치기128 = 없음. 공허 참조 fFA8 = 없음. 공허 참조 fRMS한칸 = 없음.
 공허 참조 fRoPE엮음128 = 없음. 공허 참조 fRoPE여럿엮음128 = 없음.
+공허 참조 fRoPE보통128 = 없음. 공허 참조 fRoPE보통여럿128 = 없음.      (* 11단계 — llama 의 보통 RoPE *)
+정수 b로프 = 0.                    (* 11단계 — RoPE 의 freq_factors(rope_freqs.weight — 없으면 1 을 담은 버퍼, 머리 차원 / 2 칸) *)
 
-정수 구조 = 0.                      (* 10단계 — 0 qwen35(GDN 층 · 4 층마다 게이트 어텐션), 1 qwen3(모든 층 어텐션, 게이트 없음) *)
+정수 구조 = 0.                      (* 10단계 — 0 qwen35(GDN 층 · 4 층마다 게이트 어텐션), 1 qwen3(모든 층 어텐션, 게이트 없음),
+                                       11단계 — 2 llama(모든 층 어텐션, Q · K 정규화 없음, 보통 RoPE) *)
 정수 머리D = 256.                   (* 어텐션 머리 차원(qwen35 256, qwen3 128) *)
 
 정수 층수 = 32. 정수 처음위치 = 0. 정수 KV칸 = 0. 정수 회전수 = 64. 정수 방식 = 0.
@@ -107,7 +111,8 @@
     f == fFA32_128이면 { 반환 "라마FA_MMA32_128". } f == fFA16_128이면 { 반환 "라마FA_MMA16_128". }
     f == fFA8_128이면 { 반환 "라마FA_MMA8_128". } f == fFA합치기128이면 { 반환 "라마FA_MMA합치기128". } f == fFA8이면 { 반환 "라마FA_MMA8". }
     f == fRMS한칸이면 { 반환 "라마RMS한칸256". } f == fRoPE엮음128이면 { 반환 "라마RoPE엮음128". }
-    f == fRoPE여럿엮음128이면 { 반환 "라마RoPE여럿엮음128". }
+    f == fRoPE여럿엮음128이면 { 반환 "라마RoPE여럿엮음128". } f == fRoPE보통128이면 { 반환 "라마RoPE보통128". }
+    f == fRoPE보통여럿128이면 { 반환 "라마RoPE보통여럿128". }
     반환 "?".
 }
 
@@ -417,7 +422,7 @@
 (* FFN(토큰 T 개): RMSNorm(qwen35 post_attention_norm · qwen3 ffn_norm) · 게이트 · 위 · SwiGLU · 아래 · 잔차 → bx *)
 [정수 l를 정수 res를 정수 T를 FFN]는 {
     문자열 정규 = "post_attention_norm.weight".
-    구조 == 1이면 { 정규 = "ffn_norm.weight". }
+    구조 != 0이면 { 정규 = "ffn_norm.weight". }
     RMS(res, 층가중(l, 정규)→주소, bpn, 너비, 너비, T, 1, eps비트).
     라마가중 참조 wg = 층가중(l, "ffn_gate.weight").
     라마가중 참조 wu = 층가중(l, "ffn_up.weight").
@@ -505,9 +510,14 @@
     정수 Hq = wq→R / D.
     정수 q걸음 = D.
     구조 == 0이면 { Hq = wq→R / (2 * D). q걸음 = 2 * D. }          (* qwen35 — 머리마다 q · 게이트 *)
+    정수 qin = bqn.
+    정수 kin = bkn.
     구조 == 0이면 {
         RMS(bqf, 층가중(l, "attn_q_norm.weight")→주소, bqn, D, q걸음, T * Hq, 1, eps비트).
         RMS(bkk, 층가중(l, "attn_k_norm.weight")→주소, bkn, D, D, T * Hk, 1, eps비트).
+    } 아니면 구조 == 2이면 {
+        qin = bqf.                                     (* llama — 정규화 없이 행렬곱 출력에 RoPE *)
+        kin = bkk.
     } 아니면 {
         (* qwen3 — llama.cpp 는 q · k 의 RMS_NORM · MUL · ROPE(K 는 · VIEW · SET_ROWS 까지)를 한 판으로(rms_norm_mul_rope_f32 — 정규화의
            합 차례가 따로 도는 판과 다르다). IMRoPE · 띄엄 q(qwen35)는 엮지 않는다 *)
@@ -518,16 +528,31 @@
     공허 참조 fRn = fRoPE여럿.
     D == 128이면 { fR1 = fRoPE128. fRn = fRoPE여럿128. }
     구조 == 1이면 { fR1 = fRoPE엮음128. fRn = fRoPE여럿엮음128. }       (* qwen3 — 엮은 판의 RoPE 차례 *)
-    T == 1이면 {
-        인자칸[0] = bqn. 인자칸[1] = bqr. 인자칸[2] = 회전수. 인자칸[3] = p0. 인자칸[4] = 세타비트. 인자칸[5] = fs비트. 인자칸[6] = af비트.
+    구조 == 2이면 {
+        (* 11단계 — rope_norm(freq_factors 인자). K 는 서버가 ROPE · VIEW · SET_ROWS 를 엮지만 셈은 같다 *)
+        T == 1이면 {
+            인자칸[0] = qin. 인자칸[1] = b로프. 인자칸[2] = bqr. 인자칸[3] = 회전수. 인자칸[4] = p0. 인자칸[5] = 세타비트. 인자칸[6] = fs비트.
+            인자칸[7] = af비트.
+            띄움(fRoPE보통128, Hq, 1, D, 8).
+            인자칸[0] = kin. 인자칸[2] = bkr.
+            띄움(fRoPE보통128, Hk, 1, D, 8).
+        } 아니면 {
+            인자칸[0] = qin. 인자칸[1] = b로프. 인자칸[2] = bqr. 인자칸[3] = 회전수. 인자칸[4] = p0. 인자칸[5] = Hq. 인자칸[6] = 세타비트.
+            인자칸[7] = fs비트. 인자칸[8] = af비트.
+            띄움(fRoPE보통여럿128, T * Hq, 1, D, 9).
+            인자칸[0] = kin. 인자칸[2] = bkr. 인자칸[5] = Hk.
+            띄움(fRoPE보통여럿128, T * Hk, 1, D, 9).
+        }
+    } 아니면 T == 1이면 {
+        인자칸[0] = qin. 인자칸[1] = bqr. 인자칸[2] = 회전수. 인자칸[3] = p0. 인자칸[4] = 세타비트. 인자칸[5] = fs비트. 인자칸[6] = af비트.
         띄움(fR1, Hq, 1, D, 7).
-        인자칸[0] = bkn. 인자칸[1] = bkr.
+        인자칸[0] = kin. 인자칸[1] = bkr.
         띄움(fR1, Hk, 1, D, 7).
     } 아니면 {
-        인자칸[0] = bqn. 인자칸[1] = bqr. 인자칸[2] = 회전수. 인자칸[3] = p0. 인자칸[4] = Hq. 인자칸[5] = 세타비트. 인자칸[6] = fs비트.
+        인자칸[0] = qin. 인자칸[1] = bqr. 인자칸[2] = 회전수. 인자칸[3] = p0. 인자칸[4] = Hq. 인자칸[5] = 세타비트. 인자칸[6] = fs비트.
         인자칸[7] = af비트.
         띄움(fRn, T * Hq, 1, D, 8).
-        인자칸[0] = bkn. 인자칸[1] = bkr. 인자칸[4] = Hk.
+        인자칸[0] = kin. 인자칸[1] = bkr. 인자칸[4] = Hk.
         띄움(fRn, T * Hk, 1, D, 8).
     }
     "q_rope"를 bqr를 T * Hq * D를 라마덤프쓰기하다. "k_rope"를 bkr를 T * Hk * D를 라마덤프쓰기하다.
@@ -594,7 +619,7 @@
 }
 
 (* 어텐션 층인가 — qwen35 는 4 층마다(full_attention_interval), qwen3 은 모든 층 *)
-[정수 l를 어텐션인가]는 -> 참거짓 { 반환 구조 == 1 또는 (l + 1) % 4 == 0. }
+[정수 l를 어텐션인가]는 -> 참거짓 { 반환 구조 != 0 또는 (l + 1) % 4 == 0. }
 
 (* ubatch 하나(토큰 T 개, 위치 p0 …): 토큰 임베딩 → 층 → (마지막 ubatch 면) 출력 정규화 → 출력층(마지막 토큰) *)
 [중간정수 참조 토큰들을 정수 시작을 정수 T를 정수 p0를 참거짓 마지막을 짧은정수 참조 가림호스트를 ubatch]는 {
@@ -642,6 +667,7 @@
 [GGUF 참조 g를 문자열 꼬리를 메타열쇠]는 -> 문자열 {
     문자열 앞 = "qwen35.".
     구조 == 1이면 { 앞 = "qwen3.". }
+    구조 == 2이면 { 앞 = "llama.". }
     반환 라마서식글("%s%s", 앞, 꼬리).
 }
 
@@ -650,8 +676,12 @@
     문자열 이름 = 메타글(g, "general.architecture").
     문자열_같은가(이름, "qwen35")이면 { 구조 = 0. }
     아니면 문자열_같은가(이름, "qwen3")이면 { 구조 = 1. }
-    아니면 { 파일에_쓰기(표준오류(), "받지 않는 구조 %s(qwen35 · qwen3 만)\n", 이름). 1로 종료하다. }
-    머리D = 메타정수(g, 메타열쇠(g, "attention.key_length")).
+    아니면 문자열_같은가(이름, "llama")이면 { 구조 = 2. }
+    아니면 { 파일에_쓰기(표준오류(), "받지 않는 구조 %s(qwen35 · qwen3 · llama 만)\n", 이름). 1로 종료하다. }
+    (* 머리 차원 — key_length 가 없으면(Llama-3.1 GGUF) 폭 / 머리 수(llama.cpp 의 n_embd_head_k 기본) *)
+    메타있음(g, 메타열쇠(g, "attention.key_length"))이면 { 머리D = 메타정수(g, 메타열쇠(g, "attention.key_length")). }
+    아니면 { 머리D = 메타정수(g, 메타열쇠(g, "embedding_length")) / 메타정수(g, 메타열쇠(g, "attention.head_count")). }
+    (구조 == 2 그리고 머리D != 128)이면 { 파일에_쓰기(표준오류(), "받지 않는 머리 차원 %lld(llama 는 128 만)\n", 머리D). 1로 종료하다. }
     (머리D != 256 그리고 머리D != 128)이면 { 파일에_쓰기(표준오류(), "받지 않는 머리 차원 %lld(256 · 128 만)\n", 머리D). 1로 종료하다. }
 }
 
@@ -676,6 +706,11 @@
     af비트 = 라마비트(실일).
     짧은실수 nh = 머리D 으로 짧은실수.
     fa눈금비트 = 라마비트(실일 / 씨제곱근(nh)).
+    (* 11단계 — llama 의 kq_scale 은 attention.scale 이 있으면 그 값(f_attention_scale), 없으면 1 / sqrt(머리 차원) *)
+    (구조 == 2 그리고 메타있음(g, 메타열쇠(g, "attention.scale")))이면 {
+        짧은실수 asc = 메타실수(g, 메타열쇠(g, "attention.scale")) 으로 짧은실수.
+        asc != 0.0이면 { fa눈금비트 = 라마비트(asc). }
+    }
     파일에_쓰기(표준출력(), "상수(GGUF): 구조 %lld · 층 %lld · 머리 %lld · eps %08llx · l2 eps %08llx · l2 눈금 %08llx · θ %08llx · 회전 %lld · 어텐션 눈금 %08llx\n",
         구조, 층수, 머리D, eps비트, l2eps비트, l2눈금비트, 세타비트, 회전수, fa눈금비트).
 }
@@ -712,6 +747,7 @@
     fFA합치기128 = 함수얻기(라마모듈, "라마FA_MMA합치기128"). fFA8 = 함수얻기(라마모듈, "라마FA_MMA8").
     fRMS한칸 = 함수얻기(라마모듈, "라마RMS한칸256").
     fRoPE엮음128 = 함수얻기(라마모듈, "라마RoPE엮음128"). fRoPE여럿엮음128 = 함수얻기(라마모듈, "라마RoPE여럿엮음128").
+    fRoPE보통128 = 함수얻기(라마모듈, "라마RoPE보통128"). fRoPE보통여럿128 = 함수얻기(라마모듈, "라마RoPE보통여럿128").
     (* 머리 *)
     문자열 상태 = 통째읽기(argv[3]).
     상태 == 없음이면 { 파일에_쓰기(표준오류(), "머리를 읽을 수 없다: %s\n", argv[3]). 반환 1. }
@@ -740,10 +776,21 @@
     임형 == GGUF_Q6_K이면 { f임베딩 = 함수얻기(라마모듈, "라마임베딩Q6_K"). }
     아니면 임형 == GGUF_Q8_0이면 { f임베딩 = 함수얻기(라마모듈, "라마임베딩Q8_0"). }       (* 8단계 — 0.8B *)
     아니면 임형 != GGUF_Q4_K이면 { 파일에_쓰기(표준오류(), "받지 않는 token_embd 형식 %lld\n", 임형). 1로 종료하다. }
+    (* 11단계 — RoPE 의 freq_factors: rope_freqs.weight(llama3 — F32 머리 차원 / 2 칸), 없으면 1 *)
+    텐서있음(g, "rope_freqs.weight")이면 {
+        가중올림(g, "rope_freqs.weight").
+        b로프 = 가중얻기("rope_freqs.weight")→주소.
+    } 아니면 {
+        짧은실수 참조 하나들 = 할당(머리D * 2).
+        반복 (정수 k1는 0부터 머리D / 2 전까지) { 하나들[k1] = 1.0. }
+        b로프 = 장치할당(머리D * 2).
+        올리기(b로프, 하나들 으로 공허 참조, 머리D * 2).
+        해제(하나들).
+    }
     정수 o = 64.
     반복 (정수 l는 0부터 층수 전까지) {
         가중올림(g, 라마서식글("blk.%lld.attn_norm.weight", l)).
-        구조 == 1이면 { 가중올림(g, 라마서식글("blk.%lld.ffn_norm.weight", l)). }
+        구조 != 0이면 { 가중올림(g, 라마서식글("blk.%lld.ffn_norm.weight", l)). }
         아니면 { 가중올림(g, 라마서식글("blk.%lld.post_attention_norm.weight", l)). }
         가중올림(g, 라마서식글("blk.%lld.ffn_gate.weight", l)).
         가중올림(g, 라마서식글("blk.%lld.ffn_up.weight", l)).
@@ -751,7 +798,7 @@
         어텐션인가(l)이면 {
             가중올림(g, 라마서식글("blk.%lld.attn_q.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_k.weight", l)).
             가중올림(g, 라마서식글("blk.%lld.attn_v.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_output.weight", l)).
-            가중올림(g, 라마서식글("blk.%lld.attn_q_norm.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_k_norm.weight", l)).
+            구조 != 2이면 { 가중올림(g, 라마서식글("blk.%lld.attn_q_norm.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_k_norm.weight", l)). }
             정수 kvb = KV칸 * 층가중(l, "attn_k.weight")→R * 2.          (* 8단계 — KV 머리 × D 반실수(9B · 4B 1024, 0.8B 512, Qwen3-8B 1024) *)
             K캐시[l] = 장치할당(kvb). V캐시[l] = 장치할당(kvb).
             방식 == 0이면 {
