@@ -135,9 +135,9 @@ def 모듈(글, 출력, 병렬, 갱신, 알림, 기준커밋=""):
         rc, 꼬리 = 돌리기([뒷단, gl, "-o", ptx], os.path.join(출력, f"PTX_{이름}.txt"))
         if rc != 0 or not os.path.exists(ptx):
             return 이름, gl해시, None, None, f"PTX 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0, False
-        # CUDA 만인 모듈 — SPIR-V 칸은 "-": 0.12.0 12-3g-2 MoE 의 판(원자 더하기), llama.cpp 의 CUDA 실행 재현(커널생성 라마재현 —
-        # 문서/라마재현.md: 근사 명령 · 0 쪽으로 반올림하는 덧셈은 PTX 뒷단만 안다)
-        if "--MoE" in 인자 or 인자[:1] == ["라마재현"]:
+        # CUDA 만인 모듈 — SPIR-V 칸은 "-": 0.12.0 12-3g-2 MoE 의 판(원자 더하기). llama.cpp 의 CUDA 실행 재현(커널생성 라마재현)은
+        # 3단계부터 SPIR-V 도 있다(근사 명령 · 텐서 코어를 흉내 — 문서/라마재현.md)
+        if "--MoE" in 인자:
             return 이름, gl해시, 해시(ptx), "-", "", time.time() - t0, False
         rc, 꼬리 = 돌리기([뒷단V, gl, "-o", spvs], os.path.join(출력, f"SPIRV_{이름}.txt"))
         if rc != 0 or not os.path.exists(spvs):

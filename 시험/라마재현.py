@@ -8,6 +8,8 @@
 2,048 이하) · ubatch(512)로 나눠 넣고, 프롬프트 끝 로짓과 걸음마다의 로짓을 하네스 로짓의 줄 0 … 과 견준다. 기록 폴더는 상수만 쓴다.
 
   python -I 시험/라마재현.py <라마재현.exe> <라마재현.ptx> <기록 폴더> <모델.gguf> <로짓.bin> <서버 응답.json> [걸음 수, 기본 8] [--프롬프트부터]
+        [--장치 <Vulkan 장치 이름의 일부>]
+3단계(Vulkan): 라마재현V.exe 와 SPIR-V 묶음(.spvs)을 주고 --장치 로 장치를 고른다(환경 변수 GEULPU_VULKAN).
 마지막 줄 "모두 0: True|False".
 """
 import json
@@ -100,7 +102,11 @@ def 상태파일(R, M, 경로, 병렬=7, 프롬프트부터=False, KV칸=0):
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     프롬프트부터 = "--프롬프트부터" in sys.argv
-    인자 = [a for a in sys.argv[1:] if a != "--프롬프트부터"]
+    장치 = sys.argv[sys.argv.index("--장치") + 1] if "--장치" in sys.argv else None
+    인자 = [a for i, a in enumerate(sys.argv[1:], 1) if a not in ("--프롬프트부터", "--장치") and sys.argv[i - 1] != "--장치"]
+    환경 = dict(os.environ)
+    if 장치:
+        환경["GEULPU_VULKAN"] = 장치
     exe, ptx, 폴더, 모델, 로짓, 응답 = 인자[:6]
     exe, ptx = os.path.abspath(exe), os.path.abspath(ptx)
     걸음수 = int(인자[6]) if len(인자) > 6 else 8
@@ -124,7 +130,7 @@ def main():
             print(f"처음 위치 {pos0} · KV 칸 {KV칸} · 걸음 {걸음수}", flush=True)
             줄수, 첫줄 = 걸음수, 1
         출력 = os.path.join(td, "로짓.bin")
-        r = subprocess.run([exe, 모델, ptx, 상태, 토큰, 출력], capture_output=True, text=True, encoding="utf-8")
+        r = subprocess.run([exe, 모델, ptx, 상태, 토큰, 출력], capture_output=True, text=True, encoding="utf-8", env=환경)
         print(r.stdout, end="")
         if r.returncode != 0:
             print(r.stderr)

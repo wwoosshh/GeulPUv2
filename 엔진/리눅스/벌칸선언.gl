@@ -33,6 +33,8 @@
 외부 "libvulkan.so.1" "vkDestroyPipelineLayout" [공허 참조 장치를 정수 배치를 공허 참조 할당기를 vkDestroyPipelineLayout]는 -> 중간정수.
 외부 "libvulkan.so.1" "vkCreateComputePipelines" [공허 참조 장치를 정수 캐시를 중간정수 개수를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 파이프를 vkCreateComputePipelines]는 -> 중간정수.
 외부 "libvulkan.so.1" "vkDestroyPipeline" [공허 참조 장치를 정수 파이프를 공허 참조 할당기를 vkDestroyPipeline]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCreatePipelineCache" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 캐시를 vkCreatePipelineCache]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetPipelineCacheData" [공허 참조 장치를 정수 캐시를 공허 참조 크기를 공허 참조 자료를 vkGetPipelineCacheData]는 -> 중간정수.
 외부 "libvulkan.so.1" "vkCreateCommandPool" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 풀을 vkCreateCommandPool]는 -> 중간정수.
 외부 "libvulkan.so.1" "vkDestroyCommandPool" [공허 참조 장치를 정수 풀을 공허 참조 할당기를 vkDestroyCommandPool]는 -> 중간정수.
 외부 "libvulkan.so.1" "vkAllocateCommandBuffers" [공허 참조 장치를 공허 참조 정보를 공허 참조 명령들을 vkAllocateCommandBuffers]는 -> 중간정수.
