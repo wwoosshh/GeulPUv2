@@ -274,10 +274,11 @@ def 시험_RoPE(P, R, M):
         op = rec["op_params"]
         fb = np.array([op[5]], np.int32).view(f32)[0]
         ts = f32(np.power(np.float64(fb), -2.0 / op[1]))
-        H = x.size // 256
+        D = rec["ne"][0]                                                # 10단계 — 머리 크기(256 · 128)
+        H = x.size // D
         px, py = P.올림(x), P.올림(np.zeros(x.size, f32))
-        P.띄우기("라마RoPE", (H, 1), 256, [(1, px), (1, py), (0, op[1]), (0, pos), (0, 비트(ts)), (0, op[6]), (0, op[8])])
-        견주기(f"ROPE {H}×256 위치 {pos} ({n['name']})", P.받음(py, x.size), R.배열(rec))
+        P.띄우기("라마RoPE" if D == 256 else f"라마RoPE{D}", (H, 1), D, [(1, px), (1, py), (0, op[1]), (0, pos), (0, 비트(ts)), (0, op[6]), (0, op[8])])
+        견주기(f"ROPE {H}×{D} 위치 {pos} ({n['name']})", P.받음(py, x.size), R.배열(rec))
         P.놓기()
 
 
@@ -294,16 +295,24 @@ def 시험_캐시(P, R, M):
         P.놓기()
 
 
-def 병렬블록(nkv):
-    """flash attention vec 의 병렬 블록 수 — 엔진/라마재현몸.gl 의 병렬블록 과 같은 규칙(ntiles_KV = ⌈nkv / 256⌉, 블록 = 머리 16 × P,
-    SM 당 2 블록, P 는 min(2, ntiles_KV) 부터 파도 효율이 가장 좋은 첫 값 — 95 % 이상이면 파도가 느는 값에서 멈춘다)."""
-    nt = (nkv + 255) // 256
-    고른 = min(2, nt)
+def FA벡터점유(D):
+    """llama.cpp 의 flash_attn_ext_vec<D, 1, F16, F16> 의 SM 당 블록 수(sm_89 SASS 의 레지스터 — D 256 약 200 → 2, D 128 약 168 → 3).
+    XR_FA_OCC 로 바꿔 볼 수 있다."""
+    return int(os.environ.get("XR_FA_OCC", "0")) or (2 if D == 256 else 3)
+
+
+def 병렬블록(nkv, H=16, D=256):
+    """flash attention vec 의 병렬 블록 수 — 엔진/라마재현몸.gl 의 병렬블록 과 같은 규칙(ntiles_KV = ⌈nkv / D⌉(launch_fattn 의
+    nbatch_fa = D), 블록 = q 머리 × P, SM 당 점유 블록, P 는 min(점유, ntiles_KV) 부터 파도 효율이 가장 좋은 첫 값 — 95 % 이상이면 파도가
+    느는 값에서 멈춘다)."""
+    occ = FA벡터점유(D)
+    nt = (nkv + D - 1) // D
+    고른 = min(occ, nt)
     최고, 최고파도, 멈춤 = 0, 0, False
     for pt in range(고른, nt + 1):
-        nbt = 16 * pt
-        nw = (nbt + 2 * NSM - 1) // (2 * NSM)
-        eff = 100 * nbt // (nw * 2 * NSM)
+        nbt = H * pt
+        nw = (nbt + occ * NSM - 1) // (occ * NSM)
+        eff = 100 * nbt // (nw * occ * NSM)
         if 최고 >= 95 and nw > 최고파도:
             멈춤 = True
         if not 멈춤 and eff > 최고:
@@ -314,18 +323,22 @@ def 병렬블록(nkv):
 def 시험_FA(P, R, M):
     """FLASH_ATTN_EXT(생성 — vec, 병렬 블록 P(kv 2560 → 7, 1280 → 5) + 합치기) 노드."""
     for n, rec in R.연산("FLASH_ATTN_EXT"):
-        q = R.입력(n, 0).astype(f32)[0]                                 # [머리 16, 1, 256]
-        Kc = np.ascontiguousarray(np.transpose(R.입력(n, 1)[0], (1, 0, 2)))   # [kv수, kv머리, 256] f16
+        q = R.입력(n, 0).astype(f32)[0]                                 # [머리, 1, D]
+        if q.shape[1] != 1:
+            continue
+        Kc = np.ascontiguousarray(np.transpose(R.입력(n, 1)[0], (1, 0, 2)))   # [kv수, kv머리, D] f16
         Vc = np.ascontiguousarray(np.transpose(R.입력(n, 2)[0], (1, 0, 2)))
         가림 = R.입력(n, 3).reshape(-1).astype(np.float16)
-        nkv, H = Kc.shape[0], q.shape[0]
-        병렬 = 병렬블록(nkv)
+        nkv, H, D = Kc.shape[0], q.shape[0], q.shape[2]
+        병렬 = 병렬블록(nkv, H, D)
         눈금 = rec["op_params"][0]
+        sfx = "" if D == 256 else str(D)
         pq, pK, pV, pm = P.올림(q.reshape(-1)), P.올림(Kc.reshape(-1)), P.올림(Vc.reshape(-1)), P.올림(가림)
-        p부분, p메타, po = P.올림(np.zeros(병렬 * H * 256, f32)), P.올림(np.zeros(병렬 * H * 2, f32)), P.올림(np.zeros(H * 256, f32))
-        P.띄우기("라마FA벡터", (병렬, H), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, p부분), (1, p메타), (0, nkv), (0, 병렬), (0, H // Kc.shape[1]), (0, 눈금)])
-        P.띄우기("라마FA합치기", (H, 1), 256, [(1, p부분), (1, p메타), (1, po), (0, 병렬)])
-        견주기(f"FLASH_ATTN_EXT vec {H}×256 kv {nkv} 병렬 {병렬} ({n['name']})", P.받음(po, H * 256), R.배열(rec))
+        p부분, p메타, po = P.올림(np.zeros(병렬 * H * D, f32)), P.올림(np.zeros(병렬 * H * 2, f32)), P.올림(np.zeros(H * D, f32))
+        P.띄우기(f"라마FA벡터{sfx}", (병렬, H), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, p부분), (1, p메타), (0, nkv), (0, 병렬),
+                                                (0, H // Kc.shape[1]), (0, 눈금), (0, H)])
+        P.띄우기(f"라마FA합치기{sfx}", (H, 1), D, [(1, p부분), (1, p메타), (1, po), (0, 병렬), (0, H)])
+        견주기(f"FLASH_ATTN_EXT vec {H}×{D} kv {nkv} 병렬 {병렬} ({n['name']})", P.받음(po, H * D), R.배열(rec))
         P.놓기()
 
 
@@ -450,9 +463,10 @@ def 시험_RoPE여럿(P, R, M):
         op = rec["op_params"]
         fb = np.array([op[5]], np.int32).view(f32)[0]
         ts = f32(np.power(np.float64(fb), -2.0 / op[1]))
+        D = x.shape[3]
         px, py = P.올림(x.reshape(-1)), P.올림(np.zeros(x.size, f32))
-        P.띄우기("라마RoPE여럿", (T * H, 1), 256, [(1, px), (1, py), (0, op[1]), (0, int(pos[0])), (0, H), (0, 비트(ts)), (0, op[6]), (0, op[8])])
-        견주기(f"ROPE {T}×{H}×256 위치 {pos[0]}… ({n['name']})", P.받음(py, x.size), R.배열(rec))
+        P.띄우기("라마RoPE여럿" if D == 256 else f"라마RoPE여럿{D}", (T * H, 1), D, [(1, px), (1, py), (0, op[1]), (0, int(pos[0])), (0, H), (0, 비트(ts)), (0, op[6]), (0, op[8])])
+        견주기(f"ROPE {T}×{H}×{D} 위치 {pos[0]}… ({n['name']})", P.받음(py, x.size), R.배열(rec))
         P.놓기()
 
 
@@ -470,19 +484,24 @@ def 시험_캐시여럿(P, R, M):
         P.놓기()
 
 
-def FA계획(T, nkv):
-    """flash attention mma(fattn-mma-f16, D 256, GQA 4)의 설정과 stream-k 블록 수(sm_89 점유율): 토큰 3 · 4 → 열 16(KV 묶음 64,
-    SM 당 1 블록), 9 개 이상 → 열 64(KV 묶음 32, SM 당 2 블록). 블록 = min(점유 × SM, KV 묶음 × 타일), 타일 수의 배수로 내려 잃는 몫이
+# 10단계 — fattn-mma-f16.cuh 의 sm_8x 설정표에서 (머리 차원 D, 열) → (KV 묶음 nbatch_fa, SM 당 블록). 블록 수는
+# cudaOccupancyMaxActiveBlocksPerMultiprocessor 와 같게(공유 메모리 — 2 단 KV + 가림 · 합치기 판, 블록마다 1 KiB 예약 — 와 레지스터의
+# 작은 쪽: CPU 참조 fa_mma.py 의 occupancy). D 256 의 열 32 는 옮기지 않았다(판 8192 칸 — 공유판 32 KB 를 넘는다).
+FA설정 = {(128, 8): (128, 1), (128, 16): (64, 2), (128, 32): (64, 2), (128, 64): (64, 2),
+         (256, 8): (64, 1), (256, 16): (64, 1), (256, 64): (32, 2)}
+
+
+def FA계획(T, nkv, Hk=4, D=256):
+    """flash attention mma(fattn-mma-f16, GQA 4 → ncols2 4)의 설정과 stream-k 블록 수(sm_89 점유율): 토큰 2 → 열 8, 3 · 4 → 열 16,
+    5 … 8 → 열 32, 9 개 이상 → 열 64(KV 묶음 · 점유는 FA설정). 블록 = min(점유 × SM, KV 묶음 × 타일), 타일 수의 배수로 내려 잃는 몫이
     5 % 이하면 내린 값. 블록 b 는 [b·W/블록, (b+1)·W/블록)(W = 타일 × KV 묶음). 돌려주는 것: 열, iterj, 타일 수, 조각 표, 타일 표."""
-    if 2 < T <= 4:
-        열, nb, occ = 16, 64, 1
-    elif T > 8:
-        열, nb, occ = 64, 32, 2
-    else:
-        raise NotImplementedError(f"flash attention mma 의 토큰 {T} 설정은 옮기지 않았다")
+    열 = 8 if T <= 2 else 16 if T <= 4 else 32 if T <= 8 else 64
+    if (D, 열) not in FA설정:
+        raise NotImplementedError(f"flash attention mma 의 D {D} · 토큰 {T}(열 {열}) 설정은 옮기지 않았다")
+    nb, occ = FA설정[(D, 열)]
     n1 = 열 // 4
     iterj = (T + n1 - 1) // n1
-    ntiles = iterj * 4
+    ntiles = iterj * Hk
     raw = min(occ * NSM, ((nkv + nb - 1) // nb) * ntiles)
     rounded = raw // ntiles * ntiles
     loss = 100 * (raw - rounded) // raw if rounded > 0 else 100
@@ -506,23 +525,27 @@ def FA계획(T, nkv):
 def 시험_FA여럿(P, R, M):
     """FLASH_ATTN_EXT(토큰 n 개 — mma) 노드: 설정 · stream-k 조각 · 합치기까지."""
     for n, rec in R.연산("FLASH_ATTN_EXT"):
-        q = R.입력(n, 0).astype(f32)[0]                                  # [머리 16, 토큰, 256]
-        T = q.shape[1]
+        q = R.입력(n, 0).astype(f32)[0]                                  # [머리, 토큰, D]
+        T, D = q.shape[1], q.shape[2]
         if T == 1:
             continue
-        q = np.ascontiguousarray(np.transpose(q, (1, 0, 2)))              # [토큰][머리][256]
-        Kc = np.ascontiguousarray(np.transpose(R.입력(n, 1)[0], (1, 0, 2)))  # [kv수, kv머리, 256] f16
+        q = np.ascontiguousarray(np.transpose(q, (1, 0, 2)))              # [토큰][머리][D]
+        Kc = np.ascontiguousarray(np.transpose(R.입력(n, 1)[0], (1, 0, 2)))  # [kv수, kv머리, D] f16
         Vc = np.ascontiguousarray(np.transpose(R.입력(n, 2)[0], (1, 0, 2)))
         nkv = Kc.shape[0]
         가림 = R.입력(n, 3).astype(np.float16).reshape(-1, nkv)[:T]
-        열, iterj, ntiles, 표, 타일표 = FA계획(T, nkv)
+        열, iterj, ntiles, 표, 타일표 = FA계획(T, nkv, Kc.shape[1], D)
         pq, pK, pV, pm = P.올림(q.reshape(-1)), P.올림(Kc.reshape(-1)), P.올림(Vc.reshape(-1)), P.올림(np.ascontiguousarray(가림))
-        px, pmm, pr = P.올림(np.zeros(len(표) * 열 * 256, f32)), P.올림(np.zeros(len(표) * 열, f32)), P.올림(np.zeros(len(표) * 열, f32))
-        p표, p타일, po = P.올림(표.reshape(-1)), P.올림(타일표.reshape(-1)), P.올림(np.zeros(T * 16 * 256, f32))
-        P.띄우기(f"라마FA_MMA{열}", (len(표), 1), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, px), (1, pmm), (1, pr), (1, p표),
-                                                        (0, T), (0, nkv), (0, iterj), (0, rec["op_params"][0])])
-        P.띄우기("라마FA_MMA합치기", (ntiles, 1), 256, [(1, px), (1, pmm), (1, pr), (1, p타일), (1, po), (0, T), (0, iterj), (0, 열)])
-        견주기(f"FLASH_ATTN_EXT mma 열 {열} 토큰 {T} kv {nkv} 조각 {len(표)}/타일 {ntiles} ({n['name']})", P.받음(po, T * 16 * 256), R.배열(rec))
+        px, pmm, pr = P.올림(np.zeros(len(표) * 열 * D, f32)), P.올림(np.zeros(len(표) * 열, f32)), P.올림(np.zeros(len(표) * 열, f32))
+        H = q.shape[1]
+        p표, p타일, po = P.올림(표.reshape(-1)), P.올림(타일표.reshape(-1)), P.올림(np.zeros(T * H * D, f32))
+        sfx, sfx2 = ("", "") if D == 256 else (f"_{D}", str(D))
+        P.띄우기(f"라마FA_MMA{열}{sfx}", (len(표), 1), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, px), (1, pmm), (1, pr), (1, p표),
+                                                             (0, T), (0, nkv), (0, iterj), (0, rec["op_params"][0]), (0, H)])
+        P.띄우기(f"라마FA_MMA합치기{sfx2}", (ntiles, 1), D, [(1, px), (1, pmm), (1, pr), (1, p타일), (1, po), (0, T), (0, iterj), (0, 열),
+                                                        (0, H)])
+        견주기(f"FLASH_ATTN_EXT mma D {D} 열 {열} 토큰 {T} kv {nkv} 조각 {len(표)}/타일 {ntiles} ({n['name']})", P.받음(po, T * H * D),
+             R.배열(rec))
         P.놓기()
 
 
@@ -540,7 +563,8 @@ def 시험_GDN여럿(P, R, M):
         H = g.size // T
         pq, pk, pv, pg, pb, pS, po = (P.올림(a) for a in (q, k, v, g, beta, S, np.zeros(T * H * 128, f32)))
         if T >= 64:
-            P.띄우기("라마GDN덩어리", (H, 1), 256, [(1, pq), (1, pk), (1, pv), (1, pg), (1, pb), (1, pS), (1, po), (0, T), (0, H * 128), (0, 눈금)])
+            P.띄우기("라마GDN덩어리", (H, 1), 256, [(1, pq), (1, pk), (1, pv), (1, pg), (1, pb), (1, pS), (1, po), (0, T), (0, H * 128), (0, 눈금),
+                                                (0, H), (0, q.size // T // 128)])
             판이름 = "덩어리"
         else:
             hk = q.size // T // 128
