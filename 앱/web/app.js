@@ -1353,7 +1353,7 @@ function T(s, ...v) {
 // 관리자 · 서버 문구 → 영어(사전에 통째로 있으면 그것, 아니면 아래 바꾸기를 차례로). 영어 화면이 아니면 그대로
 const TMX = [
   // llama.cpp 재현 검증(문서/라마재현.md 4단계) — 관리자의 문구
-  [/llama\.cpp 빌드 (\S*) 는 아직 재현하지 못합니다\(받는 빌드: b12008\)/g, 'llama.cpp build $1 cannot be replayed yet (supported build: b12008)'],
+  [/llama\.cpp 빌드 (\S*) 는 아직 재현하지 못합니다\(받는 빌드: b11963 · b12008\)/g, 'llama.cpp build $1 cannot be replayed yet (supported builds: b11963 · b12008)'],
   [/원래 실행의 GPU\((.*?)\)의 일 나누기는 아직 옮기지 않았습니다\(받는 것: RTX 4070 Ti — sm_89, SM 60\)/g, "The work split of the original run's GPU ($1) is not ported yet (supported: RTX 4070 Ti — sm_89, 60 SMs)"],
   [/영수증의 모델 파일이 없습니다: /g, "The receipt's model file is missing: "],
   [/모델 파일의 SHA-256 이 영수증과 다릅니다 — 다른 파일로 돈 실행입니다\(파일 (\w*)…, 영수증 (\w*)…\)/g, 'The SHA-256 of the model file differs from the receipt — the run used a different file (file $1…, receipt $2…)'],
