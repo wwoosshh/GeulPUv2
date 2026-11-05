@@ -1312,7 +1312,6 @@ const DICT = {
   "RAM 프롬프트 캐시에 이 요청과 더 맞는 앞 상태가 있어 서버가 그것을 불러왔을 수 있습니다 — 아직 셈하지 않습니다": "The RAM prompt cache holds an earlier state that matches this request better, so the server may have loaded it — not computed yet",
   "캐시가 프롬프트 전부를 덮는 요청(한 토큰 되돌림) — 하이브리드 메모리에서는 아직 셈하지 않습니다": "The whole prompt is cached (one token rolled back) — not computed yet for hybrid memory",
   "캐시의 끝이 ubatch 의 경계가 아닙니다(흉내의 이력과 서버가 다르다)": "The end of the cache is not a ubatch boundary (the emulated history and the server disagree)",
-  "캐시의 끝이 ubatch 가운데입니다 — 되돌릴 수 있는 메모리(dense)에서 그 ubatch 를 다 셈한 뒤 되돌리는 재현은 아직 받지 않습니다": "The cache ends inside a ubatch — replaying that whole ubatch and then rolling back (dense memory) is not supported yet",
   "모델 파일의 구조(general.architecture)를 읽지 못했습니다": "Could not read the model's architecture (general.architecture)",
   "프롬프트 캐시: 서버가 캐시의 {} 토큰을 이어 썼습니다 — 같은 슬롯의 앞 영수증 {}개로 슬롯의 상태를 다시 쌓았습니다(체크포인트 {} 토큰을 되살림).": "Prompt cache: the server continued from {0} cached {0|token|tokens}. The slot's state was rebuilt from {1} earlier {1|receipt|receipts} of the same slot (the checkpoint at {2} {2|token|tokens} was restored).",
   "프롬프트 캐시: 서버가 캐시의 {} 토큰을 이어 썼습니다 — 같은 슬롯의 앞 영수증 {}개로 슬롯의 상태를 다시 쌓았습니다.": "Prompt cache: the server continued from {0} cached {0|token|tokens}. The slot's state was rebuilt from {1} earlier {1|receipt|receipts} of the same slot.",
@@ -1371,7 +1370,9 @@ const TMX = [
   [/토크나이저 (\S+) 의 토큰 바이트는 아직 셈하지 않습니다\(받는 것: gpt2 — BPE · llama — SPM\)/g, 'Token bytes of tokenizer $1 are not computed yet (supported: gpt2 — BPE · llama — SPM)'],
   [/영수증 (\S+): 흉내의 캐시 토큰 (\d+) 개가 서버의 (\d+) 개와 다릅니다 — 같은 슬롯에 기록되지 않은 요청이 있었거나 서버 설정이 영수증과 다릅니다/g, 'Receipt $1: the emulation reuses $2 cached tokens but the server reused $3 — the slot served a request that was not recorded, or the server settings differ from the receipt'],
   [/영수증 (\S+): 흉내의 슬롯 토큰 (\d+) 개가 서버\(tokens_cached\)의 (\d+) 개와 다릅니다/g, 'Receipt $1: the emulated slot holds $2 tokens but the server (tokens_cached) holds $3'],
-  [/ubatch 사슬의 합 (\d+) 이 프롬프트 (\d+) 과 다릅니다/g, 'The ubatch chain sums to $1 tokens, not the prompt length $2'],
+  [/ubatch 사슬이 프롬프트 (\d+) 토큰의 끝에서 끝나지 않습니다/g, 'The ubatch chain does not end at the end of the $1-token prompt'],
+  [/캐시의 끝이 ubatch 가운데인 요청 (\d+) 곳 — 서버는 그 ubatch 를 다 셈한 뒤 캐시 끝 뒤를 지웠습니다\(seq_rm\)\. 같은 차례로 다시 셉니다/g,
+    'Requests whose cache ended inside a ubatch: $1 — the server computed that whole ubatch, then removed the cache past its end (seq_rm). Recomputing in the same order'],
   // 디버거(디버거 v1) — 관리자의 문구
   [/이미 기록 중입니다\((.*?)\) — 먼저 멈추세요/g, 'Already recording ($1) — stop it first'],
   [/같은 이름의 실행이 있습니다\((.*?)\)/g, 'A run with the same name exists ($1)'],
