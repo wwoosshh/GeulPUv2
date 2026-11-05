@@ -294,20 +294,38 @@ def 시험_캐시(P, R, M):
         P.놓기()
 
 
-def 시험_FA(P, R, M, 병렬=7):
-    """FLASH_ATTN_EXT(생성 — vec, 병렬 블록 7 + 합치기) 노드."""
+def 병렬블록(nkv):
+    """flash attention vec 의 병렬 블록 수 — 엔진/라마재현몸.gl 의 병렬블록 과 같은 규칙(ntiles_KV = ⌈nkv / 256⌉, 블록 = 머리 16 × P,
+    SM 당 2 블록, P 는 min(2, ntiles_KV) 부터 파도 효율이 가장 좋은 첫 값 — 95 % 이상이면 파도가 느는 값에서 멈춘다)."""
+    nt = (nkv + 255) // 256
+    고른 = min(2, nt)
+    최고, 최고파도, 멈춤 = 0, 0, False
+    for pt in range(고른, nt + 1):
+        nbt = 16 * pt
+        nw = (nbt + 2 * NSM - 1) // (2 * NSM)
+        eff = 100 * nbt // (nw * 2 * NSM)
+        if 최고 >= 95 and nw > 최고파도:
+            멈춤 = True
+        if not 멈춤 and eff > 최고:
+            최고파도, 최고, 고른 = nw, eff, pt
+    return 고른
+
+
+def 시험_FA(P, R, M):
+    """FLASH_ATTN_EXT(생성 — vec, 병렬 블록 P(kv 2560 → 7, 1280 → 5) + 합치기) 노드."""
     for n, rec in R.연산("FLASH_ATTN_EXT"):
         q = R.입력(n, 0).astype(f32)[0]                                 # [머리 16, 1, 256]
         Kc = np.ascontiguousarray(np.transpose(R.입력(n, 1)[0], (1, 0, 2)))   # [kv수, kv머리, 256] f16
         Vc = np.ascontiguousarray(np.transpose(R.입력(n, 2)[0], (1, 0, 2)))
         가림 = R.입력(n, 3).reshape(-1).astype(np.float16)
         nkv, H = Kc.shape[0], q.shape[0]
+        병렬 = 병렬블록(nkv)
         눈금 = rec["op_params"][0]
         pq, pK, pV, pm = P.올림(q.reshape(-1)), P.올림(Kc.reshape(-1)), P.올림(Vc.reshape(-1)), P.올림(가림)
         p부분, p메타, po = P.올림(np.zeros(병렬 * H * 256, f32)), P.올림(np.zeros(병렬 * H * 2, f32)), P.올림(np.zeros(H * 256, f32))
         P.띄우기("라마FA벡터", (병렬, H), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, p부분), (1, p메타), (0, nkv), (0, 병렬), (0, H // Kc.shape[1]), (0, 눈금)])
         P.띄우기("라마FA합치기", (H, 1), 256, [(1, p부분), (1, p메타), (1, po), (0, 병렬)])
-        견주기(f"FLASH_ATTN_EXT vec {H}×256 kv {nkv} ({n['name']})", P.받음(po, H * 256), R.배열(rec))
+        견주기(f"FLASH_ATTN_EXT vec {H}×256 kv {nkv} 병렬 {병렬} ({n['name']})", P.받음(po, H * 256), R.배열(rec))
         P.놓기()
 
 
