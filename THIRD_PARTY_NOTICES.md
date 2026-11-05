@@ -93,6 +93,67 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## ptx-math
+
+`백엔드/SPIRV/근사표.gl` holds the lookup tables of ptx-math (https://github.com/bcarlet/ptx-math, `src/ptxm/tables/*_table.c` —
+generator: `시험/근사표만들기.py`), and `백엔드/SPIRV/근사.gl` re-implements its models of the PTX approximate instructions (ex2 · rcp ·
+rsqrt · lg2 from `ptxm_*_sm5x`, sin · cos from `ptxm_*_sm70`) as integer SPIR-V, so that the SPIR-V backend gives the bits of an sm_89 GPU
+(the replay of llama.cpp runs — `문서/라마재현.md`, stage 3).
+
+```
+MIT License
+
+Copyright (c) 2020 Benjamin Carleton
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## MMA-Sim
+
+`백엔드/SPIRV/실수텐서.gl` re-implements the Ada (sm_89) model of MMA-Sim (https://github.com/microsoft/MMA-Sim — `mmasim/arithmetic/fdpa.py`
+and the Ada parameters of `nv_ptx/sim.py`) for `mma.sync.aligned.m16n8k16` with f16 · bf16 inputs, as integer SPIR-V (`문서/라마재현.md`,
+stage 3).
+
+```
+Copyright (c) Microsoft Corporation.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Unicode Character Database
 
 The character data in `엔진/유니코드표.gl` (normalization) and `엔진/유니코드범주.gl` (categories, through llama.cpp) is derived from the

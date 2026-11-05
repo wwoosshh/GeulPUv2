@@ -112,6 +112,31 @@ class 판:
         self.dr.할당들 = []
 
 
+class 판V:
+    """3단계 — 같은 판을 Vulkan 에서(판실행V · SPIR-V 묶음): --벌칸 <판실행V.exe> [--장치 <이름의 일부>] [--작업 <빈칸 없는 폴더>]"""
+
+    def __init__(self, exe, spvs, 폴더, 장치):
+        from 판실행 import 판실행
+        self.d = 판실행(exe, spvs, 폴더, 장치=장치)
+        print(f"Vulkan: {self.d.장치}", flush=True)
+
+    def 띄우기(self, 이름, grid, block, params):
+        self.d.띄우기(이름, (grid[0], grid[1], 1), (block, 1, 1), [p for _, p in params])
+
+    def 올림(self, x):
+        x = np.ascontiguousarray(x)
+        p = self.d.할당(max(x.nbytes, 4))
+        self.d.올리기(p, x)
+        return p
+
+    def 받음(self, p, 모양, dt=f32):
+        a = np.zeros(모양, dt)
+        return self.d.내리기(p, a)
+
+    def 놓기(self):
+        self.d.놓기()
+
+
 def 가중블록(t, raw, R):
     """GGUF 의 블록을 장치 배치로: Q4_K · Q5_K 는 그대로, Q6_K 는 블록(210 바이트) 뒤에 2 바이트, Q8_0 은 d 뒤에 2 바이트(값 낱말을 4 바이트 경계에)."""
     if t == gguf읽기.Q6_K:
@@ -529,10 +554,18 @@ def 시험_임베딩(P, R, M):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    인자 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] != "--토큰"]
+    값깃발 = ("--토큰", "--벌칸", "--장치", "--작업")
+    인자 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] not in 값깃발]
     ptx, 폴더, 모델 = 인자[:3]
     고른 = set(인자[3:])
-    P, R, M = 판(ptx), 기록(폴더), gguf읽기.GGUF(모델)
+
+    def 값(깃발, 기본=None):
+        return sys.argv[sys.argv.index(깃발) + 1] if 깃발 in sys.argv else 기본
+    if "--벌칸" in sys.argv:      # 3단계: ptx 자리에 SPIR-V 묶음(.spvs)
+        P = 판V(값("--벌칸"), ptx, 값("--작업", r"E:\geulpu-work\xreplay\s3\tmp"), 값("--장치", "NVIDIA"))
+    else:
+        P = 판(ptx)
+    R, M = 기록(폴더), gguf읽기.GGUF(모델)
     시험들 = {"RMS": 시험_RMS, "행렬곱": 시험_행렬곱, "원소": 시험_원소, "합성곱": 시험_합성곱, "GDN": 시험_GDN,
             "RoPE": 시험_RoPE, "캐시": 시험_캐시, "FA": 시험_FA, "임베딩": 시험_임베딩,
             "MMQ": 시험_MMQ, "행렬곱여럿": 시험_행렬곱여럿, "합성곱여럿": 시험_합성곱여럿, "RoPE여럿": 시험_RoPE여럿,
