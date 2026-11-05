@@ -1,7 +1,7 @@
 (* llama.cpp 실행의 비트 재현 — 재현 호스트의 몸(문서/라마재현.md 1 · 2 · 3단계). 머리 둘이 GPU 층을 먼저 포함한다: 라마재현.gl(쿠다.gl —
    PTX 모듈) · 라마재현V.gl(벌칸.gl — SPIR-V 묶음 .spvs, 장치는 환경 변수 GEULPU_VULKAN). 대상: Qwen3.5(qwen35) · Qwen3(qwen3 — 10단계,
-   모든 층 어텐션 · 머리 차원 128) · Llama(llama — 11단계, 보통 RoPE · rope_freqs), llama.cpp b12008 CUDA, RTX 4070 Ti(SM 60) — 어느
-   장치에서 돌든 일 나누기는 4070 Ti 의 것(아래).
+   모든 층 어텐션 · 머리 차원 128) · Llama(llama — 11단계, 보통 RoPE · rope_freqs) · Qwen2(qwen2 — 13단계, Q · K · V 치우침),
+   llama.cpp b12008 CUDA, RTX 4070 Ti(SM 60) — 어느 장치에서 돌든 일 나누기는 4070 Ti 의 것(아래).
    구조마다의 그래프는 llama.cpp 의 src/models/<구조>.cpp 를 그대로 옮긴다(재현 호스트 — GeulPU 엔진의 구조표와 따로).
      라마재현 <모델.gguf> <모듈(.ptx · V 는 .spvs)> <머리> <토큰> <로짓 출력>
    머리: 시험/라마재현.py 가 만든 파일 — 중간정수 16:
@@ -14,7 +14,7 @@
    토큰: 방식 0 — 중간정수 걸음 수 뒤에 걸음마다 넣는 토큰. 방식 1 — ubatch 수 · ubatch 마다 토큰 수 · 프롬프트 토큰 수 · 프롬프트
      토큰들 · 걸음 수 · 걸음마다 넣는 토큰(서버가 낸 토큰). ubatch 나눔은 llama-server 의 실행 모양(시험/라마재현.py 가 만든다).
    로짓 출력: 짧은실수 [줄][어휘수] — 방식 0 은 걸음마다, 방식 1 은 프롬프트 끝 + 걸음마다.
-   셈은 llama.cpp 의 그래프(src/models/qwen35.cpp · qwen3.cpp · llama.cpp)의 차례 그대로, 판마다의 셈은 커널/생성라마.gl · 생성라마프롬프트.gl. 일 나누기(MMQ 의
+   셈은 llama.cpp 의 그래프(src/models/qwen35.cpp · qwen3.cpp · llama.cpp · qwen2.cpp)의 차례 그대로, 판마다의 셈은 커널/생성라마.gl · 생성라마프롬프트.gl. 일 나누기(MMQ 의
    타일 폭 · stream-k 블록, flash attention 의 설정 · stream-k 블록 · vec 의 병렬 블록 수)는 llama.cpp 의 규칙을 SM 60 으로 셈한다. *)
 포함 "표준/입출력.gl"
 포함 "표준/문자열.gl"
@@ -53,7 +53,8 @@
 정수 b로프 = 0.                    (* 11단계 — RoPE 의 freq_factors(rope_freqs.weight — 없으면 1 을 담은 버퍼, 머리 차원 / 2 칸) *)
 
 정수 구조 = 0.                      (* 10단계 — 0 qwen35(GDN 층 · 4 층마다 게이트 어텐션), 1 qwen3(모든 층 어텐션, 게이트 없음),
-                                       11단계 — 2 llama(모든 층 어텐션, Q · K 정규화 없음, 보통 RoPE) *)
+                                       11단계 — 2 llama(모든 층 어텐션, Q · K 정규화 없음, 보통 RoPE),
+                                       13단계 — 3 qwen2(llama 와 같은 꼴에 NEOX RoPE · Q · K · V 치우침) *)
 정수 머리D = 256.                   (* 어텐션 머리 차원(qwen35 256, qwen3 128) *)
 
 정수 층수 = 32. 정수 처음위치 = 0. 정수 KV칸 = 0. 정수 회전수 = 64. 정수 방식 = 0.
@@ -515,6 +516,15 @@
     라마가중 참조 wk = 층가중(l, "attn_k.weight").
     행렬곱(ba, wk, bkk, T).
     행렬곱(ba, 층가중(l, "attn_v.weight"), bvv, T).
+    구조 == 3이면 {
+        (* 13단계 — qwen2 의 치우침: 행렬곱 + 치우침(build_qkv 의 ggml_add — 생성 걸음은 MMVQ 가 엮어 결과 + 치우침, 셈은 같다) *)
+        라마가중 참조 qb = 층가중(l, "attn_q.bias").
+        라마가중 참조 kb = 층가중(l, "attn_k.bias").
+        라마가중 참조 vb = 층가중(l, "attn_v.bias").
+        원소(bqf, qb→주소, bqf, T * wq→R, wq→R, 1, 0).
+        원소(bkk, kb→주소, bkk, T * wk→R, wk→R, 1, 0).
+        원소(bvv, vb→주소, bvv, T * vb→K, vb→K, 1, 0).
+    }
     정수 D = 머리D.
     정수 Hk = wk→R / D.
     정수 Hq = wq→R / D.
@@ -525,8 +535,8 @@
     구조 == 0이면 {
         RMS(bqf, 층가중(l, "attn_q_norm.weight")→주소, bqn, D, q걸음, T * Hq, 1, eps비트).
         RMS(bkk, 층가중(l, "attn_k_norm.weight")→주소, bkn, D, D, T * Hk, 1, eps비트).
-    } 아니면 구조 == 2이면 {
-        qin = bqf.                                     (* llama — 정규화 없이 행렬곱 출력에 RoPE *)
+    } 아니면 구조 >= 2이면 {
+        qin = bqf.                                     (* llama · qwen2 — 정규화 없이 행렬곱 출력에 RoPE *)
         kin = bkk.
     } 아니면 {
         (* qwen3 — llama.cpp 는 q · k 의 RMS_NORM · MUL · ROPE(K 는 · VIEW · SET_ROWS 까지)를 한 판으로(rms_norm_mul_rope_f32 — 정규화의
@@ -685,6 +695,7 @@
     문자열 앞 = "qwen35.".
     구조 == 1이면 { 앞 = "qwen3.". }
     구조 == 2이면 { 앞 = "llama.". }
+    구조 == 3이면 { 앞 = "qwen2.". }
     반환 라마서식글("%s%s", 앞, 꼬리).
 }
 
@@ -694,11 +705,12 @@
     문자열_같은가(이름, "qwen35")이면 { 구조 = 0. }
     아니면 문자열_같은가(이름, "qwen3")이면 { 구조 = 1. }
     아니면 문자열_같은가(이름, "llama")이면 { 구조 = 2. }
-    아니면 { 파일에_쓰기(표준오류(), "받지 않는 구조 %s(qwen35 · qwen3 · llama 만)\n", 이름). 1로 종료하다. }
+    아니면 문자열_같은가(이름, "qwen2")이면 { 구조 = 3. }
+    아니면 { 파일에_쓰기(표준오류(), "받지 않는 구조 %s(qwen35 · qwen3 · llama · qwen2 만)\n", 이름). 1로 종료하다. }
     (* 머리 차원 — key_length 가 없으면(Llama-3.1 GGUF) 폭 / 머리 수(llama.cpp 의 n_embd_head_k 기본) *)
     메타있음(g, 메타열쇠(g, "attention.key_length"))이면 { 머리D = 메타정수(g, 메타열쇠(g, "attention.key_length")). }
     아니면 { 머리D = 메타정수(g, 메타열쇠(g, "embedding_length")) / 메타정수(g, 메타열쇠(g, "attention.head_count")). }
-    (구조 == 2 그리고 머리D != 128)이면 { 파일에_쓰기(표준오류(), "받지 않는 머리 차원 %lld(llama 는 128 만)\n", 머리D). 1로 종료하다. }
+    (구조 >= 2 그리고 머리D != 128)이면 { 파일에_쓰기(표준오류(), "받지 않는 머리 차원 %lld(llama · qwen2 는 128 만)\n", 머리D). 1로 종료하다. }
     (머리D != 256 그리고 머리D != 128)이면 { 파일에_쓰기(표준오류(), "받지 않는 머리 차원 %lld(256 · 128 만)\n", 머리D). 1로 종료하다. }
 }
 
@@ -815,7 +827,11 @@
         어텐션인가(l)이면 {
             가중올림(g, 라마서식글("blk.%lld.attn_q.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_k.weight", l)).
             가중올림(g, 라마서식글("blk.%lld.attn_v.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_output.weight", l)).
-            구조 != 2이면 { 가중올림(g, 라마서식글("blk.%lld.attn_q_norm.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_k_norm.weight", l)). }
+            구조 < 2이면 { 가중올림(g, 라마서식글("blk.%lld.attn_q_norm.weight", l)). 가중올림(g, 라마서식글("blk.%lld.attn_k_norm.weight", l)). }
+            구조 == 3이면 {
+                가중올림(g, 라마서식글("blk.%lld.attn_q.bias", l)). 가중올림(g, 라마서식글("blk.%lld.attn_k.bias", l)).
+                가중올림(g, 라마서식글("blk.%lld.attn_v.bias", l)).
+            }
             정수 kvb = KV칸 * 층가중(l, "attn_k.weight")→R * 2.          (* 8단계 — KV 머리 × D 반실수(9B · 4B 1024, 0.8B 512, Qwen3-8B 1024) *)
             K캐시[l] = 장치할당(kvb). V캐시[l] = 장치할당(kvb).
             방식 == 0이면 {
