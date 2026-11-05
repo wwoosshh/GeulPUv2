@@ -20,6 +20,10 @@ response)을 그대로 쓴다.
   python -I -X utf8 시험/라마앱판.py 채팅 <꾸러미> <자료> <out> --서버 <llama-server.exe> --모델 <gguf> --기록폴더 <det …>
       9단계 — 같은 기본 설정 서버에 기록기로 채팅 API(/llama/v1/chat/completions)의 한 대화(잇기 둘 · 같은 대화 · 앞을 고침 — 넷째는
       슬롯 캐시의 절반 넘게 버려 RAM 캐시 갈래)와 스트리밍 요청 하나(9-2)를 보낸다. 영수증 이름은 <out>/영수증.json(h1 … h5 · stream).
+  python -I -X utf8 시험/라마앱판.py 흐름채팅 <꾸러미> <자료> <out> --서버 <llama-server.exe> --모델 <gguf> --기록폴더 <아무 폴더>
+      18단계 — 2단계 설정의 서버(-np 1 · 캐시 끔)에 기록기로 스트리밍 채팅 요청 다섯(끝 토큰으로 끝나는 짧은 답 · 긴 답 · 생각 켬 ·
+      온도 0.8)을 보낸다. 영수증 이름은 <out>/영수증.json(s1 … s4 · t1). 기록 에 --스트림 을 주면 /completion 을 스트리밍으로 보내고,
+      조각에서 모은 칸이 2단계 기록과 같은지 본다(빠진 토큰 수도 찍는다).
   python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <대화 out> <새 out> --단계 7
       7-2 의 바꾼 영수증 셋(c3 의 cache_n + 1 · c3 의 서버 포트 · c3 의 슬롯 상태에 다른 슬롯) — 7-1 의 검증 뒤에(같은 슬롯의 앞 영수증이 된다).
 마지막 줄 "합계: …".
@@ -84,6 +88,36 @@ def 칸들(r):
     return [(c["id"], c["logprob"], [(t["id"], t["logprob"]) for t in c["top_logprobs"]]) for c in r.get("completion_probabilities", [])]
 
 
+def 흐름보내기(포트, 길, 몸):
+    """18단계 — 스트리밍 요청을 보내고 SSE 몸(글)을 그대로"""
+    r = urllib.request.Request(f"http://127.0.0.1:{포트}{길}", data=json.dumps(몸, ensure_ascii=False).encode("utf-8"),
+                               method="POST", headers={"Content-Type": "application/json"})
+    return urllib.request.urlopen(r, timeout=1800).read().decode("utf-8", errors="replace")
+
+
+def 흐름모으기(글, 채팅):
+    """18단계 — SSE 조각에서 알려진 토큰 · 로그 확률 칸 · 끝 조각(/completion 은 stop 참, 채팅은 __verbose)"""
+    토큰, 칸, 끝 = [], [], None
+    for 줄 in 글.split("\n"):
+        줄 = 줄.rstrip("\r")
+        if not 줄.startswith("data: {"):
+            continue
+        e = json.loads(줄[6:])
+        if 채팅:
+            if "__verbose" in e:
+                끝 = e["__verbose"]
+            for ch in e.get("choices", []):
+                for en in ((ch.get("logprobs") or {}).get("content") or []):
+                    칸.append(en)
+                    토큰.append(en["id"])
+        elif e.get("stop"):
+            끝 = e
+        else:
+            토큰 += e.get("tokens", [])
+            칸 += e.get("completion_probabilities", [])
+    return 토큰, 칸, 끝
+
+
 def 기록하기(a):
     폴더들 = a.기록폴더.split(",")
 
@@ -117,8 +151,16 @@ def 기록하기(a):
             want = 기록(name)
             앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
             seed = a.시드 + q if a.온도 > 0 else 0
-            r = 묻기(a.포트, "/llama/completion", {"prompt": want["prompt_text"], "n_predict": 256, "temperature": a.온도, "seed": seed, "stream": False})
-            같음 = a.온도 > 0 or (r.get("tokens") == want["response"]["tokens"] and 칸들(r) == 칸들(want["response"]))   # 온도 > 0 은 견줄 기록이 없다
+            몸 = {"prompt": want["prompt_text"], "n_predict": 256, "temperature": a.온도, "seed": seed, "stream": a.스트림}
+            빠짐 = 0
+            if a.스트림:                                          # 18단계 — 조각에서 모은 칸이 2단계 기록(비스트리밍)과 같은가
+                토큰, 칸, 끝 = 흐름모으기(흐름보내기(a.포트, "/llama/completion", 몸), False)
+                빠짐 = (끝 or {}).get("tokens_predicted", -1) - len(토큰)
+                r = {"tokens": 토큰, "completion_probabilities": 칸}
+                같음 = a.온도 > 0 or (칸들(r) == 칸들(want["response"]) and (끝 or {}).get("tokens_predicted") == len(want["response"]["tokens"]))
+            else:
+                r = 묻기(a.포트, "/llama/completion", 몸)
+                같음 = a.온도 > 0 or (r.get("tokens") == want["response"]["tokens"] and 칸들(r) == 칸들(want["response"]))   # 온도 > 0 은 견줄 기록이 없다
             같음수 += 같음
             새것 = None
             for _ in range(120):                                   # 영수증은 스레드가 모델 해시 뒤에 쓴다 — 다 쓴 .json 이름만
@@ -128,10 +170,11 @@ def 기록하기(a):
                     break
                 time.sleep(1)
             표[name] = 새것
+            흐름글 = f" · 스트리밍(빠진 토큰 {빠짐})" if a.스트림 else ""
             if a.온도 > 0:
-                print(f"{name}: 온도 {a.온도} · 시드 {seed} · 토큰 {len(r.get('tokens', []))} · 영수증 {새것}", flush=True)
+                print(f"{name}: 온도 {a.온도} · 시드 {seed} · 토큰 {len(r.get('tokens', []))}{흐름글} · 영수증 {새것}", flush=True)
             else:
-                print(f"{name}: 응답이 2단계 기록과 {'같음' if 같음 else '다름'} · 영수증 {새것}", flush=True)
+                print(f"{name}: 응답이 2단계 기록과 {'같음' if 같음 else '다름'}{흐름글} · 영수증 {새것}", flush=True)
         json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     finally:
         if srv is not None:
@@ -256,6 +299,39 @@ def 채팅하기(a):
         보내기("h4", list(m), 4)                                                     # 같은 대화 — 체크포인트 되살리기
         보내기("h5", m[:3] + [{"role": "user", "content": "다른 질문 — Intel GPU 는?"}], 5)   # 앞을 고침 — RAM 캐시 갈래 · 사용자 자리 체크포인트
         보내기("stream", m[:3] + [{"role": "user", "content": "한 줄로."}], 6, 흐름=True)       # 9-2 — 받지 않음
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+        s.닫기()
+    print(f"합계: 요청 {len(표)} · 영수증 {sum(1 for v in 표.values() if v)}")
+    return 0 if all(표.values()) else 1
+
+
+def 흐름채팅하기(a):
+    """18단계 — 2단계 설정 서버에 스트리밍 채팅 요청 다섯"""
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표 = {}
+    try:
+        srv = 서버띄우기(a, 깃발, os.path.join(a.out, "llama-server.log"))
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발)})
+        영수증폴더 = os.path.join(a.자료, "영수증")
+        생각끔 = {"enable_thinking": False}
+        요청들 = [("s1", "Answer with one word: what color is the sky on a clear day?", 64, 0.0, 생각끔),
+                ("s2", "한 낱말로만 답하세요: 맑은 날 하늘은 무슨 색인가요?", 64, 0.0, 생각끔),
+                ("s3", "Explain in three sentences why the sky is blue.", 96, 0.0, None),
+                ("s4", "하늘이 파란 까닭을 세 문장으로 설명해 주세요.", 96, 0.0, 생각끔),
+                ("t1", "Answer with one word: what color is grass?", 64, 0.8, 생각끔)]
+        for 이름, 글, n, 온도, 틀 in 요청들:
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            몸 = {"messages": [{"role": "user", "content": 글}], "max_tokens": n, "temperature": 온도, "seed": 7, "stream": True}
+            if 틀:
+                몸["chat_template_kwargs"] = 틀
+            토큰, 칸, 끝 = 흐름모으기(흐름보내기(a.포트, "/llama/v1/chat/completions", 몸), True)
+            표[이름] = 새영수증(영수증폴더, 앞)
+            print(f"{이름}: 칸 {len(칸)} · 생성 {(끝 or {}).get('tokens_predicted')} · 끝 {(끝 or {}).get('stop_type')} · 영수증 {표[이름]}", flush=True)
         json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     finally:
         if srv is not None:
@@ -415,14 +491,14 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="할일", required=True)
-    for n in ("기록", "검증", "대화", "채팅"):
+    for n in ("기록", "검증", "대화", "채팅", "흐름채팅"):
         q = sub.add_parser(n)
         q.add_argument("꾸러미")
         q.add_argument("자료")
         q.add_argument("out")
         q.add_argument("--포트", type=int, default=44641)
         q.add_argument("--이름", type=lambda s: s.split(","), default=이름들10)
-        if n in ("기록", "대화", "채팅"):
+        if n in ("기록", "대화", "채팅", "흐름채팅"):
             q.add_argument("--서버", required=True)
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
@@ -430,6 +506,7 @@ def main():
             q.add_argument("--온도", type=float, default=0.0)
             q.add_argument("--시드", type=int, default=1)
             q.add_argument("--시작", default="multi_turn")
+            q.add_argument("--스트림", action="store_true")                 # 18단계 — 기록: /completion 을 스트리밍으로
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
             q.add_argument("--장치", default="")
@@ -439,7 +516,7 @@ def main():
     q.add_argument("out")
     q.add_argument("--단계", type=int, choices=[4, 5, 7, 9], default=4)
     a = p.parse_args()
-    return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "바꾸기": 바꾸기}[a.할일](a)
+    return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "바꾸기": 바꾸기}[a.할일](a)
 
 
 if __name__ == "__main__":
