@@ -36,6 +36,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
         "geul language (Windows x64 app with CUDA or Vulkan, Linux x86-64 app with CUDA)")
 
 
+def 꾸러미파일들():
+    """휠에 넣는 꾸러미의 파이썬 파일 — geulpu/*.py 의 이름 차례(__init__.py 는 판을 넣어 쓴다)"""
+    return sorted(n for n in os.listdir(os.path.join(HERE, "geulpu")) if n.endswith(".py"))
+
+
 def 레코드해시(b):
     return "sha256=" + base64.urlsafe_b64encode(hashlib.sha256(b).digest()).rstrip(b"=").decode("ascii")
 
@@ -169,7 +174,9 @@ def 만들기(꾸러미경로, 출력, 합파일=None, 바란판=None):
     if 처음.count('__version__ = "0.0.0"') != 1:
         raise SystemExit("geulpu/__init__.py 의 판 자리를 찾지 못했다")
     파일들.append(("geulpu/__init__.py", 처음.replace('__version__ = "0.0.0"', f'__version__ = "{판}"').encode("utf-8"), False))
-    파일들.append(("geulpu/__main__.py", open(os.path.join(HERE, "geulpu", "__main__.py"), "rb").read(), False))
+    for 이름 in 꾸러미파일들():                   # 실행기(__main__.py)와 파이썬 API(api.py) — 이름 차례
+        if 이름 != "__init__.py":
+            파일들.append((f"geulpu/{이름}", open(os.path.join(HERE, "geulpu", 이름), "rb").read(), False))
     for n in 이름들:
         상대 = n[len(뿌리) + 1:]
         바이트, 실행됨 = 항목[n]
