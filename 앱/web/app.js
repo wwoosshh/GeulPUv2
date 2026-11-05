@@ -5134,6 +5134,7 @@ async function openResult(name) {
         h('span', { class: 'tag ' + (s.same ? 'ok' : 'err') }, s.same ? null : I('alert'), s.same ? T('일치') : T('불일치'))),
       h('div', { class: 'small muted' }, [T`영수증 ${s.receipt}`, T`프롬프트 ${fmtNum(s.prompt_tokens)} 토큰`, (LAYER[s.layer] || s.layer) + (s.vulkan_device ? ` (${s.vulkan_device})` : ''),
         T`다시 계산 ${fmtNum(s.seconds, 1)}초`].join(NB)),
+      s.steps_without_probs ? labNote(T`서버가 로그 확률을 적지 않은 스텝 ${fmtNum(s.steps_without_probs)}개(글자가 덜 끝난 스텝)는 토큰만 견줬습니다.`) : null,
       diffs.length ? h('div', { class: 'list' }, h('table', { class: 'data' },
         h('thead', null, h('tr', null, [T('스텝'), T('값'), T('llama-server'), T('다시 계산')].map(t => h('th', null, t)))),
         h('tbody', null, diffs.map(d => h('tr', null, h('td', { class: 'num' }, d.step + 1),
@@ -6701,7 +6702,7 @@ const bigStringify = (v, sp) => JSON.stringify(v, null, sp).replace(/"\\u0001N:(
 const bigShow = v => (typeof v === 'string' && v.startsWith(BIG) ? v.slice(BIG.length) : v);
 
 const dbgG = x => ((x && x.response) || {}).geulpu || (x && x.llama) || {};   // llama.cpp 재현의 실행 로그는 프롬프트 · 생성 토큰을 "llama" 칸에
-const dbgFinish = r => (((r && r.choices) || [])[0] || {}).finish_reason || null;
+const dbgFinish = r => (((r && r.choices) || [])[0] || {}).finish_reason || (r && r.stop_type) || null;   // llama-server 의 /completion 은 stop_type
 const dbgKey = x => (x.type === 'branch' ? 'b' + x.b : 'r' + x.i);
 const dbgEq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 function dbgFirstDiff(a, b) {
@@ -7529,7 +7530,10 @@ function dbgCmpPair(A, B, r) {
   const x = A.reqs.find(q => q.i === r.i), y = B.reqs.find(q => q.i === r.i);
   const tA = dbgG(x).tokens, tB = dbgG(y).tokens, d = r.first_divergence === null ? 0 : r.first_divergence;
   const svA = dbgServerOf(A, x);
-  const a = dbgText(A.name + '|r' + x.i + '|' + d, tA.slice(d), svA), b = dbgText(B.name + '|r' + y.i + '|' + d, tB.slice(d), svA);
+  // llama.cpp 재현의 실행은 점수 줄의 글(영수증 모델의 어휘로 이은 바이트)에서 — 지금 서버의 어휘는 쓰지 않는다
+  const llamaTail = (R, q) => { const sc = dbgScoreFor(R, q.i, dbgServerOf(R, q)); if (!sc || !Array.isArray(sc.text_offset)) return null; const e = new TextEncoder().encode(sc.text || ''); return new TextDecoder().decode(e.subarray(d < sc.text_offset.length ? sc.text_offset[d] : e.length)); };
+  const a = dbgLlama(A) ? llamaTail(A, x) : dbgText(A.name + '|r' + x.i + '|' + d, tA.slice(d), svA);
+  const b = dbgLlama(B) ? llamaTail(B, y) : dbgText(B.name + '|r' + y.i + '|' + d, tB.slice(d), svA);
   const out = [h('div', { class: 'row g8' }, h('span', { class: 'eyebrow' }, T`요청 ${r.i}`), h('span', { class: 'grow' }),
     h('button', { class: 'btn sm ghost', onclick: () => { DBG.view = 'req'; DBG.ri = r.i; DBG.step = d < tA.length ? d : -1; renderDebug(true); } }, T('A의 이 요청 보기')))];
   out.push(labNote(r.same ? T('두 답의 토큰이 모두 같습니다.') : T`스텝 ${d + 1}에서 처음 갈라집니다 — 그 앞 ${fmtNum(d)}토큰은 같습니다.`));

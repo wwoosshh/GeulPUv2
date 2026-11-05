@@ -6,7 +6,8 @@
 # 1. 글 컴파일러: -GeulC 가 없으면 글 저장소에서 두 번 빌드한다(파이썬 참조 구현 → 글로 쓴 컴파일러 → 같은 소스로 한 번 더 — 고정점).
 # 2. 뒷단 둘(PTX · SPIR-V)은 글 저장소에서, 나머지는 이 저장소에서 빌드한다:
 #      GeulPU.exe(앱/관리자.gl) · bin\server-cuda · server-vulkan · device-vulkan · device-cuda · diag-cuda · diag-vulkan · kernel-gen ·
-#      ptx-backend · spirv-backend, kernels\ 의 진단 커널(PTX · SPIR-V — 협력 모양 셋)
+#      ptx-backend · spirv-backend · replay-llama-cuda · replay-llama-vulkan · llama-logprob(llama.cpp 재현 검증),
+#      kernels\ 의 진단 커널(PTX · SPIR-V — 협력 모양 셋)
 # 3. web\ · data\(받을 모델 목록 · 교차검증 기준 · 모델 평가의 내장 데이터) · LICENSE · THIRD_PARTY_NOTICES.md · README.txt 를 넣고
 #    version.json(판 · 커밋 · 빌드 때 · 파일마다 SHA-256)을 쓴다.
 # 4. 교차검증 기준(expected.json)에 있는 빌드 해시와 견준다 — 다르면 멈춘다(-AllowHashChange 면 경고만). 릴리스의 서버 · 생성기 · 뒷단이
@@ -90,6 +91,7 @@ $progs = @(
     @('엔진/진단V.gl', (Join-Path $Bin 'diag-vulkan.exe'), 'diag-vulkan'),
     @('엔진/라마재현.gl', (Join-Path $Bin 'replay-llama-cuda.exe'), 'replay-llama-cuda'),        # llama.cpp 재현 4단계(문서/라마재현.md)
     @('엔진/라마재현V.gl', (Join-Path $Bin 'replay-llama-vulkan.exe'), 'replay-llama-vulkan'),
+    @('엔진/라마확률.gl', (Join-Path $Bin 'llama-logprob.exe'), 'llama-logprob'),                   # 재현 검증의 서버 로그 확률 셈(C 런타임 — 앱은 부르지 않는다)
     @('커널/커널생성.gl', (Join-Path $Bin 'kernel-gen.exe'), 'kernel-gen')
 )
 foreach ($p in $progs) { Say ('빌드: ' + $p[0]); Run $Comp @($p[0], '-o', $p[1]) $Root $p[2] }

@@ -67,6 +67,7 @@ run diag-cuda "$ROOT" "$COMP" 엔진/진단.gl -o "$DIST/bin/diag-cuda"
 run diag-vulkan "$ROOT" "$COMP" 엔진/진단V.gl -o "$DIST/bin/diag-vulkan"
 run replay-llama-cuda "$ROOT" "$COMP" 엔진/라마재현.gl -o "$DIST/bin/replay-llama-cuda"      # llama.cpp 재현 4단계(문서/라마재현.md)
 run replay-llama-vulkan "$ROOT" "$COMP" 엔진/라마재현V.gl -o "$DIST/bin/replay-llama-vulkan"
+run llama-logprob "$ROOT" "$COMP" 엔진/라마확률.gl -o "$DIST/bin/llama-logprob"      # 재현 검증의 서버 로그 확률 셈(C 런타임 — 앱은 부르지 않는다)
 run kernel-gen "$ROOT" "$COMP" 커널/커널생성.gl -o "$DIST/bin/kernel-gen"
 run kernel-diag-ptx "$ROOT" "$DIST/bin/ptx-backend" 커널/진단.gl -o "$DIST/kernels/diag.ptx"
 run kernel-diag-vulkan "$ROOT" "$DIST/bin/spirv-backend" 커널/진단V.gl -o "$DIST/kernels/diag-vulkan.spvs"
