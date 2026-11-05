@@ -1368,6 +1368,7 @@ const TMX = [
   [/서버가 캐시의 토큰 (\d+) 개를 이어 쓴 요청인데, 같은 서버 · 같은 슬롯\((-?\d+)\)의 앞 영수증에 처음 요청\(캐시 0\)이 없습니다 — 그 슬롯의 처음 요청부터 기록한 영수증이 있어야 슬롯의 상태를 다시 쌓습니다/g, "The server continued from $1 cached tokens, but the earlier receipts of the same server and slot ($2) have no first request (cache 0) — receipts from the slot's first request on are needed to rebuild its state"],
   [/영수증 (\S+) 의 캐시 셈을 흉내 내지 못했습니다 — /g, 'Could not emulate the cache computation for receipt $1 — '],
   [/재현 호스트가 받지 않는 구조입니다: (\S+)\(받는 것: qwen35 · qwen3 · llama · qwen2\)/g, 'Architecture not supported by the replay host: $1 (supported: qwen35 · qwen3 · llama · qwen2)'],
+  [/토크나이저 (\S+) 의 토큰 바이트는 아직 셈하지 않습니다\(받는 것: gpt2 — BPE · llama — SPM\)/g, 'Token bytes of tokenizer $1 are not computed yet (supported: gpt2 — BPE · llama — SPM)'],
   [/영수증 (\S+): 흉내의 캐시 토큰 (\d+) 개가 서버의 (\d+) 개와 다릅니다 — 같은 슬롯에 기록되지 않은 요청이 있었거나 서버 설정이 영수증과 다릅니다/g, 'Receipt $1: the emulation reuses $2 cached tokens but the server reused $3 — the slot served a request that was not recorded, or the server settings differ from the receipt'],
   [/영수증 (\S+): 흉내의 슬롯 토큰 (\d+) 개가 서버\(tokens_cached\)의 (\d+) 개와 다릅니다/g, 'Receipt $1: the emulated slot holds $2 tokens but the server (tokens_cached) holds $3'],
   [/ubatch 사슬의 합 (\d+) 이 프롬프트 (\d+) 과 다릅니다/g, 'The ubatch chain sums to $1 tokens, not the prompt length $2'],
