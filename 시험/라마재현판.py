@@ -1,0 +1,313 @@
+#!/usr/bin/env python3
+"""llama.cpp 실행의 비트 재현(문서/라마재현.md) — 재현 모듈(커널생성 라마재현)의 판을 llama.cpp 의 기록과 비트까지.
+
+기록은 llama.cpp b12008 의 공식 DLL 을 그대로 부르고 그래프 노드를 cb_eval 로 적은 것이다(생성 1걸음, 32층 — 노드마다 입력과 출력).
+판마다 기록된 입력을 넣고 기록된 출력과 견준다. 판정 1-1 의 시험이다.
+
+  python -I 시험/라마재현판.py <라마재현.ptx> <기록 폴더> <모델.gguf> [시험 이름 …]
+마지막 줄 "모두 0: True|False".
+"""
+import ctypes
+import json
+import os
+import sys
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.normpath(os.path.join(HERE, ".."))
+sys.path.insert(0, os.path.join(ROOT, "계약"))
+sys.path.insert(0, HERE)
+import gguf읽기             # noqa: E402
+import 쿠다드라이버 as G      # noqa: E402
+
+f32 = np.float32
+u64, i64 = G.c_u64, G.c_i64
+결과 = []
+
+
+class 기록:
+    """llama.cpp 의 노드 기록: index.json(노드 · 텐서 — ne · nb · 파일) + 텐서마다의 날 바이트."""
+
+    def __init__(self, d):
+        self.d = d
+        ix = json.load(open(os.path.join(d, "index.json"), encoding="utf-8"))
+        self.노드들, self.텐서 = ix["nodes"], ix["tensors"]
+
+    def 배열(self, rec):
+        dt = {"f32": np.float32, "f16": np.float16, "i32": np.int32, "i64": np.int64}[rec["type"]]
+        buf = np.fromfile(os.path.join(self.d, rec["file"]), dtype=np.uint8)
+        ne, nb = rec["ne"], rec["nb"]
+        return np.lib.stride_tricks.as_strided(buf.view(dt), shape=(ne[3], ne[2], ne[1], ne[0]),
+                                               strides=(nb[3], nb[2], nb[1], nb[0])).copy()
+
+    def 노드(self, name, nth=0):
+        n = [x for x in self.노드들 if x["name"] == name][nth]
+        return n, self.텐서[n["ptr"]]
+
+    def 입력(self, n, i):
+        return self.배열(self.텐서[n["srcs"][i]["ptr"]])
+
+    def 연산(self, op):
+        return [(n, self.텐서[n["ptr"]]) for n in self.노드들 if self.텐서[n["ptr"]]["op"] == op]
+
+
+def 견주기(이름, got, want):
+    got = np.ascontiguousarray(got, f32).reshape(-1)
+    want = np.ascontiguousarray(want, f32).reshape(-1)
+    assert got.size == want.size, (이름, got.size, want.size)
+    bad = int(np.count_nonzero(got.view(np.uint32) != want.view(np.uint32)))
+    결과.append((이름, got.size, bad))
+    덧 = ""
+    if bad:
+        i = int(np.flatnonzero(got.view(np.uint32) != want.view(np.uint32))[0])
+        덧 = f" (처음 {i}: {got[i]!r} · 기록 {want[i]!r})"
+    print(f"{이름:40s} 값 {got.size:8d} · 불일치 {bad}{덧}", flush=True)
+
+
+class 판:
+    def __init__(self, ptx):
+        self.dr = G.드라이버()
+        self.ptx = open(ptx, "rb").read()
+        self.mod = self.dr.모듈(self.ptx)
+
+    def 띄우기(self, 이름, grid, block, params):
+        self.fn = getattr(self, "fn", {})
+        if 이름 not in self.fn:
+            self.fn[이름] = self.dr.함수(self.mod, 이름)
+        fn = self.fn[이름]
+        ps = [u64(p) if 참조_ else i64(p) for 참조_, p in params]
+        args = (ctypes.c_void_p * len(ps))(*[ctypes.cast(ctypes.byref(p), ctypes.c_void_p) for p in ps])
+        r = self.dr.cu.cuLaunchKernel(fn, grid[0], grid[1], 1, block, 1, 1, 0, None, args, None)
+        if r != 0:
+            raise RuntimeError(f"{이름}: cuLaunchKernel {r}")
+
+    def 올림(self, x):
+        x = np.ascontiguousarray(x)
+        p = self.dr.할당(max(x.nbytes, 4))
+        self.dr.올리기(p, x)
+        return p
+
+    def 받음(self, p, 모양, dt=f32):
+        a = np.zeros(모양, dt)
+        self.dr.맞추기()
+        return self.dr.내리기(p, a)
+
+    def 놓기(self):
+        """잡은 장치 메모리만 돌려준다(모듈은 그대로 — 함수 핸들을 다시 쓴다)."""
+        self.dr.맞추기()
+        for p in self.dr.할당들:
+            self.dr.확인(self.dr.cu.cuMemFree_v2(u64(p)))
+        self.dr.할당들 = []
+
+
+def 가중블록(t, raw, R):
+    """GGUF 의 블록을 장치 배치로: Q4_K · Q5_K 는 그대로, Q6_K 는 블록(210 바이트) 뒤에 2 바이트, Q8_0 은 d 뒤에 2 바이트(값 낱말을 4 바이트 경계에)."""
+    if t == gguf읽기.Q6_K:
+        b = raw.reshape(-1, 210)
+        return np.concatenate([b, np.zeros((b.shape[0], 2), np.uint8)], 1).reshape(-1)
+    if t == gguf읽기.Q8_0:
+        b = raw.reshape(-1, 34)
+        return np.concatenate([b[:, :2], np.zeros((b.shape[0], 2), np.uint8), b[:, 2:]], 1).reshape(-1)
+    return np.ascontiguousarray(raw)
+
+
+def 비트(x):
+    return int(np.array([x], f32).view(np.int32)[0])
+
+
+def 시험_RMS(P, R, M):
+    """RMS_NORM 노드 모두(열 4096 · 256 · 128 → 블록 1024 · 128 · 32), 그리고 그 출력에 가중치를 곱하는 MUL 노드(엮은 판)."""
+    판이름 = {4096: ("라마RMS1024", 1024), 256: ("라마RMS128", 128), 128: ("라마RMS32", 32)}
+    출력표 = {}
+    for n, rec in R.연산("RMS_NORM"):
+        x = R.입력(n, 0)
+        열 = x.shape[-1]
+        이름, B = 판이름[열]
+        행 = x.size // 열
+        eps = int(np.array(rec["op_params"][:1], np.int32)[0])
+        px, py = P.올림(x.astype(f32)), P.올림(np.zeros(x.size, f32))
+        P.띄우기(이름, (행, 1), B, [(1, px), (1, px), (1, py), (0, 열), (0, 열), (0, 0), (0, eps)])
+        got = P.받음(py, x.size)
+        견주기(f"RMS_NORM {열}×{행} ({n['name']})", got, R.배열(rec))
+        출력표[n["ptr"]] = (x, 이름, B, 열, 행, eps)
+    for n, rec in R.연산("MUL"):
+        s0, s1 = n["srcs"][0], n["srcs"][1]
+        if s0.get("weight") or not s1.get("weight") or s0.get("ptr") not in 출력표:
+            continue
+        x, 이름, B, 열, 행, eps = 출력표[s0["ptr"]]
+        w = M.풀기(s1["name"]).astype(f32).reshape(-1)
+        px, pw, py = P.올림(x.astype(f32)), P.올림(w), P.올림(np.zeros(x.size, f32))
+        P.띄우기(이름, (행, 1), B, [(1, px), (1, pw), (1, py), (0, 열), (0, 열), (0, 1), (0, eps)])
+        견주기(f"RMS_NORM · MUL {열}×{행} ({n['name']})", P.받음(py, x.size), R.배열(rec))
+
+
+def 행렬벡터(P, M, x, wname):
+    """q8_1 양자화(라마양자화q8_1) + MMVQ — llama.cpp 의 MUL_MAT(열 1)과 같은 셈. x [K] → [R]."""
+    t, dims, raw = M.원(wname)
+    K, R = dims
+    판형식 = {gguf읽기.Q4_K: ("라마MMVQ_Q4_K", K // 256), gguf읽기.Q5_K: ("라마MMVQ_Q5_K", K // 256),
+            gguf읽기.Q6_K: ("라마MMVQ_Q6_K", K // 256), gguf읽기.Q8_0: ("라마MMVQ_Q8_0", K // 32)}
+    이름, nb = 판형식[t]
+    px = P.올림(np.ascontiguousarray(x, f32))
+    pq, pd = P.올림(np.zeros(K // 4, np.int32)), P.올림(np.zeros(K // 32, np.float16))
+    P.띄우기("라마양자화q8_1", ((K + 255) // 256, 1), 256, [(1, px), (1, pq), (1, pd), (0, K)])
+    pw, py = P.올림(가중블록(t, raw, R)), P.올림(np.zeros(R, f32))
+    P.띄우기(이름, (R, 1), 128, [(1, pw), (1, pq), (1, pd), (1, py), (0, nb)])
+    return P.받음(py, R), gguf읽기.이름[t]
+
+
+def 시험_행렬곱(P, R, M):
+    """MUL_MAT 노드 모두(생성 1걸음 — 열 하나): 가중치 Q4_K · Q5_K · Q6_K · Q8_0, 출력층(Q6_K 248,320 행)까지."""
+    for n, rec in R.연산("MUL_MAT"):
+        s0 = n["srcs"][0]
+        if not s0.get("weight"):
+            continue
+        x = R.입력(n, 1).reshape(-1)
+        got, 형식 = 행렬벡터(P, M, x, s0["name"])
+        견주기(f"MUL_MAT {형식} {got.size}×{x.size} ({n['name']})", got, R.배열(rec))
+        P.놓기()
+
+
+def 입력값(R, M, n, i):
+    """노드의 입력 i — 가중치면 GGUF 에서(짧은실수), 아니면 기록에서."""
+    s = n["srcs"][i]
+    if s.get("weight"):
+        return M.풀기(s["name"]).astype(f32).reshape(-1)
+    return R.입력(n, i).astype(f32).reshape(-1)
+
+
+def 원소(P, a, b, 종류, s=0, t=0):
+    a = np.ascontiguousarray(a, f32).reshape(-1)
+    b = np.ascontiguousarray(a if b is None else b, f32).reshape(-1)
+    pa, pb, py = P.올림(a), P.올림(b), P.올림(np.zeros(a.size, f32))
+    P.띄우기("라마원소", ((a.size + 255) // 256, 1), 256, [(1, pa), (1, pb), (1, py), (0, a.size), (0, b.size), (0, 종류), (0, s), (0, t)])
+    return P.받음(py, a.size)
+
+
+def 시험_원소(P, R, M):
+    """SILU · SIGMOID · SOFTPLUS · SWIGLU · SCALE 과 ADD · MUL(RMS_NORM 에 엮이지 않은 것) 노드 모두."""
+    rms = {n["ptr"] for n, _ in R.연산("RMS_NORM")}
+    for op, 종류 in (("SILU", 2), ("SIGMOID", 3), ("SOFTPLUS", 4), ("SWIGLU", 5), ("SCALE", 6), ("ADD", 1), ("MUL", 0)):
+        for n, rec in R.연산(op):
+            if op == "MUL" and n["srcs"][0].get("ptr") in rms:
+                continue                                                 # 시험_RMS 가 본다
+            a = 입력값(R, M, n, 0)
+            b = 입력값(R, M, n, 1) if len(n["srcs"]) > 1 else None
+            s = t = 0
+            if op == "SCALE":
+                s, t = rec["op_params"][0], rec["op_params"][1]
+            견주기(f"{op} {a.size} ({n['name']})", 원소(P, a, b, 종류, s, t), R.배열(rec))
+        P.놓기()
+
+
+def 시험_합성곱(P, R, M):
+    """SSM_CONV(합성곱 상태 셋 + 새 값 하나 = CONCAT) 노드와, 민 상태(새 입력 끝 셋)."""
+    for n, rec in R.연산("SSM_CONV"):
+        cin = R.입력(n, 0).reshape(-1, 4).astype(f32)                    # [채널, 4]
+        w = M.풀기(n["srcs"][1]["name"]).astype(f32).reshape(-1)
+        C = cin.shape[0]
+        ps, px, pw, py = P.올림(cin[:, :3].copy()), P.올림(cin[:, 3].copy()), P.올림(w), P.올림(np.zeros(C, f32))
+        P.띄우기("라마합성곱", ((C + 255) // 256, 1), 256, [(1, ps), (1, px), (1, pw), (1, py), (0, C)])
+        견주기(f"SSM_CONV {C} ({n['name']})", P.받음(py, C), R.배열(rec))
+        견주기(f"합성곱 상태 밀기 {C * 3} ({n['name']})", P.받음(ps, C * 3), cin[:, 1:4])
+        P.놓기()
+
+
+def 시험_GDN(P, R, M):
+    """GATED_DELTA_NET(한 걸음) 노드: 출력 [v머리][128] 과 새 상태 [v머리][128][128]."""
+    눈금 = 비트((f32(1) / np.sqrt(f32(128))).astype(f32))
+    for n, rec in R.연산("GATED_DELTA_NET"):
+        q, k, v = (R.입력(n, i).astype(f32).reshape(-1) for i in range(3))
+        g, beta = R.입력(n, 3).astype(f32).reshape(-1), R.입력(n, 4).astype(f32).reshape(-1)
+        S = R.입력(n, 5).astype(f32).reshape(-1)
+        H = g.size
+        pq, pk, pv, pg, pb, pS, po = (P.올림(a) for a in (q, k, v, g, beta, S, np.zeros(H * 128, f32)))
+        P.띄우기("라마GDN한걸음", (8, H), 128, [(1, pq), (1, pk), (1, pv), (1, pg), (1, pb), (1, pS), (1, po), (0, q.size // 128), (0, 눈금)])
+        out = R.배열(rec).reshape(-1)
+        견주기(f"GATED_DELTA_NET 출력 {H * 128} ({n['name']})", P.받음(po, H * 128), out[:H * 128])
+        견주기(f"GATED_DELTA_NET 새 상태 {S.size} ({n['name']})", P.받음(pS, S.size), out[H * 128:H * 128 + S.size])
+        P.놓기()
+
+
+def 시험_RoPE(P, R, M):
+    """ROPE(IMRoPE) 노드: q(머리 16) · k(머리 4), 위치 · θ 눈금(호스트의 powf — float64 의 거듭제곱을 짧은실수로) · 진동수 눈금 · attn."""
+    for n, rec in R.연산("ROPE"):
+        x = R.입력(n, 0).astype(f32).reshape(-1)
+        pos = int(R.입력(n, 1).reshape(-1)[0])
+        op = rec["op_params"]
+        fb = np.array([op[5]], np.int32).view(f32)[0]
+        ts = f32(np.power(np.float64(fb), -2.0 / op[1]))
+        H = x.size // 256
+        px, py = P.올림(x), P.올림(np.zeros(x.size, f32))
+        P.띄우기("라마RoPE", (H, 1), 256, [(1, px), (1, py), (0, op[1]), (0, pos), (0, 비트(ts)), (0, op[6]), (0, op[8])])
+        견주기(f"ROPE {H}×256 위치 {pos} ({n['name']})", P.받음(py, x.size), R.배열(rec))
+        P.놓기()
+
+
+def 시험_캐시(P, R, M):
+    """SET_ROWS(KV 캐시 쓰기, f16): 새 행의 반실수가 기록된 캐시의 그 행과 같은가."""
+    for n, rec in R.연산("SET_ROWS"):
+        x = R.입력(n, 0).astype(f32).reshape(-1)
+        행 = int(R.입력(n, 1).reshape(-1)[0])
+        캐시 = R.배열(rec).reshape(rec["ne"][1], rec["ne"][0])
+        px, py = P.올림(x), P.올림(np.zeros(x.size, np.float16))
+        P.띄우기("라마반실수쓰기", ((x.size + 255) // 256, 1), 256, [(1, px), (1, py), (0, x.size), (0, 0)])
+        got = P.받음(py, x.size, np.float16)
+        견주기(f"SET_ROWS f16 {x.size} 행 {행} ({n['name']})", got.astype(f32), 캐시[행].astype(f32))
+        P.놓기()
+
+
+def 시험_FA(P, R, M, 병렬=7):
+    """FLASH_ATTN_EXT(생성 — vec, 병렬 블록 7 + 합치기) 노드."""
+    for n, rec in R.연산("FLASH_ATTN_EXT"):
+        q = R.입력(n, 0).astype(f32)[0]                                 # [머리 16, 1, 256]
+        Kc = np.ascontiguousarray(np.transpose(R.입력(n, 1)[0], (1, 0, 2)))   # [kv수, kv머리, 256] f16
+        Vc = np.ascontiguousarray(np.transpose(R.입력(n, 2)[0], (1, 0, 2)))
+        가림 = R.입력(n, 3).reshape(-1).astype(np.float16)
+        nkv, H = Kc.shape[0], q.shape[0]
+        눈금 = rec["op_params"][0]
+        pq, pK, pV, pm = P.올림(q.reshape(-1)), P.올림(Kc.reshape(-1)), P.올림(Vc.reshape(-1)), P.올림(가림)
+        p부분, p메타, po = P.올림(np.zeros(병렬 * H * 256, f32)), P.올림(np.zeros(병렬 * H * 2, f32)), P.올림(np.zeros(H * 256, f32))
+        P.띄우기("라마FA벡터", (병렬, H), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, p부분), (1, p메타), (0, nkv), (0, 병렬), (0, H // Kc.shape[1]), (0, 눈금)])
+        P.띄우기("라마FA합치기", (H, 1), 256, [(1, p부분), (1, p메타), (1, po), (0, 병렬)])
+        견주기(f"FLASH_ATTN_EXT vec {H}×256 kv {nkv} ({n['name']})", P.받음(po, H * 256), R.배열(rec))
+        P.놓기()
+
+
+def 시험_임베딩(P, R, M):
+    """토큰 임베딩: llama.cpp 는 CPU 에서 get_rows 를 하고 그 결과(model.input_embed)를 0 층 RMS_NORM 의 입력으로 올린다 — 그것과 견준다.
+    토큰 번호는 --토큰 N (그 걸음에 넣은 토큰)."""
+    if "--토큰" not in sys.argv:
+        print("임베딩: --토큰 이 없어 건너뜀")
+        return
+    tok = int(sys.argv[sys.argv.index("--토큰") + 1])
+    n, _ = R.노드("norm-0")
+    t, dims, raw = M.원("token_embd.weight")
+    K = dims[0]
+    pw, py = P.올림(np.ascontiguousarray(raw)), P.올림(np.zeros(K, f32))
+    P.띄우기("라마임베딩Q4_K", ((K + 255) // 256, 1), 256, [(1, pw), (1, py), (0, tok), (0, K // 256)])
+    견주기(f"get_rows {gguf읽기.이름[t]} 토큰 {tok} (model.input_embed)", P.받음(py, K), R.입력(n, 0))
+    P.놓기()
+
+
+def main():
+    sys.stdout.reconfigure(encoding="utf-8")
+    인자 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] != "--토큰"]
+    ptx, 폴더, 모델 = 인자[:3]
+    고른 = set(인자[3:])
+    P, R, M = 판(ptx), 기록(폴더), gguf읽기.GGUF(모델)
+    시험들 = {"RMS": 시험_RMS, "행렬곱": 시험_행렬곱, "원소": 시험_원소, "합성곱": 시험_합성곱, "GDN": 시험_GDN,
+            "RoPE": 시험_RoPE, "캐시": 시험_캐시, "FA": 시험_FA, "임베딩": 시험_임베딩}
+    for 이름, f in 시험들.items():
+        if not 고른 or 이름 in 고른:
+            f(P, R, M)
+    전체 = sum(r[1] for r in 결과)
+    나쁨 = sum(r[2] for r in 결과)
+    print(f"합계: 값 {전체} · 불일치 {나쁨}")
+    print(f"모두 0: {나쁨 == 0}")
+    return 0 if 나쁨 == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
