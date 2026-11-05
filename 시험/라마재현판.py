@@ -162,7 +162,9 @@ def RMS판(열):
         return "라마RMS128", 128
     if n4 <= 256:
         return "라마RMS256", 256
-    if 512 < n4 <= 1024:
+    if n4 <= 512:
+        return "라마RMS512", 512                                     # 14단계 — 폭 1536
+    if n4 <= 1024:
         return "라마RMS1024", 1024
     raise NotImplementedError(f"RMSNorm 폭 {열} 의 판이 없다")
 
