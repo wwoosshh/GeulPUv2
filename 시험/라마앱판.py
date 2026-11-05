@@ -17,6 +17,9 @@ response)을 그대로 쓴다.
       7단계 — 기본 설정의 llama-server(-np 를 주지 않음 → 슬롯 4 · 통합 KV, 프롬프트 캐시 · RAM 캐시 기본, -c 32768 만)에 기록기로 한
       대화의 이어지는 요청 여섯(잇기 둘 · 같은 프롬프트 · 생성 잇기 · 앞을 고쳐 잇기)과 다른 대화 하나(다른 슬롯)를 보낸다.
       영수증 이름은 <out>/영수증.json(c1 … c7).
+  python -I -X utf8 시험/라마앱판.py 채팅 <꾸러미> <자료> <out> --서버 <llama-server.exe> --모델 <gguf> --기록폴더 <det …>
+      9단계 — 같은 기본 설정 서버에 기록기로 채팅 API(/llama/v1/chat/completions)의 한 대화(잇기 둘 · 같은 대화 · 앞을 고침 — 넷째는
+      슬롯 캐시의 절반 넘게 버려 RAM 캐시 갈래)와 스트리밍 요청 하나(9-2)를 보낸다. 영수증 이름은 <out>/영수증.json(h1 … h5 · stream).
   python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <대화 out> <새 out> --단계 7
       7-2 의 바꾼 영수증 셋(c3 의 cache_n + 1 · c3 의 서버 포트 · c3 의 슬롯 상태에 다른 슬롯) — 7-1 의 검증 뒤에(같은 슬롯의 앞 영수증이 된다).
 마지막 줄 "합계: …".
@@ -210,6 +213,58 @@ def 대화하기(a):
     return 0 if all(표.values()) else 1
 
 
+def 채팅하기(a):
+    """9단계 — 기본 설정 서버에 채팅 API 의 한 대화와 스트리밍 요청 하나"""
+    깃발대화 = ["-c", "32768"]
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표 = {}
+    try:
+        srv = 서버띄우기(a, 깃발대화, os.path.join(a.out, "llama-server.log"))
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
+        영수증폴더 = os.path.join(a.자료, "영수증")
+        S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
+        U = ["CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "둘의 차이가 커널 작성에 주는 영향 하나만."]
+
+        def 보내기(이름, msgs, 씨앗, 흐름=False):
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            몸 = {"messages": msgs, "max_tokens": 64, "temperature": 0.0, "seed": 씨앗, "stream": 흐름,
+                  "chat_template_kwargs": {"enable_thinking": False}}
+            if 흐름:
+                r = urllib.request.Request(f"http://127.0.0.1:{a.포트}/llama/v1/chat/completions", data=json.dumps(몸, ensure_ascii=False).encode("utf-8"),
+                                           method="POST", headers={"Content-Type": "application/json"})
+                urllib.request.urlopen(r, timeout=600).read()
+                답 = ""
+            else:
+                r = 묻기(a.포트, "/llama/v1/chat/completions", 몸)
+                답 = r["choices"][0]["message"].get("content") or ""
+                v = r.get("__verbose") or {}
+                tm = v.get("timings", {})
+                print(f"{이름}: 슬롯 {v.get('id_slot')} · 프롬프트 {v.get('tokens_evaluated')} · cache_n {tm.get('cache_n')} · 생성 {len(v.get('tokens', []))}"
+                      f" · 답 {답[:30]!r}", flush=True)
+            표[이름] = 새영수증(영수증폴더, 앞)
+            print(f"{이름}: 영수증 {표[이름]}", flush=True)
+            return 답
+
+        m = [S, {"role": "user", "content": U[0]}]
+        d1 = 보내기("h1", m, 1)
+        m = m + [{"role": "assistant", "content": d1}, {"role": "user", "content": U[1]}]
+        d2 = 보내기("h2", m, 2)
+        m = m + [{"role": "assistant", "content": d2}, {"role": "user", "content": U[2]}]
+        보내기("h3", m, 3)
+        보내기("h4", list(m), 4)                                                     # 같은 대화 — 체크포인트 되살리기
+        보내기("h5", m[:3] + [{"role": "user", "content": "다른 질문 — Intel GPU 는?"}], 5)   # 앞을 고침 — RAM 캐시 갈래 · 사용자 자리 체크포인트
+        보내기("stream", m[:3] + [{"role": "user", "content": "한 줄로."}], 6, 흐름=True)       # 9-2 — 받지 않음
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+        s.닫기()
+    print(f"합계: 요청 {len(표)} · 영수증 {sum(1 for v in 표.values() if v)}")
+    return 0 if all(표.values()) else 1
+
+
 def 검증하기(a):
     표 = json.load(open(os.path.join(a.out, "영수증.json"), encoding="utf-8"))
     이름 = list(표) if a.이름 is 이름들10 else a.이름                  # --이름 이 없으면 영수증.json 의 모두(바꾼 영수증이면 alter_…)
@@ -257,6 +312,18 @@ def 바꾸기(a):
         return len(e["bytes"]) > 0 and all(b < 128 for b in e["bytes"])
 
     표 = {}
+    if a.단계 == 9:                                                # 9-2 — 채팅 영수증 h2 의 사용자 구분 토큰을 지운 것
+        base = 표0["h2"]
+        d = 읽기(base)
+        d.setdefault("chat", {})["user_start_tokens"] = []
+        쓰기(d, base + "-nodelim")
+        표["alter9_nodelim"] = base + "-nodelim"
+        표["stream"] = 표0["stream"]
+        print("alter9_nodelim: chat.user_start_tokens → []")
+        os.makedirs(a.out, exist_ok=True)
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(f"합계: 바꾼 영수증 {len(표)}")
+        return 0
     if a.단계 == 7:                                                # 7-2 — 대화의 c3 에서(같은 슬롯의 사슬)
         base = 표0["c3"]
 
@@ -348,14 +415,14 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="할일", required=True)
-    for n in ("기록", "검증", "대화"):
+    for n in ("기록", "검증", "대화", "채팅"):
         q = sub.add_parser(n)
         q.add_argument("꾸러미")
         q.add_argument("자료")
         q.add_argument("out")
         q.add_argument("--포트", type=int, default=44641)
         q.add_argument("--이름", type=lambda s: s.split(","), default=이름들10)
-        if n in ("기록", "대화"):
+        if n in ("기록", "대화", "채팅"):
             q.add_argument("--서버", required=True)
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
@@ -370,9 +437,9 @@ def main():
     q.add_argument("자료")
     q.add_argument("기록out")
     q.add_argument("out")
-    q.add_argument("--단계", type=int, choices=[4, 5, 7], default=4)
+    q.add_argument("--단계", type=int, choices=[4, 5, 7, 9], default=4)
     a = p.parse_args()
-    return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "바꾸기": 바꾸기}[a.할일](a)
+    return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "바꾸기": 바꾸기}[a.할일](a)
 
 
 if __name__ == "__main__":

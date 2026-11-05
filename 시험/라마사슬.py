@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """llama.cpp 재현 7단계(문서/라마재현.md) — GPU 없는 시험: llama-server(b12008) 한 슬롯의 프롬프트 캐시 셈 흉내(앱/라마사슬.gl)가 서버
 코드(tools/server/server-context.cpp — get_available_slot 의 LCP 비율 · 남기는 몫, n_past, 체크포인트 되살리기 · 지우기, 프롬프트의
-덩어리 나눔 · create_checkpoint, 생성 걸음)를 옮긴 파이썬 참조와 같은 cache_n · 되살림 · 슬롯의 토큰 수 · ubatch 사슬을 내는가.
+덩어리 나눔 · create_checkpoint, 생성 걸음, 9단계 — 채팅 API 의 사용자 메시지 자리에서 끊음)를 옮긴 파이썬 참조와 같은 cache_n · 되살림 ·
+슬롯의 토큰 수 · ubatch 사슬을 내는가.
 
   python -I -X utf8 시험/라마사슬.py <시험_라마사슬 실행 파일>
       정한 무작위 대화(잇기 · 같은 프롬프트 · 생성 잇기 · 앞을 고침 · 다른 프롬프트)를 설정 여섯으로 견준다(빠른 점검 4w).
       마지막 줄 "모두 같음: True|False".
   python -I -X utf8 시험/라마사슬.py --영수증 <폴더>
       폴더의 r1.json, r2.json, …(한 슬롯의 이어지는 요청 — prompt_tokens · response)로 참조의 cache_n · tokens_cached 를 서버와 견준다.
+      폴더에 구분.json(user_start — 채팅 API 의 사용자 구분 토큰열)이 있으면 프롬프트에서 사용자 메시지 자리를 찾는다.
 """
 import json
 import os
@@ -23,9 +25,10 @@ F32 = np.float32
 
 
 class 슬롯:
-    def __init__(self, nb, nu, cp, ms, sp, ram):
-        self.nb, self.nu, self.cp, self.ms, self.sp, self.ram = nb, nu, cp, ms, F32(sp), ram
+    def __init__(self, nb, nu, cp, ms, sp, ram, 슬롯수=4):
+        self.nb, self.nu, self.cp, self.ms, self.sp, self.ram, self.슬롯수 = nb, nu, cp, ms, F32(sp), ram, 슬롯수
         self.tokens, self.cps, self.hist = [], [], []                 # cps: [n_tokens, 작업], hist: [(p0, T)]
+        self.램 = []                                                  # 이 사슬에서 RAM 캐시에 저장했을 슬롯의 토큰들(위 집합)
         self.되살림 = -1
 
     def 체크만들기(self, b0, task):
@@ -42,7 +45,7 @@ class 슬롯:
         self.cps = [c for c in self.cps if c[0] != b0]
         self.cps.append([b0, task])
 
-    def 요청(self, prompt, gen, task):
+    def 요청(self, prompt, gen, task, 사용자=()):
         self.되살림 = -1
         n, m = len(prompt), len(self.tokens)
         if n < 1:
@@ -50,15 +53,24 @@ class 슬롯:
         lcp = 0
         while lcp < m and lcp < n and self.tokens[lcp] == prompt[lcp]:
             lcp += 1
-        if m > 0:
-            if self.sp <= 0:
-                return -1, []
+        if m > 0:                                                  # get_available_slot · server_prompt_cache::load
             f_sim = F32(lcp) / F32(n)
-            if not f_sim > self.sp:
-                return -1, []
-            f_keep = (f_sim * F32(n)) / F32(m)
-            if f_keep < F32(0.5) and self.ram != 0:
-                return -1, []
+            if self.sp > 0 and f_sim > self.sp:
+                고침 = (f_sim * F32(n)) / F32(m) < F32(0.5)
+            else:
+                if self.슬롯수 > 1:                                      # LRU — 쓰지 않은 빈 슬롯이 먼저
+                    return -1, []
+                고침 = True
+            if 고침 and self.ram != 0:
+                self.램.append(list(self.tokens))
+                기남김 = F32(lcp) / F32(m)
+                for e in self.램:
+                    l2 = 0
+                    while l2 < len(e) and l2 < n and e[l2] == prompt[l2]:
+                        l2 += 1
+                    e남김, e유사 = F32(l2) / F32(len(e)), F32(l2) / F32(n)
+                    if e남김 >= F32(0.25) and 기남김 < e남김 and f_sim < e유사:
+                        return -1, []
         n_past = lcp
         pos_next = n_prefix = n_past
         pos_eval = pos_next - (0 if n_past < n else 1)
@@ -91,22 +103,26 @@ class 슬롯:
         self.hist = h
         cache_n = n_past
         o1, o2 = min(self.nb, 4 + self.nu), min(self.nb, 4)
+        last_user = 사용자[-1] if 사용자 else -1
         cur = n_past
         while cur < n:
             b0 = cur
             while cur < n and cur - b0 < self.nb:
                 cur += 1
+                if self.cp > 0 and cur in 사용자:                  # 사용자 메시지 앞에서 끊음(server-context.cpp 4502)
+                    if cur == last_user or not self.cps or cur > self.cps[-1][0] + self.ms:
+                        break
                 if self.cp > 0 and (n == cur + o1 or n == cur + o2):
                     break
             b1 = cur
             if self.cp > 0:
                 do = True
                 near = n < b1 + self.nu
-                if b1 < n and not near:
+                if b1 < n and b0 not in 사용자 and not near:
                     do = False
                 if b0 <= 0:
                     do = False
-                if do and self.cps and not near and b0 <= self.cps[-1][0] + self.ms:
+                if do and self.cps and b0 != last_user and not near and b0 <= self.cps[-1][0] + self.ms:
                     do = False
                 if do:
                     self.체크만들기(b0, task)
@@ -120,13 +136,16 @@ class 슬롯:
         return cache_n, 사슬
 
 
-설정들 = [  # n_batch, n_ubatch, 체크수, 최소걸음, 유사, 램 — 서버 기본 · 작은 덩어리 · 체크포인트 적음 · 끔 · 최소걸음 · LCP 비율 끔
-    (2048, 512, 32, 8192, 0.1, 8192),
-    (512, 128, 32, 8192, 0.1, 8192),
-    (64, 16, 3, 0, 0.1, 0),
-    (2048, 512, 0, 8192, 0.1, 8192),
-    (100, 30, 2, 50, 0.5, 0),
-    (2048, 512, 32, 8192, 0.0, 8192),
+설정들 = [  # n_batch, n_ubatch, 체크수, 최소걸음, 유사, 램, 슬롯 수 — 서버 기본 · 작은 덩어리 · 체크포인트 적음 · 끔 · 최소걸음 ·
+    # LCP 비율 끔 · 슬롯 하나(LRU 가 이 슬롯)
+    (2048, 512, 32, 8192, 0.1, 8192, 4),
+    (512, 128, 32, 8192, 0.1, 8192, 4),
+    (64, 16, 3, 0, 0.1, 0, 4),
+    (2048, 512, 0, 8192, 0.1, 8192, 4),
+    (100, 30, 2, 50, 0.5, 0, 4),
+    (2048, 512, 32, 8192, 0.0, 8192, 4),
+    (2048, 512, 32, 8192, 0.1, 8192, 1),
+    (64, 16, 4, 0, 0.0, 8192, 1),
 ]
 
 
@@ -159,7 +178,8 @@ def 사례들(씨앗=7, 수=12):
                     else:
                         p = 새 + [rnd.randrange(1000) for _ in range(30)]
                 g = [rnd.randrange(1000) for _ in range(rnd.choice([1, 2, 8, 64]))]
-                reqs.append((p, g))
+                자리 = sorted(set(rnd.randrange(len(p)) for _ in range(rnd.choice([0, 0, 1, 3, 8])))) if rnd.random() < 0.6 else []
+                reqs.append((p, g, 자리))
                 prev = (p, g)
             out.append((설정, reqs))
     return out
@@ -167,13 +187,13 @@ def 사례들(씨앗=7, 수=12):
 
 def 참조출력(cases):
     out = []
-    for (nb, nu, cp, ms, sp, ram), reqs in cases:
-        s = 슬롯(nb, nu, cp, ms, sp, ram)
+    for (nb, nu, cp, ms, sp, ram, ns), reqs in cases:
+        s = 슬롯(nb, nu, cp, ms, sp, ram, ns)
         멈춤 = False
-        for r, (p, g) in enumerate(reqs):
+        for r, (p, g, 자리) in enumerate(reqs):
             if 멈춤:
                 continue
-            c, 사슬 = s.요청(p, g, r + 1)
+            c, 사슬 = s.요청(p, g, r + 1, 자리)
             out.append(c)
             if c < 0:
                 멈춤 = True
@@ -185,10 +205,10 @@ def 참조출력(cases):
 
 def 사례파일(cases, 경로):
     v = [len(cases)]
-    for (nb, nu, cp, ms, sp, ram), reqs in cases:
-        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, len(reqs)]
-        for p, g in reqs:
-            v += [len(p), *p, len(g), *g]
+    for (nb, nu, cp, ms, sp, ram, ns), reqs in cases:
+        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, ns, len(reqs)]
+        for p, g, 자리 in reqs:
+            v += [len(p), *p, len(g), *g, len(자리), *자리]
     np.array(v, np.int64).tofile(경로)
 
 
@@ -206,10 +226,10 @@ def 시험(exe):
     요청 = sum(1 for (_, reqs) in cases for _ in reqs)
     # 참조의 갈래 세기(되살림 · 셈하지 않음)
     되살림 = 셈안함 = 이음 = 0
-    for (nb, nu, cp, ms, sp, ram), reqs in cases:
-        s = 슬롯(nb, nu, cp, ms, sp, ram)
-        for r, (p, g) in enumerate(reqs):
-            c, _ = s.요청(p, g, r + 1)
+    for (nb, nu, cp, ms, sp, ram, ns), reqs in cases:
+        s = 슬롯(nb, nu, cp, ms, sp, ram, ns)
+        for r, (p, g, 자리) in enumerate(reqs):
+            c, _ = s.요청(p, g, r + 1, 자리)
             if c < 0:
                 셈안함 += 1
                 break
@@ -225,15 +245,21 @@ def 시험(exe):
     return 0 if 같음 else 1
 
 
+def 자리찾기(tokens, 구분):
+    return [i for i in range(len(tokens)) if 구분 and tokens[i:i + len(구분)] == 구분]
+
+
 def 영수증(폴더):
     s = None
     k, 나쁨 = 1, 0
+    gp = os.path.join(폴더, "구분.json")
+    구분 = json.load(open(gp))["user_start"] if os.path.exists(gp) else []
     while os.path.exists(os.path.join(폴더, f"r{k}.json")):
         d = json.load(open(os.path.join(폴더, f"r{k}.json"), encoding="utf-8"))
         if s is None:
-            s = 슬롯(2048, 512, 32, 8192, 0.1, 8192)
+            s = 슬롯(2048, 512, 32, 8192, 0.1, 8192, 4)
         r = d["response"]
-        c, 사슬 = s.요청(d["prompt_tokens"], r["tokens"], k)
+        c, 사슬 = s.요청(d["prompt_tokens"], r["tokens"], k, 자리찾기(d["prompt_tokens"], 구분))
         서c, 서t = r["timings"]["cache_n"], r.get("tokens_cached")
         같음 = c == 서c and len(s.tokens) == 서t
         나쁨 += not 같음
