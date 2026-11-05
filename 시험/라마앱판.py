@@ -112,8 +112,8 @@ def 기록하기(a):
             같음 = a.온도 > 0 or (r.get("tokens") == want["response"]["tokens"] and 칸들(r) == 칸들(want["response"]))   # 온도 > 0 은 견줄 기록이 없다
             같음수 += 같음
             새것 = None
-            for _ in range(120):                                   # 영수증은 스레드가 모델 해시 뒤에 쓴다
-                새 = sorted(set(os.listdir(영수증폴더)) - 앞 - {"기록기.json"}) if os.path.isdir(영수증폴더) else []
+            for _ in range(120):                                   # 영수증은 스레드가 모델 해시 뒤에 쓴다 — 다 쓴 .json 이름만
+                새 = sorted(f for f in set(os.listdir(영수증폴더)) - 앞 - {"기록기.json"} if f.endswith(".json")) if os.path.isdir(영수증폴더) else []
                 if 새:
                     새것 = 새[-1][:-5]
                     break
@@ -139,7 +139,12 @@ def 검증하기(a):
     결과 = {}
     try:
         for name in 이름:
-            j = 묻기(a.포트, "/api/llama/verify", {"receipt": 표[name], "layer": a.층, "device": a.장치})
+            try:
+                j = 묻기(a.포트, "/api/llama/verify", {"receipt": 표[name], "layer": a.층, "device": a.장치})
+            except urllib.error.HTTPError as e:                     # 영수증이 없음 등 — 적고 다음으로
+                결과[name] = {"state": "error", "reason": f"HTTP {e.code}"}
+                print(f"{name}: error — HTTP {e.code}", flush=True)
+                continue
             끝 = s.작업(j["job"])
             sm = {}
             if 끝.get("result"):
