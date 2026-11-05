@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """llama.cpp 재현 7단계(문서/라마재현.md) — GPU 없는 시험: llama-server(b12008) 한 슬롯의 프롬프트 캐시 셈 흉내(앱/라마사슬.gl)가 서버
 코드(tools/server/server-context.cpp — get_available_slot 의 LCP 비율 · 남기는 몫, n_past, 체크포인트 되살리기 · 지우기, 프롬프트의
-덩어리 나눔 · create_checkpoint, 생성 걸음, 9단계 — 채팅 API 의 사용자 메시지 자리에서 끊음)를 옮긴 파이썬 참조와 같은 cache_n · 되살림 ·
-슬롯의 토큰 수 · ubatch 사슬을 내는가.
+덩어리 나눔 · create_checkpoint, 생성 걸음, 9단계 — 채팅 API 의 사용자 메시지 자리에서 끊음, 10단계 — 되돌릴 수 있는 메모리(dense):
+체크포인트 없이 n_past = 겹치는 앞, 프롬프트 전부가 캐시면 n_past − 1)를 옮긴 파이썬 참조와 같은 cache_n · 되살림 · 슬롯의 토큰 수 ·
+ubatch 사슬을 내는가.
 
   python -I -X utf8 시험/라마사슬.py <시험_라마사슬 실행 파일>
       정한 무작위 대화(잇기 · 같은 프롬프트 · 생성 잇기 · 앞을 고침 · 다른 프롬프트)를 설정 여섯으로 견준다(빠른 점검 4w).
@@ -25,8 +26,9 @@ F32 = np.float32
 
 
 class 슬롯:
-    def __init__(self, nb, nu, cp, ms, sp, ram, 슬롯수=4):
+    def __init__(self, nb, nu, cp, ms, sp, ram, 슬롯수=4, 되돌림=0):
         self.nb, self.nu, self.cp, self.ms, self.sp, self.ram, self.슬롯수 = nb, nu, cp, ms, F32(sp), ram, 슬롯수
+        self.되돌림 = 되돌림                                           # 10단계 — 1: dense(PART — 체크포인트 없음)
         self.tokens, self.cps, self.hist = [], [], []                 # cps: [n_tokens, 작업], hist: [(p0, T)]
         self.램 = []                                                  # 이 사슬에서 RAM 캐시에 저장했을 슬롯의 토큰들(위 집합)
         self.되살림 = -1
@@ -71,12 +73,13 @@ class 슬롯:
                     e남김, e유사 = F32(l2) / F32(len(e)), F32(l2) / F32(n)
                     if e남김 >= F32(0.25) and 기남김 < e남김 and f_sim < e유사:
                         return -1, []
+        체크 = self.cp > 0 and not self.되돌림                         # do_checkpoint(server-context.cpp 4391)
         n_past = lcp
         pos_next = n_prefix = n_past
         pos_eval = pos_next - (0 if n_past < n else 1)
         thold = max(0, pos_eval)
         if 0 < n_past <= m:
-            pos_min = m - 1
+            pos_min = 0 if self.되돌림 else m - 1
             if pos_min >= thold:
                 found = None
                 for cn, _ in reversed(self.cps):
@@ -94,8 +97,10 @@ class 슬롯:
                     pos_next = n_past = 0
                     self.되살림 = 0
         self.cps = [c for c in self.cps if not (c[0] - 1 > pos_next or c[0] > n_prefix)]
-        if n_past == n and n_past > 0:
-            return -1, []
+        if n_past == n and n_past > 0:                             # [TAG_PROMPT_LOGITS]
+            if not self.되돌림:
+                return -1, []
+            n_past -= 1
         self.tokens = self.tokens[:n_past]
         h = [(p0, T) for p0, T in self.hist if p0 + T <= n_past]
         if (h[-1][0] + h[-1][1] if h else 0) != n_past:
@@ -109,13 +114,13 @@ class 슬롯:
             b0 = cur
             while cur < n and cur - b0 < self.nb:
                 cur += 1
-                if self.cp > 0 and cur in 사용자:                  # 사용자 메시지 앞에서 끊음(server-context.cpp 4502)
+                if 체크 and cur in 사용자:                         # 사용자 메시지 앞에서 끊음(server-context.cpp 4502)
                     if cur == last_user or not self.cps or cur > self.cps[-1][0] + self.ms:
                         break
-                if self.cp > 0 and (n == cur + o1 or n == cur + o2):
+                if 체크 and (n == cur + o1 or n == cur + o2):
                     break
             b1 = cur
-            if self.cp > 0:
+            if 체크:
                 do = True
                 near = n < b1 + self.nu
                 if b1 < n and b0 not in 사용자 and not near:
@@ -146,6 +151,10 @@ class 슬롯:
     (2048, 512, 32, 8192, 0.0, 8192, 4),
     (2048, 512, 32, 8192, 0.1, 8192, 1),
     (64, 16, 4, 0, 0.0, 8192, 1),
+    # 10단계 — 되돌릴 수 있는 메모리(dense): 서버 기본 · 슬롯 하나 · 작은 덩어리
+    (2048, 512, 32, 8192, 0.1, 8192, 4, 1),
+    (2048, 512, 32, 8192, 0.1, 8192, 1, 1),
+    (64, 16, 4, 0, 0.0, 8192, 1, 1),
 ]
 
 
@@ -185,10 +194,14 @@ def 사례들(씨앗=7, 수=12):
     return out
 
 
+def 설정풀기(설정):
+    return 설정 if len(설정) == 8 else (*설정, 0)
+
+
 def 참조출력(cases):
     out = []
-    for (nb, nu, cp, ms, sp, ram, ns), reqs in cases:
-        s = 슬롯(nb, nu, cp, ms, sp, ram, ns)
+    for 설정, reqs in cases:
+        s = 슬롯(*설정풀기(설정))
         멈춤 = False
         for r, (p, g, 자리) in enumerate(reqs):
             if 멈춤:
@@ -205,8 +218,9 @@ def 참조출력(cases):
 
 def 사례파일(cases, 경로):
     v = [len(cases)]
-    for (nb, nu, cp, ms, sp, ram, ns), reqs in cases:
-        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, ns, len(reqs)]
+    for 설정, reqs in cases:
+        nb, nu, cp, ms, sp, ram, ns, dg = 설정풀기(설정)
+        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, ns, dg, len(reqs)]
         for p, g, 자리 in reqs:
             v += [len(p), *p, len(g), *g, len(자리), *자리]
     np.array(v, np.int64).tofile(경로)
@@ -226,8 +240,8 @@ def 시험(exe):
     요청 = sum(1 for (_, reqs) in cases for _ in reqs)
     # 참조의 갈래 세기(되살림 · 셈하지 않음)
     되살림 = 셈안함 = 이음 = 0
-    for (nb, nu, cp, ms, sp, ram, ns), reqs in cases:
-        s = 슬롯(nb, nu, cp, ms, sp, ram, ns)
+    for 설정, reqs in cases:
+        s = 슬롯(*설정풀기(설정))
         for r, (p, g, 자리) in enumerate(reqs):
             c, _ = s.요청(p, g, r + 1, 자리)
             if c < 0:
