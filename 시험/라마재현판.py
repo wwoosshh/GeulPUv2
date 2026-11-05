@@ -152,14 +152,28 @@ def 비트(x):
     return int(np.array([x], f32).view(np.int32)[0])
 
 
+def RMS판(열):
+    """13단계 — 엔진/라마재현몸.gl 의 RMS 와 같은 규칙: n4 = 열 / 4 가 ≤ 32 → 블록 32, ≤ 128 → 128, ≤ 256 → 256,
+    512 < n4 ≤ 1024 → 1024(3584 · 3072 · 4096 은 1024, 1024 는 256)."""
+    n4 = 열 // 4
+    if n4 <= 32:
+        return "라마RMS32", 32
+    if n4 <= 128:
+        return "라마RMS128", 128
+    if n4 <= 256:
+        return "라마RMS256", 256
+    if 512 < n4 <= 1024:
+        return "라마RMS1024", 1024
+    raise NotImplementedError(f"RMSNorm 폭 {열} 의 판이 없다")
+
+
 def 시험_RMS(P, R, M):
-    """RMS_NORM 노드 모두(열 4096 · 256 · 128 → 블록 1024 · 128 · 32), 그리고 그 출력에 가중치를 곱하는 MUL 노드(엮은 판)."""
-    판이름 = {4096: ("라마RMS1024", 1024), 256: ("라마RMS128", 128), 128: ("라마RMS32", 32)}
+    """RMS_NORM 노드 모두(블록은 엔진의 규칙 — RMS판), 그리고 그 출력에 가중치를 곱하는 MUL 노드(엮은 판)."""
     출력표 = {}
     for n, rec in R.연산("RMS_NORM"):
         x = R.입력(n, 0)
         열 = x.shape[-1]
-        이름, B = 판이름[열]
+        이름, B = RMS판(열)
         행 = x.size // 열
         eps = int(np.array(rec["op_params"][:1], np.int32)[0])
         px, py = P.올림(x.astype(f32)), P.올림(np.zeros(x.size, f32))
