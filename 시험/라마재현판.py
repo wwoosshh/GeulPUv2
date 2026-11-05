@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """llama.cpp 실행의 비트 재현(문서/라마재현.md) — 재현 모듈(커널생성 라마재현)의 판을 llama.cpp 의 기록과 비트까지.
 
-기록은 llama.cpp b12008 의 공식 DLL 을 그대로 부르고 그래프 노드를 cb_eval 로 적은 것이다(생성 1걸음, 32층 — 노드마다 입력과 출력).
-판마다 기록된 입력을 넣고 기록된 출력과 견준다. 판정 1-1 의 시험이다.
+기록은 llama.cpp b12008 의 공식 DLL 을 그대로 부르고 그래프 노드를 cb_eval 로 적은 것이다(노드마다 입력과 출력). 판마다 기록된 입력을
+넣고 기록된 출력과 견준다. 판정 1-1(생성 1걸음, 32층 — 시험 RMS · 행렬곱 · 원소 · 합성곱 · GDN · RoPE · 캐시 · FA · 임베딩)과
+판정 2-1(프롬프트 ubatch, 0층 · 3층 — 시험 RMS · 원소 · MMQ · 행렬곱여럿 · 합성곱여럿 · RoPE여럿 · 캐시여럿 · FA여럿 · GDN여럿)의 시험이다.
 
   python -I 시험/라마재현판.py <라마재현.ptx> <기록 폴더> <모델.gguf> [시험 이름 …]
 마지막 줄 "모두 0: True|False".
@@ -10,6 +11,7 @@
 import ctypes
 import json
 import os
+import re
 import sys
 
 import numpy as np
@@ -33,6 +35,15 @@ class 기록:
         self.d = d
         ix = json.load(open(os.path.join(d, "index.json"), encoding="utf-8"))
         self.노드들, self.텐서 = ix["nodes"], ix["tensors"]
+        # 층 일부만 적은 기록(프롬프트 덩어리 — meta.json 의 layers): 그 층의 노드만 본다. 다른 층의 노드는 입력이 그 층이라 함께
+        # 적혔을 뿐이고, 하네스가 텐서를 주소로 한 번만 저장해 그 노드의 다른 입력은 주소를 다시 쓴 앞 텐서의 값일 수 있다
+        meta = os.path.join(os.path.dirname(os.path.normpath(d)), "meta.json")
+        층 = json.load(open(meta, encoding="utf-8")).get("layers") if os.path.exists(meta) else None
+        if 층 and len(층) < 32:
+            def 안(n):
+                m = re.search(r"-(\d+)$", n["name"])
+                return (int(m.group(1)) in 층) if m else not n["name"].startswith("result_")
+            self.노드들 = [n for n in self.노드들 if 안(n)]
 
     def 배열(self, rec):
         dt = {"f32": np.float32, "f16": np.float16, "i32": np.int32, "i64": np.int64}[rec["type"]]
@@ -275,6 +286,231 @@ def 시험_FA(P, R, M, 병렬=7):
         P.놓기()
 
 
+NSM = 60                                                        # RTX 4070 Ti — llama.cpp 가 일을 나눌 때 쓰는 SM 수
+QK = {gguf읽기.Q4_K: 256, gguf읽기.Q5_K: 256, gguf읽기.Q6_K: 256, gguf읽기.Q8_0: 32}
+MMQ판 = {gguf읽기.Q4_K: "라마MMQ_Q4_K", gguf읽기.Q5_K: "라마MMQ_Q5_K", gguf읽기.Q6_K: "라마MMQ_Q6_K", gguf읽기.Q8_0: "라마MMQ_Q8_0"}
+
+
+def MMQ계획(N, K, R, 형식):
+    """llama.cpp b12008 의 MMQ 일 나누기(sm_89): J = 열 타일이 가장 적은 첫 폭 — 설정표에 있는 폭만(8 · 16 · 24 · 32 · 40 · 48 · 64 · 80 ·
+    96 · 112 · 128, 행이 128 의 배수가 아니면 8 · 16 · 32 · 64 · 128),
+    타일 효율 ≥ 90 % 면 블록 = 타일, 아니면 stream-k 블록 min(SM, 타일 × ⌈K/256⌉). 블록 경계는 타일 안에서 256/qk 블록의 배수로 내린다.
+    돌려주는 것: J, ntx, 타일 수, 조각 표 [(행 타일, 열 타일, k0, k1)], 타일 표 [(첫 조각, 조각 수)]."""
+    qk = QK[형식]
+    폭들 = [8, 16, 32, 64, 128] if R % 128 != 0 else [8, 16, 24, 32, 40, 48, 64, 80, 96, 112, 128]
+    J, 최소 = 0, 1 << 30
+    for j in 폭들:
+        if 최소 <= 1:
+            break
+        ntx = (N + j - 1) // j
+        if ntx < 최소:
+            J, 최소 = j, ntx
+    nty, ntx = (R + 127) // 128, (N + J - 1) // J
+    ntiles = ntx * nty
+    nwaves = (ntiles + NSM - 1) // NSM
+    grid = ntiles if 100 * ntiles // (NSM * nwaves) >= 90 else min(NSM, ntiles * ((K + 255) // 256))
+    bpn, bpi = K // qk, 256 // qk
+    W = ntiles * bpn
+
+    def 시작(b):
+        k = b * W // grid
+        return k - (k % bpn) % bpi
+    표, 타일표 = [], [[0, 0] for _ in range(ntiles)]
+    for b in range(grid):
+        k0, k1 = 시작(b), 시작(b + 1)
+        while k0 < k1:
+            t = k0 // bpn
+            끝 = min(k1, (t + 1) * bpn)
+            if 타일표[t][1] == 0:
+                타일표[t][0] = len(표)
+            타일표[t][1] += 1
+            표.append([t // ntx, t % ntx, k0 - t * bpn, 끝 - t * bpn])
+            k0 = 끝
+    return J, ntx, ntiles, np.array(표, np.int32), np.array(타일표, np.int32)
+
+
+def 행렬곱MMQ(P, M, x, wname):
+    """quantize_mmq_q8_1 + MMQ(stream-k 조각) + 합치기 — llama.cpp 의 MUL_MAT(열 9 개 이상). x [N, K] → [N, R]."""
+    t, dims, raw = M.원(wname)
+    K, R = dims
+    N = x.shape[0]
+    J, ntx, ntiles, 표, 타일표 = MMQ계획(N, K, R, t)
+    ds4 = int(t in (gguf읽기.Q4_K, gguf읽기.Q5_K))
+    px = P.올림(np.ascontiguousarray(x, f32).reshape(-1))
+    pq, pd, ps = P.올림(np.zeros(N * K // 4, np.int32)), P.올림(np.zeros(N * K // 32, f32)), P.올림(np.zeros(N * K // 32, f32))
+    P.띄우기("라마MMQ양자화", ((N * K // 4 + 255) // 256, 1), 256, [(1, px), (1, pq), (1, pd), (1, ps), (0, N * K // 4), (0, ds4)])
+    pw = P.올림(가중블록(t, raw, R))
+    p조각 = P.올림(np.zeros(len(표) * 16384, f32))
+    p표, p타일 = P.올림(표.reshape(-1)), P.올림(타일표.reshape(-1))
+    py = P.올림(np.zeros(N * R, f32))
+    P.띄우기(MMQ판[t], (len(표), 1), 256, [(1, pw), (1, pq), (1, pd), (1, ps), (1, p조각), (1, p표), (0, N), (0, R), (0, K), (0, J)])
+    P.띄우기("라마MMQ합치기", (ntiles, 1), 256, [(1, p조각), (1, p타일), (1, py), (0, N), (0, R), (0, J), (0, ntx)])
+    return P.받음(py, (N, R)), f"{gguf읽기.이름[t]} J {J} 조각 {len(표)}/타일 {ntiles}"
+
+
+def 시험_MMQ(P, R, M):
+    """MUL_MAT 노드 가운데 열이 9 개 이상인 것(프롬프트 ubatch — MMQ). 열 8 개 이하는 열마다 MMVQ(시험 행렬곱여럿)."""
+    for n, rec in R.연산("MUL_MAT"):
+        s0 = n["srcs"][0]
+        if not s0.get("weight"):
+            continue
+        x = R.입력(n, 1)
+        x = x.reshape(-1, x.shape[-1])
+        if x.shape[0] <= 8:
+            continue
+        got, 덧 = 행렬곱MMQ(P, M, x, s0["name"])
+        견주기(f"MUL_MAT {x.shape[0]}×{x.shape[1]} {덧} ({n['name']})", got, R.배열(rec))
+        P.놓기()
+
+
+def 시험_행렬곱여럿(P, R, M):
+    """MUL_MAT 노드 가운데 열이 2 … 8 개인 것 — llama.cpp 는 MMVQ(열 수만큼)로, 열마다의 셈은 생성 걸음과 같다."""
+    for n, rec in R.연산("MUL_MAT"):
+        s0 = n["srcs"][0]
+        if not s0.get("weight"):
+            continue
+        x = R.입력(n, 1)
+        x = x.reshape(-1, x.shape[-1])
+        if not 1 < x.shape[0] <= 8:
+            continue
+        열들 = []
+        for c in range(x.shape[0]):
+            y, 형식 = 행렬벡터(P, M, x[c], s0["name"])
+            열들.append(y)
+            P.놓기()
+        견주기(f"MUL_MAT 열 {x.shape[0]} MMVQ {형식} ({n['name']})", np.stack(열들), R.배열(rec))
+
+
+def 시험_합성곱여럿(P, R, M):
+    """SSM_CONV(토큰 n 개 — 입력은 [채널][3 + n]) 노드와, 민 상태(끝 셋)."""
+    for n, rec in R.연산("SSM_CONV"):
+        cin = R.입력(n, 0).astype(f32)
+        cin = cin.reshape(-1, cin.shape[-1])                              # [채널, 3 + n]
+        C, T = cin.shape[0], cin.shape[1] - 3
+        w = M.풀기(n["srcs"][1]["name"]).astype(f32).reshape(-1)
+        x = np.ascontiguousarray(cin[:, 3:].T)                            # [토큰][채널]
+        ps, px, pw, py = P.올림(cin[:, :3].copy()), P.올림(x), P.올림(w), P.올림(np.zeros(C * T, f32))
+        P.띄우기("라마합성곱여럿", ((C * T + 255) // 256, 1), 256, [(1, ps), (1, px), (1, pw), (1, py), (0, C), (0, T)])
+        P.띄우기("라마합성곱상태", ((C + 255) // 256, 1), 256, [(1, ps), (1, px), (0, C), (0, T)])
+        견주기(f"SSM_CONV {C}×{T} ({n['name']})", P.받음(py, C * T), R.배열(rec))
+        견주기(f"합성곱 상태 밀기 {C * 3} ({n['name']})", P.받음(ps, C * 3), cin[:, -3:])
+        P.놓기()
+
+
+def 시험_RoPE여럿(P, R, M):
+    """ROPE(IMRoPE, 토큰 n 개 — 위치가 이어진 것): 토큰마다 위치 = 처음 + 토큰."""
+    for n, rec in R.연산("ROPE"):
+        x = R.입력(n, 0).astype(f32)
+        T, H = x.shape[1], x.shape[2]
+        pos = R.입력(n, 1).reshape(-1)[:T].astype(np.int64)
+        assert np.array_equal(pos, pos[0] + np.arange(T)), "위치가 이어지지 않는다"
+        op = rec["op_params"]
+        fb = np.array([op[5]], np.int32).view(f32)[0]
+        ts = f32(np.power(np.float64(fb), -2.0 / op[1]))
+        px, py = P.올림(x.reshape(-1)), P.올림(np.zeros(x.size, f32))
+        P.띄우기("라마RoPE여럿", (T * H, 1), 256, [(1, px), (1, py), (0, op[1]), (0, int(pos[0])), (0, H), (0, 비트(ts)), (0, op[6]), (0, op[8])])
+        견주기(f"ROPE {T}×{H}×256 위치 {pos[0]}… ({n['name']})", P.받음(py, x.size), R.배열(rec))
+        P.놓기()
+
+
+def 시험_캐시여럿(P, R, M):
+    """SET_ROWS(토큰 n 개 — 이어진 행): 새 행들의 반실수가 기록된 캐시의 그 행들과 같은가."""
+    for n, rec in R.연산("SET_ROWS"):
+        x = R.입력(n, 0).astype(f32).reshape(-1)
+        행 = R.입력(n, 1).reshape(-1).astype(np.int64)
+        assert np.array_equal(행, 행[0] + np.arange(행.size)), "행이 이어지지 않는다"
+        캐시 = R.배열(rec).reshape(rec["ne"][1], rec["ne"][0])
+        px, py = P.올림(x), P.올림(np.zeros(x.size, np.float16))
+        P.띄우기("라마반실수쓰기", ((x.size + 255) // 256, 1), 256, [(1, px), (1, py), (0, x.size), (0, 0)])
+        got = P.받음(py, x.size, np.float16)
+        견주기(f"SET_ROWS f16 {x.size} 행 {행[0]}… ({n['name']})", got.astype(f32), 캐시[행[0]:행[-1] + 1].astype(f32))
+        P.놓기()
+
+
+def FA계획(T, nkv):
+    """flash attention mma(fattn-mma-f16, D 256, GQA 4)의 설정과 stream-k 블록 수(sm_89 점유율): 토큰 3 · 4 → 열 16(KV 묶음 64,
+    SM 당 1 블록), 9 개 이상 → 열 64(KV 묶음 32, SM 당 2 블록). 블록 = min(점유 × SM, KV 묶음 × 타일), 타일 수의 배수로 내려 잃는 몫이
+    5 % 이하면 내린 값. 블록 b 는 [b·W/블록, (b+1)·W/블록)(W = 타일 × KV 묶음). 돌려주는 것: 열, iterj, 타일 수, 조각 표, 타일 표."""
+    if 2 < T <= 4:
+        열, nb, occ = 16, 64, 1
+    elif T > 8:
+        열, nb, occ = 64, 32, 2
+    else:
+        raise NotImplementedError(f"flash attention mma 의 토큰 {T} 설정은 옮기지 않았다")
+    n1 = 열 // 4
+    iterj = (T + n1 - 1) // n1
+    ntiles = iterj * 4
+    raw = min(occ * NSM, ((nkv + nb - 1) // nb) * ntiles)
+    rounded = raw // ntiles * ntiles
+    loss = 100 * (raw - rounded) // raw if rounded > 0 else 100
+    grid = rounded if loss <= 5 else raw
+    iter_k = nkv // nb
+    W = ntiles * iter_k
+    표, 타일표 = [], [[0, 0] for _ in range(ntiles)]
+    for b in range(grid):
+        k0, k1 = b * W // grid, (b + 1) * W // grid
+        while k0 < k1:
+            t = k0 // iter_k
+            끝 = min(k1, (t + 1) * iter_k)
+            if 타일표[t][1] == 0:
+                타일표[t][0] = len(표)
+            타일표[t][1] += 1
+            표.append([t, k0 - t * iter_k, 끝 - t * iter_k])
+            k0 = 끝
+    return 열, iterj, ntiles, np.array(표, np.int32), np.array(타일표, np.int32)
+
+
+def 시험_FA여럿(P, R, M):
+    """FLASH_ATTN_EXT(토큰 n 개 — mma) 노드: 설정 · stream-k 조각 · 합치기까지."""
+    for n, rec in R.연산("FLASH_ATTN_EXT"):
+        q = R.입력(n, 0).astype(f32)[0]                                  # [머리 16, 토큰, 256]
+        T = q.shape[1]
+        if T == 1:
+            continue
+        q = np.ascontiguousarray(np.transpose(q, (1, 0, 2)))              # [토큰][머리][256]
+        Kc = np.ascontiguousarray(np.transpose(R.입력(n, 1)[0], (1, 0, 2)))  # [kv수, kv머리, 256] f16
+        Vc = np.ascontiguousarray(np.transpose(R.입력(n, 2)[0], (1, 0, 2)))
+        nkv = Kc.shape[0]
+        가림 = R.입력(n, 3).astype(np.float16).reshape(-1, nkv)[:T]
+        열, iterj, ntiles, 표, 타일표 = FA계획(T, nkv)
+        pq, pK, pV, pm = P.올림(q.reshape(-1)), P.올림(Kc.reshape(-1)), P.올림(Vc.reshape(-1)), P.올림(np.ascontiguousarray(가림))
+        px, pmm, pr = P.올림(np.zeros(len(표) * 열 * 256, f32)), P.올림(np.zeros(len(표) * 열, f32)), P.올림(np.zeros(len(표) * 열, f32))
+        p표, p타일, po = P.올림(표.reshape(-1)), P.올림(타일표.reshape(-1)), P.올림(np.zeros(T * 16 * 256, f32))
+        P.띄우기(f"라마FA_MMA{열}", (len(표), 1), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, px), (1, pmm), (1, pr), (1, p표),
+                                                        (0, T), (0, nkv), (0, iterj), (0, rec["op_params"][0])])
+        P.띄우기("라마FA_MMA합치기", (ntiles, 1), 256, [(1, px), (1, pmm), (1, pr), (1, p타일), (1, po), (0, T), (0, iterj), (0, 열)])
+        견주기(f"FLASH_ATTN_EXT mma 열 {열} 토큰 {T} kv {nkv} 조각 {len(표)}/타일 {ntiles} ({n['name']})", P.받음(po, T * 16 * 256), R.배열(rec))
+        P.놓기()
+
+
+def 시험_GDN여럿(P, R, M):
+    """GATED_DELTA_NET(토큰 n 개): 64 개 이상이면 덩어리 판(라마GDN덩어리), 적으면 한 걸음 판을 토큰 차례로. 출력과 새 상태."""
+    눈금 = 비트((f32(1) / np.sqrt(f32(128))).astype(f32))
+    for n, rec in R.연산("GATED_DELTA_NET"):
+        q, k, v = (R.입력(n, i).astype(f32) for i in range(3))
+        T = q.shape[1]
+        if T == 1:
+            continue
+        q, k, v = (np.ascontiguousarray(a.reshape(-1)) for a in (q, k, v))
+        g, beta = R.입력(n, 3).astype(f32).reshape(-1), R.입력(n, 4).astype(f32).reshape(-1)
+        S = R.입력(n, 5).astype(f32).reshape(-1)
+        H = g.size // T
+        pq, pk, pv, pg, pb, pS, po = (P.올림(a) for a in (q, k, v, g, beta, S, np.zeros(T * H * 128, f32)))
+        if T >= 64:
+            P.띄우기("라마GDN덩어리", (H, 1), 256, [(1, pq), (1, pk), (1, pv), (1, pg), (1, pb), (1, pS), (1, po), (0, T), (0, H * 128), (0, 눈금)])
+            판이름 = "덩어리"
+        else:
+            hk = q.size // T // 128
+            for t in range(T):
+                P.띄우기("라마GDN한걸음", (8, H), 128, [(1, pq + 4 * t * hk * 128), (1, pk + 4 * t * hk * 128), (1, pv + 4 * t * H * 128),
+                                                      (1, pg + 4 * t * H), (1, pb + 4 * t * H), (1, pS), (1, po + 4 * t * H * 128), (0, hk), (0, 눈금)])
+            판이름 = "한 걸음 × 토큰"
+        out = R.배열(rec).reshape(-1)
+        견주기(f"GATED_DELTA_NET {판이름} 출력 {T}×{H}×128 ({n['name']})", P.받음(po, T * H * 128), out[:T * H * 128])
+        견주기(f"GATED_DELTA_NET {판이름} 새 상태 {S.size} ({n['name']})", P.받음(pS, S.size), out[T * H * 128:T * H * 128 + S.size])
+        P.놓기()
+
+
 def 시험_임베딩(P, R, M):
     """토큰 임베딩: llama.cpp 는 CPU 에서 get_rows 를 하고 그 결과(model.input_embed)를 0 층 RMS_NORM 의 입력으로 올린다 — 그것과 견준다.
     토큰 번호는 --토큰 N (그 걸음에 넣은 토큰)."""
@@ -298,7 +534,9 @@ def main():
     고른 = set(인자[3:])
     P, R, M = 판(ptx), 기록(폴더), gguf읽기.GGUF(모델)
     시험들 = {"RMS": 시험_RMS, "행렬곱": 시험_행렬곱, "원소": 시험_원소, "합성곱": 시험_합성곱, "GDN": 시험_GDN,
-            "RoPE": 시험_RoPE, "캐시": 시험_캐시, "FA": 시험_FA, "임베딩": 시험_임베딩}
+            "RoPE": 시험_RoPE, "캐시": 시험_캐시, "FA": 시험_FA, "임베딩": 시험_임베딩,
+            "MMQ": 시험_MMQ, "행렬곱여럿": 시험_행렬곱여럿, "합성곱여럿": 시험_합성곱여럿, "RoPE여럿": 시험_RoPE여럿,
+            "캐시여럿": 시험_캐시여럿, "FA여럿": 시험_FA여럿, "GDN여럿": 시험_GDN여럿}
     for 이름, f in 시험들.items():
         if not 고른 or 이름 in 고른:
             f(P, R, M)
