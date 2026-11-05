@@ -1,0 +1,89 @@
+(* 벌칸의 바깥 선언 — 리눅스: libvulkan.so.1(배포판의 Vulkan 로더 — 드라이버는 /usr/share/vulkan/icd.d 의 ICD: NVIDIA · Mesa 의
+   RADV · ANV · lavapipe …). #135 · D-50: 리눅스 대상이면 컴파일러가 ../벌칸선언.gl 대신 이 파일을 포함한다. 윈도 판과 Vulkan 함수의
+   기호 · 서명이 같고 라이브러리 이름만 다르다 — 윈도 판에 함수를 더하면 여기에도 같은 줄을 더한다(빠른 점검이 두 목록을 견준다).
+   디스패치되는 핸들(인스턴스 · 물리 장치 · 장치 · 큐 · 명령 버퍼)은 공허 참조, 디스패치되지 않는 핸들(버퍼 · 메모리 · 셰이더 모듈 ·
+   파이프라인 · 배치 · 명령 풀 · 울타리 · 질의 풀)과 VkDeviceSize · size_t 는 정수(64 비트), VkResult · uint32_t · VkBool32 는 중간정수.
+   구조체는 바이트 버퍼에 자리(오프셋)로 쓴다 — 벌칸쿠다.gl. *)
+
+외부 "libvulkan.so.1" "vkCreateInstance" [공허 참조 만듦을 공허 참조 할당기를 공허 참조 인스턴스를 vkCreateInstance]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyInstance" [공허 참조 인스턴스를 공허 참조 할당기를 vkDestroyInstance]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkEnumeratePhysicalDevices" [공허 참조 인스턴스를 공허 참조 개수를 공허 참조 장치들을 vkEnumeratePhysicalDevices]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetPhysicalDeviceProperties2" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceProperties2]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetPhysicalDeviceQueueFamilyProperties" [공허 참조 물리를 공허 참조 개수를 공허 참조 속성을 vkGetPhysicalDeviceQueueFamilyProperties]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetPhysicalDeviceMemoryProperties" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceMemoryProperties]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetPhysicalDeviceMemoryProperties2" [공허 참조 물리를 공허 참조 속성을 vkGetPhysicalDeviceMemoryProperties2]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetPhysicalDeviceFeatures2" [공허 참조 물리를 공허 참조 기능을 vkGetPhysicalDeviceFeatures2]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetInstanceProcAddr" [공허 참조 인스턴스를 문자열 이름을 vkGetInstanceProcAddr]는 -> 공허 참조.
+외부 "libvulkan.so.1" "vkCreateDevice" [공허 참조 물리를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 장치를 vkCreateDevice]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkEnumerateDeviceExtensionProperties" [공허 참조 물리를 공허 참조 층이름을 공허 참조 개수를 공허 참조 속성을 vkEnumerateDeviceExtensionProperties]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyDevice" [공허 참조 장치를 공허 참조 할당기를 vkDestroyDevice]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDeviceWaitIdle" [공허 참조 장치를 vkDeviceWaitIdle]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetDeviceQueue" [공허 참조 장치를 중간정수 족을 중간정수 번호를 공허 참조 큐를 vkGetDeviceQueue]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCreateBuffer" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 버퍼를 vkCreateBuffer]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyBuffer" [공허 참조 장치를 정수 버퍼를 공허 참조 할당기를 vkDestroyBuffer]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetBufferMemoryRequirements" [공허 참조 장치를 정수 버퍼를 공허 참조 요구를 vkGetBufferMemoryRequirements]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkAllocateMemory" [공허 참조 장치를 공허 참조 정보를 공허 참조 할당기를 공허 참조 메모리를 vkAllocateMemory]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkFreeMemory" [공허 참조 장치를 정수 메모리를 공허 참조 할당기를 vkFreeMemory]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkBindBufferMemory" [공허 참조 장치를 정수 버퍼를 정수 메모리를 정수 자리를 vkBindBufferMemory]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkMapMemory" [공허 참조 장치를 정수 메모리를 정수 자리를 정수 크기를 중간정수 깃발을 공허 참조 포인터를 vkMapMemory]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetBufferDeviceAddress" [공허 참조 장치를 공허 참조 정보를 vkGetBufferDeviceAddress]는 -> 정수.
+외부 "libvulkan.so.1" "vkCreateShaderModule" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 모듈을 vkCreateShaderModule]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyShaderModule" [공허 참조 장치를 정수 모듈을 공허 참조 할당기를 vkDestroyShaderModule]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCreatePipelineLayout" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 배치를 vkCreatePipelineLayout]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyPipelineLayout" [공허 참조 장치를 정수 배치를 공허 참조 할당기를 vkDestroyPipelineLayout]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCreateComputePipelines" [공허 참조 장치를 정수 캐시를 중간정수 개수를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 파이프를 vkCreateComputePipelines]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyPipeline" [공허 참조 장치를 정수 파이프를 공허 참조 할당기를 vkDestroyPipeline]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCreateCommandPool" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 풀을 vkCreateCommandPool]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyCommandPool" [공허 참조 장치를 정수 풀을 공허 참조 할당기를 vkDestroyCommandPool]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkAllocateCommandBuffers" [공허 참조 장치를 공허 참조 정보를 공허 참조 명령들을 vkAllocateCommandBuffers]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkBeginCommandBuffer" [공허 참조 명령을 공허 참조 정보를 vkBeginCommandBuffer]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkEndCommandBuffer" [공허 참조 명령을 vkEndCommandBuffer]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdBindPipeline" [공허 참조 명령을 중간정수 자리를 정수 파이프를 vkCmdBindPipeline]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdPushConstants" [공허 참조 명령을 정수 배치를 중간정수 단계를 중간정수 자리를 중간정수 크기를 공허 참조 값을 vkCmdPushConstants]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdDispatch" [공허 참조 명령을 중간정수 x를 중간정수 y를 중간정수 z를 vkCmdDispatch]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdPipelineBarrier" [공허 참조 명령을 중간정수 앞단계를 중간정수 뒤단계를 중간정수 깃발을 중간정수 메모리수를 공허 참조 메모리장벽을 중간정수 버퍼수를 공허 참조 버퍼장벽을 중간정수 그림수를 공허 참조 그림장벽을 vkCmdPipelineBarrier]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdCopyBuffer" [공허 참조 명령을 정수 원본을 정수 대상을 중간정수 개수를 공허 참조 구간들을 vkCmdCopyBuffer]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdFillBuffer" [공허 참조 명령을 정수 버퍼를 정수 자리를 정수 크기를 중간정수 값을 vkCmdFillBuffer]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkQueueSubmit" [공허 참조 큐를 중간정수 개수를 공허 참조 제출을 정수 울타리를 vkQueueSubmit]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCreateFence" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 울타리를 vkCreateFence]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyFence" [공허 참조 장치를 정수 울타리를 공허 참조 할당기를 vkDestroyFence]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkWaitForFences" [공허 참조 장치를 중간정수 개수를 공허 참조 울타리들을 중간정수 모두를 정수 기다림을 vkWaitForFences]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkResetFences" [공허 참조 장치를 중간정수 개수를 공허 참조 울타리들을 vkResetFences]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCreateQueryPool" [공허 참조 장치를 공허 참조 만듦을 공허 참조 할당기를 공허 참조 풀을 vkCreateQueryPool]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkDestroyQueryPool" [공허 참조 장치를 정수 풀을 공허 참조 할당기를 vkDestroyQueryPool]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdResetQueryPool" [공허 참조 명령을 정수 풀을 중간정수 첫을 중간정수 개수를 vkCmdResetQueryPool]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkCmdWriteTimestamp" [공허 참조 명령을 중간정수 단계를 정수 풀을 중간정수 번호를 vkCmdWriteTimestamp]는 -> 중간정수.
+외부 "libvulkan.so.1" "vkGetQueryPoolResults" [공허 참조 장치를 정수 풀을 중간정수 첫을 중간정수 개수를 정수 크기를 공허 참조 자료를 정수 걸음을 중간정수 깃발을 vkGetQueryPoolResults]는 -> 중간정수.
+
+(* 0.14.1 — 내장 GPU 에 예산 확장(VK_EXT_memory_budget)이 없을 때 남은 실제 메모리로 막는다 — 벌칸쿠다.gl 의 벌실메모리남음.
+   리눅스 판: 윈도의 GlobalMemoryStatusEx 대신 /proc/meminfo 의 MemAvailable(kB)을 바이트로 MEMORYSTATUSEX 의 ullAvailPhys 자리
+   (16 바이트 — 칸[2])에 쓴다. 앱의 리눅스 층(앱/리눅스/윈도.gl 의 메모리남음)과 같은 값. 못 읽으면 0(윈도 API 의 실패와 같은 뜻) *)
+외부 "open" [문자열 경로를 중간정수 방식을 ... 벌리열기]는 -> 중간정수.
+외부 "read" [중간정수 번호를 공허 참조 자료를 정수 길이를 벌리읽기]는 -> 정수.
+외부 "close" [중간정수 번호를 벌리닫기]는 -> 중간정수.
+
+[공허 참조 칸을 벌메모리상태]는 -> 중간정수 {
+    중간정수 f = 벌리열기("/proc/meminfo", 0).                       (* O_RDONLY — procfs 는 크기가 0 이라 끝까지 읽는다 *)
+    f < 0이면 { 반환 0. }
+    정수[512] 버퍼.
+    문자열 s = 버퍼 으로 문자열.
+    정수 읽은 = 0.
+    (읽은 < 4095)동안 {
+        정수 n = 벌리읽기(f, s + 읽은, 4095 - 읽은).
+        n <= 0이면 { 탈출. }
+        읽은 = 읽은 + n.
+    }
+    벌리닫기(f).
+    s[읽은] = 0.
+    문자열 곳 = 문자열_찾기(s 에서, "MemAvailable:").
+    곳 == 없음이면 { 반환 0. }
+    정수 k = 13.
+    ((곳[k] & 255) == 32)동안 { k += 1. }
+    정수 값 = 0.
+    ((곳[k] & 255) >= 48 그리고 (곳[k] & 255) <= 57)동안 {
+        값 = 값 * 10 + ((곳[k] & 255) - 48).
+        k += 1.
+    }
+    (칸 으로 정수 참조)[2] = 값 * 1024.
+    반환 1.
+}

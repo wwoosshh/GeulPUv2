@@ -12,6 +12,7 @@
      2f. 파이썬 API(도구/pypi/geulpu/api.py — 시험/파이썬API.py): 가짜 앱(로짓 행을 문맥으로 정하는 서버)으로 요청 본문 · 응답 풀기 ·
          모델 더하기 · 불러오기 · 점수 · 분기 · 비교 · 설정 되돌리기, 휠의 파일 목록
   3. 커널 변형(타일 모양) 표가 생성기 · 엔진에서 같은가
+     3b. Vulkan 선언의 리눅스 판(엔진/리눅스/벌칸선언.gl — libvulkan.so.1, #135)이 윈도 판(엔진/벌칸선언.gl)과 같은 함수 · 서명인가
   4. 글(geul) 언어 프로그램이 빌드되는가 — 커널 생성기 · PTX · SPIR-V 백엔드(백엔드/)와 엔진 프로그램 모두(글 컴파일러)
      4b. 문맥 저장소의 GPU 없는 시험 — 가짜 장치 위의 저장소.gl(엔진/시험_저장소CPU.gl)을 파이썬 참조(시험/저장소CPU.py)와 비교
      4c. RoPE 표(GeulPUv2 ③a — YaRN 배 2 · 4 와 늘이지 않은 표, 0.13.0 — Gemma 4 의 넓은 표 둘) — 엔진/시험_로프표.gl 의 표를 CPU 참조(시험/로프표.py)와 바이트까지
@@ -46,7 +47,8 @@
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것.
      0.12.0 12-3g-2 — --MoE 행과 라마재현 행(문서/라마재현.md)은 CUDA 만이라 SPIR-V 칸이 "-"). 5 와 7(SASS)의 코드는 시험/모듈점검.py
-  6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계)
+  6. 실행기가 가져오는 DLL 이 kernel32 · shell32 · nvcuda 뿐인가(18단계 · 22단계의 조건) — 리눅스에서는 libc.so.6 · libcuda.so.1 뿐인가(29단계),
+     리눅스의 Vulkan 판(서버V · 장치V · 진단V)은 libc.so.6 · libvulkan.so.1 뿐인가(#135)
      6b. 명령줄 옵션의 영어 별칭(#137 — 시험/명령줄별칭.py): 커널생성 · GeulPU(· 서버 · 실행기 — 뜨면)의 --help 가 한글 · 영어 이름을 함께 쓰고,
          커널생성이 영어 이름(qwen2 · --fast)으로 만든 모듈 소스가 한글 이름(qwen2큰 · --빠른)으로 만든 것과 바이트까지 같은가
 
@@ -259,6 +261,18 @@ def 판표():
     알림("판 표", bool(기준) and not 다름 and len(표) == 2 and bool(줄기준) and not 줄다름 and len(줄표) == 2 and bool(K기준) and not K다름 and len(K표) == 2,
          f"{len(기준)} 판 · 곳 {len(표)} · 줄 타일 판 {len(줄기준)} · 곳 {len(줄표)} · k-양자화 줄 타일 판 {len(K기준)} · 곳 {len(K표)}"
          + (f" — 생성기와 다른 곳 {다름 + 줄다름 + K다름}" if 다름 or 줄다름 or K다름 else ""))
+
+
+def 벌칸선언짝():
+    """3b — #135: 리눅스 대상이면 컴파일러가 엔진/벌칸선언.gl 대신 엔진/리눅스/벌칸선언.gl 을 포함한다(D-50). 두 판의 Vulkan 함수(기호 ·
+    서명)가 같은가 — 라이브러리 이름(vulkan-1.dll · libvulkan.so.1)만 다르다. 윈도 판에만 함수를 더하면 리눅스 빌드가 그 함수를 모른다"""
+    def 목록(경로, 라이브러리):
+        머리 = f'외부 "{라이브러리}" '
+        return sorted(줄[len(머리):] for 줄 in open(경로, encoding="utf-8").read().splitlines() if 줄.startswith(머리))
+    윈 = 목록(os.path.join(ROOT, "엔진", "벌칸선언.gl"), "vulkan-1.dll")
+    리 = 목록(os.path.join(ROOT, "엔진", "리눅스", "벌칸선언.gl"), "libvulkan.so.1")
+    한쪽 = sorted({줄.split('"')[1] for 줄 in set(윈) ^ set(리)})
+    알림("Vulkan 선언의 리눅스 판(#135)", bool(윈) and 윈 == 리, f"함수 {len(윈)} · {len(리)}" + (f" — 한쪽에만 있거나 서명이 다름: {한쪽}" if 한쪽 else ""))
 
 
 # ---- 4 · 5 · 6. 빌드 · 모듈 · 가져오기 표 ----
@@ -577,6 +591,15 @@ def 가져오기검사(출력):
                 continue
             dll4 = sorted({d.lower() for d, _ in 가져오기표.가져오기(도구)})
             알림(f"{이름} 의 가져오기 표", set(dll4) <= 허용서버, f"{dll4}")
+        # #135 — Vulkan 판(server-vulkan · device-vulkan · diag-vulkan)은 libc.so.6 · libvulkan.so.1 만(윈도 이름 vulkan-1.dll 이면 뜨지 않는다)
+        허용벌칸 = {"libc.so.6", "libvulkan.so.1"}
+        for 이름 in ("서버V", "장치V", "진단V"):
+            도구 = os.path.join(출력, 이름)
+            if not os.path.exists(도구):
+                알림(f"{이름} 의 가져오기 표", False, f"{이름} 가 없다(빌드 실패)")
+                continue
+            dll5 = sorted({d.lower() for d, _ in 가져오기표.가져오기(도구)})
+            알림(f"{이름} 의 가져오기 표", set(dll5) <= 허용벌칸 and "libvulkan.so.1" in dll5, f"{dll5}")
 
 
 def main():
@@ -609,6 +632,7 @@ def main():
     화면점검(출력)
     개발도구(출력)
     판표()
+    벌칸선언짝()
     도구 = [os.path.join(글, "build", "self_컴파일러" + EXE)]
     없는것 = [x for x in 도구 if not os.path.exists(x)]
     if 없는것:
