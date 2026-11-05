@@ -9,8 +9,10 @@ response)을 그대로 쓴다.
       응답의 토큰 · 로그 확률이 2단계의 기록과 같은지(4-1). 영수증 이름은 <out>/영수증.json.
   python -I -X utf8 시험/라마앱판.py 검증 <꾸러미> <자료> <out> --층 cuda|vulkan [--장치 <Vulkan 장치 이름의 일부>] [--이름 a,b,…]
       <out>/영수증.json 의 영수증마다 앱의 재현 검증(/api/llama/verify)을 돌린다(4-2 · 4-3). 결과는 <out>/검증-<층>-<장치>.json.
-  python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <기록 out> <새 out>
-      4-3 의 바꾼 영수증 넷(모델 해시 · 토큰 하나 · n_ubatch 256 · 로그 확률 하나의 마지막 비트)을 자료\\영수증\\ 에 쓰고 <새 out>/영수증.json 을.
+  python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <기록 out> <새 out> [--단계 4|5]
+      4-3 의 바꾼 영수증 넷(모델 해시 · 토큰 하나 · n_ubatch 256 · 로그 확률 하나의 마지막 비트), 또는(--단계 5 — 온도 > 0 의 영수증에서)
+      5-2 의 다섯(시드 +1 · 온도 1.2 — 다름, top_k 0 · mirostat 1 · 시드 없음 — 받지 않음)을 자료\\영수증\\ 에 쓰고 <새 out>/영수증.json 을.
+  기록에 --온도 T --시드 S 를 주면(5단계) 요청마다 시드를 S, S+1, … 로 보낸다 — 2단계의 기록과 견주지 않고 영수증만 남긴다.
 마지막 줄 "합계: …".
 """
 import argparse
@@ -102,11 +104,12 @@ def 기록하기(a):
             time.sleep(0.5)
         묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발)})
         영수증폴더 = os.path.join(a.자료, "영수증")
-        for name in a.이름:
+        for q, name in enumerate(a.이름):
             want = 기록(name)
             앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
-            r = 묻기(a.포트, "/llama/completion", {"prompt": want["prompt_text"], "n_predict": 256, "temperature": 0, "seed": 0, "stream": False})
-            같음 = r.get("tokens") == want["response"]["tokens"] and 칸들(r) == 칸들(want["response"])
+            seed = a.시드 + q if a.온도 > 0 else 0
+            r = 묻기(a.포트, "/llama/completion", {"prompt": want["prompt_text"], "n_predict": 256, "temperature": a.온도, "seed": seed, "stream": False})
+            같음 = a.온도 > 0 or (r.get("tokens") == want["response"]["tokens"] and 칸들(r) == 칸들(want["response"]))   # 온도 > 0 은 견줄 기록이 없다
             같음수 += 같음
             새것 = None
             for _ in range(120):                                   # 영수증은 스레드가 모델 해시 뒤에 쓴다
@@ -116,7 +119,10 @@ def 기록하기(a):
                     break
                 time.sleep(1)
             표[name] = 새것
-            print(f"{name}: 응답이 2단계 기록과 {'같음' if 같음 else '다름'} · 영수증 {새것}", flush=True)
+            if a.온도 > 0:
+                print(f"{name}: 온도 {a.온도} · 시드 {seed} · 토큰 {len(r.get('tokens', []))} · 영수증 {새것}", flush=True)
+            else:
+                print(f"{name}: 응답이 2단계 기록과 {'같음' if 같음 else '다름'} · 영수증 {새것}", flush=True)
         json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     finally:
         if srv is not None:
@@ -169,6 +175,27 @@ def 바꾸기(a):
 
     표 = {}
     base = 표0["math"]
+    if a.단계 == 5:                                                # 5-2 — 온도 > 0 의 영수증에서
+        def 고침(suffix, **kv):
+            d = 읽기(base)
+            gs, body = d["response"]["generation_settings"], d["request"]["body"]
+            for k, v in kv.items():
+                gs[k] = v
+                if k in ("seed", "temperature", "top_k", "mirostat"):
+                    body[k] = v
+            쓰기(d, base + suffix)
+            표["alter5_" + suffix.lstrip("-")] = base + suffix
+            print(f"alter5_{suffix.lstrip('-')}: {kv}")
+        g0 = 읽기(base)["response"]["generation_settings"]
+        고침("-seed", seed=g0["seed"] + 1)                         # 다름(처음 갈리는 걸음부터)
+        고침("-temp", temperature=1.2)                              # 다름
+        고침("-topk0", top_k=0)                                     # 받지 않음
+        고침("-mirostat", mirostat=1)                               # 받지 않음
+        고침("-noseed", seed=4294967295)                            # 받지 않음
+        os.makedirs(a.out, exist_ok=True)
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(f"합계: 바꾼 영수증 {len(표)}")
+        return 0
     d = 읽기(base)                                                 # 1. 모델 해시의 한 글자 — 시작 전에 멈춘다
     h = d["model"]["sha256"]
     d["model"]["sha256"] = ("0" if h[0] != "0" else "1") + h[1:]
@@ -219,6 +246,8 @@ def main():
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
             q.add_argument("--라마포트", type=int, default=18181)
+            q.add_argument("--온도", type=float, default=0.0)
+            q.add_argument("--시드", type=int, default=1)
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
             q.add_argument("--장치", default="")
@@ -226,6 +255,7 @@ def main():
     q.add_argument("자료")
     q.add_argument("기록out")
     q.add_argument("out")
+    q.add_argument("--단계", type=int, choices=[4, 5], default=4)
     a = p.parse_args()
     return {"기록": 기록하기, "검증": 검증하기, "바꾸기": 바꾸기}[a.할일](a)
 
