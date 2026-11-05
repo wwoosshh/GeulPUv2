@@ -1,11 +1,12 @@
 #!/bin/bash
-# GeulPU 앱 꾸리기 — 리눅스 판(x86-64 · NVIDIA CUDA). 앱/꾸리기.ps1(윈도)과 같은 차례로 소스에서 릴리스 폴더와 tar.gz 를 만든다.
+# GeulPU 앱 꾸리기 — 리눅스 판(x86-64 · NVIDIA CUDA · Vulkan). 앱/꾸리기.ps1(윈도)과 같은 차례로 소스에서 릴리스 폴더와 tar.gz 를 만든다.
 #
 #   bash 앱/꾸리기.sh <글 저장소(고정 커밋 — 시험/글저장소커밋.txt)> [출력 폴더] [--묶지않음]
 #
 # 1. 글 컴파일러: 파이썬 참조 구현 → 글로 쓴 컴파일러 → 같은 소스로 한 번 더(고정점).
-# 2. 빌드: GeulPU(앱/관리자.gl) · bin/ 의 server-cuda · device-cuda · diag-cuda · kernel-gen · ptx-backend, kernels/diag.ptx.
-#    Vulkan(server-vulkan · device-vulkan)은 리눅스에서 아직 없다(#135).
+# 2. 빌드: GeulPU(앱/관리자.gl) · bin/ 의 server-cuda · server-vulkan · device-vulkan · device-cuda · diag-cuda · diag-vulkan ·
+#    kernel-gen · ptx-backend · spirv-backend, kernels/diag.ptx · diag-vulkan.spvs · diag-vulkan-coop-*.spvs(협력 행렬 셋).
+#    Vulkan 판(#135)은 엔진/리눅스/벌칸선언.gl 로 libvulkan.so.1 을 가져온다.
 # 3. web/ · data/(받을 모델 목록 · 교차검증 기준 · 모델 평가의 내장 데이터) · LICENSE · THIRD_PARTY_NOTICES.md · README.txt, version.json(판 ·
 #    커밋 · 빌드 때 · 파일마다 SHA-256).
 # 4. GeulPU-<판>-linux-x64.tar.gz 와 SHA256SUMS.txt.
@@ -56,12 +57,20 @@ rm -rf "$DIST"
 mkdir -p "$DIST/bin" "$DIST/kernels" "$DIST/web" "$DIST/data/crosscheck/pair" "$DIST/data/eval"
 say "빌드..."
 run ptx-backend "$ROOT" "$COMP" 백엔드/PTX/PTX.gl -o "$DIST/bin/ptx-backend"
+run spirv-backend "$ROOT" "$COMP" 백엔드/SPIRV/SPIRV.gl -o "$DIST/bin/spirv-backend"
 run app "$ROOT" "$COMP" 앱/관리자.gl -o "$DIST/GeulPU"
 run server-cuda "$ROOT" "$COMP" 엔진/서버.gl -o "$DIST/bin/server-cuda"
+run server-vulkan "$ROOT" "$COMP" 엔진/서버V.gl -o "$DIST/bin/server-vulkan"
+run device-vulkan "$ROOT" "$COMP" 엔진/장치V.gl -o "$DIST/bin/device-vulkan"
 run device-cuda "$ROOT" "$COMP" 엔진/장치C.gl -o "$DIST/bin/device-cuda"
 run diag-cuda "$ROOT" "$COMP" 엔진/진단.gl -o "$DIST/bin/diag-cuda"
+run diag-vulkan "$ROOT" "$COMP" 엔진/진단V.gl -o "$DIST/bin/diag-vulkan"
 run kernel-gen "$ROOT" "$COMP" 커널/커널생성.gl -o "$DIST/bin/kernel-gen"
 run kernel-diag-ptx "$ROOT" "$DIST/bin/ptx-backend" 커널/진단.gl -o "$DIST/kernels/diag.ptx"
+run kernel-diag-vulkan "$ROOT" "$DIST/bin/spirv-backend" 커널/진단V.gl -o "$DIST/kernels/diag-vulkan.spvs"
+for s in 16x16x32 16x8x32 16x16x16; do
+  run "kernel-diag-coop-$s" "$ROOT" "$DIST/bin/spirv-backend" 커널/진단협력.gl -o "$DIST/kernels/diag-vulkan-coop-$s.spvs" --협력 "$s"
+done
 
 cp -r "$HERE/web/." "$DIST/web/"
 cp "$HERE/data/models.json" "$DIST/data/"

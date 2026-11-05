@@ -2,16 +2,19 @@
 # build-linux.sh — build GeulPU's command-line programs from source with ASCII names only (#137).
 # For terminals that cannot show or type Korean (SSH, JupyterHub). The full app (GeulPU + bin/ + web/ + data/ + tar.gz)
 # is 앱/꾸리기.sh; this script builds just the pieces a server needs:
-#   bin/geulc        the geul compiler (from the pinned geul-lang commit in 시험/글저장소커밋.txt)
-#   bin/ptx-backend  geul kernel source → PTX
-#   bin/kernel-gen   kernel generator (one module per model shape and format)
-#   bin/server-cuda  the inference server (OpenAI-compatible API)
-#   bin/runner-cuda  the terminal runner (optional, same module as the server)
+#   bin/geulc          the geul compiler (from the pinned geul-lang commit in 시험/글저장소커밋.txt)
+#   bin/ptx-backend    geul kernel source → PTX
+#   bin/spirv-backend  geul kernel source → SPIR-V (for server-vulkan)
+#   bin/kernel-gen     kernel generator (one module per model shape and format)
+#   bin/server-cuda    the inference server (OpenAI-compatible API) on NVIDIA CUDA
+#   bin/server-vulkan  the same server on Vulkan (AMD · Intel · NVIDIA … — #135); --ptx takes the .spvs from spirv-backend
+#   bin/runner-cuda    the terminal runner (optional, same module as the server)
 #
 #   bash build-linux.sh [geul repo dir — default ../geul-lang-v2] [out dir — default bin]
 #
-# Needs: git, python3 (the compiler is bootstrapped from its Python reference implementation), an NVIDIA driver at run time
-# (the binaries import only libc.so.6 and libcuda.so.1). Works in Git Bash on Windows too (.exe, python).
+# Needs: git, python3 (the compiler is bootstrapped from its Python reference implementation), a GPU driver at run time:
+# server-cuda and runner-cuda import only libc.so.6 and libcuda.so.1 (NVIDIA), server-vulkan only libc.so.6 and libvulkan.so.1
+# (any Vulkan driver). Works in Git Bash on Windows too (.exe, python).
 # Then, for example (Qwen2.5-7B, k-quants, the app's default fast mode):
 #   bin/kernel-gen qwen2 K 3584 28 4 18944 152064 qwen2K_3584x28x4x18944x152064.gl --fast --KV8 --F2
 #   bin/ptx-backend qwen2K_3584x28x4x18944x152064.gl -o qwen2K_3584x28x4x18944x152064.ptx
@@ -56,7 +59,9 @@ build() {  # build <name> <source.gl>
   (cd "$HERE" && "$GEULC" "$2" -o "$OUT/$1$EXE")
 }
 build ptx-backend 백엔드/PTX/PTX.gl
+build spirv-backend 백엔드/SPIRV/SPIRV.gl
 build kernel-gen  커널/커널생성.gl
 build server-cuda 엔진/서버.gl
+build server-vulkan 엔진/서버V.gl
 build runner-cuda 엔진/실행기.gl
 say "done: $OUT — kernel-gen --help · server-cuda --help list the options (Korean names with English aliases)"
