@@ -13,6 +13,12 @@ response)을 그대로 쓴다.
       4-3 의 바꾼 영수증 넷(모델 해시 · 토큰 하나 · n_ubatch 256 · 로그 확률 하나의 마지막 비트), 또는(--단계 5 — 온도 > 0 의 영수증에서)
       5-2 의 다섯(시드 +1 · 온도 1.2 — 다름, top_k 0 · mirostat 1 · 시드 없음 — 받지 않음)을 자료\\영수증\\ 에 쓰고 <새 out>/영수증.json 을.
   기록에 --온도 T --시드 S 를 주면(5단계) 요청마다 시드를 S, S+1, … 로 보낸다 — 2단계의 기록과 견주지 않고 영수증만 남긴다.
+  python -I -X utf8 시험/라마앱판.py 대화 <꾸러미> <자료> <out> --서버 <llama-server.exe> --모델 <gguf> --기록폴더 <det …> [--시작 <이름>]
+      7단계 — 기본 설정의 llama-server(-np 를 주지 않음 → 슬롯 4 · 통합 KV, 프롬프트 캐시 · RAM 캐시 기본, -c 32768 만)에 기록기로 한
+      대화의 이어지는 요청 여섯(잇기 둘 · 같은 프롬프트 · 생성 잇기 · 앞을 고쳐 잇기)과 다른 대화 하나(다른 슬롯)를 보낸다.
+      영수증 이름은 <out>/영수증.json(c1 … c7).
+  python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <대화 out> <새 out> --단계 7
+      7-2 의 바꾼 영수증 셋(c3 의 cache_n + 1 · c3 의 서버 포트 · c3 의 슬롯 상태에 다른 슬롯) — 7-1 의 검증 뒤에(같은 슬롯의 앞 영수증이 된다).
 마지막 줄 "합계: …".
 """
 import argparse
@@ -132,6 +138,78 @@ def 기록하기(a):
     return 0 if 같음수 == len(a.이름) and all(표.values()) else 1
 
 
+def 서버띄우기(a, 깃발들, log경로):
+    log = open(log경로, "w", encoding="utf-8", errors="replace")
+    srv = subprocess.Popen([a.서버, "-m", a.모델, *깃발들, "--host", "127.0.0.1", "--port", str(a.라마포트)], stdout=log, stderr=subprocess.STDOUT)
+    t0 = time.time()
+    while True:
+        try:
+            if 묻기(a.라마포트, "/health", 시간=5).get("status") == "ok":
+                return srv
+        except (urllib.error.URLError, ConnectionError, TimeoutError, json.JSONDecodeError):
+            pass
+        if srv.poll() is not None or time.time() - t0 > 600:
+            raise RuntimeError("llama-server 가 준비되지 않았다")
+        time.sleep(0.5)
+
+
+def 새영수증(폴더, 앞):
+    for _ in range(120):                                           # 영수증은 스레드가 모델 해시 뒤에 쓴다 — 다 쓴 .json 이름만
+        새 = sorted(f for f in set(os.listdir(폴더)) - 앞 - {"기록기.json"} if f.endswith(".json")) if os.path.isdir(폴더) else []
+        if 새:
+            return 새[-1][:-5]
+        time.sleep(1)
+    return None
+
+
+def 대화하기(a):
+    """7단계 — 기본 설정 서버에 한 대화(같은 슬롯)의 이어지는 요청과 다른 대화 하나"""
+    폴더들 = a.기록폴더.split(",")
+    시작 = None
+    for d in 폴더들:
+        p = os.path.join(d, f"run0_{a.시작}_r0.json")
+        if os.path.exists(p):
+            시작 = json.load(open(p, encoding="utf-8"))["prompt_text"]
+            break
+    if 시작 is None:
+        raise FileNotFoundError(a.시작)
+    깃발대화 = ["-c", "32768"]
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표 = {}
+    try:
+        srv = 서버띄우기(a, 깃발대화, os.path.join(a.out, "llama-server.log"))
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
+        영수증폴더 = os.path.join(a.자료, "영수증")
+        꼬리 = "<|im_end|>\n<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n<think>\n"
+        프롬프트, 응답 = {}, {}
+
+        def 보내기(이름, p, 씨앗):
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            r = 묻기(a.포트, "/llama/completion", {"prompt": p, "n_predict": 64, "temperature": 0.0, "seed": 씨앗, "stream": False})
+            표[이름] = 새영수증(영수증폴더, 앞)
+            프롬프트[이름], 응답[이름] = p, r
+            tm = r.get("timings", {})
+            print(f"{이름}: 슬롯 {r.get('id_slot')} · 프롬프트 토큰 {r.get('tokens_evaluated')} · cache_n {tm.get('cache_n')} · prompt_n {tm.get('prompt_n')}"
+                  f" · 생성 {len(r.get('tokens', []))} · 영수증 {표[이름]}", flush=True)
+
+        보내기("c1", 시작, 1)
+        보내기("c2", 프롬프트["c1"] + 응답["c1"]["content"] + 꼬리.format("방금 정리한 것을 한 문장으로 줄여 줘."), 2)
+        보내기("c3", 프롬프트["c2"] + 응답["c2"]["content"] + 꼬리.format("그 문장을 영어로 옮겨 줘."), 3)
+        보내기("c4", 프롬프트["c3"], 4)                                               # 같은 프롬프트 — 체크포인트 되살리기
+        보내기("c5", 프롬프트["c4"] + 응답["c4"]["content"], 5)                       # 생성 잇기 — 되살리지 않고 이어 감
+        보내기("c6", 프롬프트["c2"] + 응답["c2"]["content"] + 꼬리.format("대신 세 줄로 나눠 줘."), 6)   # 앞을 고쳐 잇기 — 앞 체크포인트
+        보내기("c7", "<|im_start|>user\n짧게 인사해 줘.<|im_end|>\n<|im_start|>assistant\n<think>\n", 7)   # 다른 대화 — 다른 슬롯
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+        s.닫기()
+    print(f"합계: 요청 {len(표)} · 영수증 {sum(1 for v in 표.values() if v)}")
+    return 0 if all(표.values()) else 1
+
+
 def 검증하기(a):
     표 = json.load(open(os.path.join(a.out, "영수증.json"), encoding="utf-8"))
     이름 = list(표) if a.이름 is 이름들10 else a.이름                  # --이름 이 없으면 영수증.json 의 모두(바꾼 영수증이면 alter_…)
@@ -153,7 +231,7 @@ def 검증하기(a):
                     sm = json.load(open(p, encoding="utf-8"))
             결과[name] = {"state": 끝.get("state"), "summary": 끝.get("summary"), "reason": 끝.get("reason"),
                          **{k: sm.get(k) for k in ("steps", "values", "mismatches", "first_divergence", "steps_without_probs", "same", "seconds",
-                                                   "run_log", "differences")}}
+                                                   "run_log", "cache", "differences")}}
             print(f"{name}: {끝.get('state')} — {끝.get('summary') or 끝.get('reason')}", flush=True)
     finally:
         s.닫기()
@@ -179,6 +257,37 @@ def 바꾸기(a):
         return len(e["bytes"]) > 0 and all(b < 128 for b in e["bytes"])
 
     표 = {}
+    if a.단계 == 7:                                                # 7-2 — 대화의 c3 에서(같은 슬롯의 사슬)
+        base = 표0["c3"]
+
+        def 고침7(suffix, f):
+            d = 읽기(base)
+            설명 = f(d)
+            쓰기(d, base + suffix)
+            표["alter7_" + suffix.lstrip("-")] = base + suffix
+            print(f"alter7_{suffix.lstrip('-')}: {설명}")
+
+        def 캐시(d):
+            d["response"]["timings"]["cache_n"] += 1
+            return f"cache_n → {d['response']['timings']['cache_n']}"
+
+        def 포트(d):
+            d["server"]["port"] += 1
+            return f"서버 포트 → {d['server']['port']}(같은 서버의 앞 영수증이 없다)"
+
+        def 슬롯(d):
+            for x in d.get("slots_after", []):
+                if x["id"] != d["response"]["id_slot"]:
+                    x["id_task"] = 999
+                    return f"슬롯 {x['id']} 에 id_task"
+            return "?"
+        고침7("-cache", 캐시)                                       # 받지 않음 — 흉내의 cache_n 이 다르다
+        고침7("-port", 포트)                                        # 받지 않음 — 처음 요청이 없다
+        고침7("-slots", 슬롯)                                       # 받지 않음 — 다른 슬롯도 쓰였다
+        os.makedirs(a.out, exist_ok=True)
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(f"합계: 바꾼 영수증 {len(표)}")
+        return 0
     base = 표0["math"]
     if a.단계 == 5:                                                # 5-2 — 온도 > 0 의 영수증에서
         def 고침(suffix, **kv):
@@ -239,20 +348,21 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="할일", required=True)
-    for n in ("기록", "검증"):
+    for n in ("기록", "검증", "대화"):
         q = sub.add_parser(n)
         q.add_argument("꾸러미")
         q.add_argument("자료")
         q.add_argument("out")
         q.add_argument("--포트", type=int, default=44641)
         q.add_argument("--이름", type=lambda s: s.split(","), default=이름들10)
-        if n == "기록":
+        if n in ("기록", "대화"):
             q.add_argument("--서버", required=True)
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
             q.add_argument("--라마포트", type=int, default=18181)
             q.add_argument("--온도", type=float, default=0.0)
             q.add_argument("--시드", type=int, default=1)
+            q.add_argument("--시작", default="multi_turn")
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
             q.add_argument("--장치", default="")
@@ -260,9 +370,9 @@ def main():
     q.add_argument("자료")
     q.add_argument("기록out")
     q.add_argument("out")
-    q.add_argument("--단계", type=int, choices=[4, 5], default=4)
+    q.add_argument("--단계", type=int, choices=[4, 5, 7], default=4)
     a = p.parse_args()
-    return {"기록": 기록하기, "검증": 검증하기, "바꾸기": 바꾸기}[a.할일](a)
+    return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "바꾸기": 바꾸기}[a.할일](a)
 
 
 if __name__ == "__main__":
