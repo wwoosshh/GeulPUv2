@@ -509,15 +509,18 @@ FA설정 = {(128, 8): (128, 1), (128, 16): (64, 2), (128, 32): (64, 2), (128, 64
          (256, 8): (64, 1), (256, 16): (64, 1), (256, 64): (32, 2)}
 
 
-def FA계획(T, nkv, Hk=4, D=256):
+def FA계획(T, nkv, Hk=4, D=256, gqa=4):
     """flash attention mma(fattn-mma-f16, GQA 4 → ncols2 4)의 설정과 stream-k 블록 수(sm_89 점유율): 토큰 2 → 열 8, 3 · 4 → 열 16,
     5 … 8 → 열 32, 9 개 이상 → 열 64(KV 묶음 · 점유는 FA설정). 블록 = min(점유 × SM, KV 묶음 × 타일), 타일 수의 배수로 내려 잃는 몫이
     5 % 이하면 내린 값. 블록 b 는 [b·W/블록, (b+1)·W/블록)(W = 타일 × KV 묶음). 돌려주는 것: 열, iterj, 타일 수, 조각 표, 타일 표."""
-    열 = 8 if T <= 2 else 16 if T <= 4 else 32 if T <= 8 else 64
+    n2 = 8 if gqa > 4 else 4 if gqa > 2 else 2 if gqa > 1 else 1      # 12단계 — ncols2(GQA 비)
+    열 = 8 if T <= 8 // n2 else 16 if T <= 16 // n2 else 32 if T <= 32 // n2 else 64
+    if D == 256 and (n2, gqa) != (4, 4):
+        raise NotImplementedError(f"flash attention mma 의 D 256 · GQA {gqa} 는 옮기지 않았다")
     if (D, 열) not in FA설정:
         raise NotImplementedError(f"flash attention mma 의 D {D} · 토큰 {T}(열 {열}) 설정은 옮기지 않았다")
     nb, occ = FA설정[(D, 열)]
-    n1 = 열 // 4
+    n1 = 열 // n2
     iterj = (T + n1 - 1) // n1
     ntiles = iterj * Hk
     raw = min(occ * NSM, ((nkv + nb - 1) // nb) * ntiles)
@@ -537,7 +540,7 @@ def FA계획(T, nkv, Hk=4, D=256):
             타일표[t][1] += 1
             표.append([t, k0 - t * iter_k, 끝 - t * iter_k])
             k0 = 끝
-    return 열, iterj, ntiles, np.array(표, np.int32), np.array(타일표, np.int32)
+    return 열, iterj, ntiles, np.array(표, np.int32), np.array(타일표, np.int32), n2
 
 
 def 시험_FA여럿(P, R, M):
@@ -552,17 +555,19 @@ def 시험_FA여럿(P, R, M):
         Vc = np.ascontiguousarray(np.transpose(R.입력(n, 2)[0], (1, 0, 2)))
         nkv = Kc.shape[0]
         가림 = R.입력(n, 3).astype(np.float16).reshape(-1, nkv)[:T]
-        열, iterj, ntiles, 표, 타일표 = FA계획(T, nkv, Kc.shape[1], D)
+        gqa = q.shape[1] // Kc.shape[1]
+        열, iterj, ntiles, 표, 타일표, n2 = FA계획(T, nkv, Kc.shape[1], D, gqa)
         pq, pK, pV, pm = P.올림(q.reshape(-1)), P.올림(Kc.reshape(-1)), P.올림(Vc.reshape(-1)), P.올림(np.ascontiguousarray(가림))
         px, pmm, pr = P.올림(np.zeros(len(표) * 열 * D, f32)), P.올림(np.zeros(len(표) * 열, f32)), P.올림(np.zeros(len(표) * 열, f32))
         H = q.shape[1]
         p표, p타일, po = P.올림(표.reshape(-1)), P.올림(타일표.reshape(-1)), P.올림(np.zeros(T * H * D, f32))
         sfx, sfx2 = ("", "") if D == 256 else (f"_{D}", str(D))
+        gq = [] if D == 256 else [(0, n2), (0, gqa)]                      # 12단계 — D 128 판의 GQA 인자
         P.띄우기(f"라마FA_MMA{열}{sfx}", (len(표), 1), 128, [(1, pq), (1, pK), (1, pV), (1, pm), (1, px), (1, pmm), (1, pr), (1, p표),
-                                                             (0, T), (0, nkv), (0, iterj), (0, rec["op_params"][0]), (0, H)])
+                                                             (0, T), (0, nkv), (0, iterj), (0, rec["op_params"][0]), (0, H)] + gq)
         P.띄우기(f"라마FA_MMA합치기{sfx2}", (ntiles, 1), D, [(1, px), (1, pmm), (1, pr), (1, p타일), (1, po), (0, T), (0, iterj), (0, 열),
-                                                        (0, H)])
-        견주기(f"FLASH_ATTN_EXT mma D {D} 열 {열} 토큰 {T} kv {nkv} 조각 {len(표)}/타일 {ntiles} ({n['name']})", P.받음(po, T * H * D),
+                                                        (0, H)] + gq)
+        견주기(f"FLASH_ATTN_EXT mma D {D} 열 {열} GQA {gqa}(n2 {n2}) 토큰 {T} kv {nkv} 조각 {len(표)}/타일 {ntiles} ({n['name']})", P.받음(po, T * H * D),
              R.배열(rec))
         P.놓기()
 
