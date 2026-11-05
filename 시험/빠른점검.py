@@ -46,6 +46,9 @@
          받고, 끈다(시험/파이썬API.py --앱 — 임시 자료 · GPU 없이 · 윈도만)
      4u. llama-server 의 로그 확률 흉내(llama.cpp 재현 4단계 — 엔진/라마로그확률.gl · 엔진/시험_라마로그확률.gl)가 서버 코드를 옮긴
          파이썬 참조(시험/라마영수증.py — MSVC partial_sort 의 자리 옮김 · 같은 C 런타임의 expf · logf)와 비트까지 같은가(GPU 없이)
+     4v. llama-server 의 고르기 사슬 흉내(llama.cpp 재현 5단계 — 엔진/라마고르기.gl · 엔진/시험_라마고르기.gl)가 서버 코드를 옮긴
+         파이썬 참조(시험/라마고르기.py — top_k · top_p · min_p · temperature → dist, std::mt19937 · MSVC uniform_real_distribution)와
+         같은 토큰을 고르는가(GPU 없이)
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 --해시갱신
      (31단계 — SPIR-V 는 SPIR-V 백엔드로. GPU 없이 만들 수 있어 PTX 와 같이 CI 에서 본다. 두 백엔드는 4 에서 빌드한 것.
      0.12.0 12-3g-2 — --MoE 행은 CUDA 만이라 SPIR-V 칸이 "-"). 5 와 7(SASS)의 코드는 시험/모듈점검.py
@@ -452,6 +455,18 @@ def 라마로그확률(출력):
     알림("llama-server 로그 확률의 흉내(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
 
 
+def 라마고르기(출력):
+    """4v — llama.cpp 재현 5단계: llama-server 의 고르기 사슬 흉내(글)가 서버 코드를 옮긴 파이썬 참조와 같은 토큰을 고르는가(GPU 없이)"""
+    exe = os.path.join(출력, "시험_라마고르기" + EXE)
+    if not os.path.exists(exe):
+        알림("llama-server 고르기 사슬의 흉내(GPU 없이)", False, "시험_라마고르기 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "라마고르기.py"), exe],
+                      os.path.join(출력, "라마고르기.txt"))
+    알림("llama-server 고르기 사슬의 흉내(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+
+
 def GGUF쓰기(출력):
     """모델 평가 2-1 — 메타데이터만 고친 GGUF(앱/GGUF쓰기.gl)가 키 · 텐서 정보 · 자료 구역 · 맞춤에서 기대와 같은가(GPU 없이)"""
     exe = os.path.join(출력, "시험_GGUF쓰기" + EXE)
@@ -675,6 +690,7 @@ def main():
             채점(출력)
             조각상태(출력)
             라마로그확률(출력)
+            라마고르기(출력)
             건너뛴 = set()
             if a.모듈없이:
                 print("모듈 · SASS: 건너뜀(--모듈없이 — 커널 · 생성기 · 글 고정 커밋이 그대로)", flush=True)
