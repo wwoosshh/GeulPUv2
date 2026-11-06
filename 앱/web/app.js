@@ -1255,6 +1255,13 @@ const DICT = {
   "llama-server의 포트": "llama-server port",
   "llama-server를 띄운 명령줄": "Command line that started llama-server",
   "기록기 설정을 저장했습니다": "Saved the recorder settings",
+  "llama-server의 실행 파일": "llama-server executable",
+  "기록 방식": "Recording mode",
+  "투명(기본) — 요청을 그대로 넘기고 실행 중에 서버에 묻지 않음": "Transparent (default) — forwards requests unchanged and never queries the server during a run",
+  "개입 — 요청에 확률 · 토큰 칸을 더하고 /slots 등을 물음(토큰 있는 영수증)": "Probing — adds probability and token fields to requests and queries /slots etc. (receipts with tokens)",
+  "실행 파일 — 저장할 때 --version 으로 빌드를 읽습니다(따로 도는 프로세스). 검증할 때 같은 빌드의 llama-server 로 프롬프트 토큰을 다시 만듭니다": "Executable — on save, the build is read with --version (a separate process). At verification a llama-server of the same build rebuilds the prompt tokens",
+  "빌드 {} · 모델 {} ({})": "build {} · model {} ({})",
+  "토큰 없음": "no tokens",
   "검증할 영수증": "Receipt to check",
   "프롬프트 {} · 생성 {} 토큰": "prompt {} · {} generated tokens",
   "영수증 없음": "No receipts",
@@ -1262,6 +1269,7 @@ const DICT = {
   "다시 계산할 Vulkan 장치": "Vulkan device to recompute on",
   "첫 장치": "First device",
   "기록기 — llama-server 대신 이 주소로 /completion 요청을 보내면 그 서버로 넘기고 영수증을 남깁니다.": "Recorder — send /completion requests to this address instead of llama-server; the app forwards them to that server and keeps a receipt.",
+  "기록기 — llama-server 대신 이 주소로 /completion · /v1/chat/completions 요청을 보내면 그 서버로 바이트 그대로 넘기고 영수증을 남깁니다. 기본(투명)은 요청을 바꾸지 않고 실행 중에 서버에 묻지 않습니다.": "Recorder — send /completion · /v1/chat/completions requests to this address instead of llama-server; the app forwards them byte for byte and keeps a receipt. The default (transparent) changes no request and never queries the server during a run.",
   "llama-server를 띄운 명령줄 — n_batch · n_ubatch · flash attention · 슬롯 · 프롬프트 캐시 · 체크포인트를 읽습니다": "Command line that started llama-server — n_batch, n_ubatch, flash attention, slots, the prompt cache and checkpoints are read from it",
   "영수증 {}개": "{0} {0|receipt|receipts}",
   "검증": "Check",
@@ -1394,6 +1402,12 @@ const TMX = [
   [/이 대화의 위치 (-?\d+) 가 KV 칸 밖입니다/g, 'position $1 of this conversation is outside the KV cells'],
   [/서버 기록을 읽지 못했습니다\(까닭 (-?\d+)\)/g, 'could not read the server log (reason $1)'],
   [/연속 배치: 다른 요청과 같은 때 셈한 요청 — 서버 기록 (.*?) 의 ubatch 묶음대로 셉니다\(항목 (\d+) · 다른 대화와 섞인 ubatch (\d+) · 이 대화의 출력 (\d+) 줄 · find_slot 견줌 (\d+) 줄 · KV 칸 (\d+)\)/g, 'Continuous batching: this request was computed together with other requests — computing it by the ubatch batches in the server log $1 ($2 items · $3 ubatches mixed with other conversations · $4 output rows of this conversation · $5 find_slot lines compared · $6 KV cells)'],
+  // 31단계 — 투명한 기록기(설정의 경고)
+  ["llama-server 의 실행 파일을 찾지 못했습니다 — 설정의 실행 파일(exe)에 적으세요. 검증할 때 같은 빌드의 llama-server 로 프롬프트 토큰을 다시 만듭니다", "The llama-server executable was not found — enter it in the settings (exe). At verification a llama-server of the same build rebuilds the prompt tokens"],
+  ["실행 파일의 --version 에서 빌드를 읽지 못했습니다 — 채팅 영수증은 응답의 system_fingerprint 로, 다른 영수증은 검증할 때 임시 서버에서 받습니다", "Could not read the build from the executable's --version — chat receipts use the response's system_fingerprint, other receipts get it from the temporary server at verification"],
+  ["명령줄의 -m 에서 모델 파일을 찾지 못했습니다 — 영수증에 모델 경로 · 크기가 없으면 검증하지 못합니다", "The model file from -m in the command line was not found — receipts without a model path and size cannot be verified"],
+  ["개입하는 기록(probes): 요청에 확률 · 토큰 칸(n_probs · return_tokens — 채팅은 logprobs · verbose)을 더하고 실행 중에 /slots · /props · /tokenize 를 묻습니다. n_probs 가 있으면 온도 0 에서도 서버의 고르기 사슬 끝이 바뀝니다(맨 위 logit 이 같은 걸음)", "Probing mode: adds probability and token fields (n_probs · return_tokens — logprobs · verbose for chat) to requests and queries /slots · /props · /tokenize during the run. With n_probs the server's sampler chain end changes even at temperature 0 (steps whose top logits tie)"],
+  ["임시 llama-server 가 빌드(/props)를 알리지 않았습니다", "The temporary llama-server did not report its build (/props)"],
   // 30단계 — 토큰 없는 영수증(요청 · 응답의 글만으로)
   ["토큰 없는 영수증 — 프롬프트 토큰을 llama.cpp 의 셈으로 다시 만드는 중", "Token-less receipt — rebuilding the prompt tokens with llama.cpp's own tokenizer"],
   [/토큰 없는 영수증: 프롬프트 토큰 (\d+) 개\(llama\.cpp 의 셈 — 다시만듦 파일\) · 생성 토큰 (\d+) 개는 재현이 다시 만듭니다/g, 'Token-less receipt: $1 prompt tokens (llama.cpp tokenizer — regenerated file) · the replay regenerates the $2 generated tokens'],
@@ -5049,12 +5063,22 @@ function llamaCard(b, busy) {
   if (!list.some(r => r.name === L.sel)) L.sel = list.length ? list[0].name : '';
   const port = h('input', { type: 'number', class: 'input lab-num', min: '0', max: '65535', value: rec.port ? String(rec.port) : '', placeholder: '8080', 'aria-label': T('llama-server의 포트'), 'data-fk': 'llama-port' });
   const args = h('input', { type: 'text', class: 'input', value: rec.args || '', placeholder: 'llama-server -m … -np 1 -fa on --no-cache-prompt -ngl 99', 'aria-label': T('llama-server를 띄운 명령줄'), spellcheck: 'false', 'data-fk': 'llama-args' });
+  const exe = h('input', { type: 'text', class: 'input', value: rec.exe || '', placeholder: 'C:\\llama\\llama-server.exe', 'aria-label': T('llama-server의 실행 파일'), spellcheck: 'false', 'data-fk': 'llama-exe' });
+  const mode = h('select', { class: 'input', 'aria-label': T('기록 방식'), 'data-fk': 'llama-mode' },
+    h('option', { value: 'transparent', selected: rec.mode !== 'probes' ? true : null }, T('투명(기본) — 요청을 그대로 넘기고 실행 중에 서버에 묻지 않음')),
+    h('option', { value: 'probes', selected: rec.mode === 'probes' ? true : null }, T('개입 — 요청에 확률 · 토큰 칸을 더하고 /slots 등을 물음(토큰 있는 영수증)')));
   const save = async () => {
-    try { await api('/api/llama/recorder', { port: parseInt(port.value || '0', 10) || 0, args: args.value.trim() }); toast(T('기록기 설정을 저장했습니다'), 'ok'); llamaLoad(); }
+    try {
+      const r = await api('/api/llama/recorder', { port: parseInt(port.value || '0', 10) || 0, args: args.value.trim(), exe: exe.value.trim(), mode: mode.value });
+      toast(T('기록기 설정을 저장했습니다'), 'ok');
+      for (const w of (r && r.warnings) || []) toast(TM(w), 'err');
+      llamaLoad();
+    }
     catch (e) { toast(e.message, 'err'); }
   };
+  const derived = rec.build || rec.model ? h('div', { class: 'small muted' }, T`빌드 ${rec.build || '?'} · 모델 ${rec.model ? rec.model.split(/[\\/]/).pop() : '?'} (${rec.model_size > 0 ? fmtBytes(rec.model_size) : '?'})`) : null;
   const sel = h('select', { class: 'input', 'aria-label': T('검증할 영수증'), 'data-fk': 'llama-receipt', disabled: list.length ? null : true, onchange: ev => { L.sel = ev.target.value; } },
-    list.length ? list.map(r => h('option', { value: r.name, selected: r.name === L.sel ? true : null }, `${r.name} · ${r.model} · ` + T`프롬프트 ${fmtNum(r.prompt_tokens)} · 생성 ${fmtNum(r.tokens)} 토큰`))
+    list.length ? list.map(r => h('option', { value: r.name, selected: r.name === L.sel ? true : null }, `${r.name} · ${r.model} · ` + T`프롬프트 ${fmtNum(r.prompt_tokens)} · 생성 ${fmtNum(r.tokens)} 토큰` + (r.tokenless ? ' · ' + T('토큰 없음') : '')))
       : h('option', { value: '' }, T('영수증 없음')));
   const lay = h('select', { class: 'input', 'aria-label': T('다시 계산할 백엔드'), 'data-fk': 'llama-layer', onchange: ev => { L.layer = ev.target.value; L.v++; renderBench(); } },
     h('option', { value: 'cuda', selected: L.layer === 'cuda' ? true : null }, 'CUDA'), h('option', { value: 'vulkan', selected: L.layer === 'vulkan' ? true : null }, 'Vulkan'));
@@ -5065,11 +5089,14 @@ function llamaCard(b, busy) {
     h('div', null, h('h2', null, b.title), h('div', { class: 'eyebrow' }, b.time)),
     h('p', null, b.desc),
     h('div', { class: 'col g8' },
-      h('div', { class: 'small muted' }, T('기록기 — llama-server 대신 이 주소로 /completion 요청을 보내면 그 서버로 넘기고 영수증을 남깁니다.')),
+      h('div', { class: 'small muted' }, T('기록기 — llama-server 대신 이 주소로 /completion · /v1/chat/completions 요청을 보내면 그 서버로 바이트 그대로 넘기고 영수증을 남깁니다. 기본(투명)은 요청을 바꾸지 않고 실행 중에 서버에 묻지 않습니다.')),
       h('div', { class: 'row g8' }, h('span', { class: 'mono small' }, url),
         h('button', { class: 'icon-btn sm', 'aria-label': T('주소 복사'), 'data-tip': T('주소 복사'), 'data-tip-pos': 'top', onclick: () => copyText(url).then(ok => { if (ok) toast(T('복사했습니다'), 'ok'); }) }, I('copy', 's'))),
       h('div', { class: 'row g8' }, h('span', { class: 'small muted nw' }, T('llama-server의 포트')), port, h('button', { class: 'btn sm needs-conn', 'data-fk': 'llama-save', onclick: save }, T('저장'))),
-      h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('llama-server를 띄운 명령줄 — n_batch · n_ubatch · flash attention · 슬롯 · 프롬프트 캐시 · 체크포인트를 읽습니다')), args)),
+      h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('llama-server를 띄운 명령줄 — n_batch · n_ubatch · flash attention · 슬롯 · 프롬프트 캐시 · 체크포인트를 읽습니다')), args),
+      h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('실행 파일 — 저장할 때 --version 으로 빌드를 읽습니다(따로 도는 프로세스). 검증할 때 같은 빌드의 llama-server 로 프롬프트 토큰을 다시 만듭니다')), exe),
+      h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('기록 방식')), mode),
+      derived),
     h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T`영수증 ${fmtNum(list.length)}개`), sel, h('div', { class: 'row g8' }, lay, dev)),
     h('div', null, h('button', {
       class: 'btn run needs-conn', 'data-fk': 'llama-run', disabled: busy || !L.sel ? true : null, onclick: async () => {

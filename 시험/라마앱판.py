@@ -28,6 +28,12 @@ response)을 그대로 쓴다.
       20단계 — Ollama(v0.40.14)를 시험 포트(11500) · 따로 둔 홈 · 모델 폴더(<out> 옆)로 띄워 모델을 싣고, 로그의 "starting llama-server"
       에서 Ollama 가 띄운 llama-server 의 포트 · 인자를 읽어 기록기를 그 서버에 붙인 뒤 2단계 프롬프트를 보낸다(cache_prompt 끔). --견줄 의
       영수증(같은 모델 · 공식 빌드)과 토큰 · 로그 확률이 같은지 본다. 영수증 이름은 <out>/영수증.json.
+  python -I -X utf8 시험/라마앱판.py 투명 <꾸러미> <자료> <out> --서버 … --모델 … --기록폴더 …
+      31단계 — 2단계 설정의 서버에 투명한 기록기(기본)로: 같은 요청(/completion 10 · 채팅 3 — n_probs 없이)을 llama-server 에 직접 보낸
+      것과 기록기로 보낸 것의 응답이 timings 를 빼고 같은가, 스트리밍 채팅 하나의 모은 글이 같은가, 서버 기록의 요청 줄이 클라이언트가
+      보낸 것뿐인가(GET /slots · /props · /tokenize 없음). 영수증 이름은 <out>/영수증.json(이름 10 · h1 … h3 · stream).
+  python -I -X utf8 시험/라마앱판.py 투명대화 <꾸러미> <자료> <out> --서버 … --모델 … --기록폴더 …
+      31단계 — 기본 설정 서버(슬롯 4 · 캐시)에 투명한 기록기로 9단계의 대화 h1 … h5. 서버 기록의 요청 줄이 다섯뿐인가.
   python -I -X utf8 시험/라마앱판.py 벗기기 <자료> <기록 out> <새 자료> <새 out>
       30단계 — <기록 out>/영수증.json 의 영수증(geulpu-llama-receipt/1)에서 토큰 없는 사본(geulpu-llama-receipt/2)을 <새 자료>\\영수증\\ 에
       쓴다: 요청 몸은 기록기가 더한 칸(n_probs · return_tokens — 채팅은 logprobs · top_logprobs · return_tokens · verbose)을 뺀 것, 응답은
@@ -37,6 +43,7 @@ response)을 그대로 쓴다.
   python -I -X utf8 시험/라마앱판.py 다시견주기 <자료> <새 자료> <새 out>
       30단계 — 앱이 토큰 없는 사본을 검증하며 적은 다시만듦 파일(<새 자료>\\영수증\\다시만듦)의 프롬프트 토큰 · 생성 토큰이 원래 영수증과
       같은가.
+      --기록폴더 를 주면(31단계) 원래 영수증 대신 2단계 기록(run0_<이름>_r0.json)과 견준다(자료 는 쓰지 않음).
   python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <대화 out> <새 out> --단계 7
       7-2 의 바꾼 영수증 셋(c3 의 cache_n + 1 · c3 의 서버 포트 · c3 의 슬롯 상태에 다른 슬롯) — 7-1 의 검증 뒤에(같은 슬롯의 앞 영수증이 된다).
 마지막 줄 "합계: …".
@@ -44,9 +51,12 @@ response)을 그대로 쓴다.
 import argparse
 import json
 import os
+import re
+import socket
 import struct
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -158,7 +168,7 @@ def 기록하기(a):
             if srv.poll() is not None or time.time() - t0 > 600:
                 raise RuntimeError("llama-server 가 준비되지 않았다")
             time.sleep(0.5)
-        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발)})
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "mode": "probes", "args": "llama-server -m " + a.모델 + " " + " ".join(깃발)})
         영수증폴더 = os.path.join(a.자료, "영수증")
         for q, name in enumerate(a.이름):
             want = 기록(name)
@@ -239,7 +249,7 @@ def 대화하기(a):
     표 = {}
     try:
         srv = 서버띄우기(a, 깃발대화, os.path.join(a.out, "llama-server.log"))
-        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "mode": "probes", "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
         영수증폴더 = os.path.join(a.자료, "영수증")
         꼬리 = "<|im_end|>\n<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n<think>\n"
         프롬프트, 응답 = {}, {}
@@ -278,7 +288,7 @@ def 채팅하기(a):
     표 = {}
     try:
         srv = 서버띄우기(a, 깃발대화, os.path.join(a.out, "llama-server.log"))
-        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "mode": "probes", "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
         영수증폴더 = os.path.join(a.자료, "영수증")
         S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
         U = ["CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "둘의 차이가 커널 작성에 주는 영향 하나만."]
@@ -329,7 +339,7 @@ def 흐름채팅하기(a):
     표 = {}
     try:
         srv = 서버띄우기(a, 깃발, os.path.join(a.out, "llama-server.log"))
-        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발)})
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "mode": "probes", "args": "llama-server -m " + a.모델 + " " + " ".join(깃발)})
         영수증폴더 = os.path.join(a.자료, "영수증")
         생각끔 = {"enable_thinking": False}
         요청들 = [("s1", "Answer with one word: what color is the sky on a clear day?", 64, 0.0, 생각끔),
@@ -401,7 +411,7 @@ def 올라마하기(a):
         인자 = cmd.split("llama-server.exe", 1)[1].strip()
         print(f"Ollama 의 llama-server: 포트 {라마포트} · 인자 {인자}", flush=True)
         s = 앱(a.꾸러미, a.자료, a.포트)
-        묻기(a.포트, "/api/llama/recorder", {"port": 라마포트, "args": "llama-server " + 인자})
+        묻기(a.포트, "/api/llama/recorder", {"port": 라마포트, "mode": "probes", "args": "llama-server " + 인자})
         영수증폴더 = os.path.join(a.자료, "영수증")
         for name in a.이름:
             want = 기록(name)
@@ -437,7 +447,7 @@ def 슬롯하기(a):
     표 = {}
     try:
         srv = 서버띄우기(a, 깃발대화, os.path.join(a.out, "llama-server.log"))
-        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "mode": "probes", "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
         영수증폴더 = os.path.join(a.자료, "영수증")
 
         def 긴글(주제, n):
@@ -585,6 +595,244 @@ def 빌드번호(b):
     return "b11963" if b.startswith("b1-39febd2ad") else b.split("-")[0]       # Ollama v0.40.14 의 llama-server = b11963 의 커밋
 
 
+class 엿보기(threading.Thread):
+    """31단계 — 기록기와 llama-server 사이의 TCP 프록시: 기록기가 서버에 보낸 HTTP 요청마다 (방법, 길, 몸 바이트)를 적는다. llama-server
+    (b12008)는 요청을 기록에 적지 않으므로, 기록기가 서버에 보낸 것이 클라이언트의 요청뿐인지(그리고 몸이 바이트까지 같은지)는 이것으로 본다.
+    기록기는 요청마다 이음 하나(Connection: close)"""
+
+    def __init__(self, 위포트, 아래포트):
+        super().__init__(daemon=True)
+        self.위포트, self.아래포트, self.보인, self.멈춤 = 위포트, 아래포트, [], False
+        self.srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.srv.bind(("127.0.0.1", 아래포트))
+        self.srv.listen(16)
+        self.srv.settimeout(0.5)
+
+    def run(self):
+        while not self.멈춤:
+            try:
+                c, _ = self.srv.accept()
+            except socket.timeout:
+                continue
+            threading.Thread(target=self.하나, args=(c,), daemon=True).start()
+        self.srv.close()
+
+    def 하나(self, c):
+        u = socket.create_connection(("127.0.0.1", self.위포트))
+        try:
+            buf = b""
+            while b"\r\n\r\n" not in buf:
+                d = c.recv(65536)
+                if not d:
+                    break
+                buf += d
+            head, _, body = buf.partition(b"\r\n\r\n")
+            줄 = head.split(b"\r\n")
+            m, pth = (줄[0].split() + [b"", b""])[:2]
+            n = 0
+            for h in 줄[1:]:
+                k, _, v = h.partition(b":")
+                if k.strip().lower() == b"content-length":
+                    n = int(v.strip() or 0)
+            while len(body) < n:
+                d = c.recv(65536)
+                if not d:
+                    break
+                body += d
+            self.보인.append((m.decode(), pth.decode(), body[:n]))
+            u.sendall(head + b"\r\n\r\n" + body)
+            while True:
+                d = u.recv(65536)
+                if not d:
+                    break
+                c.sendall(d)
+        finally:
+            try:
+                c.close()
+            finally:
+                u.close()
+
+    def 요약(self):
+        표 = {}
+        for m, pth, _ in self.보인:
+            표[f"{m} {pth}"] = 표.get(f"{m} {pth}", 0) + 1
+        return 표
+
+
+def 몸바이트(몸):
+    return json.dumps(몸, ensure_ascii=False).encode("utf-8")               # 묻기 · 흐름글이 보내는 그대로
+
+
+def 빼고같은가(a, b, 빼기=("timings", "id", "created")):
+    da = {k: v for k, v in a.items() if k not in 빼기}
+    db = {k: v for k, v in b.items() if k not in 빼기}
+    if da == db:
+        return True, ""
+    다른 = [k for k in sorted(set(da) | set(db)) if da.get(k) != db.get(k)]
+    return False, "다른 칸: " + ", ".join(다른)
+
+
+def 흐름글(포트, 길, 몸):
+    r = urllib.request.Request(f"http://127.0.0.1:{포트}{길}", data=json.dumps(몸, ensure_ascii=False).encode("utf-8"), method="POST",
+                               headers={"Content-Type": "application/json"})
+    out, n = [], 0
+    for ln in urllib.request.urlopen(r, timeout=600).read().decode("utf-8", "replace").splitlines():
+        if ln.startswith("data: ") and ln[6:].strip() != "[DONE]":
+            n += 1
+            for ch in json.loads(ln[6:]).get("choices") or []:
+                out.append((ch.get("delta") or {}).get("content") or "")
+    return "".join(out), n
+
+
+def 투명설정(a, 깃발들, 포트):
+    r = 묻기(a.포트, "/api/llama/recorder", {"port": 포트, "exe": a.서버, "mode": "transparent", "args": a.서버 + " -m " + a.모델 + " " + " ".join(깃발들)})
+    print(f"기록기 설정: 방식 {r.get('mode')} · 빌드 {r.get('build')} · 모델 {os.path.basename(r.get('model') or '')} ({r.get('model_size')}) · 경고 {r.get('warnings')}", flush=True)
+    return r
+
+
+def 투명하기(a):
+    """31단계 — 투명한 기록기(기본): 직접 보낸 응답과 같은가 · 서버 기록의 요청 줄"""
+    폴더들 = a.기록폴더.split(",")
+
+    def 기록(name):
+        for d in 폴더들:
+            p = os.path.join(d, f"run0_{name}_r0.json")
+            if os.path.exists(p):
+                return json.load(open(p, encoding="utf-8"))
+        raise FileNotFoundError(name)
+
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표, 같음, 다름, 보낸몸들 = {}, 0, [], []
+    log경로 = os.path.join(a.out, "llama-server.log")
+    엿 = 엿보기(a.라마포트, a.라마포트 + 1)
+    엿.start()
+    try:
+        srv = 서버띄우기(a, 깃발, log경로)
+        r0 = 투명설정(a, 깃발, a.라마포트 + 1)
+        설정됨 = r0.get("mode") == "transparent" and str(r0.get("build", "")).startswith("b") and not r0.get("warnings")
+        영수증폴더 = os.path.join(a.자료, "영수증")
+        for name in 이름들10:                                      # /completion — n_probs 없이
+            want = 기록(name)
+            몸 = {"prompt": want["prompt_text"], "n_predict": 256, "temperature": 0}
+            rd = 묻기(a.라마포트, "/completion", 몸)
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            rr = 묻기(a.포트, "/llama/completion", 몸)
+            보낸몸들.append(("POST", "/completion", 몸바이트(몸)))
+            ok, 왜 = 빼고같은가(rd, rr)
+            같음 += ok
+            if not ok:
+                다름.append((name, 왜))
+            표[name] = 새영수증(영수증폴더, 앞)
+            print(f"{name}: 직접 · 기록기 응답 {'같음' if ok else '다름 — ' + 왜} · 글 {len(rr.get('content', ''))} 자 · 영수증 {표[name]}", flush=True)
+        S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
+        U = ["CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "둘의 차이가 커널 작성에 주는 영향 하나만."]
+        m = [S]
+        for k, u in enumerate(U):                                  # 채팅 — 직접 보낸 답을 다음 차례에 잇는다
+            m = m + [{"role": "user", "content": u}]
+            몸 = {"messages": m, "max_tokens": 64, "temperature": 0.0, "seed": k + 1, "stream": False, "chat_template_kwargs": {"enable_thinking": False}}
+            rd = 묻기(a.라마포트, "/v1/chat/completions", 몸)
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            rr = 묻기(a.포트, "/llama/v1/chat/completions", 몸)
+            보낸몸들.append(("POST", "/v1/chat/completions", 몸바이트(몸)))
+            ok, 왜 = 빼고같은가(rd, rr)
+            같음 += ok
+            if not ok:
+                다름.append((f"h{k + 1}", 왜))
+            표[f"h{k + 1}"] = 새영수증(영수증폴더, 앞)
+            답 = rd["choices"][0]["message"].get("content") or ""
+            print(f"h{k + 1}: 직접 · 기록기 응답 {'같음' if ok else '다름 — ' + 왜} · 답 {답[:30]!r} · 영수증 {표[f'h{k + 1}']}", flush=True)
+            m = m + [{"role": "assistant", "content": 답}]
+        몸 = {"messages": m[:2] + [{"role": "user", "content": "한 줄로."}], "max_tokens": 32, "temperature": 0.0, "seed": 9, "stream": True,
+              "chat_template_kwargs": {"enable_thinking": False}}
+        gd, nd = 흐름글(a.라마포트, "/v1/chat/completions", 몸)
+        앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+        gr, nr = 흐름글(a.포트, "/llama/v1/chat/completions", 몸)
+        보낸몸들.append(("POST", "/v1/chat/completions", 몸바이트(몸)))
+        ok = gd == gr and nd == nr
+        같음 += ok
+        if not ok:
+            다름.append(("stream", f"조각 {nd} · {nr}, 글 같음 {gd == gr}"))
+        표["stream"] = 새영수증(영수증폴더, 앞)
+        print(f"stream: 직접 · 기록기 모은 글 {'같음' if ok else '다름'}(조각 {nd} · {nr}) · 영수증 {표['stream']}", flush=True)
+        time.sleep(2.0)                                            # 영수증 마무리 스레드
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+            srv.wait(30)
+        s.닫기()
+        엿.멈춤 = True
+    남 = 엿.요약()
+    깨끗 = 엿.보인 == 보낸몸들                                           # 서버에 간 것 = 클라이언트의 요청뿐, 몸은 바이트까지 같음
+    꼴 = {}
+    for rid in 표.values():
+        d = json.load(open(os.path.join(a.자료, "영수증", rid + ".json"), encoding="utf-8"))
+        꼴[d.get("format")] = 꼴.get(d.get("format"), 0) + 1
+        if "prompt_tokens" in d or "tokens" in d.get("response", {}) and d["response"].get("tokens"):
+            다름.append((rid, "토큰 없는 영수증에 토큰이 있다"))
+    print(f"기록기가 서버에 보낸 요청(프록시로 봄): {남} — 클라이언트의 요청뿐이고 몸이 바이트까지 같음 {깨끗}(보낸 {len(보낸몸들)} · 본 {len(엿.보인)})")
+    print(f"영수증의 꼴: {꼴}")
+    print(f"합계: 요청 {len(표)} · 직접 보낸 것과 같음 {같음} · 영수증 {sum(1 for v in 표.values() if v)} · 설정 {설정됨} · 다름 {len(다름)}")
+    for x in 다름[:10]:
+        print("  ", x)
+    return 0 if 같음 == len(표) and 깨끗 and 설정됨 and not 다름 and all(표.values()) else 1
+
+
+def 투명대화하기(a):
+    """31단계 — 기본 설정 서버에 투명한 기록기로 9단계의 대화 h1 … h5"""
+    깃발대화 = ["-c", "32768"]
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표, 보낸몸들 = {}, []
+    log경로 = os.path.join(a.out, "llama-server.log")
+    엿 = 엿보기(a.라마포트, a.라마포트 + 1)
+    엿.start()
+    try:
+        srv = 서버띄우기(a, 깃발대화, log경로)
+        r0 = 투명설정(a, 깃발대화, a.라마포트 + 1)
+        설정됨 = r0.get("mode") == "transparent" and not r0.get("warnings")
+        영수증폴더 = os.path.join(a.자료, "영수증")
+        S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
+        U = ["CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "둘의 차이가 커널 작성에 주는 영향 하나만."]
+
+        def 보내기(이름, msgs, 씨앗):
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            몸 = {"messages": msgs, "max_tokens": 64, "temperature": 0.0, "seed": 씨앗, "stream": False, "chat_template_kwargs": {"enable_thinking": False}}
+            r = 묻기(a.포트, "/llama/v1/chat/completions", 몸)
+            보낸몸들.append(("POST", "/v1/chat/completions", 몸바이트(몸)))
+            답 = r["choices"][0]["message"].get("content") or ""
+            표[이름] = 새영수증(영수증폴더, 앞)
+            tm = r.get("timings") or {}
+            print(f"{이름}: 프롬프트 {tm.get('prompt_n')} · cache_n {tm.get('cache_n')} · 생성 {tm.get('predicted_n')} · 답 {답[:30]!r} · 영수증 {표[이름]}", flush=True)
+            return 답
+
+        m = [S, {"role": "user", "content": U[0]}]
+        d1 = 보내기("h1", m, 1)
+        m = m + [{"role": "assistant", "content": d1}, {"role": "user", "content": U[1]}]
+        d2 = 보내기("h2", m, 2)
+        m = m + [{"role": "assistant", "content": d2}, {"role": "user", "content": U[2]}]
+        보내기("h3", m, 3)
+        보내기("h4", list(m), 4)
+        보내기("h5", m[:3] + [{"role": "user", "content": "다른 질문 — Intel GPU 는?"}], 5)
+        time.sleep(2.0)
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+            srv.wait(30)
+        s.닫기()
+        엿.멈춤 = True
+    남 = 엿.요약()
+    깨끗 = 엿.보인 == 보낸몸들
+    print(f"기록기가 서버에 보낸 요청(프록시로 봄): {남} — 클라이언트의 요청뿐이고 몸이 바이트까지 같음 {깨끗}(보낸 {len(보낸몸들)} · 본 {len(엿.보인)})")
+    print(f"합계: 요청 {len(표)} · 영수증 {sum(1 for v in 표.values() if v)} · 설정 {설정됨}")
+    return 0 if 깨끗 and 설정됨 and all(표.values()) else 1
+
+
 def 벗기기(a):
     """30단계 — 토큰 없는 사본(geulpu-llama-receipt/2): 기록기가 개입하지 않았다면 남았을 것만"""
     표 = json.load(open(os.path.join(a.기록out, "영수증.json"), encoding="utf-8"))
@@ -631,7 +879,16 @@ def 다시견주기(a):
     프같음 = 생같음 = 생없음 = 0
     다름 = []
     for name, rid in 표.items():
-        d = json.load(open(os.path.join(a.자료, "영수증", rid + ".json"), encoding="utf-8"))
+        if a.기록폴더:                                             # 31단계 — 2단계 기록(prompt_tokens · response.tokens)과
+            d = None
+            for 폴 in a.기록폴더.split(","):
+                q = os.path.join(폴, f"run0_{name}_r0.json")
+                if os.path.exists(q):
+                    d = json.load(open(q, encoding="utf-8"))
+            if d is None:
+                continue
+        else:
+            d = json.load(open(os.path.join(a.자료, "영수증", rid + ".json"), encoding="utf-8"))
         p = os.path.join(a.새자료, "영수증", "다시만듦", rid + ".json")
         if not os.path.exists(p):
             다름.append((name, "다시만듦 파일 없음"))
@@ -773,7 +1030,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="할일", required=True)
-    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마", "슬롯"):
+    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마", "슬롯", "투명", "투명대화"):
         q = sub.add_parser(n)
         q.add_argument("꾸러미")
         q.add_argument("자료")
@@ -785,7 +1042,7 @@ def main():
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
             q.add_argument("--견줄", required=True)
-        elif n in ("기록", "대화", "채팅", "흐름채팅", "슬롯"):
+        elif n in ("기록", "대화", "채팅", "흐름채팅", "슬롯", "투명", "투명대화"):
             q.add_argument("--서버", required=True)
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
@@ -817,9 +1074,10 @@ def main():
     q.add_argument("자료")
     q.add_argument("새자료")
     q.add_argument("out")
+    q.add_argument("--기록폴더", default="")                          # 31단계 — 2단계 기록과 견준다
     a = p.parse_args()
     return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "올라마": 올라마하기, "슬롯": 슬롯하기,
-            "바꾸기": 바꾸기, "벗기기": 벗기기, "다시견주기": 다시견주기}[a.할일](a)
+            "바꾸기": 바꾸기, "벗기기": 벗기기, "다시견주기": 다시견주기, "투명": 투명하기, "투명대화": 투명대화하기}[a.할일](a)
 
 
 if __name__ == "__main__":
