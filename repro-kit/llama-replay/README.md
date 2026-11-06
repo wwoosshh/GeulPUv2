@@ -5,8 +5,9 @@
 GeulPU can recompute a run that an **unmodified llama-server** produced, with its own GPU kernels, and compare every generated token
 and every step's top-20 log-probabilities **bit for bit** ([docs/llama-replay.md](../../docs/llama-replay.md)). The runs in this kit
 were made by llama.cpp b12008 (the official Windows CUDA build) on an NVIDIA RTX 4070 Ti. The recomputation emulates that GPU's
-arithmetic, so it should give the same bits on **any** GPU — including AMD and Intel GPUs through Vulkan. We have checked the RTX 4070 Ti
-(CUDA and Vulkan) and an Intel UHD 770. This kit is for checking another GPU, in particular an **AMD** one.
+arithmetic, so it should give the same bits on **any** GPU — including AMD and Intel GPUs through Vulkan. We have checked all six receipts
+on the RTX 4070 Ti (CUDA and Vulkan), and the three Qwen3.5-9B receipts also on an Intel UHD 770 (an integrated GPU). This kit is for
+checking another GPU, in particular an **AMD** one.
 
 | | |
 |---|---|

@@ -5,8 +5,8 @@
 GeulPU 는 **고치지 않은 llama-server** 가 만든 실행을 자기 GPU 커널로 다시 계산해, 생성한 토큰마다와 스텝마다의 상위 20 로그확률을
 **비트까지** 견줍니다([docs/llama-replay.md](../../docs/llama-replay.md)). 이 키트의 실행은 llama.cpp b12008(공식 Windows CUDA 빌드)이
 NVIDIA RTX 4070 Ti 에서 만든 것입니다. 다시 계산은 그 GPU 의 산술을 에뮬레이션하므로 **어느** GPU 에서든 — Vulkan 으로 AMD · Intel GPU
-에서도 — 같은 비트가 나와야 합니다. 확인한 것은 RTX 4070 Ti(CUDA · Vulkan)와 Intel UHD 770 입니다. 이 키트는 다른 GPU, 특히 **AMD**
-GPU 를 확인하려는 것입니다.
+에서도 — 같은 비트가 나와야 합니다. 영수증 여섯 모두 RTX 4070 Ti(CUDA · Vulkan)에서, Qwen3.5-9B 의 셋은 Intel UHD 770(내장 GPU)에서도
+확인했습니다. 이 키트는 다른 GPU, 특히 **AMD** GPU 를 확인하려는 것입니다.
 
 | | |
 |---|---|

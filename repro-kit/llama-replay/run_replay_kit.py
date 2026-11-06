@@ -97,6 +97,19 @@ def find_app(arg):
     raise KitError("GeulPU not found — install it (pip install geulpu==0.22.0) or unpack the Windows zip and pass --app <GeulPU.exe>")
 
 
+def scrub(x, home=os.path.expanduser("~")):
+    """the result file is sent back: drop the user's home folder from messages (paths in errors)"""
+    if isinstance(x, str):
+        if len(home) > 3:
+            x = x.replace(home, "~").replace(home.replace("\\", "/"), "~")
+        return x
+    if isinstance(x, list):
+        return [scrub(v) for v in x]
+    if isinstance(x, dict):
+        return {k: scrub(v) for k, v in x.items()}
+    return x
+
+
 def free_port(preferred):
     for p in [preferred] + list(range(preferred + 1, preferred + 50)):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -216,7 +229,7 @@ def main():
             log.close()
     dev = ((env.get("device") or {}).get("name") or (env.get("device") or {}).get("gpu") or "gpu").replace(" ", "-")
     out = a.out or f"result-{''.join(c for c in dev if c.isalnum() or c in '-_')[:40]}-{datetime.datetime.now():%Y%m%d-%H%M%S}.json"
-    rep = {"kit": KIT, "time": datetime.datetime.now().isoformat(timespec="seconds"), "environment": env, "results": results}
+    rep = scrub({"kit": KIT, "time": datetime.datetime.now().isoformat(timespec="seconds"), "environment": env, "results": results})
     json.dump(rep, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     if a.keep or "_error" in results:
         print("data folder kept:", data)
