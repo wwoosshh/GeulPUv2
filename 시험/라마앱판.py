@@ -1022,11 +1022,13 @@ def 멈춤하기(a):
                                                       "chat_template_kwargs": {"enable_thinking": False}})
         같음 += 한번("c1_no", "/v1/chat/completions", {"messages": m, "max_tokens": 64, "temperature": 0.0, "seed": 1, "stop": "@@@@",
                                                        "chat_template_kwargs": {"enable_thinking": False}})
-        # 탐침 기록기 — n_probs 를 준 /completion: 서버가 로그 확률 칸의 끝을 멈춤 글의 토큰 수만큼 자른다
+        # 탐침 기록기 — n_probs 를 준 /completion: 서버가 로그 확률 칸의 끝을 멈춤 글의 토큰 수만큼 자른다. 클라이언트가 n_probs ·
+        # return_tokens 를 주면 기록기는 몸에 더하지 않는다 — 직접 보낸 응답과 같아야 한다
         묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "exe": a.서버, "mode": "probes", "args": a.서버 + " -m " + a.모델 + " " + " ".join(깃발)})
         for name in ("code", "math"):
             want = 기록(name)
-            같음 += 한번(f"p_{name}", "/completion", {"prompt": want["prompt_text"], "n_predict": 256, "temperature": 0, "stop": ["\n\n"]})
+            같음 += 한번(f"p_{name}", "/completion", {"prompt": want["prompt_text"], "n_predict": 256, "temperature": 0, "stop": ["\n\n"],
+                                                      "n_probs": 5, "return_tokens": True})
         time.sleep(2.0)
         json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     finally:
