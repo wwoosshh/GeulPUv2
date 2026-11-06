@@ -17,6 +17,10 @@
 앱에 든 **재현성 검증**(벤치마크 화면 — DeepSeek-R1-Distill-Qwen-7B Q8_0, 수학 32 문제)을 먼저 돌려 보면 좋다. 이 검증은 RTX 3080 Ti ·
 4070 Ti · 5070, H100 MIG 구획, Radeon RX 9060 XT, Intel 내장 그래픽에서 이미 같았다. 키트도 `--builtin-check` 로 함께 돌린다.
 
+**독립 검증 결과.** 2026년 11월에 마드리드 공과대학교 GING 그룹이 이 키트와 그들 자신의 시험 모음을 RTX 6000 Ada · H100 MIG 구획 ·
+A100 MIG 구획에서 돌렸다: 카드마다 144/144 이고, 그들 모음의 검사(동시 대화 8 개 · 추측 디코딩 켬과 끔 · 캐시 축출 · Llama 3.1)도 모두
+통과했다. 보고서와 재현 묶음은 [independent/upm-ging-2026-11](independent/upm-ging-2026-11/README.ko.md) 에 있다.
+
 ## 1. GeulPU 0.21.0 설치
 
 ```bash
@@ -94,6 +98,9 @@ python3 run_kit.py --models-dir ~/geulpu-models
 - `logits differ from step k` — 처음 `k` 걸음은 같고 `k` 걸음에서 달라졌다. 보통 그 뒤의 답도 달라진다.
 - `note: the server's computation path differs from the reference's` — 앱이 이 모델에 다른 계산 길을 골랐다(이를테면 8비트 KV
   캐시를 쓰지 않음). 그것만으로도 다를 수 있다. 결과 파일에 둘 다 남는다.
+
+키트의 판정은 토큰과 로짓뿐이고 응답의 글은 견주지 않는다. 도구 호출의 id(`call_…`)와 응답의 `created` 시각은 호출마다 새 값이
+되게 만든 것이라, 같은 요청은 같은 토큰 · 같은 로짓을 내지만 응답 글까지 같지는 않다.
 
 한 기계에서 하나씩 보낸 답과 한꺼번에 보낸 답이 다르면 묶음이 결과를 바꾼 것이고, GeulPU 의 정밀도 계약에서는 일어나지 않아야 한다.
 어느 쪽이든 결과 파일과 함께 알려 주면 된다.
