@@ -53,6 +53,12 @@ response)을 그대로 쓴다.
       --기록폴더 를 주면(31단계) 원래 영수증 대신 2단계 기록(run0_<이름>_r0.json)과 견준다(자료 는 쓰지 않음).
   python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <대화 out> <새 out> --단계 7
       7-2 의 바꾼 영수증 셋(c3 의 cache_n + 1 · c3 의 서버 포트 · c3 의 슬롯 상태에 다른 슬롯) — 7-1 의 검증 뒤에(같은 슬롯의 앞 영수증이 된다).
+  python -I -X utf8 시험/라마앱판.py 투명흐름 <꾸러미> <자료> <out> --서버 … --모델 … --기록폴더 …
+      33단계 — 2단계 설정의 서버에 투명한 기록기로 스트리밍 요청: /completion 10(2단계 프롬프트 · 온도 0) · 채팅 h1 … h3 · 로그 확률을
+      요청한 둘(p_math — n_probs 5, p_chat — logprobs · top_logprobs 5) · 생각 켬(think) · 온도 0.8(t08). 직접 보낸 스트림과 모은 글 ·
+      조각 수가 같은가, 기록기가 서버에 보낸 것이 클라이언트의 요청뿐인가(프록시). 영수증 이름은 <out>/영수증.json.
+  python -I -X utf8 시험/라마앱판.py 투명흐름대화 <꾸러미> <자료> <out> --서버 … --모델 … --기록폴더 …
+      33단계 — 기본 설정 서버(슬롯 4 · 캐시)에 투명한 기록기로 스트리밍 채팅 대화 h1 … h5(h2 는 stream_options.include_usage).
 마지막 줄 "합계: …".
 """
 import argparse
@@ -840,6 +846,165 @@ def 투명대화하기(a):
     return 0 if 깨끗 and 설정됨 and all(표.values()) else 1
 
 
+def 흐름글완성(포트, 길, 몸):
+    """33단계 — /completion 스트림의 모은 글과 조각 수"""
+    r = urllib.request.Request(f"http://127.0.0.1:{포트}{길}", data=json.dumps(몸, ensure_ascii=False).encode("utf-8"), method="POST",
+                               headers={"Content-Type": "application/json"})
+    out, n = [], 0
+    for ln in urllib.request.urlopen(r, timeout=600).read().decode("utf-8", "replace").splitlines():
+        if ln.startswith("data: ") and ln[6:].strip() != "[DONE]":
+            n += 1
+            out.append(json.loads(ln[6:]).get("content") or "")
+    return "".join(out), n
+
+
+def 투명흐름하기(a):
+    """33단계 — 투명한 기록기로 스트리밍 요청: 직접 보낸 스트림과 같은가 · 서버에 간 요청"""
+    폴더들 = a.기록폴더.split(",")
+
+    def 기록(name):
+        for d in 폴더들:
+            q = os.path.join(d, f"run0_{name}_r0.json")
+            if os.path.exists(q):
+                return json.load(open(q, encoding="utf-8"))
+        raise FileNotFoundError(name)
+
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표, 같음, 다름, 보낸몸들 = {}, 0, [], []
+    log경로 = os.path.join(a.out, "llama-server.log")
+    엿 = 엿보기(a.라마포트, a.라마포트 + 1)
+    엿.start()
+    try:
+        srv = 서버띄우기(a, 깃발, log경로)
+        r0 = 투명설정(a, 깃발, a.라마포트 + 1)
+        설정됨 = r0.get("mode") == "transparent" and str(r0.get("build", "")).startswith("b") and not r0.get("warnings")
+        영수증폴더 = os.path.join(a.자료, "영수증")
+
+        def 한번(이름, 길, 몸):
+            채팅 = 길.endswith("/chat/completions")
+            모으기 = 흐름글 if 채팅 else 흐름글완성
+            gd, nd = 모으기(a.라마포트, 길, 몸)
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            gr, nr = 모으기(a.포트, "/llama" + 길, 몸)
+            보낸몸들.append(("POST", 길, 몸바이트(몸)))
+            ok = gd == gr and nd == nr
+            표[이름] = 새영수증(영수증폴더, 앞)
+            print(f"{이름}: 직접 · 기록기 모은 글 {'같음' if ok else '다름'}(조각 {nd} · {nr}) · 글 {len(gr)} 자 · 영수증 {표[이름]}", flush=True)
+            if not ok:
+                다름.append((이름, f"조각 {nd} · {nr}, 글 같음 {gd == gr}"))
+            return ok, gr
+
+        for name in a.이름:                                        # /completion — 2단계 프롬프트, 온도 0
+            want = 기록(name)
+            ok, _ = 한번(name, "/completion", {"prompt": want["prompt_text"], "n_predict": 256, "temperature": 0, "stream": True})
+            같음 += ok
+        S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
+        U = ["CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "둘의 차이가 커널 작성에 주는 영향 하나만."]
+        m = [S]
+        for k, u in enumerate(U):                                  # 채팅 — 모은 답을 다음 차례에 잇는다
+            m = m + [{"role": "user", "content": u}]
+            ok, 답 = 한번(f"h{k + 1}", "/v1/chat/completions", {"messages": m, "max_tokens": 64, "temperature": 0.0, "seed": k + 1, "stream": True,
+                                                              "chat_template_kwargs": {"enable_thinking": False}})
+            같음 += ok
+            m = m + [{"role": "assistant", "content": 답}]
+        want = 기록("math")                                        # 로그 확률을 요청한 스트림 둘
+        ok, _ = 한번("p_math", "/completion", {"prompt": want["prompt_text"], "n_predict": 96, "temperature": 0, "n_probs": 5, "stream": True})
+        같음 += ok
+        ok, _ = 한번("p_chat", "/v1/chat/completions", {"messages": [S, {"role": "user", "content": "GPU 의 공유 메모리를 한 문단으로 설명해 줘."}],
+                                                         "max_tokens": 64, "temperature": 0.0, "seed": 7, "stream": True, "logprobs": True,
+                                                         "top_logprobs": 5, "chat_template_kwargs": {"enable_thinking": False}})
+        같음 += ok
+        ok, _ = 한번("think", "/v1/chat/completions", {"messages": [S, {"role": "user", "content": "17 × 23 은?"}], "max_tokens": 64,
+                                                        "temperature": 0.0, "seed": 8, "stream": True, "chat_template_kwargs": {"enable_thinking": True}})
+        같음 += ok
+        ok, _ = 한번("t08", "/v1/chat/completions", {"messages": [S, {"role": "user", "content": "warp 와 wavefront 의 차이를 한 줄로."}],
+                                                      "max_tokens": 48, "temperature": 0.8, "seed": 3, "stream": True,
+                                                      "chat_template_kwargs": {"enable_thinking": False}})
+        같음 += ok
+        time.sleep(2.0)                                            # 영수증 마무리 스레드
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+            srv.wait(30)
+        s.닫기()
+        엿.멈춤 = True
+    남 = 엿.요약()
+    깨끗 = 엿.보인 == 보낸몸들
+    꼴, 나눔 = {}, {}
+    for 이름, rid in 표.items():
+        d = json.load(open(os.path.join(a.자료, "영수증", rid + ".json"), encoding="utf-8"))
+        꼴[d.get("format")] = 꼴.get(d.get("format"), 0) + 1
+        r = d.get("response") or {}
+        나눔[이름] = (r.get("split"), r.get("finish_reason"), len(r.get("completion_probabilities") or []))
+    print(f"기록기가 서버에 보낸 요청(프록시로 봄): {남} — 클라이언트의 요청뿐이고 몸이 바이트까지 같음 {깨끗}(보낸 {len(보낸몸들)} · 본 {len(엿.보인)})")
+    print(f"영수증의 꼴: {꼴}")
+    print("영수증의 split · finish_reason · 로그 확률 칸 수: " + " · ".join(f"{k} {v}" for k, v in 나눔.items()))
+    print(f"합계: 요청 {len(표)} · 직접 보낸 것과 같음 {같음} · 영수증 {sum(1 for v in 표.values() if v)} · 설정 {설정됨} · 다름 {len(다름)}")
+    for x in 다름[:10]:
+        print("  ", x)
+    return 0 if 같음 == len(표) and 깨끗 and 설정됨 and not 다름 and all(표.values()) else 1
+
+
+def 투명흐름대화하기(a):
+    """33단계 — 기본 설정 서버에 투명한 기록기로 스트리밍 채팅 대화 h1 … h5"""
+    깃발대화 = ["-c", "32768"]
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표, 보낸몸들 = {}, []
+    log경로 = os.path.join(a.out, "llama-server.log")
+    엿 = 엿보기(a.라마포트, a.라마포트 + 1)
+    엿.start()
+    try:
+        srv = 서버띄우기(a, 깃발대화, log경로)
+        r0 = 투명설정(a, 깃발대화, a.라마포트 + 1)
+        설정됨 = r0.get("mode") == "transparent" and not r0.get("warnings")
+        영수증폴더 = os.path.join(a.자료, "영수증")
+        S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
+        U = ["CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "둘의 차이가 커널 작성에 주는 영향 하나만."]
+
+        def 보내기(이름, msgs, 씨앗, 쓴=False):
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            몸 = {"messages": msgs, "max_tokens": 64, "temperature": 0.0, "seed": 씨앗, "stream": True, "chat_template_kwargs": {"enable_thinking": False}}
+            if 쓴:
+                몸["stream_options"] = {"include_usage": True}
+            답, n = 흐름글(a.포트, "/llama/v1/chat/completions", 몸)
+            보낸몸들.append(("POST", "/v1/chat/completions", 몸바이트(몸)))
+            표[이름] = 새영수증(영수증폴더, 앞)
+            print(f"{이름}: 조각 {n} · 답 {답[:30]!r} · 영수증 {표[이름]}", flush=True)
+            return 답
+
+        m = [S, {"role": "user", "content": U[0]}]
+        d1 = 보내기("h1", m, 1)
+        m = m + [{"role": "assistant", "content": d1}, {"role": "user", "content": U[1]}]
+        d2 = 보내기("h2", m, 2, 쓴=True)
+        m = m + [{"role": "assistant", "content": d2}, {"role": "user", "content": U[2]}]
+        보내기("h3", m, 3)
+        보내기("h4", list(m), 4)
+        보내기("h5", m[:3] + [{"role": "user", "content": "다른 질문 — Intel GPU 는?"}], 5)
+        time.sleep(2.0)
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+            srv.wait(30)
+        s.닫기()
+        엿.멈춤 = True
+    남 = 엿.요약()
+    깨끗 = 엿.보인 == 보낸몸들
+    쓴칸 = {}
+    for 이름, rid in 표.items():
+        r = json.load(open(os.path.join(a.자료, "영수증", rid + ".json"), encoding="utf-8")).get("response") or {}
+        쓴칸[이름] = ((r.get("final") or {}).get("timings") or {}).get("cache_n"), (r.get("usage") or {}).get("completion_tokens"), r.get("finish_reason")
+    print(f"기록기가 서버에 보낸 요청(프록시로 봄): {남} — 클라이언트의 요청뿐이고 몸이 바이트까지 같음 {깨끗}(보낸 {len(보낸몸들)} · 본 {len(엿.보인)})")
+    print("cache_n · usage.completion_tokens · finish_reason: " + " · ".join(f"{k} {v}" for k, v in 쓴칸.items()))
+    print(f"합계: 요청 {len(표)} · 영수증 {sum(1 for v in 표.values() if v)} · 설정 {설정됨}")
+    return 0 if 깨끗 and 설정됨 and all(표.values()) else 1
+
+
 def 대화기록하기(a):
     """32단계 — 기록기 없이 llama-server 에 직접 보낸 대화를 대화 기록(JSON)으로"""
     깃발들 = 깃발 if a.이단계 else ["-c", "32768"]
@@ -983,8 +1148,13 @@ def 다시견주기(a):
             프같음 += 1
         else:
             다름.append((name, f"프롬프트 토큰 {len(x.get('prompt_tokens') or [])} · 원래 {len(d.get('prompt_tokens') or [])}"))
-        if "tokens" not in x:
-            생없음 += 1
+        if "tokens" not in x:                                      # 33단계 — 다시 만들지 않았다(스트리밍 /completion 의 조각이 토큰을 다 실었다)
+            rr = (json.load(open(os.path.join(a.새자료, "영수증", rid + ".json"), encoding="utf-8")).get("response") or {}).get("tokens")
+            if rr and rr == d["response"].get("tokens"):
+                x["tokens"] = rr
+                생같음 += 1
+            else:
+                생없음 += 1
         elif x["tokens"] == d["response"].get("tokens"):
             생같음 += 1
         else:
@@ -1115,7 +1285,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="할일", required=True)
-    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마", "슬롯", "투명", "투명대화", "대화기록", "가져오기"):
+    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마", "슬롯", "투명", "투명대화", "대화기록", "가져오기", "투명흐름", "투명흐름대화"):
         q = sub.add_parser(n)
         q.add_argument("꾸러미")
         q.add_argument("자료")
@@ -1127,7 +1297,7 @@ def main():
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
             q.add_argument("--견줄", required=True)
-        elif n in ("기록", "대화", "채팅", "흐름채팅", "슬롯", "투명", "투명대화", "대화기록", "가져오기"):
+        elif n in ("기록", "대화", "채팅", "흐름채팅", "슬롯", "투명", "투명대화", "대화기록", "가져오기", "투명흐름", "투명흐름대화"):
             q.add_argument("--서버", required=True)
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
@@ -1165,7 +1335,7 @@ def main():
     a = p.parse_args()
     return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "올라마": 올라마하기, "슬롯": 슬롯하기,
             "바꾸기": 바꾸기, "벗기기": 벗기기, "다시견주기": 다시견주기, "투명": 투명하기, "투명대화": 투명대화하기,
-            "대화기록": 대화기록하기, "가져오기": 가져오기하기}[a.할일](a)
+            "대화기록": 대화기록하기, "가져오기": 가져오기하기, "투명흐름": 투명흐름하기, "투명흐름대화": 투명흐름대화하기}[a.할일](a)
 
 
 if __name__ == "__main__":
