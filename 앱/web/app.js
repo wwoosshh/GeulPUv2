@@ -1364,7 +1364,8 @@ const TMX = [
   [/결과: 영수증과 비트까지 같습니다 — 걸음 (\d+) · 값 (\d+)\(토큰과 상위 (\d+) 로그 확률\) · (\w+) · ([\d.]+)초/g, 'Result: bit-identical to the receipt — $1 steps · $2 values (tokens and top-$3 log probabilities) · $4 · $5 s'],
   [/결과: 영수증과 다릅니다 — 걸음 (-?\d+) 에서 처음 갈림 · 다른 값 (\d+)\(토큰 (\d+)\) \/ (\d+) · (\w+)/g, 'Result: differs from the receipt — first divergence at step $1 · $2 values differ ($3 tokens) / $4 · $5'],
   // 7단계 — 프롬프트 캐시의 사슬 · 슬롯
-  [/다른 슬롯\((-?\d+)\)도 쓰인 서버의 영수증은 아직 받지 않습니다 — 통합 KV 에서 KV 칸의 자리와 RAM 프롬프트 캐시가 달라집니다/g, 'Receipts from a server where another slot ($1) was also used are not accepted yet — with a unified KV cache the KV cell placement and the RAM prompt cache change'],
+  ["서버의 슬롯 고르기(LCP 비율 · 빈 슬롯 · 가장 오래 쓰지 않은 슬롯)로는 영수증과 다른 슬롯을 고릅니다 — 같은 서버에 기록되지 않은 요청이 있었을 수 있습니다", "The server's slot selection (LCP ratio · empty slot · least recently used slot) picks a different slot than the receipt — the same server may have served a request that was not recorded"],
+  ["영수증의 슬롯 번호가 서버의 슬롯 수 밖입니다", "The receipt's slot number is outside the server's slot count"],
   [/서버가 캐시의 토큰 (\d+) 개를 이어 쓴 요청인데, 같은 서버 · 같은 슬롯\((-?\d+)\)의 앞 영수증에 처음 요청\(캐시 0\)이 없습니다 — 그 슬롯의 처음 요청부터 기록한 영수증이 있어야 슬롯의 상태를 다시 쌓습니다/g, "The server continued from $1 cached tokens, but the earlier receipts of the same server and slot ($2) have no first request (cache 0) — receipts from the slot's first request on are needed to rebuild its state"],
   [/영수증 (\S+) 의 캐시 셈을 흉내 내지 못했습니다 — /g, 'Could not emulate the cache computation for receipt $1 — '],
   [/재현 호스트가 받지 않는 구조입니다: (\S+)\(받는 것: qwen35 · qwen3 · llama · qwen2\)/g, 'Architecture not supported by the replay host: $1 (supported: qwen35 · qwen3 · llama · qwen2)'],
