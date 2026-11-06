@@ -28,6 +28,15 @@ response)을 그대로 쓴다.
       20단계 — Ollama(v0.40.14)를 시험 포트(11500) · 따로 둔 홈 · 모델 폴더(<out> 옆)로 띄워 모델을 싣고, 로그의 "starting llama-server"
       에서 Ollama 가 띄운 llama-server 의 포트 · 인자를 읽어 기록기를 그 서버에 붙인 뒤 2단계 프롬프트를 보낸다(cache_prompt 끔). --견줄 의
       영수증(같은 모델 · 공식 빌드)과 토큰 · 로그 확률이 같은지 본다. 영수증 이름은 <out>/영수증.json.
+  python -I -X utf8 시험/라마앱판.py 벗기기 <자료> <기록 out> <새 자료> <새 out>
+      30단계 — <기록 out>/영수증.json 의 영수증(geulpu-llama-receipt/1)에서 토큰 없는 사본(geulpu-llama-receipt/2)을 <새 자료>\\영수증\\ 에
+      쓴다: 요청 몸은 기록기가 더한 칸(n_probs · return_tokens — 채팅은 logprobs · top_logprobs · return_tokens · verbose)을 뺀 것, 응답은
+      서버가 기본으로 내는 칸만(/completion 은 토큰 · 로그 확률 없이, 채팅은 __verbose 에서 OpenAI 꼴로), 프롬프트 토큰 · 슬롯 상태 ·
+      모델 해시 · 사용자 구분 토큰은 뺀다. 서버의 실행 파일(server.exe)은 빌드마다 E:\\geulpu-work\\demo\\llama-b<번호>. <새 out>/영수증.json 은
+      같은 이름.
+  python -I -X utf8 시험/라마앱판.py 다시견주기 <자료> <새 자료> <새 out>
+      30단계 — 앱이 토큰 없는 사본을 검증하며 적은 다시만듦 파일(<새 자료>\\영수증\\다시만듦)의 프롬프트 토큰 · 생성 토큰이 원래 영수증과
+      같은가.
   python -I -X utf8 시험/라마앱판.py 바꾸기 <자료> <대화 out> <새 out> --단계 7
       7-2 의 바꾼 영수증 셋(c3 의 cache_n + 1 · c3 의 서버 포트 · c3 의 슬롯 상태에 다른 슬롯) — 7-1 의 검증 뒤에(같은 슬롯의 앞 영수증이 된다).
 마지막 줄 "합계: …".
@@ -568,6 +577,83 @@ def 검증하기(a):
     return 0
 
 
+실행들 = {"b12008": "E:/geulpu-work/demo/llama-b12008/llama-server.exe", "b11963": "E:/geulpu-work/demo/llama-b11963/llama-server.exe",
+          "b12138": "E:/geulpu-work/demo/llama-b12138/llama-server.exe", "b11721": "E:/geulpu-work/demo/llama-b11721/llama-server.exe"}
+
+
+def 빌드번호(b):
+    return "b11963" if b.startswith("b1-39febd2ad") else b.split("-")[0]       # Ollama v0.40.14 의 llama-server = b11963 의 커밋
+
+
+def 벗기기(a):
+    """30단계 — 토큰 없는 사본(geulpu-llama-receipt/2): 기록기가 개입하지 않았다면 남았을 것만"""
+    표 = json.load(open(os.path.join(a.기록out, "영수증.json"), encoding="utf-8"))
+    os.makedirs(os.path.join(a.새자료, "영수증"), exist_ok=True)
+    os.makedirs(a.out, exist_ok=True)
+    n = 0
+    for name, rid in 표.items():
+        d = json.load(open(os.path.join(a.자료, "영수증", rid + ".json"), encoding="utf-8"))
+        rq = d["request"]
+        chat = rq["endpoint"] == "/v1/chat/completions"
+        body = dict(rq["body"])
+        for k in (["logprobs", "top_logprobs", "return_tokens", "verbose"] if chat else ["n_probs", "return_tokens"]):
+            body.pop(k, None)
+        r = d["response"]
+        if chat:                                                  # 1판의 채팅 응답은 __verbose(/completion 꼴) — OpenAI 꼴로
+            resp = {"choices": [{"index": 0, "message": {"role": "assistant", "content": r.get("content", "")},
+                                 "finish_reason": "length" if r.get("stop_type") == "limit" else "stop"}],
+                    "created": 0, "id": "chatcmpl-strip", "model": d["model"]["path"], "object": "chat.completion",
+                    "system_fingerprint": d["engine"]["build_info"],
+                    "usage": {"completion_tokens": r.get("tokens_predicted"), "prompt_tokens": r.get("tokens_evaluated"),
+                              "total_tokens": (r.get("tokens_predicted") or 0) + (r.get("tokens_evaluated") or 0)},
+                    "timings": r.get("timings")}
+        else:
+            resp = {k: v for k, v in r.items() if k not in ("tokens", "completion_probabilities")}
+            resp["tokens"] = []
+        exe = 실행들.get(빌드번호(d["engine"]["build_info"]), "")
+        out = {"format": "geulpu-llama-receipt/2", "recorded_at": d["recorded_at"], "recorder": {**d.get("recorder", {}), "mode": "test-strip"},
+               "engine": {"name": "llama.cpp", "program": "llama-server", "build_info": d["engine"]["build_info"], "os": d["engine"].get("os", "windows")},
+               "device": d["device"], "model": {"path": d["model"]["path"], "size": d["model"]["size"]},
+               "server": {**d["server"], "exe": exe}, "request": {"endpoint": rq["endpoint"], "body": body}, "response": resp,
+               "elapsed_ms": d.get("elapsed_ms", 0)}
+        with open(os.path.join(a.새자료, "영수증", rid + ".json"), "w", encoding="utf-8", newline="\n") as f:
+            json.dump(out, f, ensure_ascii=False)
+            f.write("\n")
+        n += 1
+    json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(f"토큰 없는 사본 {n} 개 → {a.새자료}")
+    return 0
+
+
+def 다시견주기(a):
+    """30단계 — 다시만듦 파일의 프롬프트 토큰 · 생성 토큰이 원래 영수증과 같은가"""
+    표 = json.load(open(os.path.join(a.out, "영수증.json"), encoding="utf-8"))
+    프같음 = 생같음 = 생없음 = 0
+    다름 = []
+    for name, rid in 표.items():
+        d = json.load(open(os.path.join(a.자료, "영수증", rid + ".json"), encoding="utf-8"))
+        p = os.path.join(a.새자료, "영수증", "다시만듦", rid + ".json")
+        if not os.path.exists(p):
+            다름.append((name, "다시만듦 파일 없음"))
+            continue
+        x = json.load(open(p, encoding="utf-8"))
+        if x.get("prompt_tokens") == d.get("prompt_tokens"):
+            프같음 += 1
+        else:
+            다름.append((name, f"프롬프트 토큰 {len(x.get('prompt_tokens') or [])} · 원래 {len(d.get('prompt_tokens') or [])}"))
+        if "tokens" not in x:
+            생없음 += 1
+        elif x["tokens"] == d["response"].get("tokens"):
+            생같음 += 1
+        else:
+            k = next((i for i, (u, v) in enumerate(zip(x["tokens"], d["response"]["tokens"])) if u != v), -1)
+            다름.append((name, f"생성 토큰이 걸음 {k} 에서 다름"))
+    print(f"영수증 {len(표)}: 프롬프트 토큰 같음 {프같음} · 생성 토큰 같음 {생같음} · 생성 토큰을 다시 만들지 않음 {생없음} · 다름 {len(다름)}")
+    for x in 다름[:10]:
+        print("  ", x)
+    return 0 if not 다름 and 생없음 == 0 else 1
+
+
 def 바꾸기(a):
     폴더 = os.path.join(a.자료, "영수증")
     표0 = json.load(open(os.path.join(a.기록out, "영수증.json"), encoding="utf-8"))
@@ -722,9 +808,18 @@ def main():
     q.add_argument("기록out")
     q.add_argument("out")
     q.add_argument("--단계", type=int, choices=[4, 5, 7, 9], default=4)
+    q = sub.add_parser("벗기기")                                     # 30단계 — 토큰 없는 사본
+    q.add_argument("자료")
+    q.add_argument("기록out")
+    q.add_argument("새자료")
+    q.add_argument("out")
+    q = sub.add_parser("다시견주기")                                  # 30단계 — 다시만듦 파일과 원래 영수증
+    q.add_argument("자료")
+    q.add_argument("새자료")
+    q.add_argument("out")
     a = p.parse_args()
     return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "올라마": 올라마하기, "슬롯": 슬롯하기,
-            "바꾸기": 바꾸기}[a.할일](a)
+            "바꾸기": 바꾸기, "벗기기": 벗기기, "다시견주기": 다시견주기}[a.할일](a)
 
 
 if __name__ == "__main__":

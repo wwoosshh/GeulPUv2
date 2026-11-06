@@ -354,7 +354,7 @@ class 서버:
         if n < 1:
             return -1, []
         번호, 고침 = self.고르기(prompt)
-        if 번호 != 슬롯번호:                                          # 서버는 다른 슬롯을 골랐을 것 — 기록되지 않은 요청 등
+        if 슬롯번호 >= 0 and 번호 != 슬롯번호:                        # 서버는 다른 슬롯을 골랐을 것 — 기록되지 않은 요청 등(30단계 — −1 은 모름)
             self.까닭 = f"슬롯 {번호} 을 골랐을 것(영수증은 {슬롯번호})"
             return -1, []
         s = self.슬롯들.get(번호)
@@ -496,10 +496,15 @@ def 서버사례(rnd, 설정):
 def 사례들(씨앗=7, 수=12):
     rnd = random.Random(씨앗)
     out = []
+    서버수 = 0
     for 설정 in 설정들:
         for _ in range(수):
             if 설정풀기(설정)[8]:
-                out.append((설정, 서버사례(rnd, 설정)))
+                reqs = 서버사례(rnd, 설정)
+                out.append((설정, reqs))
+                서버수 += 1
+                if 서버수 % 4 == 0:                                   # 30단계 — 슬롯을 모르는 영수증(채팅 응답 — 슬롯 번호 −1)
+                    out.append((설정, [(p, g, 자리, -1) for p, g, 자리, _ in reqs]))
                 continue
             길이 = rnd.choice([5, 40, 300, 700, 1500, 2600])
             prompt = [rnd.randrange(1000) for _ in range(길이)]
