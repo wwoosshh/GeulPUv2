@@ -443,6 +443,40 @@ def 슬롯하기(a):
             print(f"{이름}: 슬롯 {v.get('id_slot')} · 프롬프트 {v.get('tokens_evaluated')} · cache_n {(v.get('timings') or {}).get('cache_n')} · 영수증 {표[이름]}", flush=True)
             return 답
 
+        if a.동시:                                                # 연속 배치 조사 — A 가 생성하는 동안 B 를 보낸다(B 가 먼저 끝난다)
+            import threading
+            몸들 = {"A": {"messages": [{"role": "user", "content": "Write a long, detailed essay of at least 400 words about these notes. " + 긴글("GPU warps", 30)}],
+                          "max_tokens": 300, "temperature": 0.0, "seed": 1, "stream": False},
+                    "B": {"messages": [{"role": "user", "content": "List two facts from these notes. " + 긴글("tensor cores", 40)}],
+                          "max_tokens": 48, "temperature": 0.0, "seed": 2, "stream": False}}
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            답 = {}
+
+            def 하나(이름):
+                if 이름 == "B" and a.비켜:                         # B 는 기록기를 거치지 않고 llama-server 에 바로(영수증 없음)
+                    답[이름] = 묻기(a.라마포트, "/v1/chat/completions", 몸들[이름])
+                else:
+                    답[이름] = 묻기(a.포트, "/llama/v1/chat/completions", 몸들[이름])
+
+            ta = threading.Thread(target=하나, args=("A",))
+            ta.start()
+            time.sleep(0.3)
+            tb = threading.Thread(target=하나, args=("B",))
+            tb.start()
+            ta.join()
+            tb.join()
+            time.sleep(3.0)                                           # 영수증 마무리(스레드)를 기다린다
+            새것 = sorted(set(os.listdir(영수증폴더)) - 앞 - {"기록기.json"})
+            for f in 새것:
+                d = json.load(open(os.path.join(영수증폴더, f), encoding="utf-8"))
+                첫 = d["request"]["body"]["messages"][0]["content"][:20]
+                이름 = next(k for k, v in 몸들.items() if v["messages"][0]["content"].startswith(첫))
+                표[이름] = f[:-5]
+                r = d["response"]
+                print(f"{이름}: 슬롯 {r.get('id_slot')} · 프롬프트 {len(d['prompt_tokens'])} · 생성 {len(r['tokens'])} · 걸림 {d.get('elapsed_ms')} ms"
+                      f" · 끝난 때 {d['recorded_at']} · 영수증 {표[이름]}", flush=True)
+            json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            return 0 if len(표) == (1 if a.비켜 else 2) else 1
         if a.다섯:                                                # 26단계 — 대화 다섯이 슬롯 넷을 나눠 쓴다(칸이 있는 슬롯을 LRU 로 다시 씀)
             주제 = {"A": ("Summarize these notes in one sentence. ", "GPU warps", 30), "B": ("List two facts from these notes. ", "tensor cores", 40),
                     "C": ("Give a title for these notes. ", "memory coalescing", 45), "D": ("Name one risk in these notes. ", "register spills", 35),
@@ -669,6 +703,8 @@ def main():
             q.add_argument("--스트림", action="store_true")                 # 18단계 — 기록: /completion 을 스트리밍으로
             q.add_argument("--오감", action="store_true")                   # 24단계 — 슬롯: 대화를 더 오간다
             q.add_argument("--다섯", action="store_true")                   # 26단계 — 슬롯: 대화 다섯이 슬롯 넷을
+            q.add_argument("--동시", action="store_true")                   # 연속 배치 조사 — 슬롯: 두 요청이 겹친다
+            q.add_argument("--비켜", action="store_true")                   # 28단계 — 동시: B 는 기록기를 거치지 않는다
             q.add_argument("--더깃발", default="")                          # 25단계 — 슬롯: 서버 인자에 더함
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
