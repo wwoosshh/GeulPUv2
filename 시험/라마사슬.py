@@ -41,14 +41,15 @@ class 칸판:
     하나씩, 머리 > 쓴 칸 + 2·n 이면 0 부터, 끝에 닿으면 0 으로) · apply_ubatch(머리 = 마지막 칸 + 1) · seq_rm(머리 = min(머리, 처음 비운
     칸)) · get_n_kv(min(크기, max(256, used_max_p1 을 256 의 배수로 올림)))"""
 
-    def __init__(self, 크기):
+    def __init__(self, 크기, 흐름=0, 자취=None):
         self.크기 = 크기
         self.seq = [-1] * 크기
         self.pos = [0] * 크기
         self.머리 = 0
         self.쓴수 = 0
         self.끝 = 0                                                   # used_max_p1
-        self.자취 = []                                                # find_slot 마다 (used_max_p1, used, head) — 서버의 KV 디버그 기록과 견줌
+        self.흐름 = 흐름                                              # 27단계 — 흐름 번호(슬롯마다 KV 면 슬롯 번호)
+        self.자취 = [] if 자취 is None else 자취                     # find_slot 마다 (흐름, used_max_p1, used, head) — 서버의 KV 디버그 기록과 견줌
         self.돎 = self.처음부터 = 0                                   # 시험의 갈래 세기 — 끝에서 0 으로 · head 가 멀어 0 부터
 
     def 지우기(self, seq, p0=0):                                     # seq_rm(seq, p0, −1)
@@ -65,7 +66,7 @@ class 칸판:
             self.끝 -= 1
 
     def 찾기(self, n):                                               # find_slot(ubatch, cont = false)
-        self.자취.append((self.끝, self.쓴수, self.머리))
+        self.자취.append((self.흐름, self.끝, self.쓴수, self.머리))
         h = self.머리
         if h > self.쓴수 + 2 * n:
             h = 0
@@ -270,19 +271,24 @@ class 서버:
         self.sp = F32(f[4])
         self.램 = f[5]
         self.슬롯수 = f[6]
-        self.비움 = f[10] != 0 and self.램 != 0                       # 26단계 — 쉬는 슬롯을 비우는가
+        self.통합 = f[11] != 0                                       # 27단계 — 통합 KV(아니면 슬롯마다 흐름 — -np N)
+        쉬는저장 = f[10] != 0 and self.램 != 0                        # --cache-idle-slots(기본 켬 — RAM 캐시가 있어야 함)
+        self.쉬는 = (2 if self.통합 else 1) if 쉬는저장 else 0       # 26 · 27단계 — 쉬는 슬롯: 0 그대로 · 1 저장만 · 2 저장하고 비움
+        self.비움 = self.쉬는 == 2
         self.슬롯들 = {}                                             # 번호 → 슬롯(토큰이 있는 것)
         self.마지막 = {}                                             # 번호 → 마지막으로 쓴 차례(없으면 −1)
         self.차례 = 0
         self.활성 = None                                             # (슬롯 번호, 슬롯) — 마지막 요청의 슬롯
         self.항목 = []                                               # RAM 캐시 항목(오래된 것부터)
-        self.칸판 = 칸판(f[9])                                        # 25단계 — 통합 KV(크기 = n_ctx)
+        self.자취 = []
+        # 25단계 — 통합 KV(크기 = n_ctx), 27단계 — 슬롯마다 KV 면 슬롯마다 흐름(크기 = n_ctx_seq — 영수증의 n_ctx)
+        self.칸판들 = [칸판(f[9], 0, self.자취)] if self.통합 else [칸판(f[9], i, self.자취) for i in range(self.슬롯수)]
         self.까닭 = None
 
     def 새슬롯(self, 번호):
         s = 슬롯(*self.설정)
         s.서버흉내 = True
-        s.번호, s.칸판 = 번호, self.칸판
+        s.번호, s.칸판 = 번호, self.칸판들[0 if self.통합 else 번호]
         return s
 
     def 고르기(self, prompt):
@@ -330,14 +336,14 @@ class 서버:
             e = self.항목.pop(best)
             # 25단계 — state_read_meta: seq_rm(슬롯, 모두) → find_slot(cont = false — 다른 슬롯의 칸이 있으면 그 뒤로) → apply_ubatch.
             # 저장한 차례는 칸 차례(state_write 가 칸을 앞에서부터 — 위치 차례가 아닐 수 있다)
-            self.칸판.지우기(s.번호, 0)
+            s.칸판.지우기(s.번호, 0)
             차례 = sorted(e.칸, key=lambda p: e.칸[p])
             assert sorted(차례) == list(range(len(e.tokens))), "항목의 칸이 토큰과 맞지 않음"
-            cells = self.칸판.찾기(len(차례))
+            cells = s.칸판.찾기(len(차례))
             if cells is None:
                 s.까닭 = "칸 모자람"
                 return
-            self.칸판.놓기(cells, s.번호, 차례)
+            s.칸판.놓기(cells, s.번호, 차례)
             s.칸 = dict(zip(차례, cells))
             s.tokens, s.cps = list(e.tokens), [list(x) for x in e.cps]
             s.hist = list(e.hist) + [(-1, len(차례), [], [s.칸[p] for p in range(len(차례))], 0)]
@@ -358,13 +364,14 @@ class 서버:
         if 고침 and self.램 != 0:                                     # 캐시 고침 — 저장 → 불러오기(다른 슬롯의 칸이 KV 에 있을 수 있다)
             self.저장(s)
             self.불러오기(s, prompt)
-        if self.비움:                                                 # 쉬는 슬롯을 저장하고 비운다(띄운 뒤 — prompt_clear, 번호 차례)
+        if self.쉬는:                                                 # 띄운 뒤 쉬는 슬롯을 저장(번호 차례) — 통합 KV 면 비운다(prompt_clear)
             for i in range(self.슬롯수):
                 o = self.슬롯들.get(i)
                 if i != 번호 and o is not None and o.tokens:
                     self.저장(o)
-                    self.칸판.지우기(i, 0)
-                    del self.슬롯들[i]
+                    if self.쉬는 == 2:
+                        o.칸판.지우기(i, 0)
+                        del self.슬롯들[i]
         self.활성 = (번호, s)
         if s.까닭 is not None:
             self.까닭 = s.까닭
@@ -433,6 +440,14 @@ def 칸같음(사슬, 걸음):
     (64, 16, 4, 0, 0.1, 8192, 4, 1, 1, 4096, 0),
     (512, 128, 32, 8192, 0.0, 0, 4, 1, 1, 32768, 0),
     (128, 32, 32, 8192, 0.1, 8192, 4, 0, 1, 1024, 0),
+    # 27단계 — 슬롯마다 KV 를 둔 서버(-np N — 흐름마다 n_ctx / N): 쉬는 슬롯을 저장만(기본) · dense · 하이브리드 · RAM 캐시 0 ·
+    # --no-cache-idle-slots · 작은 흐름
+    (2048, 512, 32, 8192, 0.1, 8192, 4, 1, 1, 8192, 1, 0),
+    (2048, 512, 32, 8192, 0.1, 8192, 4, 0, 1, 8192, 1, 0),
+    (2048, 512, 32, 8192, 0.1, 0, 4, 1, 1, 8192, 1, 0),
+    (2048, 512, 32, 8192, 0.1, 8192, 4, 1, 1, 8192, 0, 0),
+    (64, 16, 4, 0, 0.1, 8192, 4, 0, 1, 1024, 1, 0),
+    (512, 128, 32, 8192, 0.0, 8192, 2, 1, 1, 2048, 1, 0),
 ]
 
 
@@ -443,7 +458,7 @@ def 서버사례(rnd, 설정):
     sv = 서버(설정)
     f = 설정풀기(설정)
     작음 = f[9] < 4096                                             # 25단계 — KV 가 작은 서버는 짧은 대화로
-    남김 = f[10] == 0 or f[5] == 0                                 # 26단계 — 쉬는 슬롯의 칸이 남는 서버
+    남김 = f[10] == 0 or f[5] == 0 or f[11] == 0                   # 26 · 27단계 — 쉬는 슬롯의 칸이 남는 서버
     머리 = [999 - j for j in range(30)]
     대화 = []                                                      # (프롬프트, 생성)
     reqs = []
@@ -518,11 +533,13 @@ def 사례들(씨앗=7, 수=12):
 
 
 def 설정풀기(설정):
-    # n_batch, n_ubatch, 체크수, 최소걸음, 유사, 램, 슬롯 수, 되돌림(10단계), 서버(24단계), KV 크기(25단계 — n_ctx, 기본 32768),
-    # 쉬는 슬롯을 비움(26단계 — 기본 1, RAM 캐시가 0 이면 비우지 않는다)
+    # n_batch, n_ubatch, 체크수, 최소걸음, 유사, 램, 슬롯 수, 되돌림(10단계), 서버(24단계), KV 크기(25단계 — n_ctx, 기본 32768 —
+    # 슬롯마다 KV 면 흐름 하나의 크기), 쉬는 슬롯 저장(26단계 — --cache-idle-slots, 기본 1 · RAM 캐시가 0 이면 하지 않는다),
+    # 통합 KV(27단계 — 기본 1, 0 이면 슬롯마다 흐름)
     s = tuple(설정) + (0,) * (9 - len(설정))
     s = s if len(s) >= 10 else s + (32768,)
-    return s if len(s) >= 11 else s + (1,)
+    s = s if len(s) >= 11 else s + (1,)
+    return s if len(s) >= 12 else s + (1,)
 
 
 def 토큰셈(사슬):
@@ -622,8 +639,8 @@ def 칸판참조(사례):
 def 사례파일(cases, 경로, 칸사례=()):
     v = [len(cases)]
     for 설정, reqs in cases:
-        nb, nu, cp, ms, sp, ram, ns, dg, sv, kv, 비움 = 설정풀기(설정)
-        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, ns, dg, sv, kv, 비움, len(reqs)]
+        nb, nu, cp, ms, sp, ram, ns, dg, sv, kv, 비움, 통합 = 설정풀기(설정)
+        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, ns, dg, sv, kv, 비움, 통합, len(reqs)]
         for p, g, 자리, 번호 in reqs:
             v += [len(p), *p, len(g), *g, len(자리), *자리, 번호]
     v.append(len(칸사례))                                          # 25단계 — 칸판만의 시험
@@ -693,7 +710,7 @@ def 서버기록칸(경로):
     """25단계 — 서버 기록(LLAMA_KV_CACHE_DEBUG=1 · -v)의 find_slot 줄마다 (used_max_p1, used, head) — 첫 작업을 띄운 뒤부터(올릴 때의
     시험 디코드는 뺀다)"""
     import re
-    fs = re.compile(r"find_slot: stream\[0\], n = +(\d+), used = +(\d+), head = +(\d+)")
+    fs = re.compile(r"find_slot: stream\[(\d+)\], n = +(\d+), used = +(\d+), head = +(\d+)")
     out, 띄움 = [], False
     for ln in open(경로, encoding="utf-8", errors="replace"):
         if "launch_slot_" in ln:
@@ -717,7 +734,7 @@ def 서버영수증(자료, out, 되돌림=1):
             sd = d["server"]
             비움 = 0 if "--no-cache-idle-slots" in sd.get("args", "") else 1
             sv = 서버((sd["n_batch"], sd["n_ubatch"], sd["ctx_checkpoints"], sd["checkpoint_min_step"], sd["slot_prompt_similarity"],
-                      sd["cache_ram_mib"], sd["n_parallel"], 되돌림, 1, sd.get("n_ctx", 32768), 비움))
+                      sd["cache_ram_mib"], sd["n_parallel"], 되돌림, 1, sd.get("n_ctx", 32768), 비움, 1 if sd.get("kv_unified") else 0))
         구분 = (d.get("chat") or {}).get("user_start_tokens") or []      # 25단계 — 채팅 API 의 사용자 메시지 자리(하이브리드의 덩어리 끊기)
         c, 사슬 = sv.요청(d["prompt_tokens"], r["tokens"], k + 1, 자리찾기(d["prompt_tokens"], 구분), r["id_slot"])
         서c, 서t = r["timings"]["cache_n"], r.get("tokens_cached")
@@ -736,7 +753,7 @@ def 서버영수증(자료, out, 되돌림=1):
     로그 = os.path.join(out, "llama-server.log")
     if sv is not None and os.path.exists(로그):
         서 = 서버기록칸(로그)
-        흉 = sv.칸판.자취
+        흉 = sv.자취
         if 서:
             k = next((i for i, (a, b) in enumerate(zip(흉, 서)) if a != b), min(len(흉), len(서)))
             칸맞음 = len(흉) == len(서) and k == len(서)
