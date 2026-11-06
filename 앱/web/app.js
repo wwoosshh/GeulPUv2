@@ -1262,6 +1262,10 @@ const DICT = {
   "실행 파일 — 저장할 때 --version 으로 빌드를 읽습니다(따로 도는 프로세스). 검증할 때 같은 빌드의 llama-server 로 프롬프트 토큰을 다시 만듭니다": "Executable — on save, the build is read with --version (a separate process). At verification a llama-server of the same build rebuilds the prompt tokens",
   "빌드 {} · 모델 {} ({})": "build {} · model {} ({})",
   "토큰 없음": "no tokens",
+  "대화 기록(JSON)의 경로": "Path of the conversation log (JSON)",
+  "대화 기록 가져오기": "Import conversation log",
+  "대화 기록 가져오기 — 클라이언트가 llama-server 에 직접 보낸 대화(messages · sampling)를 JSON 으로 두면, 도우미 메시지마다 토큰 없는 영수증을 만듭니다(기록기 없이 — 문서/라마재현.md 32단계)": "Import a conversation log — a JSON file with the conversation the client sent directly to llama-server (messages · sampling) becomes one token-less receipt per assistant message (no recorder — 문서/라마재현.md, stage 32)",
+  "영수증 {}개를 만들었습니다": "{0} {0|receipt|receipts} created",
   "검증할 영수증": "Receipt to check",
   "프롬프트 {} · 생성 {} 토큰": "prompt {} · {} generated tokens",
   "영수증 없음": "No receipts",
@@ -1408,6 +1412,19 @@ const TMX = [
   ["명령줄의 -m 에서 모델 파일을 찾지 못했습니다 — 영수증에 모델 경로 · 크기가 없으면 검증하지 못합니다", "The model file from -m in the command line was not found — receipts without a model path and size cannot be verified"],
   ["개입하는 기록(probes): 요청에 확률 · 토큰 칸(n_probs · return_tokens — 채팅은 logprobs · verbose)을 더하고 실행 중에 /slots · /props · /tokenize 를 묻습니다. n_probs 가 있으면 온도 0 에서도 서버의 고르기 사슬 끝이 바뀝니다(맨 위 logit 이 같은 걸음)", "Probing mode: adds probability and token fields (n_probs · return_tokens — logprobs · verbose for chat) to requests and queries /slots · /props · /tokenize during the run. With n_probs the server's sampler chain end changes even at temperature 0 (steps whose top logits tie)"],
   ["임시 llama-server 가 빌드(/props)를 알리지 않았습니다", "The temporary llama-server did not report its build (/props)"],
+  // 32단계 — 대화 기록에서
+  ["서버 설정(llama-server 의 명령줄 · 실행 파일)을 먼저 저장하세요 — 영수증에 서버 · 모델을 적습니다", "Save the server settings first (llama-server command line · executable) — receipts record the server and model"],
+  ["대화 기록(JSON)을 읽지 못했습니다 — path(파일) 또는 log(객체)", "Could not read the conversation log (JSON) — path (file) or log (object)"],
+  ["대화 기록에 messages(둘 이상)가 없습니다", "The conversation log has no messages (two or more)"],
+  ["sampling.temperature 가 없습니다 — 온도를 모르면 검증하지 못합니다(클라이언트가 보낸 값을 적으세요)", "sampling.temperature is missing — without the temperature the conversation cannot be verified (enter the value the client sent)"],
+  ["온도 > 0 의 대화 — 서버가 고른 토큰을 되짚을 수 없어 검증은 까닭과 함께 거절합니다", "Temperature > 0 — the tokens the server sampled cannot be traced back, so verification will refuse with that reason"],
+  [/결과: 대화 기록의 답이 다시 만든 토큰의 글과 바이트까지 같습니다 — 걸음 (\d+)\((.*?)\) · (\w+) · ([\d.]+)초/g, 'Result: the answer in the conversation log is byte-identical to the text of the regenerated tokens — $1 steps ($2) · $3 · $4 s'],
+  [/결과: 대화 기록의 답과 다릅니다 — 걸음 (-?\d+) 에서 처음 갈림\(글의 바이트 (-?\d+) — (.*?)\) · (\w+)/g, 'Result: differs from the answer in the conversation log — first divergence at step $1 (text byte $2 — $3) · $4'],
+  [/끝 토큰 (\d+) 으로 끝남/g, 'ended with end token $1'],
+  [/max_tokens (\d+) 에서 끝남/g, 'ended at max_tokens $1'],
+  [/답 뒤를 모델이 이어 씀\(토큰 (\d+)\)/g, 'the model continues after the answer (token $1)'],
+  ["답 뒤를 더 셈하지 못함(어림한 수가 모자람)", "could not compute past the answer (the estimated count was too small)"],
+  ["글이 다름", "text differs"],
   // 30단계 — 토큰 없는 영수증(요청 · 응답의 글만으로)
   ["토큰 없는 영수증 — 프롬프트 토큰을 llama.cpp 의 셈으로 다시 만드는 중", "Token-less receipt — rebuilding the prompt tokens with llama.cpp's own tokenizer"],
   [/토큰 없는 영수증: 프롬프트 토큰 (\d+) 개\(llama\.cpp 의 셈 — 다시만듦 파일\) · 생성 토큰 (\d+) 개는 재현이 다시 만듭니다/g, 'Token-less receipt: $1 prompt tokens (llama.cpp tokenizer — regenerated file) · the replay regenerates the $2 generated tokens'],
@@ -5077,6 +5094,18 @@ function llamaCard(b, busy) {
     catch (e) { toast(e.message, 'err'); }
   };
   const derived = rec.build || rec.model ? h('div', { class: 'small muted' }, T`빌드 ${rec.build || '?'} · 모델 ${rec.model ? rec.model.split(/[\\/]/).pop() : '?'} (${rec.model_size > 0 ? fmtBytes(rec.model_size) : '?'})`) : null;
+  const logPath = h('input', { type: 'text', class: 'input', placeholder: 'C:\\…\\conversation.json', 'aria-label': T('대화 기록(JSON)의 경로'), spellcheck: 'false', 'data-fk': 'llama-log' });
+  const importLog = async () => {
+    const path = logPath.value.trim();
+    if (!path) return;
+    try {
+      const r = await api('/api/llama/import', { path });
+      toast(T`영수증 ${fmtNum((r.receipts || []).length)}개를 만들었습니다`, 'ok');
+      for (const w of (r && r.warnings) || []) toast(TM(w), 'err');
+      llamaLoad();
+    }
+    catch (e) { toast(e.message, 'err'); }
+  };
   const sel = h('select', { class: 'input', 'aria-label': T('검증할 영수증'), 'data-fk': 'llama-receipt', disabled: list.length ? null : true, onchange: ev => { L.sel = ev.target.value; } },
     list.length ? list.map(r => h('option', { value: r.name, selected: r.name === L.sel ? true : null }, `${r.name} · ${r.model} · ` + T`프롬프트 ${fmtNum(r.prompt_tokens)} · 생성 ${fmtNum(r.tokens)} 토큰` + (r.tokenless ? ' · ' + T('토큰 없음') : '')))
       : h('option', { value: '' }, T('영수증 없음')));
@@ -5096,7 +5125,9 @@ function llamaCard(b, busy) {
       h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('llama-server를 띄운 명령줄 — n_batch · n_ubatch · flash attention · 슬롯 · 프롬프트 캐시 · 체크포인트를 읽습니다')), args),
       h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('실행 파일 — 저장할 때 --version 으로 빌드를 읽습니다(따로 도는 프로세스). 검증할 때 같은 빌드의 llama-server 로 프롬프트 토큰을 다시 만듭니다')), exe),
       h('label', { class: 'col g4' }, h('span', { class: 'small muted' }, T('기록 방식')), mode),
-      derived),
+      derived,
+      h('div', { class: 'small muted' }, T('대화 기록 가져오기 — 클라이언트가 llama-server 에 직접 보낸 대화(messages · sampling)를 JSON 으로 두면, 도우미 메시지마다 토큰 없는 영수증을 만듭니다(기록기 없이 — 문서/라마재현.md 32단계)')),
+      h('div', { class: 'row g8' }, logPath, h('button', { class: 'btn sm needs-conn', 'data-fk': 'llama-import', onclick: importLog }, T('대화 기록 가져오기')))),
     h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T`영수증 ${fmtNum(list.length)}개`), sel, h('div', { class: 'row g8' }, lay, dev)),
     h('div', null, h('button', {
       class: 'btn run needs-conn', 'data-fk': 'llama-run', disabled: busy || !L.sel ? true : null, onclick: async () => {
