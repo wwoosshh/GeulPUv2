@@ -416,6 +416,52 @@ def 올라마하기(a):
     return 0 if 같음수 == len(표) and all(표.values()) else 1
 
 
+def 슬롯하기(a):
+    """23단계 — 기본 설정 서버(슬롯 4 · 통합 KV)에 세 대화: A1 · A2 · B1 · B2 · A3 · C1. B · C 의 첫 메시지는 길어 슬롯 고르기의 기준(LCP 비율
+    0.1) 아래 — 새 슬롯으로 간다. A3 는 B 뒤에 A 로 돌아온다(A 의 슬롯은 비워졌고 RAM 캐시에서 불러온다)"""
+    깃발대화 = ["-c", "32768"]
+    os.makedirs(a.out, exist_ok=True)
+    s = 앱(a.꾸러미, a.자료, a.포트)
+    srv = None
+    표 = {}
+    try:
+        srv = 서버띄우기(a, 깃발대화, os.path.join(a.out, "llama-server.log"))
+        묻기(a.포트, "/api/llama/recorder", {"port": a.라마포트, "args": "llama-server -m " + a.모델 + " " + " ".join(깃발대화)})
+        영수증폴더 = os.path.join(a.자료, "영수증")
+
+        def 긴글(주제, n):
+            return " ".join(f"({i + 1}) A note about {주제}: each item is numbered so the text is long and deterministic." for i in range(n))
+
+        def 보내기(이름, msgs, 씨앗):
+            앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
+            r = 묻기(a.포트, "/llama/v1/chat/completions", {"messages": msgs, "max_tokens": 48, "temperature": 0.0, "seed": 씨앗, "stream": False})
+            답 = r["choices"][0]["message"].get("content") or ""
+            v = r.get("__verbose") or {}
+            표[이름] = 새영수증(영수증폴더, 앞)
+            print(f"{이름}: 슬롯 {v.get('id_slot')} · 프롬프트 {v.get('tokens_evaluated')} · cache_n {(v.get('timings') or {}).get('cache_n')} · 영수증 {표[이름]}", flush=True)
+            return 답
+
+        A = [{"role": "user", "content": "Summarize these notes in one sentence. " + 긴글("GPU warps", 30)}]
+        dA1 = 보내기("A1", A, 1)
+        A = A + [{"role": "assistant", "content": dA1}, {"role": "user", "content": "Now in five words."}]
+        dA2 = 보내기("A2", A, 2)
+        B = [{"role": "user", "content": "List two facts from these notes. " + 긴글("tensor cores", 40)}]
+        dB1 = 보내기("B1", B, 3)
+        B = B + [{"role": "assistant", "content": dB1}, {"role": "user", "content": "And one more."}]
+        보내기("B2", B, 4)
+        A = A + [{"role": "assistant", "content": dA2}, {"role": "user", "content": "Translate that to Korean."}]
+        보내기("A3", A, 5)
+        C = [{"role": "user", "content": "Give a title for these notes. " + 긴글("memory coalescing", 45)}]
+        보내기("C1", C, 6)
+        json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+        s.닫기()
+    print(f"합계: 요청 {len(표)} · 영수증 {sum(1 for v in 표.values() if v)}")
+    return 0 if all(표.values()) else 1
+
+
 def 검증하기(a):
     표 = json.load(open(os.path.join(a.out, "영수증.json"), encoding="utf-8"))
     이름 = list(표) if a.이름 is 이름들10 else a.이름                  # --이름 이 없으면 영수증.json 의 모두(바꾼 영수증이면 alter_…)
@@ -566,7 +612,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="할일", required=True)
-    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마"):
+    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마", "슬롯"):
         q = sub.add_parser(n)
         q.add_argument("꾸러미")
         q.add_argument("자료")
@@ -578,7 +624,7 @@ def main():
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
             q.add_argument("--견줄", required=True)
-        elif n in ("기록", "대화", "채팅", "흐름채팅"):
+        elif n in ("기록", "대화", "채팅", "흐름채팅", "슬롯"):
             q.add_argument("--서버", required=True)
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
@@ -596,7 +642,7 @@ def main():
     q.add_argument("out")
     q.add_argument("--단계", type=int, choices=[4, 5, 7, 9], default=4)
     a = p.parse_args()
-    return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "올라마": 올라마하기,
+    return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "올라마": 올라마하기, "슬롯": 슬롯하기,
             "바꾸기": 바꾸기}[a.할일](a)
 
 
