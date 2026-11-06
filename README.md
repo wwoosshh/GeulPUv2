@@ -42,6 +42,9 @@ a token, a tool result, the quantization — and see the effect of that one chan
   generations and a Radeon RX 9060 XT.
 - **Debugger for local models.** Record runs, replay them bit for bit, find low-margin steps, branch from any token or edited request,
   and compare two runs request by request — from the app or from scripts.
+- **Check llama.cpp runs.** Record a run of an unmodified llama-server — or just keep the conversation log — and let GeulPU recompute
+  it with kernels that follow llama.cpp's CUDA arithmetic instruction by instruction, comparing tokens and log-probabilities bit for bit,
+  on CUDA or Vulkan (runs made on an RTX 4070 Ti so far; from 0.22.0 — [docs/llama-replay.md](docs/llama-replay.md)).
 - **Model evaluation for GGUF files.** Make a GGUF from a Hugging Face folder, check the conversion against the original files and the
   original (transformers) model, compare versions with a reference model and grade their answers (built-in GSM8K and MMLU-Pro sets),
   count what a fine-tune learned and forgot against the model before fine-tuning, and measure which matrix groups to keep at a higher
@@ -82,8 +85,8 @@ this prompt). Release files are built from this repository by GitHub Actions, wi
 
 **On Linux** — `pipx install geulpu` works the same way; without Python, extract `GeulPU-<version>-linux-x64.tar.gz` and run
 `./GeulPU`. The app prints its address instead of opening a browser (on a remote machine, forward the port first:
-`ssh -L 44544:127.0.0.1:44544 <host>`). Downloads inside the app use the system's `curl`; Vulkan is not on Linux yet
-([On Linux](docs/user-guide.md#on-linux)).
+`ssh -L 44544:127.0.0.1:44544 <host>`). Downloads inside the app use the system's `curl`; from 0.22.0 the package also carries the Vulkan path, not yet
+confirmed on a real Linux GPU ([On Linux](docs/user-guide.md#on-linux)).
 
 Then open **Models → Find models**, download a file marked *Recommended for this PC*, and start chatting. The first message builds
 kernels for your GPU (once per version, 10 seconds to a few minutes). The [user guide](docs/user-guide.md) walks through every screen.
@@ -233,6 +236,7 @@ directly. Activations are block integers, sums are exact on integer tensor cores
 | Debugger guide | [docs/debugger-guide.md](docs/debugger-guide.md) | [디버거안내.md](디버거안내.md) |
 | Research panel guide | [docs/research-guide.md](docs/research-guide.md) | [연구자안내.md](연구자안내.md) |
 | Model evaluation guide — make, check and improve GGUF files | [docs/model-evaluation-guide.md](docs/model-evaluation-guide.md) | [모델평가안내.md](모델평가안내.md) |
+| llama.cpp replay check — record formats, what is verified | [docs/llama-replay.md](docs/llama-replay.md) | [라마재현.md](문서/라마재현.md) |
 | Precision contract | [계약/contract.md](계약/contract.md) | [계약/계약.md](계약/계약.md) |
 | Development — build from source, layout, checks | [docs/development.md](docs/development.md) | [문서/개발.md](문서/개발.md) |
 | Changelog · versioning | [CHANGELOG.md](CHANGELOG.md) · [docs/versioning.md](docs/versioning.md) | [바뀐것.md](문서/바뀐것.md) · [버전규칙.md](문서/버전규칙.md) |

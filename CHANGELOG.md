@@ -6,6 +6,165 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.22.0 — llama.cpp replay check · Python API · Linux Vulkan · reproducibility kit (2026-11-06)
+
+### Added
+
+- **Vulkan on Linux (#135).** The Linux package now carries the Vulkan build too (server-vulkan, device-vulkan, diag-vulkan,
+  spirv-backend and the diagnosis kernels) — the way to run GeulPU on GPUs other than NVIDIA (AMD, Intel …) on Linux. The Linux
+  Vulkan declarations import `libvulkan.so.1`; the quick check verifies that they declare the same functions as the Windows ones
+  and that the Linux Vulkan programs import only `libc.so.6` and `libvulkan.so.1`. Windows binaries, modules and output bits are
+  unchanged.
+- **llama.cpp replay check — dense architecture (Qwen3).** Plain architectures without the gated delta net can now be checked
+  too (attention in every layer, head size 128, Q/K norms, NEOX RoPE). The replay kernels now cover flash attention with head
+  size 128 (the decode step and the four prompt configurations) and the fused kernel in which llama.cpp runs the Q/K norm and
+  RoPE together, and the check emulates how the server splits the prompt for a dense model (no checkpoints). Ten Qwen3-8B
+  Q4_K_M receipts matched bit for bit on CUDA ([문서/라마재현.md](문서/라마재현.md), stage 10).
+- **llama.cpp replay check — llama architecture (Llama 3.1).** The llama architecture used by Llama and Mistral can now be
+  checked too. The replay kernels cover the normal RoPE (adjacent pairs) and Llama 3.1's long-context scaling (rope_freqs),
+  and the replay host follows the graph without Q/K norms. Ten Meta-Llama-3.1-8B-Instruct Q4_K_M receipts matched bit for
+  bit on CUDA ([문서/라마재현.md](문서/라마재현.md), stage 11).
+- **llama.cpp replay check — GQA ratios other than 4, and Q8_0.** Models whose query/KV head ratio is 2 or 3 (Qwen3-0.6B,
+  Llama-3.2-3B) can now be checked too: the replay kernels follow how llama.cpp changes the number of heads it packs into a
+  flash-attention tile for each GQA ratio. Ten Q8_0 receipts of each of those models, and ten Q8_0 receipts each of
+  Qwen3-8B and Llama-3.1-8B, matched bit for bit on CUDA ([문서/라마재현.md](문서/라마재현.md), stage 12).
+- **llama.cpp replay check — qwen2 architecture (Qwen2.5).** The qwen2 architecture used by Qwen2, Qwen2.5 and
+  DeepSeek-R1-Distill-Qwen can now be checked too. The replay host follows the Q/K/V matmul biases and NEOX RoPE (no kernel
+  changes). Ten Qwen2.5-7B-Instruct Q4_K_M receipts matched bit for bit on CUDA ([문서/라마재현.md](문서/라마재현.md), stage 13).
+- **llama.cpp replay check — narrower widths (Qwen2.5-1.5B) and DeepSeek-R1-Distill.** Models whose RMSNorm uses 512-thread
+  blocks (width 1536) can now be checked too. Ten Qwen2.5-1.5B-Instruct Q4_K_M receipts, and — with no code change — ten
+  DeepSeek-R1-Distill-Qwen-7B Q8_0 receipts, matched bit for bit on CUDA ([문서/라마재현.md](문서/라마재현.md), stage 14).
+- **llama.cpp replay check — SPM tokenizer (Mistral).** When the check builds each step's token bytes it now also handles SPM
+  vocabularies (`▁` is a space, `<0xAB>` is that byte). Ten Mistral-7B-Instruct-v0.3 Q4_K_M receipts matched bit for bit on
+  CUDA, including steps where a character spans several byte tokens, as in Korean ([문서/라마재현.md](문서/라마재현.md),
+  stage 15).
+- **llama.cpp replay check — conversation requests whose cache ends inside a ubatch (dense models).** When the server had
+  computed a whole ubatch of an earlier request and then removed the cache past the reused prefix (the same prompt sent again,
+  an edited earlier turn, another conversation on the same slot), the check now recomputes in the same order and verifies the
+  request. These requests were refused before ([문서/라마재현.md](문서/라마재현.md), stage 16).
+- **llama.cpp replay check — models wider than 4096 (14B class).** The check now computes the RMSNorm that llama.cpp uses
+  for width 5120 (block 1024, four float4 per thread), and the flash-attention partial buffers no longer run short on
+  prompt ubatches of models with many KV heads. Verified with Qwen2.5-Coder-14B-Instruct Q4_K_M
+  ([문서/라마재현.md](문서/라마재현.md), stage 17).
+- **llama.cpp replay check — streamed responses.** The recorder now assembles streamed responses (/completion and the chat
+  API) into the receipt, and the replay check accepts them. Tokens the server never sends as a chunk (steps that end inside
+  a character, and chat steps that produce no text) are chosen by the replay itself at temperature 0, then the server's
+  log-probability entries are compared ([문서/라마재현.md](문서/라마재현.md), stage 18).
+- **llama.cpp replay check — llama.cpp b11963 (the build Ollama v0.40.14 uses).** The check now also accepts receipts from a
+  llama-server built at b11963, besides b12008. The two builds compute the same for the supported models and default settings:
+  the same requests gave identical tokens and log probabilities ([문서/라마재현.md](문서/라마재현.md), stage 19).
+- **llama.cpp replay check — the llama-server that Ollama launches.** Receipts from the llama-server that Ollama (v0.40.14)
+  builds and launches are now accepted (it reports its build as a commit — b11963 — rather than a build number). Nine
+  receipts recorded by attaching the recorder to Ollama's llama-server matched bit for bit; on this PC Ollama ran its CUDA
+  kernels from PTX compiled by the driver at run time, and the values still matched the official build
+  ([문서/라마재현.md](문서/라마재현.md), stage 20).
+- **llama.cpp replay check — the latest llama.cpp (b12138).** From b12081 llama.cpp computes the Q8_1 correction sum of its prompt
+  matrix multiplications (MMQ) from the quantized integers (sum × d) instead of the float values. The check now does the same
+  for those builds, and b12138 receipts verify bit for bit ([문서/라마재현.md](문서/라마재현.md), stage 21).
+- **llama.cpp replay check — chat streams above temperature 0.** Receipts of the common chat-UI setting (streaming, temperature
+  0.7–1) are now accepted. The end token, which a chat stream never sends, is the last token and is not fed back, so every
+  step before it is replayed with known tokens and the last step takes the token the sampler chain picks with the same seed (it
+  must be a control token) ([문서/라마재현.md](문서/라마재현.md), stage 22).
+- **llama.cpp replay check — default servers whose slots are shared by several conversations.** A default llama-server saves
+  idle slots to its RAM cache and clears them whenever it starts a new task, so while one request is computed the KV cache holds
+  only that slot's cells. Receipts from servers where other slots were used are now accepted: requests computed without the
+  cache, and follow-ups with no other slot's request in between. Follow-ups continued from a state loaded from the RAM cache are
+  still refused with a reason ([문서/라마재현.md](문서/라마재현.md), stage 23).
+- **llama.cpp replay check — requests loaded from the RAM cache into another slot.** On default servers, requests continued
+  from a RAM prompt-cache load after another conversation (refused with a reason up to stage 24) are now replayed. The check
+  emulates the server's KV cell allocation (free-cell search, removal, state restore), so the replay uses the server's cell
+  layout and attention length ([문서/라마재현.md](문서/라마재현.md), stage 25).
+- **llama.cpp replay check — servers that keep idle slots.** Receipts from servers with several slots and a unified KV cache
+  that run with `--no-cache-idle-slots` or without a RAM prompt cache are now replayed even when other slots were used (they
+  were refused before). The check emulates the server's slot selection (LCP ratio, empty slot, least recently used slot) and
+  the KV cells of every slot, so requests computed while other slots' cells stayed in the cache are recomputed with the
+  server's cell layout ([문서/라마재현.md](문서/라마재현.md), stage 26).
+- **llama.cpp replay check — servers with a KV cache per slot (-np N).** Receipts from servers started with `-np N` (one KV
+  stream per slot, unified KV off) are now replayed (they were refused before). The check emulates the KV cells of each
+  stream and the server's habit of only saving idle slots to the RAM prompt cache when a task starts
+  ([문서/라마재현.md](문서/라마재현.md), stage 27).
+- **llama.cpp replay check — overlapping requests (continuous batching) from the server log.** Receipts of requests that the
+  server computed together with other requests in one ubatch are now replayed bit for bit by the ubatch batches written in the
+  server log, when that server was started with the environment variable `LLAMA_BATCH_DEBUG=1` and `-v --log-file <file>`
+  (they were refused with a reason before). Without a server log they are still refused, and the reason says how to record one
+  ([문서/라마재현.md](문서/라마재현.md), stage 29).
+- **llama.cpp replay check — token-less records (request and response text only).** Records that keep only what the server
+  returns by default (token-less receipts, `geulpu-llama-receipt/2`) can now be verified. The prompt tokens are rebuilt at
+  verification time by llama.cpp itself (a temporary CPU-only llama-server of the same build), and the replay regenerates the
+  generated tokens and checks that their text is byte-identical to the response (temperature 0). The original run is not
+  touched. Records of one server are verified in order from the first ([문서/라마재현.md](문서/라마재현.md), stage 30). The docs
+  now state correctly that the recorder's added `n_probs` changes the server's sampler chain even at temperature 0.
+- **llama.cpp replay check — without the recorder, from conversation logs.** A JSON file with the conversation the client sent
+  directly to llama-server (messages with answers, and the sampling values it sent) can be imported ("Import conversation log" ·
+  `POST /api/llama/import`); each assistant message becomes a token-less receipt and is verified. This is post-hoc verification
+  of a run that nothing touched — the generated token count is unknown, so the replay regenerates tokens matching the answer text
+  and checks that it ended with an end token or at max_tokens (temperature 0 only, [문서/라마재현.md](문서/라마재현.md), stage 32).
+- **llama.cpp replay check.** Send requests for an unmodified llama-server through the app's recorder (`/llama/completion`)
+  and it keeps a receipt; 'llama.cpp replay check' on the Benchmark page recomputes the request from the receipt alone on
+  this PC's GPU (CUDA or Vulkan) and checks that the tokens and log probabilities the server returned are bit-identical.
+  The recomputed run opens step by step in the debugger (top candidates, log probabilities, entropy) without a GeulPU
+  server. Supported runs: llama.cpp b12008, RTX 4070 Ti, Qwen3.5, one slot, prompt cache off, temperature 0
+  ([문서/라마재현.md](문서/라마재현.md)).
+- **llama.cpp replay check — temperature > 0.** Receipts of requests with temperature > 0 are accepted when the request
+  gave a seed. The check computes llama-server's sampling chain (top_k, top_p, min_p, temperature, then sampling from the
+  distribution with the same random numbers) and compares the token the server chose at every step. Non-default chains
+  (repetition penalties, mirostat, grammar and so on) and requests without a seed are refused with the reason
+  ([문서/라마재현.md](문서/라마재현.md), stage 5).
+- **llama.cpp replay check — Qwen3.5-4B.** Other sizes of the same architecture (qwen35) can now be checked. The check
+  accepts models without a separate output layer (tied embeddings) and Q6_K token embeddings, and follows llama.cpp's work
+  split where it depends on the matrix shape (the matrix-vector loop and the RMSNorm block size). Ten Qwen3.5-4B Q4_K_M
+  receipts matched bit for bit on CUDA, and three short ones on Vulkan (RTX 4070 Ti)
+  ([문서/라마재현.md](문서/라마재현.md), stage 6).
+- **llama.cpp replay check — default server settings and the prompt cache.** Receipts from a default llama-server (no
+  `-np`: 4 slots, unified KV cache, prompt cache on) are now accepted. When a conversation continues and the server reuses
+  its cache, the check rebuilds the slot's state from the earlier receipts of the same slot. It emulates the server's
+  cache logic (common prefix, checkpoint restore, prompt batching). The recorder no longer turns the prompt cache off and
+  also records the slot state. Servers where another slot was used, and requests whose earlier receipts are missing, are
+  refused with the reason ([문서/라마재현.md](문서/라마재현.md), stage 7).
+- **llama.cpp replay check — Qwen3.5-0.8B.** Sizes with different head counts can now be checked too (8/2 attention heads,
+  16 GDN value heads). The replay kernels for flash attention and the gated delta net take the head counts from the model
+  file, and RMSNorm for width 1024 and Q8_0 token embeddings were added. Ten Qwen3.5-0.8B Q8_0 receipts matched bit for bit
+  on CUDA, and three short ones on Vulkan (RTX 4070 Ti) ([문서/라마재현.md](문서/라마재현.md), stage 8).
+- **llama.cpp replay check — chat API.** The recorder now also forwards llama-server's chat API (`/v1/chat/completions`) and
+  writes receipts for it, and the check accepts them. It emulates how the server splits the prompt and creates checkpoints
+  at message positions (the start of each user message), and the case where the slot is saved to and looked up in the RAM
+  prompt cache. Streamed responses are not accepted yet ([문서/라마재현.md](문서/라마재현.md), stage 9).
+- **Python API.** `import geulpu` starts a GeulPU app without a window (`geulpu.start`) or connects to a running one
+  (`geulpu.connect`), loads a model, generates with every step's logit hash (`chat`, `complete`), sends a request again (`rerun`),
+  scores tokens (`score`), branches at a token (`branch`) and compares two runs bit for bit (`geulpu.compare`); `info()` returns the
+  version, GPU, driver, model SHA-256 and computation path. Standard library only, through the app's HTTP API — the engine and its
+  output bits are unchanged ([docs/python-api.md](docs/python-api.md)).
+- **Reproducibility kit (`repro-kit/`).** One command checks whether another machine running GeulPU 0.21.0 gives the same bits as
+  the reference PC: it loads Qwen3-8B Q4_K_M, Qwen3-8B Q8_0 and Qwen3.5-9B Q4_K_M with the default settings (for Q4_K_M including the
+  8-bit KV cache and fast attention) and the exact settings, sends 12 fixed requests one at a time and all at once, and compares the
+  prompt tokens, the generated tokens and every step's logit hash with the reference values (RTX 4070 Ti). It can also run the app's
+  reproducibility check and writes a result file to share. Standard-library Python only ([README.md](repro-kit/README.md)).
+
+### Changed
+
+- **llama.cpp replay check — the recorder is transparent by default.** The recorder now forwards requests to llama-server byte for
+  byte, never queries the server during a run (no `/slots` · `/props` · `/tokenize`, and it does not read the model file), and
+  writes token-less receipts (`geulpu-llama-receipt/2`). With the llama-server executable in the settings, the build is read with
+  `--version` on save (a separate process). The previous recorder (adding probability and token fields to requests and querying
+  slot state — receipts with tokens) remains available as the "probing" mode, which states what it changes
+  ([문서/라마재현.md](문서/라마재현.md), stage 31).
+
+### Fixed
+
+- **llama.cpp replay check — server-level chains for default servers.** On default servers whose slots are shared by several
+  conversations, the chain is now built from all slots' receipts of the same server, emulating the server's slot selection and
+  RAM prompt cache (save and load). Requests continued from a RAM-cache load after another conversation still cannot be
+  replayed (their KV cell layout differs from the original computation) and are now refused with that reason instead of being
+  reported as different ([문서/라마재현.md](문서/라마재현.md), stage 24).
+- **llama.cpp replay check — overlapping requests are refused with a reason.** Receipts of requests that the server computed
+  together with another request (continuous batching) are now refused with a reason, including the request that finished
+  later, which was reported as "different" before. The recorder also stores the slot state before forwarding a request
+  (`slots_before`), so overlaps with requests that bypassed the recorder are caught as well
+  ([문서/라마재현.md](문서/라마재현.md), stage 28).
+- **Vulkan multiply-add rounds once.** The SPIR-V backend now decorates fused multiply-add (GLSL Fma) with NoContraction.
+  Without it a driver may round the product and the sum separately, so Vulkan output bits could differ from CUDA on GPUs other
+  than NVIDIA (seen on an Intel UHD 770). Output bits on NVIDIA's Vulkan are unchanged. Every module's SPIR-V changes.
+
 ## 0.21.0 — Model evaluation: fixes from the fourth researcher review · accuracy interval · original weight type (2026-11-05)
 
 0.21.0 fixes what the fourth outside-researcher review on 0.20.0 (#240 · #241) and an external review found: Make GGUF reads the original weights' type from the stored tensors rather than config.json, Compare workspaces shows every version of a type with its name, and the 95 % accuracy interval no longer collapses to zero width when the number of graded conversations is a power of two. The workspace list (`GET /api/eval`) gains each result's app version (`app`) and, for workspaces whose config.json disagrees with the tensors, `original_config_dtype`; the CSV gains an `app` column at the end. The engine did not change: the build hashes and the output bits of existing requests are the same as 0.20.0.
