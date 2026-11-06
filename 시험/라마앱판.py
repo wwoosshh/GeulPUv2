@@ -441,6 +441,22 @@ def 슬롯하기(a):
             print(f"{이름}: 슬롯 {v.get('id_slot')} · 프롬프트 {v.get('tokens_evaluated')} · cache_n {(v.get('timings') or {}).get('cache_n')} · 영수증 {표[이름]}", flush=True)
             return 답
 
+        if a.오감:                                                # 24단계 — 대화를 더 오간다(A · B · A · C · B · A · C · A)
+            대화 = {"A": [{"role": "user", "content": "Summarize these notes in one sentence. " + 긴글("GPU warps", 30)}],
+                    "B": [{"role": "user", "content": "List two facts from these notes. " + 긴글("tensor cores", 40)}],
+                    "C": [{"role": "user", "content": "Give a title for these notes. " + 긴글("memory coalescing", 45)}]}
+            다음 = {"A": ["Now in five words.", "Translate that to Korean.", "Add one more sentence."],
+                    "B": ["And one more.", "Which one matters most?"], "C": ["Make it shorter.", "Now a subtitle."]}
+            세기 = {"A": 0, "B": 0, "C": 0}
+            for 씨앗, 누구 in enumerate("ABACBACA"):
+                n = 세기[누구]
+                if n > 0:
+                    대화[누구] = 대화[누구] + [{"role": "user", "content": 다음[누구][(n - 1) % len(다음[누구])]}]
+                답 = 보내기(f"{누구}{n + 1}", 대화[누구], 씨앗 + 1)
+                대화[누구] = 대화[누구] + [{"role": "assistant", "content": 답}]
+                세기[누구] = n + 1
+            json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            return 0 if all(표.values()) else 1
         A = [{"role": "user", "content": "Summarize these notes in one sentence. " + 긴글("GPU warps", 30)}]
         dA1 = 보내기("A1", A, 1)
         A = A + [{"role": "assistant", "content": dA1}, {"role": "user", "content": "Now in five words."}]
@@ -633,6 +649,7 @@ def main():
             q.add_argument("--시드", type=int, default=1)
             q.add_argument("--시작", default="multi_turn")
             q.add_argument("--스트림", action="store_true")                 # 18단계 — 기록: /completion 을 스트리밍으로
+            q.add_argument("--오감", action="store_true")                   # 24단계 — 슬롯: 대화를 더 오간다
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
             q.add_argument("--장치", default="")
