@@ -67,6 +67,11 @@ response)을 그대로 쓴다.
       presence 0.3 · 온도 0.7 3 개, repeat 1.3 · 온도 0 2 개, 토큰 번호 logit_bias 1 개, ignore_eos 1 개), 투명한 기록기로 /completion
       repeat 1.1 · 온도 0.8 3 개 · 채팅 2 개 · 토큰 번호 logit_bias 의 /completion · 채팅 각 1 개 · 글로 준 logit_bias 1 개. 영수증 이름은
       <out>/영수증.json.
+  python -I -X utf8 시험/라마앱판.py 갈래기록 <꾸러미> <자료> <out> --서버 … --모델 … --기록폴더 … [--온도 T]
+      37단계 — 기록기 없이: 기본 설정 서버(슬롯 4 · 캐시)에 직접, 갈라진 대화와 다른 대화가 섞인 요청 여섯(A1 · A2 · A2′(둘째 질문을
+      고침) · A3′ · B1 · A3(처음 갈래로 돌아옴))을 보내고, 요청 · 답의 기록 둘을 남긴다 — <out>/갈래요청.json(requests 꼴 — messages ·
+      answer) · <out>/갈래교환.jsonl(exchanges 꼴 — 보낸 몸 · 받은 응답 그대로). 참고는 <out>/참고.json(completion_tokens · cache_n).
+      가져오기 에 --파일들 갈래요청.json(또는 갈래교환.jsonl)을 주면 그 파일을 가져온다(이름은 그 기록의 차례로 r1 … r6).
   python -I -X utf8 시험/라마앱판.py 투명흐름대화 <꾸러미> <자료> <out> --서버 … --모델 … --기록폴더 …
       33단계 — 기본 설정 서버(슬롯 4 · 캐시)에 투명한 기록기로 스트리밍 채팅 대화 h1 … h5(h2 는 stream_options.include_usage).
 마지막 줄 "합계: …".
@@ -1113,6 +1118,53 @@ def 벌점하기(a):
     return 0 if all(표.values()) else 1
 
 
+def 갈래기록하기(a):
+    """37단계 — 기록기 없이 갈라진 대화 · 섞인 대화를 서버에 직접 보내고 requests · exchanges 꼴의 기록을 남긴다"""
+    깃발들 = ["-c", "32768"]
+    os.makedirs(a.out, exist_ok=True)
+    srv = None
+    참고, 요청들, 교환들 = {}, [], []
+    S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
+    더칸 = {"chat_template_kwargs": {"enable_thinking": False}}
+    try:
+        srv = 서버띄우기(a, 깃발들, os.path.join(a.out, "llama-server.log"))
+
+        def 보내기(이름, msgs, 씨앗):
+            몸 = {"messages": msgs, "stream": False, "max_tokens": 64, "temperature": a.온도, "seed": 씨앗, **더칸}
+            r = 묻기(a.라마포트, "/v1/chat/completions", 몸)
+            답 = r["choices"][0]["message"].get("content") or ""
+            tm = r.get("timings") or {}
+            참고[이름] = {"completion_tokens": (r.get("usage") or {}).get("completion_tokens"), "cache_n": tm.get("cache_n"),
+                         "finish_reason": r["choices"][0].get("finish_reason")}
+            요청들.append({"messages": msgs, "answer": 답, "sampling": {"seed": 씨앗}})
+            교환들.append({"request": 몸, "response": r})
+            print(f"{이름}: 프롬프트 {tm.get('prompt_n')} · cache_n {tm.get('cache_n')} · 생성 {tm.get('predicted_n')} · 답 {답[:24]!r}", flush=True)
+            return 답
+
+        u1, u2, u2b, u3 = "CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "그럼 Intel 은? 두 문장으로.", "그 차이가 커널에 주는 영향 하나만."
+        a1 = 보내기("r1", [S, {"role": "user", "content": u1}], 1)
+        a2 = 보내기("r2", [S, {"role": "user", "content": u1}, {"role": "assistant", "content": a1}, {"role": "user", "content": u2}], 2)
+        a2b = 보내기("r3", [S, {"role": "user", "content": u1}, {"role": "assistant", "content": a1}, {"role": "user", "content": u2b}], 3)
+        보내기("r4", [S, {"role": "user", "content": u1}, {"role": "assistant", "content": a1}, {"role": "user", "content": u2b},
+                     {"role": "assistant", "content": a2b}, {"role": "user", "content": u3}], 4)
+        보내기("r5", [S, {"role": "user", "content": "shared memory 뱅크 충돌이 뭐야? 두 문장으로."}], 5)
+        보내기("r6", [S, {"role": "user", "content": u1}, {"role": "assistant", "content": a1}, {"role": "user", "content": u2},
+                     {"role": "assistant", "content": a2}, {"role": "user", "content": u3}], 6)
+        json.dump({"sampling": {"temperature": a.온도, "max_tokens": 64}, "request_fields": 더칸,
+                   "requests": [{k: v for k, v in x.items()} for x in 요청들]},
+                  open(os.path.join(a.out, "갈래요청.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        with open(os.path.join(a.out, "갈래교환.jsonl"), "w", encoding="utf-8", newline="\n") as f:
+            for x in 교환들:
+                f.write(json.dumps(x, ensure_ascii=False) + "\n")
+        json.dump(참고, open(os.path.join(a.out, "참고.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    finally:
+        if srv is not None:
+            srv.terminate()
+            srv.wait(30)
+    print(f"합계: 요청 {len(참고)} · 기록 {a.out}/갈래요청.json · 갈래교환.jsonl")
+    return 0 if len(참고) == 6 else 1
+
+
 def 투명흐름대화하기(a):
     """33단계 — 기본 설정 서버에 투명한 기록기로 스트리밍 채팅 대화 h1 … h5"""
     깃발대화 = ["-c", "32768"]
@@ -1222,7 +1274,13 @@ def 가져오기하기(a):
     try:
         r0 = 묻기(a.포트, "/api/llama/recorder", {"port": 0, "exe": a.서버, "mode": "transparent", "args": a.서버 + " -m " + a.모델 + " " + " ".join(깃발들)})
         print(f"서버 설정: 빌드 {r0.get('build')} · 모델 {os.path.basename(r0.get('model') or '')} · 경고 {r0.get('warnings')}", flush=True)
-        for 이름 in ("A", "B"):
+        for 파일 in (a.파일들.split(",") if a.파일들 else []):         # 37단계 — 갈래 기록(requests · exchanges)
+            r = 묻기(a.포트, "/api/llama/import", {"path": os.path.join(a.out, 파일)})
+            경고들 += r.get("warnings") or []
+            for k, rid in enumerate(r.get("receipts") or []):
+                표[f"r{k + 1}"] = rid
+            print(f"{파일}: 영수증 {len(r.get('receipts') or [])} · 경고 {r.get('warnings')}", flush=True)
+        for 이름 in (("A", "B") if not a.파일들 else ()):
             p = os.path.join(a.out, f"대화{이름}.json")
             if not os.path.exists(p):
                 continue
@@ -1452,7 +1510,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="할일", required=True)
-    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마", "슬롯", "투명", "투명대화", "대화기록", "가져오기", "투명흐름", "투명흐름대화", "멈춤", "벌점"):
+    for n in ("기록", "검증", "대화", "채팅", "흐름채팅", "올라마", "슬롯", "투명", "투명대화", "대화기록", "가져오기", "투명흐름", "투명흐름대화", "멈춤", "벌점", "갈래기록"):
         q = sub.add_parser(n)
         q.add_argument("꾸러미")
         q.add_argument("자료")
@@ -1464,7 +1522,7 @@ def main():
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
             q.add_argument("--견줄", required=True)
-        elif n in ("기록", "대화", "채팅", "흐름채팅", "슬롯", "투명", "투명대화", "대화기록", "가져오기", "투명흐름", "투명흐름대화", "멈춤", "벌점"):
+        elif n in ("기록", "대화", "채팅", "흐름채팅", "슬롯", "투명", "투명대화", "대화기록", "가져오기", "투명흐름", "투명흐름대화", "멈춤", "벌점", "갈래기록"):
             q.add_argument("--서버", required=True)
             q.add_argument("--모델", required=True)
             q.add_argument("--기록폴더", required=True)
@@ -1482,6 +1540,7 @@ def main():
             q.add_argument("--바꾸기", action="store_true")                 # 32단계 — 가져오기: A2 의 답 한 글자를 바꾼다
             q.add_argument("--더깃발", default="")                          # 25단계 — 슬롯: 서버 인자에 더함
             q.add_argument("--멈춤글", default="")                          # 35단계 — 대화기록: 요청마다 stop(| 로 나눔)
+            q.add_argument("--파일들", default="")                          # 37단계 — 가져오기: <out> 안의 기록 파일들(, 로 나눔)
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
             q.add_argument("--장치", default="")
@@ -1503,7 +1562,7 @@ def main():
     a = p.parse_args()
     return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "올라마": 올라마하기, "슬롯": 슬롯하기,
             "바꾸기": 바꾸기, "벗기기": 벗기기, "다시견주기": 다시견주기, "투명": 투명하기, "투명대화": 투명대화하기,
-            "대화기록": 대화기록하기, "가져오기": 가져오기하기, "투명흐름": 투명흐름하기, "투명흐름대화": 투명흐름대화하기, "멈춤": 멈춤하기, "벌점": 벌점하기}[a.할일](a)
+            "대화기록": 대화기록하기, "가져오기": 가져오기하기, "투명흐름": 투명흐름하기, "투명흐름대화": 투명흐름대화하기, "멈춤": 멈춤하기, "벌점": 벌점하기, "갈래기록": 갈래기록하기}[a.할일](a)
 
 
 if __name__ == "__main__":
