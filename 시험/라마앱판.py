@@ -1506,6 +1506,132 @@ def 바꾸기(a):
     return 0
 
 
+def 설정목록하기(a):
+    """39단계 — 기존 영수증의 사본에 설정을 하나씩 더한 영수증과 기대값(기대.json). 사본마다 서버 포트를 달리 한다 — 사슬(같은 서버의
+    앞 영수증)이 서로 떨어진다"""
+    import copy
+    밑 = {}
+    for 칸 in a.밑.split(";"):
+        이름, 자료, out, 영이름 = 칸.split("|")
+        표 = json.load(open(os.path.join(out, "영수증.json"), encoding="utf-8"))
+        밑[이름] = json.load(open(os.path.join(자료, "영수증", 표[영이름] + ".json"), encoding="utf-8"))
+    값 = {k: int(v) for k, v in (x.split("=") for x in a.값.split(","))}
+    os.makedirs(os.path.join(a.자료, "영수증"), exist_ok=True)
+    os.makedirs(a.out, exist_ok=True)
+    BS = chr(92)
+    NN = BS + "n" + BS + "n"                                      # 명령줄에 친 그대로의 \n\n(이스케이프를 풀기 전)
+    지움 = object()
+    그림 = object()
+    사례 = [
+        # (이름, 밑, 서버 인자에 더함, 요청 몸을 고침(지움 · 그림), 기대)
+        ("ctk", "T", " -ctk q8_0", {}, ("거절", "KV 캐시 형")),
+        ("ctv", "P", " -ctv q4_0", {}, ("거절", "KV 캐시 형")),
+        ("md", "T", " -md E:/x/draft.gguf", {}, ("거절", "추측 디코딩")),
+        ("spec", "T", " --spec-type ngram-simple", {}, ("거절", "추측 디코딩")),
+        ("draftmax", "P", " --draft-max 16", {}, ("거절", "추측 디코딩")),
+        ("lcs", "T", " -lcs E:/x/table.bin", {}, ("거절", "추측 디코딩")),
+        ("lora", "T", " --lora E:/x/a.gguf", {}, ("거절", "LoRA · 제어 벡터")),
+        ("cvec", "P", " --control-vector E:/x/c.gguf", {}, ("거절", "LoRA · 제어 벡터")),
+        ("ot", "T", " -ot exps=CPU", {}, ("거절", "CPU 나 다른 장치")),
+        ("cpumoe", "T", " --cpu-moe", {}, ("거절", "CPU 나 다른 장치")),
+        ("nkvo", "P", " -nkvo", {}, ("거절", "CPU 나 다른 장치")),
+        ("ts", "T", " -ts 1,1", {}, ("거절", "CPU 나 다른 장치")),
+        ("rpc", "T", " --rpc 127.0.0.1:50052", {}, ("거절", "CPU 나 다른 장치")),
+        ("ngl20", "T", " -ngl 20", {}, ("거절", "층 일부만 GPU")),
+        ("devnone", "T", " -dev none", {}, ("거절", "CUDA 장치 하나")),
+        ("devtwo", "P", " -dev CUDA0,CUDA1", {}, ("거절", "CUDA 장치 하나")),
+        ("smrow", "T", " -sm row", {}, ("거절", "none · layer")),
+        ("rope", "T", " --rope-freq-base 1000000", {}, ("거절", "RoPE · 모델 메타데이터")),
+        ("okv", "P", " --override-kv a=int:1", {}, ("거절", "RoPE · 모델 메타데이터")),
+        ("lbias", "T", " -l 15043+1", {}, ("거절", "서버 명령줄의 logit_bias")),
+        ("bs", "T", " -bs", {}, ("거절", "백엔드 고르기")),
+        ("sp", "P", " -sp", {}, ("거절", "특수 토큰")),
+        ("tools", "T", " --tools all", {}, ("거절", "서버 쪽 도구")),
+        ("emb", "T", " --embedding", {}, ("거절", "임베딩")),
+        ("router", "T", " --models-dir E:/x", {}, ("거절", "라우터")),
+        ("rbudget", "C", " --reasoning-budget 0", {}, ("거절", "생각 예산")),
+        ("sleep", "T", " --sleep-idle-seconds 60", {}, ("거절", "잠드는 서버")),
+        ("adapt", "T", " --adaptive-target 0.5", {}, ("거절", "adaptive 고르기")),
+        ("under", "T", " --top_k 20", {}, ("거절", "밑줄")),
+        ("foo", "T", " --foo", {}, ("거절", "아직 셈에 넣지 않은 서버 인자(--foo)")),
+        ("psp", "P", "", {"post_sampling_probs": True}, ("거절", "post_sampling_probs")),
+        ("ncmpl", "T", "", {"n_cmpl": 2}, ("거절", "답을 여럿")),
+        ("n2", "C", "", {"n": 2}, ("거절", "답을 여럿")),
+        ("rlora", "T", "", {"lora": [{"id": 0, "scale": 1.0}]}, ("거절", "LoRA 를 준 요청")),
+        ("ncr", "T", "", {"n_cache_reuse": 256}, ("거절", "캐시 조각 재사용")),
+        ("rf", "P", "", {"response_fields": ["content"]}, ("거절", "response_fields")),
+        ("radapt", "T", "", {"adaptive_target": 0.5}, ("거절", "adaptive 고르기")),
+        ("rbs", "T", "", {"backend_sampling": True}, ("거절", "백엔드 고르기")),
+        ("rbt", "C", "", {"reasoning_budget_tokens": 0}, ("거절", "생각 예산")),
+        ("rctl", "C", "", {"reasoning_control": True}, ("거절", "생각 예산")),
+        ("slot", "T", "", {"id_slot": 0}, ("거절", "슬롯을 정해")),
+        ("img", "C", "", {"messages": 그림}, ("거절", "글이 아닌 입력")),
+        # 39-2 — 셈을 바꾸지 않는 인자
+        ("okT", "T", ' -t 8 --metrics --log-colors on --no-warmup -ngl all -dev CUDA0 -sm layer -ctk f16 -ctv f16 --keep 4 --alias "my model"', {},
+         ("같음", 값["T"])),
+        ("okP", "P", " -t 8 --metrics -ngl 99 -dev CUDA0 -sm none -ctk f16", {}, ("같음", 값["P"])),
+        # 39-3 — -r(이스케이프 · 여럿) · 요청의 빈 멈춤 글
+        ("r1", "S", " -r " + NN, {"stop": 지움}, ("같음", 값["S"])),
+        ("r2", "S", " -r @@@@ -r " + NN, {"stop": 지움}, ("같음", 값["S"])),
+        ("r3", "S", " --no-escape -r " + NN, {"stop": 지움}, ("다름", 0)),
+        ("r4", "S", " -r " + NN, {"stop": [""]}, ("같음", 값["S"])),
+        ("r5", "S", "", {"stop": ["", "\n\n"]}, ("같음", 값["S"])),
+        # 39-4 — 다른 이름(채팅 — 응답에 고르기 설정이 없다)
+        ("t0", "C", " --temperature 0", {"temperature": 지움}, ("같음", 값["C"])),
+        ("typ", "C", " --typical-p 0.9", {}, ("거절", "typical_p")),
+        ("tns", "C", " --top-n-sigma 1", {}, ("거절", "top_n_sigma")),
+        ("sseq", "C", " --sampler-seq kt", {}, ("거절", "차례(samplers)")),
+    ]
+    표, 기대 = {}, {}
+    for i, (이름, b, 더함, 몸고침, 바람) in enumerate(사례, 1):
+        d = copy.deepcopy(밑[b])
+        d["server"]["args"] = d["server"]["args"] + 더함
+        d["server"]["port"] = 62000 + i
+        몸 = d["request"]["body"]
+        for k, v in 몸고침.items():
+            if v is 지움:
+                몸.pop(k, None)
+            elif v is 그림:
+                for m in 몸["messages"]:
+                    if m.get("role") == "user":
+                        m["content"] = [{"type": "text", "text": m["content"]},
+                                        {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo="}}]
+            else:
+                몸[k] = v
+        rid = f"20261107-050000-{i}"
+        with open(os.path.join(a.자료, "영수증", rid + ".json"), "w", encoding="utf-8", newline="\n") as f:
+            json.dump(d, f, ensure_ascii=False)
+        표[이름] = rid
+        기대[이름] = {"kind": 바람[0], "text": 바람[1] if 바람[0] == "거절" else "", "values": 바람[1] if 바람[0] == "같음" else None}
+    json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    json.dump(기대, open(os.path.join(a.out, "기대.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(f"사례 {len(사례)} 개 → {a.자료}")
+    return 0
+
+
+def 설정확인하기(a):
+    """39단계 — 검증 결과(검증-cuda-default.json)를 기대.json 과 견준다"""
+    기대 = json.load(open(os.path.join(a.out, "기대.json"), encoding="utf-8"))
+    결과 = json.load(open(os.path.join(a.out, "검증-cuda-default.json"), encoding="utf-8"))
+    맞음, 틀림 = 0, []
+    for 이름, w in 기대.items():
+        r = 결과.get(이름) or {}
+        if w["kind"] == "거절":
+            ok = r.get("state") == "failed" and w["text"] in (r.get("reason") or "")
+        elif w["kind"] == "같음":
+            ok = r.get("same") is True and r.get("values") == w["values"]
+        else:
+            ok = r.get("state") == "done" and r.get("same") is False
+        print(f"{'맞음' if ok else '틀림'} {이름}: 기대 {w['kind']} {w['text'] or w['values'] or ''} — {r.get('state')} · {(r.get('reason') or r.get('summary') or '')[:110]}",
+              flush=True)
+        if ok:
+            맞음 += 1
+        else:
+            틀림.append(이름)
+    print(f"합계: 사례 {len(기대)} · 기대대로 {맞음} · 틀림 {틀림}")
+    return 0 if not 틀림 else 1
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser()
@@ -1554,6 +1680,13 @@ def main():
     q.add_argument("기록out")
     q.add_argument("새자료")
     q.add_argument("out")
+    q = sub.add_parser("설정목록")                                   # 39단계 — 설정을 하나씩 더한 사본과 기대값
+    q.add_argument("자료")
+    q.add_argument("out")
+    q.add_argument("--밑", required=True)                             # 이름|자료|out|영수증 이름 ; …
+    q.add_argument("--값", required=True)                             # 이름=원래 값 수 , …
+    q = sub.add_parser("설정확인")                                   # 39단계 — 결과를 기대값과
+    q.add_argument("out")
     q = sub.add_parser("다시견주기")                                  # 30단계 — 다시만듦 파일과 원래 영수증
     q.add_argument("자료")
     q.add_argument("새자료")
@@ -1562,7 +1695,8 @@ def main():
     a = p.parse_args()
     return {"기록": 기록하기, "검증": 검증하기, "대화": 대화하기, "채팅": 채팅하기, "흐름채팅": 흐름채팅하기, "올라마": 올라마하기, "슬롯": 슬롯하기,
             "바꾸기": 바꾸기, "벗기기": 벗기기, "다시견주기": 다시견주기, "투명": 투명하기, "투명대화": 투명대화하기,
-            "대화기록": 대화기록하기, "가져오기": 가져오기하기, "투명흐름": 투명흐름하기, "투명흐름대화": 투명흐름대화하기, "멈춤": 멈춤하기, "벌점": 벌점하기, "갈래기록": 갈래기록하기}[a.할일](a)
+            "대화기록": 대화기록하기, "가져오기": 가져오기하기, "투명흐름": 투명흐름하기, "투명흐름대화": 투명흐름대화하기, "멈춤": 멈춤하기, "벌점": 벌점하기, "갈래기록": 갈래기록하기,
+            "설정목록": 설정목록하기, "설정확인": 설정확인하기}[a.할일](a)
 
 
 if __name__ == "__main__":

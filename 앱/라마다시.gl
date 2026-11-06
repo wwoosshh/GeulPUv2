@@ -479,9 +479,11 @@
         문자열 명령줄 = 제글보기(서, "args", "").
         날글넣기(b, ",\"generation_settings\":\{\"samplers\":").
         제찾기(몸, "samplers") != 없음이면 { 파이썬쓰기(b, 제찾기(몸, "samplers"), 0, 0). }
-        아니면 (라마인자있나(명령줄, "--samplers") 또는 라마인자있나(명령줄, "--sampling-seq"))이면 { 날글넣기(b, "[\"custom\"]"). }
+        아니면 (라마인자있나(명령줄, "--samplers") 또는 라마인자있나(명령줄, "--sampling-seq") 또는 라마인자있나(명령줄, "--sampler-seq"))이면 {
+            날글넣기(b, "[\"custom\"]").
+        }
         아니면 { 날글넣기(b, "[\"penalties\",\"dry\",\"top_n_sigma\",\"top_k\",\"typ_p\",\"top_p\",\"min_p\",\"xtc\",\"temperature\"]"). }
-        라마고르기칸(b, 몸, 명령줄, "temperature", "--temp", "--temp", "0.8").
+        라마고르기칸(b, 몸, 명령줄, "temperature", "--temp", "--temperature", "0.8").           (* 39단계 — 다른 이름도 *)
         라마고르기칸(b, 몸, 명령줄, "top_k", "--top-k", "--top-k", "40").
         라마고르기칸(b, 몸, 명령줄, "top_p", "--top-p", "--top-p", "0.95").
         라마고르기칸(b, 몸, 명령줄, "min_p", "--min-p", "--min-p", "0.05").
@@ -493,8 +495,8 @@
         라마고르기칸(b, 몸, 명령줄, "repeat_last_n", "--repeat-last-n", "--repeat-last-n", "64").      (* 36단계 *)
         라마고르기칸(b, 몸, 명령줄, "mirostat", "--mirostat", "--mirostat", "0").
         라마고르기칸(b, 몸, 명령줄, "dry_multiplier", "--dry-multiplier", "--dry-multiplier", "0.0").
-        라마고르기칸(b, 몸, 명령줄, "top_n_sigma", "--top-nsigma", "--top-nsigma", "-1.0").
-        라마고르기칸(b, 몸, 명령줄, "typical_p", "--typical", "--typical", "1.0").
+        라마고르기칸(b, 몸, 명령줄, "top_n_sigma", "--top-nsigma", "--top-n-sigma", "-1.0").
+        라마고르기칸(b, 몸, 명령줄, "typical_p", "--typical", "--typical-p", "1.0").
         라마고르기칸(b, 몸, 명령줄, "xtc_probability", "--xtc-probability", "--xtc-probability", "0.0").
         라마고르기칸(b, 몸, 명령줄, "dynatemp_range", "--dynatemp-range", "--dynatemp-range", "0.0").
         날글넣기(b, ",\"ignore_eos\":").
