@@ -800,6 +800,351 @@
     해제(m).
 }
 
+(* ===== 39단계 — 셈을 바꾸는 설정은 닫힌 목록으로(서버 인자 · 요청 칸 — 문서/라마재현.md 39단계). 영수증을 읽은 바로 뒤, 토큰 없는
+   기록의 프롬프트를 임시 서버로 다시 만들기 전에 본다(라마검증일) ===== *)
+
+(* 명령줄의 낱말들: 빈칸 · 탭으로 나누되 큰따옴표로 묶은 것은 하나로(따옴표는 뺀다) *)
+[문자열 명령줄을 라마명령낱말들]는 -> 문자열목록 참조 {
+    문자열목록 참조 l = 문자열목록_만들기().
+    명령줄 == 없음이면 { 반환 l. }
+    바이트열 참조 b = 바이트열_만들기().
+    참거짓 따옴 = 거짓.
+    참거짓 있음 = 거짓.
+    정수 k = 0.
+    (명령줄[k] != 0) 동안 {
+        정수 c = 명령줄[k] & 255.
+        c == 34이면 {
+            따옴 = 아닌 따옴.
+            있음 = 참.
+        } 아니면 ((c == 32 또는 c == 9) 그리고 아닌 따옴)이면 {
+            있음이면 {
+                바이트열_넣기(b, 0).
+                문자열목록_추가(l, 문자열_복제(바이트열_자료(b))).
+                바이트열_해제(b).
+                b = 바이트열_만들기().
+            }
+            있음 = 거짓.
+        } 아니면 {
+            바이트열_넣기(b, c).
+            있음 = 참.
+        }
+        k += 1.
+    }
+    있음이면 {
+        바이트열_넣기(b, 0).
+        문자열목록_추가(l, 문자열_복제(바이트열_자료(b))).
+    }
+    바이트열_해제(b).
+    반환 l.
+}
+
+(* s 가 p 로 시작하는가(바이트) *)
+[문자열 s를 문자열 p를 라마앞같은가]는 -> 참거짓 {
+    (s == 없음 또는 p == 없음)이면 { 반환 거짓. }
+    반복 (정수 k = 0: p[k] != 0: k += 1) { (s[k] & 255) != (p[k] & 255)이면 { 반환 거짓. } }
+    반환 참.
+}
+
+[문자열 s를 라마또는빈]는 -> 문자열 {
+    s == 없음이면 { 반환 "". }
+    반환 s.
+}
+
+(* 십육진 숫자 하나 — 아니면 −1 *)
+[정수 c를 라마십육]는 -> 정수 {
+    (c >= 48 그리고 c <= 57)이면 { 반환 c - 48. }
+    (c >= 97 그리고 c <= 102)이면 { 반환 c - 87. }
+    (c >= 65 그리고 c <= 70)이면 { 반환 c - 55. }
+    반환 -1.
+}
+
+(* \x 뒤의 두 글자를 strtol(…, 16) 이 모두 읽을 때의 바이트 — 아니면 −1(십육진 둘 · 빈칸 + 십육진 · 부호 + 십육진) *)
+[정수 a를 정수 b를 라마십육둘]는 -> 정수 {
+    정수 hb = 라마십육(b).
+    hb < 0이면 { 반환 -1. }
+    정수 ha = 라마십육(a).
+    ha >= 0이면 { 반환 ha * 16 + hb. }
+    (a == 32 또는 (a >= 9 그리고 a <= 13) 또는 a == 43)이면 { 반환 hb. }
+    a == 45이면 { 반환 (256 - hb) & 255. }
+    반환 -1.
+}
+
+(* common.cpp string_process_escapes(b12008): \n \r \t \' \" \\ 와 \xHH. 그 밖의 \c 와 끝의 \ 는 그대로 *)
+[문자열 s를 라마이스케이프풀기]는 -> 문자열 {
+    바이트열 참조 b = 바이트열_만들기().
+    정수 n = 글자수(s).
+    정수 i = 0.
+    (i < n) 동안 {
+        정수 c = s[i] & 255.
+        (c == 92 그리고 i + 1 < n)이면 {
+            i += 1.
+            정수 d = s[i] & 255.
+            d == 110이면 { 바이트열_넣기(b, 10). }
+            아니면 (d == 114)이면 { 바이트열_넣기(b, 13). }
+            아니면 (d == 116)이면 { 바이트열_넣기(b, 9). }
+            아니면 (d == 39 또는 d == 34 또는 d == 92)이면 { 바이트열_넣기(b, d). }
+            아니면 {
+                정수 v = -1.
+                (d == 120 그리고 i + 2 < n)이면 { v = 라마십육둘(s[i + 1] & 255, s[i + 2] & 255). }
+                v >= 0이면 {
+                    바이트열_넣기(b, v).
+                    i += 2.
+                } 아니면 {
+                    바이트열_넣기(b, 92).
+                    바이트열_넣기(b, d).
+                }
+            }
+        } 아니면 { 바이트열_넣기(b, c). }
+        i += 1.
+    }
+    바이트열_넣기(b, 0).
+    문자열 r = 문자열_복제(바이트열_자료(b)).
+    바이트열_해제(b).
+    반환 r.
+}
+
+(* 서버 명령줄의 멈춤 글(-r · --reverse-prompt) 모두 — 서버처럼 --no-escape 가 아니면 이스케이프를 푼다(마지막 -e · --no-escape 가
+   정한다 — common/arg.cpp 의 params.escape, 기본 참) *)
+[문자열 명령줄을 라마서버멈춤글들]는 -> 문자열목록 참조 {
+    문자열목록 참조 l = 문자열목록_만들기().
+    문자열목록 참조 낱 = 라마명령낱말들(명령줄).
+    정수 n = 문자열목록_길이(낱).
+    참거짓 푸나 = 참.
+    반복 (정수 k는 0부터 n 전까지) {
+        문자열 a = 문자열목록_값(낱, k).
+        문자열_같은가(a, "--no-escape")이면 { 푸나 = 거짓. }
+        (문자열_같은가(a, "-e") 또는 문자열_같은가(a, "--escape"))이면 { 푸나 = 참. }
+    }
+    정수 k2 = 0.
+    (k2 + 1 < n) 동안 {
+        문자열 a2 = 문자열목록_값(낱, k2).
+        (문자열_같은가(a2, "-r") 또는 문자열_같은가(a2, "--reverse-prompt"))이면 {
+            문자열 v = 문자열목록_값(낱, k2 + 1).
+            푸나이면 { 문자열목록_추가(l, 라마이스케이프풀기(v)). } 아니면 { 문자열목록_추가(l, 문자열_복제(v)). }
+            k2 += 2.
+        } 아니면 { k2 += 1. }
+    }
+    반환 l.
+}
+
+(* 모델 파일의 층 수(GGUF 머리의 <구조>.block_count) — 못 읽으면 −1 *)
+[문자열 경로를 라마층수읽기]는 -> 정수 {
+    정수 n = 0.
+    문자열 사상 = 앱통째사상(경로, &n).
+    사상 == 없음이면 { 반환 -1. }
+    GGUF머리 참조 머리 = GGUF머리읽기(사상, n).
+    정수 r = -1.
+    아닌 머리→틀림이면 {
+        문자열 구조이름 = GGUF글값(머리, "general.architecture").
+        구조이름 != 없음이면 {
+            문자열 열쇠 = 잇기(구조이름, ".block_count").
+            r = GGUF수(머리, 열쇠, -1).
+            해제(열쇠).
+        }
+    }
+    GGUF머리놓기(머리).
+    앱사상풀기(사상 으로 공허 참조).
+    반환 r.
+}
+
+(* 받는 서버 인자(b12008 의 llama-server — common/arg.cpp): 셈에 넣은 것과 셈을 바꾸지 않는 것. " 이름 " 은 값 없이, " 이름= " 은 값
+   하나를 받는다. 값을 보는 인자(-ctk · -ctv · -ngl · -dev · -sm · --reasoning-budget · --sleep-idle-seconds · --adaptive-target)와 거절하는
+   인자(라마거절무리)는 여기 없다 *)
+[라마받는인자들]는 -> 문자열 {
+    바이트열 참조 b = 바이트열_만들기().
+    (* 값 없이 *)
+    날글넣기(b, " -h --help --usage --version -cl --cache-list --completion-bash --swa-full -kvu --kv-unified -no-kvu --no-kv-unified").
+    날글넣기(b, " --cache-idle-slots --no-cache-idle-slots --context-shift --no-context-shift --perf --no-perf -e --escape --no-escape").
+    날글넣기(b, " --warmup --no-warmup --spm-infill --ignore-eos -kvo --kv-offload --repack -nr --no-repack --no-host -cb --cont-batching").
+    날글넣기(b, " -nocb --no-cont-batching --mmproj-auto --no-mmproj --no-mmproj-auto --mmproj-offload --no-mmproj-offload --list-devices").
+    날글넣기(b, " --check-tensors --op-offload --no-op-offload --offline --reuse-port --cors-credentials --no-cors-credentials --ui-mcp-proxy").
+    날글넣기(b, " --webui-mcp-proxy --no-ui-mcp-proxy --no-webui-mcp-proxy -no-ag --no-agent --ui --webui --no-ui --no-webui --connect").
+    날글넣기(b, " --cache-prompt --no-cache-prompt --metrics --props --slots --no-slots --jinja --no-jinja --reasoning-preserve").
+    날글넣기(b, " --no-reasoning-preserve --skip-chat-parsing --no-skip-chat-parsing --prefill-assistant --no-prefill-assistant --log-disable").
+    날글넣기(b, " --log-jsonl --no-log-jsonl -v --verbose --log-verbose --log-prefix --no-log-prefix --log-timestamps --no-log-timestamps").
+    (* 값 하나 *)
+    날글넣기(b, " -t= --threads= -tb= --threads-batch= -C= --cpu-mask= -Cr= --cpu-range= --cpu-strict= --prio= --poll= -Cb= --cpu-mask-batch=").
+    날글넣기(b, " -Crb= --cpu-range-batch= --cpu-strict-batch= --prio-batch= --poll-batch= -c= --ctx-size= --kv-unified-per-slot= -n= --predict=").
+    날글넣기(b, " --n-predict= -b= --batch-size= -ub= --ubatch-size= --keep= -ctxcp= --ctx-checkpoints= --swa-checkpoints= -cms=").
+    날글넣기(b, " --checkpoint-min-step= -cram= --cache-ram= -fa= --flash-attn= -r= --reverse-prompt= --samplers= -s= --seed= --sampler-seq=").
+    날글넣기(b, " --sampling-seq= --temp= --temperature= --top-k= --top-p= --min-p= --top-nsigma= --top-n-sigma= --xtc-probability=").
+    날글넣기(b, " --xtc-threshold= --typical= --typical-p= --repeat-last-n= --repeat-penalty= --presence-penalty= --frequency-penalty=").
+    날글넣기(b, " --dry-multiplier= --dry-base= --dry-allowed-length= --dry-penalty-last-n= --dry-sequence-breaker= --adaptive-decay=").
+    날글넣기(b, " --dynatemp-range= --dynatemp-exp= --mirostat= --mirostat-lr= --mirostat-ent= --grammar= --grammar-file= -j= --json-schema=").
+    날글넣기(b, " -jf= --json-schema-file= --pooling= -dt= --defrag-thold= -np= --parallel= -mm= --mmproj= -mmu= --mmproj-url=").
+    날글넣기(b, " --image-min-tokens= --image-max-tokens= --mtmd-batch-max-tokens= --video-fps= --video-timestamp-interval=").
+    날글넣기(b, " --video-ffmpeg-dir= -lm= --load-mode= -lzm= --lazy-mode= --numa= -mg= --main-gpu= -fit= --fit= -fitt= --fit-target= -fitc=").
+    날글넣기(b, " --fit-ctx= -a= --alias= --tags= -m= --model= -mu= --model-url= -dr= --docker-repo= -hf= -hfr= --hf-repo= -hff= --hf-file=").
+    날글넣기(b, " -hft= --hf-token= --embd-normalize= --host= --port= --path= --cors-origins= --cors-methods= --cors-headers= --api-prefix=").
+    날글넣기(b, " --ui-config= --webui-config= --ui-config-file= --webui-config-file= --connect-code= --api-key= --api-key-file=").
+    날글넣기(b, " --ssl-key-file= --ssl-cert-file= --chat-template-kwargs= -to= --timeout= --sse-ping-interval= --threads-http= --cache-reuse=").
+    날글넣기(b, " --slot-save-path= --media-path= --reasoning-format= -rea= --reasoning= --reasoning-effort= --reasoning-budget-message=").
+    날글넣기(b, " --chat-template= --chat-template-file= -sps= --slot-prompt-similarity= --log-file= --log-prompts-dir= --log-colors= -lv=").
+    날글넣기(b, " --verbosity= --log-verbosity= ").
+    바이트열_넣기(b, 0).
+    문자열 r = 문자열_복제(바이트열_자료(b)).
+    바이트열_해제(b).
+    반환 r.
+}
+
+(* 셈을 바꾸는데 흉내 내지 않는 서버 인자의 무리 — 아니면 0 *)
+[문자열 a를 라마거절무리]는 -> 정수 {
+    문자열 감싼 = 잇기3(" ", a, " ").
+    정수 g = 0.
+    (라마앞같은가(a, "--spec-") 또는 라마앞같은가(a, "--draft"))이면 { g = 1. }
+    아니면 (문자열_찾기_위치(" -lcs --lookup-cache-static -lcd --lookup-cache-dynamic -hfd -hfrd --hf-repo-draft -td --threads-draft -tbd --threads-batch-draft -Cd --cpu-mask-draft -Crd --cpu-range-draft --cpu-strict-draft --prio-draft --poll-draft -Cbd --cpu-mask-batch-draft --cpu-strict-batch-draft --prio-batch-draft --poll-batch-draft -ctkd --cache-type-k-draft -ctvd --cache-type-v-draft -otd --override-tensor-draft -cmoed --cpu-moe-draft -ncmoed --n-cpu-moe-draft -devd --device-draft -ngld --gpu-layers-draft --n-gpu-layers-draft -md --model-draft --fim-qwen-7b-spec --fim-qwen-14b-spec " 에서, 감싼 를) >= 0)이면 { g = 1. }
+    아니면 (문자열_찾기_위치(" --lora --lora-scaled --lora-init-without-apply --control-vector --control-vector-scaled --control-vector-layer-range " 에서, 감싼 를) >= 0)이면 { g = 2. }
+    아니면 (문자열_찾기_위치(" -ot --override-tensor -cmoe --cpu-moe -ncmoe --n-cpu-moe --moe-cache-mib -ncffn --n-cpu-ffn -nkvo --no-kv-offload -ts --tensor-split --rpc " 에서, 감싼 를) >= 0)이면 { g = 3. }
+    아니면 (문자열_찾기_위치(" --rope-scaling --rope-scale --rope-freq-base --rope-freq-scale --yarn-orig-ctx --yarn-ext-factor --yarn-attn-factor --yarn-beta-slow --yarn-beta-fast --override-kv " 에서, 감싼 를) >= 0)이면 { g = 4. }
+    아니면 (문자열_찾기_위치(" -l --logit-bias " 에서, 감싼 를) >= 0)이면 { g = 5. }
+    아니면 (문자열_찾기_위치(" -bs --backend-sampling " 에서, 감싼 를) >= 0)이면 { g = 6. }
+    아니면 (문자열_찾기_위치(" -sp --special " 에서, 감싼 를) >= 0)이면 { g = 7. }
+    아니면 (문자열_찾기_위치(" --tools --tools-runtime --mcp-servers-config --mcp-servers-json -ag --agent " 에서, 감싼 를) >= 0)이면 { g = 8. }
+    아니면 (문자열_찾기_위치(" --embedding --embeddings --rerank --reranking " 에서, 감싼 를) >= 0)이면 { g = 9. }
+    아니면 (문자열_찾기_위치(" --models-dir --models-preset --models-max --models-memory-margin --models-autoload --no-models-autoload " 에서, 감싼 를) >= 0)이면 { g = 10. }
+    아니면 (문자열_찾기_위치(" --embd-gemma-default --fim-qwen-1.5b-default --fim-qwen-3b-default --fim-qwen-7b-default --fim-qwen-30b-default --gpt-oss-20b-default --gpt-oss-120b-default --vision-gemma-4b-default --vision-gemma-12b-default " 에서, 감싼 를) >= 0)이면 { g = 11. }
+    해제(감싼).
+    반환 g.
+}
+
+[정수 g를 문자열 a를 라마거절까닭]는 -> 문자열 {
+    g == 1이면 { 반환 짓기("추측 디코딩(초안 모델 · n-gram · lookup)을 켠 서버(%s)의 영수증은 아직 받지 않습니다 — 생성 토큰을 여럿씩 셈해 셈의 모양이 다릅니다", a). }
+    g == 2이면 { 반환 짓기("LoRA · 제어 벡터를 쓴 서버(%s)의 영수증은 아직 받지 않습니다", a). }
+    g == 3이면 { 반환 짓기("가중치 · KV 의 일부를 CPU 나 다른 장치에 둔 서버(%s)의 영수증은 아직 받지 않습니다 — 재현은 모든 층을 GPU 하나에서 셈합니다", a). }
+    g == 4이면 { 반환 짓기("RoPE · 모델 메타데이터를 덮어쓴 서버(%s)의 영수증은 아직 받지 않습니다", a). }
+    g == 5이면 { 반환 짓기("서버 명령줄의 logit_bias(%s)는 아직 받지 않습니다 — 요청의 logit_bias 로 주세요", a). }
+    g == 6이면 { 반환 짓기("백엔드 고르기(%s)를 켠 서버의 영수증은 아직 받지 않습니다", a). }
+    g == 7이면 { 반환 짓기("특수 토큰을 글로 내는 서버(%s)의 영수증은 아직 받지 않습니다", a). }
+    g == 8이면 { 반환 짓기("서버 쪽 도구 · 에이전트(%s)를 켠 서버의 영수증은 받지 않습니다 — 요청 하나에 모델을 여러 번 부를 수 있습니다", a). }
+    g == 9이면 { 반환 짓기("임베딩 · 재순위 서버(%s)의 영수증은 받지 않습니다", a). }
+    g == 10이면 { 반환 짓기("여러 모델을 다루는 라우터(%s)의 영수증은 아직 받지 않습니다 — 모델을 띄운 llama-server 의 명령줄이 필요합니다", a). }
+    반환 짓기("모델과 설정을 한꺼번에 정하는 묶음(%s)은 아직 받지 않습니다 — 그 설정을 인자로 풀어 주세요", a).
+}
+
+(* CUDA 장치 하나(CUDA0, CUDA1 …)인가 *)
+[문자열 v를 라마쿠다장치하나]는 -> 참거짓 {
+    아닌 라마앞같은가(v, "CUDA")이면 { 반환 거짓. }
+    (v[4] & 255) == 0이면 { 반환 거짓. }
+    반복 (정수 k = 4: v[k] != 0: k += 1) {
+        정수 c = v[k] & 255.
+        (c < 48 또는 c > 57)이면 { 반환 거짓. }
+    }
+    반환 참.
+}
+
+(* 서버 인자를 닫힌 목록으로 — 받으면 없음, 아니면 까닭(새 글) *)
+[제이슨 참조 영을 라마인자받나]는 -> 문자열 {
+    문자열목록 참조 낱 = 라마명령낱말들(제글보기(제찾기(영, "server"), "args", "")).
+    정수 n = 문자열목록_길이(낱).
+    문자열 받음 = 라마받는인자들().
+    문자열 까닭 = 없음.
+    정수 k = 0.
+    (k < n 그리고 까닭 == 없음) 동안 {
+        문자열 a = 문자열목록_값(낱, k).
+        정수 c0 = a[0] & 255.
+        정수 c1 = 0.
+        c0 != 0이면 { c1 = a[1] & 255. }
+        참거짓 깃발 = c0 == 45 그리고 c1 != 0 그리고 아닌 (c1 >= 48 그리고 c1 <= 57) 그리고 c1 != 46.
+        아닌 깃발이면 { k += 1. }
+        아니면 {
+            문자열 v = 없음.
+            k + 1 < n이면 { v = 문자열목록_값(낱, k + 1). }
+            (라마앞같은가(a, "--") 그리고 문자_찾기(a, 95) != 없음)이면 {
+                까닭 = 짓기("밑줄로 쓴 서버 인자 이름(%s)은 받지 않습니다 — 대시로 쓴 이름만 받습니다", a).
+            } 아니면 (문자열_같은가(a, "-ctk") 또는 문자열_같은가(a, "--cache-type-k") 또는 문자열_같은가(a, "-ctv") 또는 문자열_같은가(a, "--cache-type-v"))이면 {
+                (v == 없음 또는 아닌 문자열_같은가(v, "f16"))이면 {
+                    까닭 = 짓기("KV 캐시 형을 바꾼 서버(%s %s)의 영수증은 아직 받지 않습니다 — 재현의 KV 는 f16 입니다", a, 라마또는빈(v)).
+                }
+                k += 2.
+            } 아니면 (문자열_같은가(a, "-ngl") 또는 문자열_같은가(a, "--gpu-layers") 또는 문자열_같은가(a, "--n-gpu-layers"))이면 {
+                v == 없음이면 { 까닭 = 짓기("값이 없는 서버 인자(%s)입니다", a). }
+                아니면 (아닌 (문자열_같은가(v, "auto") 또는 문자열_같은가(v, "all") 또는 (v[0] & 255) == 45))이면 {
+                    정수 쓸층 = 라마십진(v).
+                    쓸층 < 0이면 { 까닭 = 짓기("서버 인자 %s 의 값(%s)을 읽지 못했습니다", a, v). }
+                    아니면 {
+                        정수 층수 = 라마층수읽기(제글보기(제찾기(영, "model"), "path", "")).
+                        층수 < 0이면 {
+                            까닭 = 짓기("모델 파일의 층 수를 읽지 못해 %s %s 이 모든 층을 GPU 에 두었는지 알 수 없습니다", a, v).
+                        } 아니면 (쓸층 < 층수 + 1)이면 {
+                            까닭 = 짓기("층 일부만 GPU 에 둔 서버(%s %s — 모델은 층 %lld 개와 출력 층)의 영수증은 받지 않습니다 — 재현은 모든 층을 GPU 에서 셈합니다", a, v, 층수).
+                        }
+                    }
+                }
+                k += 2.
+            } 아니면 (문자열_같은가(a, "-dev") 또는 문자열_같은가(a, "--device"))이면 {
+                아닌 라마쿠다장치하나(v)이면 { 까닭 = 짓기("장치를 정한 서버(%s %s)는 CUDA 장치 하나일 때만 받습니다", a, 라마또는빈(v)). }
+                k += 2.
+            } 아니면 (문자열_같은가(a, "-sm") 또는 문자열_같은가(a, "--split-mode"))이면 {
+                (v == 없음 또는 아닌 (문자열_같은가(v, "none") 또는 문자열_같은가(v, "layer")))이면 {
+                    까닭 = 짓기("나누기 방식(%s %s)은 none · layer 만 받습니다", a, 라마또는빈(v)).
+                }
+                k += 2.
+            } 아니면 (문자열_같은가(a, "--reasoning-budget"))이면 {
+                (v == 없음 또는 아닌 문자열_같은가(v, "-1"))이면 {
+                    까닭 = 짓기("생각 예산(%s %s)을 준 서버의 영수증은 아직 받지 않습니다 — 서버가 생각을 끝내는 토큰을 끼워 넣습니다", a, 라마또는빈(v)).
+                }
+                k += 2.
+            } 아니면 (문자열_같은가(a, "--sleep-idle-seconds"))이면 {
+                (v == 없음 또는 아닌 문자열_같은가(v, "-1"))이면 {
+                    까닭 = 짓기("잠드는 서버(%s %s)의 영수증은 받지 않습니다 — 잠들면 프롬프트 캐시가 비워집니다", a, 라마또는빈(v)).
+                }
+                k += 2.
+            } 아니면 (문자열_같은가(a, "--adaptive-target"))이면 {
+                (v == 없음 또는 (v[0] & 255) != 45)이면 { 까닭 = 짓기("adaptive 고르기(%s %s)를 켠 서버의 영수증은 아직 받지 않습니다", a, 라마또는빈(v)). }
+                k += 2.
+            } 아니면 {
+                정수 무 = 라마거절무리(a).
+                문자열 맞1 = 잇기3(" ", a, " ").
+                문자열 맞2 = 잇기3(" ", a, "= ").
+                무 > 0이면 { 까닭 = 라마거절까닭(무, a). }
+                아니면 (문자열_찾기_위치(받음 에서, 맞1 를) >= 0)이면 { k += 1. }
+                아니면 (문자열_찾기_위치(받음 에서, 맞2 를) >= 0)이면 {
+                    v == 없음이면 { 까닭 = 짓기("값이 없는 서버 인자(%s)입니다", a). }
+                    k += 2.
+                } 아니면 {
+                    까닭 = 짓기("아직 셈에 넣지 않은 서버 인자(%s)입니다 — b12008 의 인자 표에서 읽은 것만 받습니다", a).
+                }
+                해제(맞1).
+                해제(맞2).
+            }
+        }
+    }
+    해제(받음).
+    반환 까닭.
+}
+
+(* 셈이나 응답을 바꾸는데 흉내 내지 않는 요청 칸 — 받으면 없음, 아니면 까닭 *)
+[제이슨 참조 영을 라마요청칸받나]는 -> 문자열 {
+    제이슨 참조 몸 = 제찾기(제찾기(영, "request"), "body").
+    몸 == 없음이면 { 반환 없음. }
+    제참값(몸, "post_sampling_probs", 거짓)이면 {
+        반환 문자열_복제("사슬 뒤의 확률(post_sampling_probs)을 적은 요청은 아직 받지 않습니다 — 재현은 사슬 앞의 로그 확률을 견줍니다").
+    }
+    (제정수값(몸, "n_cmpl", 1) > 1 또는 제정수값(몸, "n", 1) > 1)이면 {
+        반환 문자열_복제("답을 여럿 만든 요청(n_cmpl · n)은 받지 않습니다 — 답마다 다른 슬롯에서 함께 셈합니다").
+    }
+    제개수(제찾기(몸, "lora")) > 0이면 { 반환 문자열_복제("LoRA 를 준 요청(lora)은 아직 받지 않습니다"). }
+    제정수값(몸, "n_cache_reuse", 0) > 0이면 { 반환 문자열_복제("캐시 조각 재사용(n_cache_reuse — KV 옮기기)을 준 요청은 아직 받지 않습니다"). }
+    제개수(제찾기(몸, "response_fields")) > 0이면 { 반환 문자열_복제("응답 칸을 고른 요청(response_fields)은 받지 않습니다 — 응답이 잘려 견줄 칸이 없습니다"). }
+    제실수값(몸, "adaptive_target", -1.0) >= 0.0이면 { 반환 문자열_복제("adaptive 고르기(adaptive_target)를 쓴 요청은 아직 받지 않습니다"). }
+    제참값(몸, "backend_sampling", 거짓)이면 { 반환 문자열_복제("백엔드 고르기(backend_sampling)를 쓴 요청은 아직 받지 않습니다"). }
+    (제정수값(몸, "reasoning_budget_tokens", -1) >= 0 또는 제참값(몸, "reasoning_control", 거짓))이면 {
+        반환 문자열_복제("생각 예산(reasoning_budget_tokens · reasoning_control)을 쓴 요청은 아직 받지 않습니다 — 서버가 생각을 끝내는 토큰을 끼워 넣습니다").
+    }
+    제정수값(몸, "id_slot", -1) >= 0이면 { 반환 문자열_복제("슬롯을 정해 보낸 요청(id_slot)은 아직 받지 않습니다 — 흉내는 서버의 슬롯 고르기를 따릅니다"). }
+    제이슨 참조 ms = 제찾기(몸, "messages").
+    반복 (정수 i는 0부터 제개수(ms) 전까지) {
+        제이슨 참조 ct = 제찾기(제자식(ms, i), "content").
+        (ct != 없음 그리고 ct→종류 == 5)이면 {
+            반복 (정수 q는 0부터 제개수(ct) 전까지) {
+                문자열 ty = 제글보기(제자식(ct, q), "type", "text").
+                아닌 문자열_같은가(ty, "text")이면 { 반환 짓기("글이 아닌 입력(%s)이 든 요청은 받지 않습니다", ty). }
+            }
+        }
+    }
+    반환 없음.
+}
+
 [제이슨 참조 영을 라마받나]는 -> 문자열 {
     아닌 문자열_같은가(제글보기(영, "format", ""), "geulpu-llama-receipt/1")이면 { 반환 문자열_복제("영수증의 꼴이 geulpu-llama-receipt/1 이 아닙니다"). }
     제이슨 참조 엔 = 제찾기(영, "engine").
@@ -1107,12 +1452,14 @@
     아니면 (st != 없음 그리고 st→종류 == 5)이면 {
         반복 (정수 k는 0부터 제개수(st) 전까지) {
             제이슨 참조 w = 제자식(st, k).
-            (w != 없음 그리고 w→종류 == 4)이면 { 문자열목록_추가(l, 문자열_복제(w→글)). }
+            (* 39단계 — b12008(server-schema.cpp)은 배열의 빈 글을 건너뛴다(글 하나로 준 빈 글은 넣는다) *)
+            (w != 없음 그리고 w→종류 == 4 그리고 글자수(w→글) > 0)이면 { 문자열목록_추가(l, 문자열_복제(w→글)). }
         }
     }
     문자열목록_길이(l) == 0이면 {
-        문자열 r = 라마인자값(제글보기(서, "args", ""), "-r", "--reverse-prompt").
-        r != 없음이면 { 문자열목록_추가(l, 문자열_복제(r)). }
+        (* 남는 멈춤 글이 없으면 서버의 -r — 39단계: 여럿 · 이스케이프를 푼 것(라마서버멈춤글들) *)
+        문자열목록 참조 rs = 라마서버멈춤글들(제글보기(서, "args", "")).
+        반복 (정수 k2는 0부터 문자열목록_길이(rs) 전까지) { 문자열목록_추가(l, 문자열목록_값(rs, k2)). }
     }
     반환 l.
 }
@@ -1431,6 +1778,10 @@
     제이슨 참조 영 = 제파일읽기(잇기3(라마영수증폴더(), 이름, ".json")).
     영 == 없음이면 { 일끝(j, 3, "영수증을 읽지 못했습니다"). 반환 0. }
     라마토큰서버끄기().                                          (* 30단계 — 앞 일이 남긴 임시 서버 *)
+    (* 39단계 — 셈을 바꾸는 설정은 닫힌 목록으로(서버 인자 · 요청 칸): 토큰 없는 기록의 임시 서버보다 먼저 *)
+    문자열 설정안됨 = 라마인자받나(영).
+    설정안됨 == 없음이면 { 설정안됨 = 라마요청칸받나(영). }
+    설정안됨 != 없음이면 { 잠그기(). 제놓기(영). 풀기(). 일끝(j, 3, 설정안됨). 반환 0. }
     라마영수증2인가(영)이면 {
         (* 30단계 — 토큰 없는 영수증: 검증할 꼴로(프롬프트 토큰은 llama.cpp 의 셈으로 다시 — 같은 빌드의 임시 llama-server) *)
         일단계(j, "토큰 없는 영수증 — 프롬프트 토큰을 llama.cpp 의 셈으로 다시 만드는 중", 12).
