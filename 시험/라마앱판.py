@@ -57,6 +57,7 @@ response)을 그대로 쓴다.
       33단계 — 2단계 설정의 서버에 투명한 기록기로 스트리밍 요청: /completion 10(2단계 프롬프트 · 온도 0) · 채팅 h1 … h3 · 로그 확률을
       요청한 둘(p_math — n_probs 5, p_chat — logprobs · top_logprobs 5) · 생각 켬(think) · 온도 0.8(t08). 직접 보낸 스트림과 모은 글 ·
       조각 수가 같은가, 기록기가 서버에 보낸 것이 클라이언트의 요청뿐인가(프록시). 영수증 이름은 <out>/영수증.json.
+      --온도 T(> 0)를 주면(34단계) /completion 10 과 채팅 h1 … h3 을 온도 T · 시드 S, S+1, … 로 보낸다(덧붙인 요청은 보내지 않는다).
   python -I -X utf8 시험/라마앱판.py 투명흐름대화 <꾸러미> <자료> <out> --서버 … --모델 … --기록폴더 …
       33단계 — 기본 설정 서버(슬롯 4 · 캐시)에 투명한 기록기로 스트리밍 채팅 대화 h1 … h5(h2 는 stream_options.include_usage).
 마지막 줄 "합계: …".
@@ -896,19 +897,28 @@ def 투명흐름하기(a):
                 다름.append((이름, f"조각 {nd} · {nr}, 글 같음 {gd == gr}"))
             return ok, gr
 
-        for name in a.이름:                                        # /completion — 2단계 프롬프트, 온도 0
+        T = a.온도                                                 # 34단계 — 온도 > 0 이면 요청마다 시드
+        for i, name in enumerate(a.이름):                          # /completion — 2단계 프롬프트
             want = 기록(name)
-            ok, _ = 한번(name, "/completion", {"prompt": want["prompt_text"], "n_predict": 256, "temperature": 0, "stream": True})
+            몸 = {"prompt": want["prompt_text"], "n_predict": 256, "temperature": T if T > 0 else 0, "stream": True}
+            if T > 0:
+                몸["seed"] = a.시드 + i
+            ok, _ = 한번(name, "/completion", 몸)
             같음 += ok
         S = {"role": "system", "content": "너는 GPU 커널을 잘 아는 동료다. 질문의 언어로 짧게 답한다."}
         U = ["CUDA 에서 warp 하나는 스레드 몇 개야? 한 문단으로.", "그럼 AMD 는? 두 문장으로.", "둘의 차이가 커널 작성에 주는 영향 하나만."]
         m = [S]
         for k, u in enumerate(U):                                  # 채팅 — 모은 답을 다음 차례에 잇는다
             m = m + [{"role": "user", "content": u}]
-            ok, 답 = 한번(f"h{k + 1}", "/v1/chat/completions", {"messages": m, "max_tokens": 64, "temperature": 0.0, "seed": k + 1, "stream": True,
+            ok, 답 = 한번(f"h{k + 1}", "/v1/chat/completions", {"messages": m, "max_tokens": 64, "temperature": T if T > 0 else 0.0,
+                                                              "seed": a.시드 + 10 + k if T > 0 else k + 1, "stream": True,
                                                               "chat_template_kwargs": {"enable_thinking": False}})
             같음 += ok
             m = m + [{"role": "assistant", "content": 답}]
+        if T > 0:
+            time.sleep(2.0)
+            json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            raise StopIteration                                    # 34단계 — 덧붙인 요청 없이 끝
         want = 기록("math")                                        # 로그 확률을 요청한 스트림 둘
         ok, _ = 한번("p_math", "/completion", {"prompt": want["prompt_text"], "n_predict": 96, "temperature": 0, "n_probs": 5, "stream": True})
         같음 += ok
@@ -925,6 +935,8 @@ def 투명흐름하기(a):
         같음 += ok
         time.sleep(2.0)                                            # 영수증 마무리 스레드
         json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    except StopIteration:
+        pass
     finally:
         if srv is not None:
             srv.terminate()
