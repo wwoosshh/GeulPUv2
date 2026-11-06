@@ -1,0 +1,360 @@
+{
+ "kit": "1",
+ "geulpu": "0.21.0",
+ "about": "Fixed requests of the GeulPU reproducibility kit. Each request is sent to /v1/chat/completions with the \"geulpu\" extension (logit_hash, prompt_tokens); the kit compares the prompt tokens, the generated tokens and every step's logit hash with expected.json.",
+ "models": [
+  {
+   "key": "qwen3-8b-q4_k_m",
+   "name": "Qwen3-8B Q4_K_M",
+   "repo": "Qwen/Qwen3-8B-GGUF",
+   "file": "Qwen3-8B-Q4_K_M.gguf",
+   "size": 5027783488,
+   "sha256": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785",
+   "license": "Apache-2.0",
+   "backends": "CUDA and Vulkan; with the default settings on CUDA it uses the 8-bit KV cache and fast attention"
+  },
+  {
+   "key": "qwen3-8b-q8_0",
+   "name": "Qwen3-8B Q8_0",
+   "repo": "Qwen/Qwen3-8B-GGUF",
+   "file": "Qwen3-8B-Q8_0.gguf",
+   "size": 8709518112,
+   "sha256": "408b955510e196121c1c375201744783b5c9a43c7956d73fc78df54c66e883d6",
+   "license": "Apache-2.0",
+   "backends": "CUDA and Vulkan"
+  },
+  {
+   "key": "qwen3.5-9b-q4_k_m",
+   "name": "Qwen3.5-9B Q4_K_M",
+   "repo": "unsloth/Qwen3.5-9B-GGUF",
+   "file": "Qwen3.5-9B-Q4_K_M.gguf",
+   "size": 5680522464,
+   "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
+   "license": "Apache-2.0",
+   "backends": "CUDA only (GeulPU 0.21.0)"
+  }
+ ],
+ "builtin_check": {
+  "key": "deepseek-r1-distill-qwen-7b-q8_0",
+  "name": "DeepSeek-R1-Distill-Qwen-7B Q8_0",
+  "repo": "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+  "file": "DeepSeek-R1-Distill-Qwen-7B-Q8_0.gguf",
+  "size": 8098524896,
+  "sha256": "7307bfbb539fd2e8ed636315440781fed23140dc7f911f64b33418f5b978281b"
+ },
+ "configs": {
+  "default": {
+   "precision": "fast",
+   "kv8_cache": true,
+   "fast_attention": true,
+   "slots": 2,
+   "context": 8192
+  },
+  "exact": {
+   "precision": "exact",
+   "kv8_cache": false,
+   "fast_attention": false,
+   "slots": 2,
+   "context": 8192
+  }
+ },
+ "requests": [
+  {
+   "id": "math-1",
+   "kind": "math, thinking on",
+   "messages": [
+    {
+     "role": "user",
+     "content": "A bakery sells muffins for $2.50 and scones for $3.25. On Monday it sold 48 muffins and 27 scones; on Tuesday it sold a third fewer muffins and 50% more scones than on Monday. How much more or less money did it make on Tuesday than on Monday? Show your reasoning step by step, then give the final amount."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": true
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "math-2",
+   "kind": "math",
+   "messages": [
+    {
+     "role": "user",
+     "content": "A train leaves a station at 09:40 and travels 186 km at an average speed of 72 km/h, then waits 18 minutes and travels another 95 km at 76 km/h. At what time does it arrive? Explain each step."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "math-3",
+   "kind": "math",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Compute 7/12 + 5/18 - 1/8 as a single fraction in lowest terms, showing the common denominator you use."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "logic-1",
+   "kind": "logic",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Ana, Ben and Chloe each own exactly one pet: a cat, a dog or a parrot. Ana does not own the dog. The parrot's owner is not Chloe. Ben is allergic to cats. Who owns which pet? Reason it out before answering."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "code-1",
+   "kind": "code",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Write a Python function `merge_intervals(intervals)` that merges overlapping closed intervals given as a list of (start, end) tuples and returns them sorted. Include a short docstring and two example calls."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "code-2",
+   "kind": "code",
+   "messages": [
+    {
+     "role": "user",
+     "content": "This function should return the second largest distinct value in a list, but it fails for some inputs. Find the bug and give a fixed version.\n\n```python\ndef second_largest(xs):\n    xs.sort()\n    return xs[-2]\n```"
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "tool-1",
+   "kind": "tool call",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Is it warm enough for a picnic in Madrid this afternoon? Use the tools if needed."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "get_weather",
+      "description": "Get the current weather for a city.",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string",
+         "description": "City name, e.g. Madrid"
+        },
+        "unit": {
+         "type": "string",
+         "enum": [
+          "celsius",
+          "fahrenheit"
+         ]
+        }
+       },
+       "required": [
+        "city"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "calculator",
+      "description": "Evaluate an arithmetic expression and return the result.",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "expression": {
+         "type": "string",
+         "description": "e.g. (3 + 4) * 12"
+        }
+       },
+       "required": [
+        "expression"
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "tool-2",
+   "kind": "tool call",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You are a coding assistant working in the repository /work/app. Use the tools to look things up."
+    },
+    {
+     "role": "user",
+     "content": "Where is the function that parses the configuration file defined? I think it is called load_config."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7,
+   "tools": [
+    {
+     "type": "function",
+     "function": {
+      "name": "search_files",
+      "description": "Search a code repository for files whose content matches a pattern.",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "pattern": {
+         "type": "string",
+         "description": "Regular expression to search for"
+        },
+        "path": {
+         "type": "string",
+         "description": "Folder to search, relative to the repository root"
+        }
+       },
+       "required": [
+        "pattern"
+       ]
+      }
+     }
+    },
+    {
+     "type": "function",
+     "function": {
+      "name": "calculator",
+      "description": "Evaluate an arithmetic expression and return the result.",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "expression": {
+         "type": "string",
+         "description": "e.g. (3 + 4) * 12"
+        }
+       },
+       "required": [
+        "expression"
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "korean-1",
+   "kind": "Korean",
+   "messages": [
+    {
+     "role": "user",
+     "content": "하늘이 파란 까닭을 초등학생에게 설명하듯 세 문장으로 써 주세요."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "spanish-1",
+   "kind": "Spanish, sampled",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Escribe un poema breve de cuatro versos sobre el mar en invierno."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0.8,
+   "top_p": 0.95,
+   "seed": 1234
+  },
+  {
+   "id": "long-1",
+   "kind": "long context (~4k tokens)",
+   "messages": [
+    {
+     "role": "user",
+     "content": "Here is a warehouse log. Each line has a date, a product code, an action with a number of units, a shelf and an entry number.\n\n2026-10-01 08:15 | SKU-1049 | received 27 units | shelf D5 | entry 001\n2026-10-01 09:45 | SKU-1044 | shipped 30 units | shelf D5 | entry 002\n2026-10-01 10:15 | SKU-1042 | received 20 units | shelf B4 | entry 003\n2026-10-01 11:00 | SKU-1047 | received 31 units | shelf D4 | entry 004\n2026-10-01 12:45 | SKU-1042 | counted 8 units | shelf D1 | entry 005\n2026-10-01 13:45 | SKU-1040 | counted 4 units | shelf D1 | entry 006\n2026-10-01 15:45 | SKU-1049 | moved in 39 units | shelf A5 | entry 007\n2026-10-01 16:00 | SKU-1043 | received 40 units | shelf D2 | entry 008\n2026-10-01 16:15 | SKU-1048 | received 26 units | shelf B5 | entry 009\n2026-10-01 18:00 | SKU-1042 | counted 35 units | shelf B4 | entry 010\n2026-10-02 07:30 | SKU-1049 | moved in 26 units | shelf B4 | entry 011\n2026-10-02 07:15 | SKU-1041 | received 28 units | shelf A2 | entry 012\n2026-10-02 08:15 | SKU-1041 | moved in 30 units | shelf C1 | entry 013\n2026-10-02 09:45 | SKU-1044 | received 5 units | shelf A5 | entry 014\n2026-10-02 10:00 | SKU-1040 | counted 2 units | shelf C2 | entry 015\n2026-10-02 12:45 | SKU-1051 | moved in 8 units | shelf B3 | entry 016\n2026-10-02 14:45 | SKU-1049 | received 1 units | shelf A5 | entry 017\n2026-10-02 15:15 | SKU-1050 | counted 20 units | shelf D3 | entry 018\n2026-10-02 16:45 | SKU-1044 | moved in 30 units | shelf C4 | entry 019\n2026-10-02 18:15 | SKU-1045 | moved in 6 units | shelf A2 | entry 020\n2026-10-02 18:15 | SKU-1046 | moved in 40 units | shelf C5 | entry 021\n2026-10-03 07:30 | SKU-1040 | shipped 34 units | shelf D5 | entry 022\n2026-10-03 08:30 | SKU-1044 | shipped 3 units | shelf B4 | entry 023\n2026-10-03 09:30 | SKU-1049 | shipped 1 units | shelf A4 | entry 024\n2026-10-03 11:15 | SKU-1042 | moved in 4 units | shelf C3 | entry 025\n2026-10-03 11:45 | SKU-1043 | shipped 21 units | shelf C1 | entry 026\n2026-10-03 12:30 | SKU-1045 | counted 17 units | shelf B5 | entry 027\n2026-10-03 14:45 | SKU-1041 | moved in 9 units | shelf B5 | entry 028\n2026-10-03 15:45 | SKU-1042 | counted 39 units | shelf A3 | entry 029\n2026-10-03 17:15 | SKU-1045 | shipped 40 units | shelf B4 | entry 030\n2026-10-04 07:45 | SKU-1051 | counted 17 units | shelf C4 | entry 031\n2026-10-04 09:15 | SKU-1044 | moved in 19 units | shelf B2 | entry 032\n2026-10-04 10:15 | SKU-1050 | shipped 15 units | shelf B2 | entry 033\n2026-10-04 11:15 | SKU-1048 | counted 8 units | shelf B1 | entry 034\n2026-10-04 12:00 | SKU-1043 | moved in 37 units | shelf A5 | entry 035\n2026-10-04 14:30 | SKU-1041 | received 12 units | shelf B1 | entry 036\n2026-10-04 14:00 | SKU-1041 | moved in 6 units | shelf D1 | entry 037\n2026-10-04 14:45 | SKU-1040 | counted 21 units | shelf D5 | entry 038\n2026-10-04 15:15 | SKU-1049 | shipped 39 units | shelf C4 | entry 039\n2026-10-04 16:30 | SKU-1046 | shipped 29 units | shelf C4 | entry 040\n2026-10-04 17:00 | SKU-1044 | shipped 38 units | shelf D2 | entry 041\n2026-10-04 17:45 | SKU-1046 | shipped 37 units | shelf A5 | entry 042\n2026-10-04 18:15 | SKU-1048 | counted 29 units | shelf A5 | entry 043\n2026-10-04 18:30 | SKU-1045 | moved in 34 units | shelf A1 | entry 044\n2026-10-05 07:15 | SKU-1043 | received 9 units | shelf B4 | entry 045\n2026-10-05 09:15 | SKU-1047 | received 36 units | shelf B3 | entry 046\n2026-10-05 11:30 | SKU-1050 | shipped 36 units | shelf B2 | entry 047\n2026-10-05 13:15 | SKU-1040 | moved in 36 units | shelf A2 | entry 048\n2026-10-05 15:15 | SKU-1045 | received 35 units | shelf D2 | entry 049\n2026-10-05 15:15 | SKU-1046 | shipped 26 units | shelf D1 | entry 050\n2026-10-05 16:45 | SKU-1048 | shipped 27 units | shelf C5 | entry 051\n2026-10-05 17:00 | SKU-1048 | shipped 40 units | shelf A4 | entry 052\n2026-10-05 18:00 | SKU-1047 | shipped 6 units | shelf B2 | entry 053\n2026-10-06 07:15 | SKU-1049 | shipped 14 units | shelf A2 | entry 054\n2026-10-06 09:30 | SKU-1047 | shipped 2 units | shelf B2 | entry 055\n2026-10-06 10:30 | SKU-1043 | shipped 3 units | shelf C3 | entry 056\n2026-10-06 12:15 | SKU-1043 | counted 10 units | shelf D1 | entry 057\n2026-10-06 13:15 | SKU-1041 | received 4 units | shelf D3 | entry 058\n2026-10-06 15:15 | SKU-1049 | shipped 6 units | shelf A5 | entry 059\n2026-10-06 15:30 | SKU-1043 | received 32 units | shelf C3 | entry 060\n2026-10-06 17:45 | SKU-1042 | received 36 units | shelf C2 | entry 061\n2026-10-07 07:00 | SKU-1043 | counted 5 units | shelf D5 | entry 062\n2026-10-07 07:30 | SKU-1049 | counted 31 units | shelf A1 | entry 063\n2026-10-07 07:45 | SKU-1046 | shipped 9 units | shelf C3 | entry 064\n2026-10-07 08:00 | SKU-1040 | counted 25 units | shelf B5 | entry 065\n2026-10-07 08:15 | SKU-1051 | moved in 31 units | shelf D1 | entry 066\n2026-10-07 08:45 | SKU-1047 | moved in 15 units | shelf A3 | entry 067\n2026-10-07 10:00 | SKU-1044 | shipped 18 units | shelf B3 | entry 068\n2026-10-07 11:45 | SKU-1049 | shipped 16 units | shelf B1 | entry 069\n2026-10-07 13:15 | SKU-1045 | counted 29 units | shelf D2 | entry 070\n2026-10-07 15:30 | SKU-1045 | shipped 12 units | shelf D2 | entry 071\n2026-10-07 16:45 | SKU-1045 | received 8 units | shelf A2 | entry 072\n2026-10-07 16:45 | SKU-1045 | counted 14 units | shelf D4 | entry 073\n2026-10-07 17:45 | SKU-1045 | received 22 units | shelf A2 | entry 074\n2026-10-07 18:30 | SKU-1048 | received 14 units | shelf D1 | entry 075\n2026-10-07 18:00 | SKU-1047 | moved in 36 units | shelf B4 | entry 076\n2026-10-08 07:15 | SKU-1048 | shipped 30 units | shelf A3 | entry 077\n2026-10-08 09:45 | SKU-1048 | shipped 9 units | shelf D4 | entry 078\n2026-10-08 09:15 | SKU-1040 | shipped 28 units | shelf B5 | entry 079\n2026-10-08 10:45 | SKU-1050 | received 20 units | shelf A5 | entry 080\n2026-10-08 11:30 | SKU-1048 | shipped 1 units | shelf D2 | entry 081\n2026-10-08 12:30 | SKU-1048 | moved in 26 units | shelf C3 | entry 082\n2026-10-08 13:30 | SKU-1041 | received 13 units | shelf A3 | entry 083\n2026-10-08 14:45 | SKU-1044 | moved in 33 units | shelf D3 | entry 084\n2026-10-08 15:45 | SKU-1043 | moved in 32 units | shelf C5 | entry 085\n2026-10-08 16:15 | SKU-1044 | counted 36 units | shelf D1 | entry 086\n2026-10-08 18:15 | SKU-1040 | received 36 units | shelf C1 | entry 087\n2026-10-09 07:45 | SKU-1042 | shipped 25 units | shelf A5 | entry 088\n2026-10-09 08:15 | SKU-1049 | shipped 16 units | shelf B2 | entry 089\n2026-10-09 08:45 | SKU-1049 | moved in 30 units | shelf B4 | entry 090\n2026-10-09 10:15 | SKU-1040 | shipped 36 units | shelf D1 | entry 091\n2026-10-09 11:30 | SKU-1044 | received 14 units | shelf D2 | entry 092\n2026-10-09 11:00 | SKU-1040 | counted 14 units | shelf B1 | entry 093\n2026-10-09 11:45 | SKU-1047 | counted 13 units | shelf B4 | entry 094\n2026-10-09 12:45 | SKU-1050 | shipped 9 units | shelf B2 | entry 095\n2026-10-09 12:00 | SKU-1042 | shipped 1 units | shelf C2 | entry 096\n2026-10-09 14:15 | SKU-1047 | counted 31 units | shelf D1 | entry 097\n2026-10-09 16:30 | SKU-1043 | shipped 26 units | shelf A3 | entry 098\n2026-10-09 17:15 | SKU-1044 | received 30 units | shelf B4 | entry 099\n2026-10-09 18:45 | SKU-1041 | shipped 20 units | shelf A3 | entry 100\n2026-10-10 07:00 | SKU-1048 | moved in 17 units | shelf D1 | entry 101\n2026-10-10 08:45 | SKU-1049 | shipped 17 units | shelf C3 | entry 102\n2026-10-10 09:30 | SKU-1043 | moved in 20 units | shelf C1 | entry 103\n2026-10-10 09:00 | SKU-1044 | counted 29 units | shelf C3 | entry 104\n2026-10-10 10:00 | SKU-1046 | received 2 units | shelf A5 | entry 105\n2026-10-10 10:45 | SKU-1045 | shipped 16 units | shelf D4 | entry 106\n2026-10-10 11:45 | SKU-1051 | received 28 units | shelf B3 | entry 107\n2026-10-10 11:00 | SKU-1045 | counted 35 units | shelf C2 | entry 108\n2026-10-10 11:45 | SKU-1050 | moved in 34 units | shelf A3 | entry 109\n2026-10-10 12:30 | SKU-1041 | counted 37 units | shelf D2 | entry 110\n2026-10-10 13:15 | SKU-1040 | counted 12 units | shelf B2 | entry 111\n2026-10-10 13:15 | SKU-1043 | moved in 21 units | shelf B2 | entry 112\n2026-10-10 14:15 | SKU-1051 | moved in 32 units | shelf B4 | entry 113\n2026-10-10 15:00 | SKU-1051 | shipped 35 units | shelf B2 | entry 114\n2026-10-10 16:00 | SKU-1043 | moved in 10 units | shelf A3 | entry 115\n2026-10-10 18:45 | SKU-1043 | shipped 4 units | shelf D1 | entry 116\n2026-10-11 07:30 | SKU-1044 | counted 39 units | shelf B4 | entry 117\n2026-10-11 08:00 | SKU-1046 | shipped 21 units | shelf D2 | entry 118\n2026-10-11 09:00 | SKU-1046 | received 15 units | shelf B3 | entry 119\n2026-10-11 10:00 | SKU-1042 | received 8 units | shelf C1 | entry 120\n2026-10-11 12:45 | SKU-1043 | received 3 units | shelf B4 | entry 121\n2026-10-11 13:15 | SKU-1051 | received 9 units | shelf C5 | entry 122\n2026-10-11 13:45 | SKU-1047 | received 23 units | shelf B4 | entry 123\n2026-10-11 13:15 | SKU-1044 | shipped 28 units | shelf D4 | entry 124\n2026-10-11 13:15 | SKU-1050 | counted 23 units | shelf A1 | entry 125\n2026-10-11 15:30 | SKU-1044 | counted 13 units | shelf C3 | entry 126\n2026-10-11 16:00 | SKU-1047 | shipped 25 units | shelf B2 | entry 127\n2026-10-11 18:15 | SKU-1045 | moved in 9 units | shelf B3 | entry 128\n2026-10-11 18:45 | SKU-1045 | received 15 units | shelf B5 | entry 129\n2026-10-12 07:15 | SKU-1040 | received 25 units | shelf A3 | entry 130\n2026-10-12 09:00 | SKU-1046 | shipped 34 units | shelf D4 | entry 131\n2026-10-12 10:45 | SKU-1046 | shipped 14 units | shelf C4 | entry 132\n2026-10-12 11:00 | SKU-1048 | shipped 15 units | shelf C2 | entry 133\n2026-10-12 13:30 | SKU-1045 | counted 30 units | shelf B4 | entry 134\n2026-10-12 14:15 | SKU-1041 | counted 15 units | shelf D3 | entry 135\n2026-10-12 14:00 | SKU-1049 | moved in 19 units | shelf C2 | entry 136\n2026-10-12 15:30 | SKU-1051 | moved in 19 units | shelf A3 | entry 137\n2026-10-12 17:15 | SKU-1042 | shipped 22 units | shelf B1 | entry 138\n2026-10-13 07:15 | SKU-1048 | counted 29 units | shelf C3 | entry 139\n2026-10-13 08:45 | SKU-1043 | received 30 units | shelf D2 | entry 140\n2026-10-13 10:00 | SKU-1049 | counted 12 units | shelf C3 | entry 141\n2026-10-13 10:00 | SKU-1042 | shipped 25 units | shelf D3 | entry 142\n2026-10-13 12:30 | SKU-1041 | shipped 30 units | shelf B4 | entry 143\n2026-10-13 12:45 | SKU-1040 | received 11 units | shelf C5 | entry 144\n2026-10-13 13:30 | SKU-1045 | moved in 20 units | shelf A2 | entry 145\n2026-10-13 15:00 | SKU-1050 | shipped 18 units | shelf A2 | entry 146\n2026-10-13 17:15 | SKU-1046 | received 8 units | shelf C1 | entry 147\n2026-10-13 18:15 | SKU-1049 | shipped 2 units | shelf A4 | entry 148\n2026-10-14 07:00 | SKU-1046 | received 2 units | shelf D3 | entry 149\n2026-10-14 09:15 | SKU-1041 | received 35 units | shelf C5 | entry 150\n\nFrom this log only: on which shelf was SKU-1047 last received, and how many units of SKU-1047 were shipped in total? Answer briefly."
+    }
+   ],
+   "max_tokens": 128,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0,
+   "seed": 7
+  },
+  {
+   "id": "chat-1",
+   "kind": "multi-turn, sampled",
+   "messages": [
+    {
+     "role": "user",
+     "content": "I want to learn to cook. What are three simple dishes to start with?"
+    },
+    {
+     "role": "assistant",
+     "content": "Good choices are scrambled eggs, a tomato pasta sauce and a vegetable stir-fry. Each teaches a basic technique: gentle heat, simmering and quick high-heat cooking."
+    },
+    {
+     "role": "user",
+     "content": "Let's start with the pasta sauce. Give me a short ingredient list and the steps."
+    }
+   ],
+   "max_tokens": 256,
+   "chat_template_kwargs": {
+    "enable_thinking": false
+   },
+   "temperature": 0.7,
+   "top_p": 0.9,
+   "seed": 42
+  }
+ ]
+}

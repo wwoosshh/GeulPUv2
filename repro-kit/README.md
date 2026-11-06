@@ -19,6 +19,11 @@ The app's own **reproducibility check** (Benchmark page — DeepSeek-R1-Distill-
 step: it has already matched on RTX 3080 Ti, 4070 Ti and 5070 cards, an H100 MIG slice, a Radeon RX 9060 XT and Intel integrated
 graphics. The kit can run it too (`--builtin-check`).
 
+**Independent results.** In November 2026 the GING group of the Universidad Politécnica de Madrid ran this kit and test suites of
+its own on an RTX 6000 Ada, an H100 MIG slice and an A100 MIG slice: 144/144 on each card, and every check of their suites passed
+(eight concurrent chats, speculation on and off, cache eviction, Llama 3.1). Their report and reproduction bundle are in
+[independent/upm-ging-2026-11](independent/upm-ging-2026-11/README.md).
+
 ## 1. Install GeulPU 0.21.0
 
 ```bash
@@ -98,6 +103,10 @@ it puts the previous settings back at the end and deletes nothing. Do not use th
 - `logits differ from step k` — the first `k` steps matched and step `k` did not; the rest of the answer usually differs too.
 - `note: the server's computation path differs from the reference's` — the app chose another computation path for this model
   (for example no 8-bit KV cache). That alone can explain a difference; the result file records both.
+
+The kit judges by tokens and logits only; it does not compare the text of a response. The id of a tool call (`call_…`) and the
+`created` time of a response are new for every call by design, so the same request gives the same tokens and the same logits but
+not the same response text.
 
 A difference between the one-at-a-time pass and the batch pass on your machine would mean that batching changed the result, which
 GeulPU's precision contract rules out. Please report either kind with the result file.

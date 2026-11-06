@@ -5,3 +5,4 @@
 시험/모듈해시.txt merge=union
 시험/SASS넘침.txt merge=union
 구조/등록.gl merge=union
+*.pdf binary
