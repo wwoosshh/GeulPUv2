@@ -667,7 +667,8 @@ def 서버영수증(자료, out, 되돌림=1):
         r = d["response"]
         if sv is None:
             sv = 서버((2048, 512, 32, 8192, 0.1, 8192, 4, 되돌림, 1, d["server"].get("n_ctx", 32768)))
-        c, 사슬 = sv.요청(d["prompt_tokens"], r["tokens"], k + 1, [], r["id_slot"])
+        구분 = (d.get("chat") or {}).get("user_start_tokens") or []      # 25단계 — 채팅 API 의 사용자 메시지 자리(하이브리드의 덩어리 끊기)
+        c, 사슬 = sv.요청(d["prompt_tokens"], r["tokens"], k + 1, 자리찾기(d["prompt_tokens"], 구분), r["id_slot"])
         서c, 서t = r["timings"]["cache_n"], r.get("tokens_cached")
         s = sv.활성[1]
         같음 = c == 서c and len(s.tokens) == 서t
