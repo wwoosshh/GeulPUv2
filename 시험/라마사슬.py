@@ -636,6 +636,452 @@ def 칸판참조(사례):
     return out, 세기
 
 
+def 기록묶음(b, 슬롯, 작업, 프, 생, 빠짐, 칸수):
+    """29단계 — 앱/라마묶음.gl(라마기록묶음)의 참조: llama-server 기록(바이트 — LLAMA_BATCH_DEBUG=1 · -v)에서 슬롯 · 작업(영수증)의 방식 6
+    입력. 돌려줌: [까닭, 까1, 까2, 까3, KV 칸, 항목 수, 섞인 수, 출력 수, ubatch 수, 견준 수, 값 수, 값 …] — 시험_라마사슬 --기록 의 출력"""
+    n = len(b)
+    r = {"까닭": 0, "까": [0, 0, 0], "항목": 0, "섞인": 0, "ub": 0, "견준": 0}
+    st = {"기대줄수": -1, "표적시작": 0, "첫줄봄": 0, "표적출력": 0, "최대칸": -1, "최대nkv": 256, "최대위치": -1, "기대읽음": 0}
+    판 = 칸판(칸수)
+    ut, up, us, uo = [], [], [], []
+    기대, 표토, 머리l, 값l = [], [-1] * 칸수, [], []
+
+    def 까닭(k, a=0, bb=0, c=0):
+        if r["까닭"] == 0:
+            r["까닭"], r["까"] = k, [a, bb, c]
+
+    def 찾(a, e, 바늘):
+        return b.find(바늘, a, e) if e - a >= len(바늘) else -1
+
+    def 수(i, e):
+        k = i
+        while k < e and b[k] == 32:
+            k += 1
+        부호 = 1
+        if k < e and b[k] == 45:
+            부호, k = -1, k + 1
+        k0, v = k, 0
+        while k < e and 48 <= b[k] <= 57:
+            v, k = v * 10 + b[k] - 48, k + 1
+        return (0, -1) if k == k0 else (부호 * v, k)
+
+    def 뒤수(a, e, 바늘):
+        p = 찾(a, e, 바늘)
+        return (0, -1) if p < 0 else 수(p + len(바늘), e)
+
+    def 마감():
+        m = len(ut)
+        if m > 0:
+            r["ub"] += 1
+            if st["기대줄수"] >= 0 and st["기대줄수"] != m:
+                까닭(14, m, st["기대줄수"])
+            본, u, 출력, 표적수 = set(), 0, 0, 0
+            for t in range(m):
+                sq = us[t]
+                if sq < 0 or sq >= 64:
+                    까닭(14, t, sq)
+                elif sq not in 본:
+                    본.add(sq)
+                    u += 1
+                출력 += uo[t] != 0
+                표적수 += sq == 슬롯
+            for _ in range(u):
+                기대.extend((판.끝, 판.쓴수, 판.머리))
+            cells = 판.찾기(m)
+            판.자취.clear()
+            if cells is None:
+                까닭(9, m)
+            else:
+                for t in range(m):
+                    c = cells[t]
+                    판.seq[c], 판.pos[c] = us[t], up[t]
+                    판.쓴수 += 1
+                    판.끝 = max(판.끝, c + 1)
+                판.머리 = cells[m - 1] + 1
+                nkv = 판.nkv()
+                if 표적수 > 0:
+                    if 출력 > 8:
+                        까닭(6, 출력)
+                    r["섞인"] += u > 1
+                    r["항목"] += 1
+                    머리l.extend((0, m, nkv))
+                    st["최대nkv"] = max(st["최대nkv"], nkv)
+                    np_ = len(프)
+                    for t in range(m):
+                        tok, pos, c3, 표시 = ut[t], up[t], cells[t], 0
+                        st["최대칸"] = max(st["최대칸"], c3)
+                        if us[t] == 슬롯:
+                            표시 = 1
+                            if pos < 0 or pos >= 칸수:
+                                까닭(15, pos)
+                            else:
+                                st["최대위치"] = max(st["최대위치"], pos)
+                                if st["표적시작"]:
+                                    if not st["첫줄봄"]:
+                                        st["첫줄봄"] = 1
+                                        for q in range(pos):
+                                            want = 프[q] if q < np_ else -1
+                                            if 표토[q] != want:
+                                                까닭(11, q, 표토[q], want)
+                                    want2 = -2
+                                    if pos < np_:
+                                        want2 = 프[pos]
+                                    elif 빠짐 == 0 and pos - np_ < len(생):
+                                        want2 = 생[pos - np_]
+                                    if want2 != -2 and want2 != tok:
+                                        까닭(11, pos, tok, want2)
+                                    if uo[t]:
+                                        표시 = 3
+                                        st["표적출력"] += 1
+                                표토[pos] = tok
+                        값l.extend((tok, pos, c3, 표시))
+            ut.clear(), up.clear(), us.clear(), uo.clear()
+        st["기대줄수"] = -1
+
+    def 지움(sq, p):
+        마감()
+        p0 = max(p, 0)
+        판.지우기(sq, p0)
+        if sq == 슬롯:
+            r["항목"] += 1
+            머리l.extend((2, p0, 0))
+            for q in range(p0, min(st["최대위치"] + 1, 칸수)):
+                표토[q] = -1
+
+    시작 = 끝남 = False
+    모드, i = 0, 0
+    while i < n and not 끝남 and r["까닭"] == 0:
+        e = b.find(b"\n", i)
+        e = n if e < 0 else e
+        if not 시작 and 찾(i, e, b"launch_slot_") >= 0:
+            시작 = True
+        if 시작:
+            up_ = 찾(i, e, b"ubatch_print:")
+            if up_ >= 0:
+                if 모드 == 2:
+                    ip = 찾(up_, e, b": id =")
+                    if ip >= 0:
+                        한계 = min(ip + 65536, n)
+                        행, 행끝 = 수(up_ + 13, ip)
+                        tok, x = 수(ip + 6, e)
+                        pp = 찾(x, 한계, b"), pos =") if x >= 0 else -1
+                        if 행끝 < 0 or x < 0 or pp < 0:
+                            까닭(14, len(ut), -1)
+                        else:
+                            pos, x = 수(pp + 8, 한계)
+                            nsq = 0
+                            if x >= 0:
+                                nsq, x = 뒤수(x, 한계, b"n_seq_id =")
+                            sp = 찾(x, 한계, b"seq_id = [") if x >= 0 else -1
+                            sq = -1
+                            if sp >= 0:
+                                k2 = sp + 10
+                                while k2 < 한계 and b[k2] == 46:
+                                    k2 += 1
+                                if k2 < n and 48 <= b[k2] <= 57:
+                                    sq = k2 - (sp + 10)
+                                x = k2
+                            o = 0
+                            if sq >= 0:
+                                o, x = 뒤수(x, 한계, b"output =")
+                            if sq < 0 or x < 0:
+                                까닭(14, len(ut), -2)
+                            elif nsq != 1:
+                                까닭(5, nsq)
+                            elif 행 != len(ut):
+                                까닭(14, len(ut), 행)
+                            else:
+                                ut.append(tok), up.append(pos), us.append(sq), uo.append(o)
+                            if x >= 0:
+                                e = b.find(b"\n", x)
+                                e = n if e < 0 else e
+                    else:
+                        k3 = up_ + 13
+                        while k3 < e and b[k3] == 32:
+                            k3 += 1
+                        if k3 < e and b[k3] == 93:
+                            마감()
+                            모드 = 0
+                        elif 찾(up_, e, b"n_tokens") >= 0:
+                            v, x = 뒤수(up_, e, b"=")
+                            st["기대줄수"] = v if x >= 0 else -1
+            elif 찾(i, e, b"added ubatch to split") >= 0:
+                마감()
+                모드 = 2
+            elif 찾(i, e, b"input batch info") >= 0:
+                마감()
+                모드 = 1
+            elif 찾(i, e, b"find_slot: stream[") >= 0:
+                fn, x = 뒤수(i, e, b", n =")
+                if x >= 0:
+                    마감()
+                    st_, _ = 뒤수(i, e, b"stream[")
+                    fu, _ = 뒤수(i, e, b"used =")
+                    fh, _ = 뒤수(i, e, b"head =")
+                    r["견준"] += 1
+                    if st_ != 0:
+                        까닭(7, st_)
+                    elif st["기대읽음"] + 3 > len(기대):
+                        까닭(8, r["견준"], fn, -1)
+                    else:
+                        en, eu, eh = 기대[st["기대읽음"]:st["기대읽음"] + 3]
+                        st["기대읽음"] += 3
+                        if (en, eu, eh) != (fn, fu, fh):
+                            까닭(8, r["견준"], fn, en)
+            elif 찾(i, e, b"memory_seq_rm [") >= 0:
+                sl, x = 뒤수(i, e, b": id ")
+                p = 0
+                if x >= 0:
+                    p, x = 뒤수(i, e, b"memory_seq_rm [")
+                if x >= 0:
+                    지움(sl, p)
+            elif 찾(i, e, b"clearing prompt with") >= 0:
+                sl2, x = 뒤수(i, e, b": id ")
+                if x >= 0:
+                    지움(sl2, 0)
+            elif 찾(i, e, b"processing task") >= 0:
+                sl3, x = 뒤수(i, e, b": id ")
+                tk = 0
+                if x >= 0:
+                    tk, x = 뒤수(i, e, b"| task ")
+                if x >= 0:
+                    마감()
+                    if sl3 == 슬롯:
+                        if tk == 작업:
+                            st["표적시작"] = 1
+                        elif st["표적시작"]:
+                            끝남 = True
+            elif 찾(i, e, b"stop processing") >= 0:
+                sl4, x = 뒤수(i, e, b": id ")
+                tk4 = 0
+                if x >= 0:
+                    tk4, x = 뒤수(i, e, b"| task ")
+                if x >= 0:
+                    마감()
+                    if sl4 == 슬롯 and tk4 == 작업:
+                        끝남 = True
+            elif 찾(i, e, b"found better prompt") >= 0:
+                까닭(3)
+            elif 찾(i, e, b"context shift") >= 0:
+                까닭(4)
+            elif 찾(i, e, b"failed to decode") >= 0 or 찾(i, e, b"failed to find a memory slot") >= 0:
+                까닭(13)
+        i = e + 1
+    마감()
+    if r["까닭"] == 0:
+        if not 시작:
+            까닭(1)
+        elif r["ub"] == 0:
+            까닭(2)
+        elif not st["표적시작"]:
+            까닭(10)
+        elif st["표적출력"] != len(생) + 빠짐:
+            까닭(12, st["표적출력"], len(생) + 빠짐)
+        elif r["견준"] > 0 and st["기대읽음"] < len(기대):
+            까닭(8, r["견준"] + 1, -1, 기대[st["기대읽음"]])
+    kv = max(st["최대nkv"], (st["최대칸"] + 256) // 256 * 256, (st["최대위치"] + 256) // 256 * 256)
+    값 = [r["항목"]] + 머리l + 값l
+    return [r["까닭"], *r["까"], kv, r["항목"], r["섞인"], st["표적출력"], r["ub"], r["견준"], len(값), *값]
+
+
+def 기록짓기(rnd, 슬롯수, 칸수, n_batch, n_ubatch, 요청들, kv디버그=True):
+    """29단계 — llama-server(b12008)의 연속 배치를 흉내 낸 기록(LLAMA_BATCH_DEBUG=1 · -v 의 줄 꼴): 요청들 = [(도착 차례, 슬롯, 앞 대화를
+    잇나, 프롬프트 더함, 생성 수)]. 차례마다 생성 중인 슬롯의 토큰(슬롯 차례) 뒤에 프롬프트를 n_batch 까지, ubatch 는 n_ubatch 로 나눔
+    (split_simple), 칸은 칸판. 돌려줌: (기록 바이트, 영수증들 [(슬롯, 작업, 프롬프트, 생성)])"""
+    줄 = []
+    t0 = [0]
+
+    def 쓰기(글, 수준="D"):
+        t0[0] += rnd.randint(1, 40)
+        ms = t0[0]
+        줄.append(f"{ms // 60000}.{ms // 1000 % 60:02d}.{ms % 1000:03d}.{rnd.randint(0, 999):03d} {수준} {글}")
+
+    def 잡음():
+        if rnd.random() < 0.3:
+            쓰기(rnd.choice(["srv  log_server_r: request: POST /completion 127.0.0.1 200", "que    process_new_: processing task, id = 17",
+                           "srv  update_slots: posting NEXT_RESPONSE", "que  yield_to_que: yielding to queue",
+                           "srv          load:  - looking for better prompt, base f_keep = -1.000, f_sim = 0.000"]))
+
+    def 조각(tok):
+        if tok % 97 == 5:
+            return "\n\n"                                          # 줄바꿈이 든 토큰 글
+        if tok % 89 == 3:
+            return "), x ("
+        return f"t{tok}"
+
+    def 줄들(rows, 머리):
+        쓰기(머리)
+        for k, v in (("equal_seqs", 0), ("n_tokens", len(rows)), ("n_seq_tokens", 1), ("n_seqs", len(rows))):
+            쓰기(f"ubatch_print:   {k:<12} = {v}")
+        쓰기("ubatch_print:   seq_id_unq = [ " + " ".join(str(s) for s in sorted({x[2] for x in rows})) + " ]")
+        쓰기("ubatch_print:   token     = [")
+        for k, (tok, pos, sq, o) in enumerate(rows):
+            표 = "".join(str(s % 10) if s == sq else "." for s in range(max(2, 슬롯수)))
+            쓰기(f"ubatch_print:   {k:4d}: id = {tok:6d} ({조각(tok):>16}), pos = {pos:4d}, n_seq_id = {1:2d}, seq_id = [{표}], output = {o}")
+            if rnd.random() < 0.02:
+                잡음()
+        쓰기("ubatch_print:   ]")
+
+    # 올릴 때의 시험 디코드(처음 작업 앞 — 읽는 쪽이 건너뛴다)
+    줄들([(1, 0, 0, 0), (2, 1, 0, 1)], "init: input batch info:")
+    줄들([(1, 0, 0, 0), (2, 1, 0, 1)], "ubatch_add: added ubatch to split:")
+    쓰기("find_slot: stream[0], n =     0, used =     0, head =     0, size = 99, n_swa =     0")
+    쓰기("srv          init: idle slots will be saved to prompt cache and cleared upon starting a new task", "I")
+    판 = 칸판(칸수)
+    슬 = [{"토큰": [], "작업": -1, "때": "쉼", "프": [], "n_past": 0, "남음": 0, "생": [], "마지막": 0} for _ in range(슬롯수)]
+    대기 = sorted(요청들, key=lambda q: q[0])
+    영수증들 = []
+    작업수 = 0
+    차례 = 0
+    while 대기 or any(s["때"] != "쉼" for s in 슬):
+        # 도착 — 슬롯이 쉬면 띄운다(아니면 다음 차례로)
+        남김 = []
+        for q in 대기:
+            도착, 번호, 잇기, 더함, 생성수 = q
+            s = 슬[번호]
+            if 도착 > 차례 or s["때"] != "쉼":
+                남김.append(q)
+                continue
+            쓰기(f"slot launch_slot_: id  {번호} | task -1 | launching slot : {{\"id\":{번호}}}")
+            작업 = 작업수
+            작업수 += 1
+            쓰기(f"slot launch_slot_: id  {번호} | task {작업} | processing task, is_child = 0", "I")
+            잡음()
+            앞 = s["토큰"] if 잇기 else []
+            프 = list(앞) + [rnd.randrange(1, 1000) for _ in range(더함)]
+            n_past = 0
+            while n_past < min(len(s["토큰"]), len(프) - 1) and s["토큰"][n_past] == 프[n_past]:
+                n_past += 1
+            for j, o in enumerate(슬):                              # 쉬는 슬롯을 비운다(--cache-idle-slots)
+                if j != 번호 and o["때"] == "쉼" and (o["토큰"] or rnd.random() < 0.3) and rnd.random() < 0.5:
+                    쓰기(f"slot prompt_clear: id  {j} | task -1 | clearing prompt with {len(o['토큰'])} tokens", "I")
+                    판.지우기(j, 0)
+                    o["토큰"] = []
+            쓰기(f"slot   operator(): id  {번호} | task {작업} | cached n_tokens = {n_past}, memory_seq_rm [{n_past}, end)", "I")
+            판.지우기(번호, n_past)
+            s.update({"토큰": s["토큰"][:n_past], "작업": 작업, "때": "프", "프": 프, "n_past": n_past, "남음": 생성수, "생": []})
+        대기 = 남김
+        rows = []
+        for j, s in enumerate(슬):
+            if s["때"] == "생":
+                rows.append((s["마지막"], len(s["토큰"]), j, 1))
+                s["토큰"].append(s["마지막"])
+        for j, s in enumerate(슬):
+            if s["때"] == "프":
+                while s["n_past"] < len(s["프"]) and len(rows) < n_batch:
+                    끝 = s["n_past"] == len(s["프"]) - 1
+                    rows.append((s["프"][s["n_past"]], s["n_past"], j, 1 if 끝 else 0))
+                    s["토큰"].append(s["프"][s["n_past"]])
+                    s["n_past"] += 1
+        if not rows:
+            차례 += 1
+            continue
+        줄들(rows, "init: input batch info:")
+        ubs = [rows[k:k + n_ubatch] for k in range(0, len(rows), n_ubatch)]
+        for u in ubs:
+            줄들(u, "ubatch_add: added ubatch to split:")
+        for u in ubs:
+            for _ in sorted({x[2] for x in u}):
+                if kv디버그:
+                    쓰기(f"find_slot: stream[0], n = {판.끝:5d}, used = {판.쓴수:5d}, head = {판.머리:5d}, size = {칸수:5d}, n_swa =     0")
+                    for sq in range(슬롯수):
+                        ps = [판.pos[c] for c in range(판.끝) if 판.seq[c] == sq]
+                        if ps:
+                            쓰기(f"find_slot: stream[0] min[{sq}] = {min(ps):5d}, max[{sq}] = {max(ps):5d}")
+            cells = 판.찾기(len(u))
+            판.자취.clear()
+            if cells is None:
+                raise RuntimeError("시험 기록의 KV 가 모자란다 — 칸 수를 늘린다")
+            for (tok, pos, sq, o), c in zip(u, cells):
+                판.seq[c], 판.pos[c] = sq, pos
+                판.쓴수 += 1
+                판.끝 = max(판.끝, c + 1)
+            판.머리 = cells[-1] + 1
+        잡음()
+        for j, s in enumerate(슬):                                  # 고르기 — 출력이 있는 슬롯
+            if any(x[2] == j and x[3] for x in rows):
+                tok = rnd.randrange(1, 1000)
+                s["생"].append(tok)
+                s["남음"] -= 1
+                if s["남음"] <= 0:
+                    쓰기(f"slot      release: id  {j} | task {s['작업']} | stop processing: n_tokens = {len(s['토큰'])}, truncated = 0", "I")
+                    영수증들.append((j, s["작업"], s["프"], s["생"]))
+                    s["때"] = "쉼"
+                else:
+                    s["때"], s["마지막"] = "생", tok
+        차례 += 1
+    return ("\n".join(줄) + "\n").encode("utf-8"), 영수증들
+
+
+def 기록사례들(씨앗=29, 수=20):
+    """29단계 — 서버 기록 사례 [(기록, 슬롯, 작업, 칸 수, 프롬프트, 생성, 빠짐, 기대 까닭)]: 겹친 요청들의 기록마다 영수증 하나 + 꾸민 사례
+    (RAM 캐시 불러옴 · find_slot 다름 · 작업 없음 · 토큰 다름 · 생성 수 다름 · 시퀀스 둘 · 출력 9 · KV 디버그 없음 · 스트리밍의 빠짐 · 앞뒤가 잘림)"""
+    rnd = random.Random(씨앗)
+    out = []
+    for ci in range(수):
+        슬롯수 = rnd.choice([2, 3, 4])
+        칸수 = rnd.choice([512, 640, 1024])
+        n_ubatch = rnd.choice([4, 8, 16, 64]) if ci % 10 != 9 else rnd.choice([16, 64])
+        n_batch = rnd.choice([n_ubatch, 2 * n_ubatch, 64, 128])
+        n_batch = max(n_batch, n_ubatch)
+        요청들 = []
+        for _ in range(rnd.randint(3, 7)):
+            요청들.append((rnd.randint(0, 12), rnd.randrange(슬롯수), rnd.random() < 0.5, rnd.randint(1, 50), rnd.randint(1, 12)))
+        kvd = ci % 5 != 3
+        b, 영들 = 기록짓기(rnd, 슬롯수, 칸수, n_batch, n_ubatch, 요청들, kvd)
+        sl, tk, p, g = rnd.choice(영들)
+        out.append((b, sl, tk, 칸수, p, g, 0, 0))
+        꾸밈 = ci % 10
+        if 꾸밈 == 0:                                                 # RAM 캐시에서 불러옴 — 이 작업이 끝나기 앞
+            k = b.find(f"| task {tk} | processing task".encode())
+            out.append((b[:k] + b"srv          load:  - found better prompt with f_keep = 0.500, f_sim = 0.900\n" + b[k:], sl, tk, 칸수, p, g, 0, 3))
+        elif 꾸밈 == 1 and kvd:                                      # find_slot 하나가 다르다
+            k = b.find(b"find_slot: stream[0], n =", b.find(b"launch_slot_"))
+            k = b.find(b"used =", k)
+            out.append((b[:k] + b"used = 99999" + b[k + 12:], sl, tk, 칸수, p, g, 0, 8))
+        elif 꾸밈 == 2:
+            out.append((b, sl, tk + 1000, 칸수, p, g, 0, 10))
+        elif 꾸밈 == 4:
+            q = list(p)
+            q[-1] = (q[-1] + 1) % 1000
+            out.append((b, sl, tk, 칸수, q, g, 0, 11))
+        elif 꾸밈 == 5:
+            out.append((b, sl, tk, 칸수, p, g + [7], 0, 12))
+        elif 꾸밈 == 6:                                              # 시퀀스 둘인 줄
+            k = b.find(b"n_seq_id =  1", b.find(b"added ubatch to split", b.find(b"launch_slot_")))
+            out.append((b[:k] + b"n_seq_id =  2" + b[k + 13:], sl, tk, 칸수, p, g, 0, 5))
+        elif 꾸밈 == 7 and len(g) > 2:                               # 스트리밍 응답에서 빠진 생성 토큰 둘
+            out.append((b, sl, tk, 칸수, p, g[:-2], 2, 0))
+        elif 꾸밈 == 8:                                              # 이 작업이 끝나기 앞에서 잘린 기록
+            k = b.find(f"release: id  {sl} | task {tk} |".encode())
+            k = b.rfind(b"init: input batch info", 0, k)
+            out.append((b[:k], sl, tk, 칸수, p, g, 0, 12))
+        elif 꾸밈 == 9:                                              # 출력 9 줄인 ubatch(이 슬롯의 줄이 든)
+            k = b.find(f"| task {tk} | processing task".encode())
+            k = b.find(b"added ubatch to split", k)
+            e = b.find(b"ubatch_print:   ]", k)
+            blk = b[k:e].replace(b"output = 0", b"output = 1")
+            if blk.count(b"output = 1") > 8 and f"seq_id = [{'.' * sl}{sl % 10}".encode() in blk:
+                out.append((b[:k] + blk + b[e:], sl, tk, 칸수, p, g, 0, 6))
+    return out
+
+
+def 기록참조(사례):
+    want = []
+    for b, sl, tk, kn, p, g, 빠짐, _ in 사례:
+        want += 기록묶음(b, sl, tk, p, g, 빠짐, kn)
+    return want
+
+
+def 기록사례파일(사례, 경로):
+    with open(경로, "wb") as f:
+        f.write(struct.pack("<q", len(사례)))
+        for b, sl, tk, kn, p, g, 빠짐, _ in 사례:
+            f.write(struct.pack("<q", len(b)) + b + b"\0" * ((-len(b)) % 8))
+            f.write(struct.pack(f"<{4 + len(p)}q", sl, tk, kn, len(p), *p))
+            f.write(struct.pack(f"<{2 + len(g)}q", len(g), *g, 빠짐))
+
+
 def 사례파일(cases, 경로, 칸사례=()):
     v = [len(cases)]
     for 설정, reqs in cases:
@@ -663,7 +1109,30 @@ def 시험(exe):
         if r.returncode != 0:
             raise SystemExit(f"시험_라마사슬 실패({r.returncode}): {r.stdout}{r.stderr}")
         got = np.fromfile(outp, np.int64).tolist()
+        # 29단계 — 서버 기록의 방식 6 입력(앱/라마묶음.gl)
+        기록사례 = 기록사례들()
+        기록want = 기록참조(기록사례)
+        inp2, outp2 = os.path.join(d, "기록.bin"), os.path.join(d, "기록출력.bin")
+        기록사례파일(기록사례, inp2)
+        r2 = subprocess.run([exe, "--기록", inp2, outp2], capture_output=True, text=True)
+        if r2.returncode != 0:
+            raise SystemExit(f"시험_라마사슬 --기록 실패({r2.returncode}): {r2.stdout}{r2.stderr}")
+        기록got = np.fromfile(outp2, np.int64).tolist()
     같음 = got == want
+    기록같음 = 기록got == 기록want
+    # 참조의 까닭이 꾸민 대로인가(참조 자체의 시험), 섞인 ubatch 수
+    까닭들, 꾸밈맞음, 섞인합, o = {}, True, 0, 0
+    for 사 in 기록사례:
+        v = 기록want[o:o + 11]
+        o += 11 + v[10]
+        까닭들[v[0]] = 까닭들.get(v[0], 0) + 1
+        꾸밈맞음 = 꾸밈맞음 and v[0] == 사[7]
+        섞인합 += v[6]
+    if not 기록같음:
+        k = next((i for i, (a, b) in enumerate(zip(기록got, 기록want)) if a != b), min(len(기록got), len(기록want)))
+        print(f"서버 기록: 처음 다른 자리 {k}: 글 {기록got[k:k + 8]} · 참조 {기록want[k:k + 8]} (길이 {len(기록got)} · {len(기록want)})")
+    기록글 = f"서버 기록 사례 {len(기록사례)} · 까닭 {dict(sorted(까닭들.items()))} · 꾸민 대로 {꾸밈맞음} · 섞인 ubatch {섞인합}"
+    같음 = 같음 and 기록같음 and 꾸밈맞음
     요청 = sum(1 for (_, reqs) in cases for _ in reqs)
     # 참조의 갈래 세기(되살림 · 셈하지 않음)
     되살림 = 셈안함 = 이음 = 서버요청 = 불러옴 = 칸다름 = 옮김수 = 0
@@ -698,6 +1167,7 @@ def 시험(exe):
           f" · 칸이 위치와 다른 요청 {칸다름} · 사슬의 옮김 {옮김수}")
     print(f"칸판 시험 {len(칸사례)} 개 · 연산 {sum(len(o) for _, o in 칸사례)} · 끝에서 0 으로 돎 {칸세기[0]} · head 가 멀어 0 부터 {칸세기[1]}"
           f" · 칸 모자람 {칸세기[2]}")
+    print(기록글)                                                 # 29단계 — 빠른 점검의 요약(끝 세 줄)에 보이도록 끝에서 둘째
     print(f"모두 같음: {같음}")
     return 0 if 같음 else 1
 
