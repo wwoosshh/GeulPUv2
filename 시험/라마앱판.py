@@ -419,7 +419,8 @@ def 올라마하기(a):
 def 슬롯하기(a):
     """23단계 — 기본 설정 서버(슬롯 4 · 통합 KV)에 세 대화: A1 · A2 · B1 · B2 · A3 · C1. B · C 의 첫 메시지는 길어 슬롯 고르기의 기준(LCP 비율
     0.1) 아래 — 새 슬롯으로 간다. A3 는 B 뒤에 A 로 돌아온다(A 의 슬롯은 비워졌고 RAM 캐시에서 불러온다). --더깃발 은 서버 인자에
-    더한다(25단계 — 칸 배치를 기록하려고 -v)"""
+    더한다(25단계 — 칸 배치를 기록하려고 -v, 26단계 — --no-cache-idle-slots · --cache-ram 0). --오감 은 A · B · A · C · B · A · C · A,
+    --다섯 은 대화 다섯이 슬롯 넷을 나눠 쓴다(26단계 — A · B · C · D · E · A · B · E · C · A)"""
     깃발대화 = ["-c", "32768"] + (a.더깃발.split() if a.더깃발 else [])
     os.makedirs(a.out, exist_ok=True)
     s = 앱(a.꾸러미, a.자료, a.포트)
@@ -442,6 +443,22 @@ def 슬롯하기(a):
             print(f"{이름}: 슬롯 {v.get('id_slot')} · 프롬프트 {v.get('tokens_evaluated')} · cache_n {(v.get('timings') or {}).get('cache_n')} · 영수증 {표[이름]}", flush=True)
             return 답
 
+        if a.다섯:                                                # 26단계 — 대화 다섯이 슬롯 넷을 나눠 쓴다(칸이 있는 슬롯을 LRU 로 다시 씀)
+            주제 = {"A": ("Summarize these notes in one sentence. ", "GPU warps", 30), "B": ("List two facts from these notes. ", "tensor cores", 40),
+                    "C": ("Give a title for these notes. ", "memory coalescing", 45), "D": ("Name one risk in these notes. ", "register spills", 35),
+                    "E": ("Ask one question about these notes. ", "shared memory banks", 38)}
+            대화 = {k: [{"role": "user", "content": v[0] + 긴글(v[1], v[2])}] for k, v in 주제.items()}
+            다음 = ["Now in five words.", "Translate that to Korean.", "Add one more sentence."]
+            세기 = {k: 0 for k in 주제}
+            for 씨앗, 누구 in enumerate(["A", "B", "C", "D", "E", "A", "B", "E", "C", "A"]):
+                n = 세기[누구]
+                if n > 0:
+                    대화[누구] = 대화[누구] + [{"role": "user", "content": 다음[(n - 1) % len(다음)]}]
+                답 = 보내기(f"{누구}{n + 1}", 대화[누구], 씨앗 + 1)
+                대화[누구] = 대화[누구] + [{"role": "assistant", "content": 답}]
+                세기[누구] = n + 1
+            json.dump(표, open(os.path.join(a.out, "영수증.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            return 0 if all(표.values()) else 1
         if a.오감:                                                # 24단계 — 대화를 더 오간다(A · B · A · C · B · A · C · A)
             대화 = {"A": [{"role": "user", "content": "Summarize these notes in one sentence. " + 긴글("GPU warps", 30)}],
                     "B": [{"role": "user", "content": "List two facts from these notes. " + 긴글("tensor cores", 40)}],
@@ -651,6 +668,7 @@ def main():
             q.add_argument("--시작", default="multi_turn")
             q.add_argument("--스트림", action="store_true")                 # 18단계 — 기록: /completion 을 스트리밍으로
             q.add_argument("--오감", action="store_true")                   # 24단계 — 슬롯: 대화를 더 오간다
+            q.add_argument("--다섯", action="store_true")                   # 26단계 — 슬롯: 대화 다섯이 슬롯 넷을
             q.add_argument("--더깃발", default="")                          # 25단계 — 슬롯: 서버 인자에 더함
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
