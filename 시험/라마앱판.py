@@ -328,9 +328,11 @@ def 흐름채팅하기(a):
                 ("s3", "Explain in three sentences why the sky is blue.", 96, 0.0, None),
                 ("s4", "하늘이 파란 까닭을 세 문장으로 설명해 주세요.", 96, 0.0, 생각끔),
                 ("t1", "Answer with one word: what color is grass?", 64, 0.8, 생각끔)]
-        for 이름, 글, n, 온도, 틀 in 요청들:
+        if a.온도 > 0:                                           # 22단계 — 모두 이 온도로(시드는 요청마다 다르게)
+            요청들 = [(f"{이름}t", 글, 192, a.온도, 틀) for 이름, 글, n, 온도, 틀 in 요청들]
+        for q, (이름, 글, n, 온도, 틀) in enumerate(요청들):
             앞 = set(os.listdir(영수증폴더)) if os.path.isdir(영수증폴더) else set()
-            몸 = {"messages": [{"role": "user", "content": 글}], "max_tokens": n, "temperature": 온도, "seed": 7, "stream": True}
+            몸 = {"messages": [{"role": "user", "content": 글}], "max_tokens": n, "temperature": 온도, "seed": 7 + q * (a.온도 > 0), "stream": True}
             if 틀:
                 몸["chat_template_kwargs"] = 틀
             토큰, 칸, 끝 = 흐름모으기(흐름보내기(a.포트, "/llama/v1/chat/completions", 몸), True)
