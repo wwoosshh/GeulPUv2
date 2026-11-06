@@ -6,8 +6,9 @@ GeulPU is a local LLM engine and debugger for GGUF models — Qwen3, Qwen2.5 / C
 Mistral 7B — with a chat screen in the browser and an OpenAI-compatible API. Its arithmetic is fixed by a written precision contract,
 so the same request gives bit-identical tokens and logits whatever the batch, the slot, the prompt cache or speculative decoding — and,
 in exact mode, on NVIDIA (CUDA) and AMD or other GPUs (Vulkan) alike. The debugger records runs (agent sessions, test sets), replays
-them bit for bit, branches from any token or edited request, and compares models and quantizations request by request. The engine is
-written in the 글(geul) programming language.
+them bit for bit, branches from any token or edited request, and compares models and quantizations request by request. From 0.22.0 it
+also checks runs of an unmodified llama-server: it recomputes them with kernels that follow llama.cpp's CUDA arithmetic and compares
+tokens and log-probabilities bit for bit. The engine is written in the 글(geul) programming language.
 
 This package ships the app from the GitHub release — Windows x64 and Linux x86-64 — so one install command is enough: no archive to
 download and extract.

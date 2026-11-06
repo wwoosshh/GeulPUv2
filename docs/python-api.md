@@ -24,7 +24,7 @@ with geulpu.start() as g:                                   # a private GeulPU w
 
 ## Getting it
 
-- From the release after 0.21.0, the `geulpu` package on PyPI contains it: `pip install geulpu`, then `import geulpu`.
+- From 0.22.0, the `geulpu` package on PyPI contains it: `pip install geulpu`, then `import geulpu`.
 - With GeulPU 0.21.0 (installed with `pip install geulpu==0.21.0`), save [`api.py`](../도구/pypi/geulpu/api.py) next to your
   script as `geulpu_api.py` and `import geulpu_api as geulpu`. It finds the app of the installed package the same way.
 

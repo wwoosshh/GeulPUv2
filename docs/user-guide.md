@@ -83,8 +83,10 @@ cd GeulPU-<version> && ./GeulPU
 
 - The app does not open a browser; it prints its address, `http://127.0.0.1:44544`. On a remote machine, forward the port first
   (`ssh -L 44544:127.0.0.1:44544 <host>`) and open the address on your own computer.
-- Downloads inside the app (and `geulpu --hf`) use the system's `curl` — install it if your distribution lacks it. Vulkan is not on
-  Linux yet. GGUF files you already have can be added with **Models → Add a GGUF file**.
+- Downloads inside the app (and `geulpu --hf`) use the system's `curl` — install it if your distribution lacks it. GGUF files you
+  already have can be added with **Models → Add a GGUF file**.
+- From 0.22.0 the Linux package also carries the Vulkan path (server-vulkan, device-vulkan, `libvulkan.so.1`) — the way to GPUs other
+  than NVIDIA (AMD, Intel …). It has only been exercised with a software Vulkan driver; a run on a real Linux GPU is still open.
 - Models, settings and results live in `~/GeulPU` (or in the folder named by `GEULPU_HOME`).
 
 ## First steps
@@ -322,6 +324,35 @@ model's work: a reference model (best a BF16 or F16 file) and the GGUF files to 
 
 New to it? Start with the [model evaluation guide](model-evaluation-guide.md) — it follows one fine-tuned model through a full round.
 The plan and the measurements behind these screens are in [문서/모델평가.md](../문서/모델평가.md) (Korean).
+
+### 8. llama.cpp replay check — recompute a llama-server run bit for bit
+
+The **llama.cpp replay check** (a card on the Benchmark screen, from 0.22.0) takes a run that an **unmodified llama-server** produced and
+recomputes it with GeulPU's own GPU kernels. Those kernels follow llama.cpp's CUDA arithmetic instruction by instruction, so the check
+compares the generated tokens — and, when the client asked for them, the top-20 log-probabilities of every step — **bit for bit**. The
+recomputation runs on CUDA or on Vulkan: a run made by llama.cpp on an RTX 4070 Ti was recomputed bit-identically on the Intel integrated
+graphics of the same PC. What the replay imitates is **llama.cpp as it runs on an RTX 4070 Ti (sm_89, 60 SMs)**; runs made on other GPUs
+are not accepted yet.
+
+- **Supported** — llama.cpp b11963 (the build Ollama v0.40.14 launches), b12008 and b12138 (CUDA, Windows); Qwen3.5 (0.8B · 4B · 9B),
+  Qwen3, Qwen2.5 (incl. Coder 14B), Llama 3.1 · 3.2, Mistral 7B and DeepSeek-R1-Distill-Qwen in Q4_K · Q5_K · Q6_K · Q8_0; `/completion`,
+  the chat API, streaming, temperature 0 and seeded temperature > 0; the default server (4 slots, prompt cache, RAM cache), `-np N`, and
+  overlapping requests when the server wrote a batch log.
+- **Three ways to record** — ① **Import a conversation log**: a JSON file with the conversation the client sent directly to
+  llama-server (messages with answers, and the sampling values) becomes one receipt per assistant message; nothing touches the run
+  (temperature 0 only). ② **The transparent recorder** (default): point the client at `http://127.0.0.1:44544/llama/completion` or
+  `…/llama/v1/chat/completions` instead of llama-server; GeulPU forwards each request byte for byte, returns the response unchanged, never
+  queries the server during the run, and keeps a receipt. ③ **Probing mode** (opt-in): the recorder adds probability and token fields to
+  the request and queries the slot state, so the check can compare log-probabilities bit for bit — it changes the run (even at
+  temperature 0 the server's sampler ends differently), so choose it knowingly.
+- **Verify** — save the server settings (the command line that started llama-server and its executable — the build is read with
+  `--version` on save), pick a receipt and run it on CUDA or Vulkan. The job checks the model file, rebuilds missing prompt tokens with a
+  temporary CPU-only llama-server of the same build, emulates the slot and prompt-cache state from the earlier receipts of the same
+  server, recomputes and compares. The result is same or different (first diverging step, number of differing values), and the recomputed
+  run is kept as a debugger run log with every step's probabilities and alternatives. Receipts it cannot verify are refused with a reason.
+
+The record formats and what we need to accept runs from other GPUs are in [llama-replay.md](llama-replay.md); every stage with its
+criteria and results is in [문서/라마재현.md](../문서/라마재현.md) (Korean).
 
 ### Use it from other programs (OpenAI-compatible API)
 

@@ -23,7 +23,7 @@ with geulpu.start() as g:                                   # 창 없는 GeulPU 
 
 ## 받기
 
-- 0.21.0 다음 릴리스부터 PyPI 의 `geulpu` 꾸러미에 들어 있다: `pip install geulpu` 뒤 `import geulpu`.
+- 0.22.0 부터 PyPI 의 `geulpu` 꾸러미에 들어 있다: `pip install geulpu` 뒤 `import geulpu`.
 - GeulPU 0.21.0(`pip install geulpu==0.21.0`)에서는 [`api.py`](../도구/pypi/geulpu/api.py) 를 스크립트 옆에 `geulpu_api.py` 로
   저장하고 `import geulpu_api as geulpu`. 설치된 꾸러미의 앱을 같은 방법으로 찾는다.
 
