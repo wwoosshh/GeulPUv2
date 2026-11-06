@@ -6,7 +6,8 @@ expf · logf 는 서버와 같은 C 런타임(윈도 ucrtbase · 리눅스 libm,
 
   python -I -X utf8 시험/라마고르기.py <시험_라마고르기 실행 파일>
       정한 무작위 로짓(맨 위가 뚜렷한 줄 · 같은 logit 이 많은 줄)으로 온도 0 · 0.6 · 0.8 · 1 · 1.5, top_k 20 · 40 · 128, min_keep 0 · 3,
-      판 둘을 견준다(빠른 점검 4v). 마지막 줄 "모두 같음: True|False".
+      판 둘을 견준다(빠른 점검 4v). 36단계 — 반복 벌점(repeat · frequency · presence, repeat_last_n — 프롬프트 토큰의 끝을 받아들인 뒤
+      걸음마다 고른 토큰을 받아들인다)과 logit_bias(−inf 포함)를 준 사례. 마지막 줄 "모두 같음: True|False".
 """
 import os
 import struct
@@ -109,6 +110,37 @@ def 고르기(로짓, g, 판, top_k, top_p, min_p, 온도, min_keep=0):
     return cur[-1][1]
 
 
+class 벌점:
+    """36단계 — llama_sampler_penalties(accept · apply)와 logit_bias(사슬의 맨 앞)"""
+
+    def __init__(self, n, rep, freq, pres, 편향):
+        self.n, self.rep, self.freq, self.pres, self.편향 = n, F32(rep), F32(freq), F32(pres), 편향
+        self.cnt, self.ring = {}, []
+
+    def 받기(self, t):
+        if self.n == 0:
+            return
+        self.cnt[t] = self.cnt.get(t, 0) + 1
+        if len(self.ring) >= self.n:
+            old = self.ring.pop(0)
+            self.cnt[old] -= 1
+            if self.cnt[old] == 0:
+                del self.cnt[old]
+        self.ring.append(t)
+
+    def 손질(self, 로짓):
+        로짓 = 로짓.copy()
+        for t, b in self.편향:
+            로짓[t] = F32(로짓[t] + F32(b))
+        if self.n == 0 or (self.rep == F32(1) and self.freq == F32(0) and self.pres == F32(0)):
+            return 로짓
+        for t, c in self.cnt.items():
+            l = 로짓[t]
+            l = F32(l * self.rep) if l <= F32(0) else F32(l / self.rep)
+            로짓[t] = F32(l - F32(F32(F32(c) * self.freq) + self.pres))
+        return 로짓
+
+
 def 비트(x):
     return struct.unpack("<I", struct.pack("<f", float(F32(x))))[0]
 
@@ -121,24 +153,48 @@ def main():
         g0()
     나쁨 = int(g0() != 4123659995)
     전체 = 1
-    for (V, R, seed, temp, k, tp, mp, keep, 판) in [(2000, 40, 1, 0.8, 40, 0.95, 0.05, 0, 1), (2000, 40, 2, 0.8, 40, 0.95, 0.05, 0, 0),
-                                                   (5000, 30, 7, 1.5, 40, 0.9, 0.02, 0, 1), (5000, 30, 9, 0.0, 40, 0.95, 0.05, 0, 1),
-                                                   (3000, 30, 11, 0.6, 20, 1.0, 0.0, 0, 0), (3000, 30, 12, 1.0, 128, 0.99, 0.1, 3, 1)]:
+    사례 = [(2000, 40, 1, 0.8, 40, 0.95, 0.05, 0, 1, None), (2000, 40, 2, 0.8, 40, 0.95, 0.05, 0, 0, None),
+            (5000, 30, 7, 1.5, 40, 0.9, 0.02, 0, 1, None), (5000, 30, 9, 0.0, 40, 0.95, 0.05, 0, 1, None),
+            (3000, 30, 11, 0.6, 20, 1.0, 0.0, 0, 0, None), (3000, 30, 12, 1.0, 128, 0.99, 0.1, 3, 1, None)]
+    # 36단계 — (repeat_last_n, repeat, frequency, presence, logit_bias [(토큰, 편향)], 이력 길이)
+    사례 += [(2000, 40, 21, 0.8, 40, 0.95, 0.05, 0, 1, (64, 1.1, 0.0, 0.0, [], 80)),
+             (2000, 40, 22, 0.0, 40, 0.95, 0.05, 0, 1, (64, 1.3, 0.0, 0.0, [], 50)),
+             (3000, 40, 23, 0.7, 40, 0.9, 0.05, 0, 1, (32, 1.05, 0.4, 0.3, [(7, -2.5), (11, 1.5), (7, 0.25)], 10)),
+             (3000, 40, 24, 1.0, 40, 0.95, 0.0, 0, 1, (0, 1.2, 0.0, 0.0, [(7, float("-inf")), (100, 3.0)], 5)),
+             (2000, 40, 25, 0.8, 128, 1.0, 0.0, 0, 1, (16, 1.0, 0.8, 0.0, [], 0))]
+    for (V, R, seed, temp, k, tp, mp, keep, 판, 덧) in 사례:
         g = np.random.default_rng(seed)
         rows = g.normal(0, 3, (R, V)).astype(F32)
         rows[:, 7] = 9.0                                          # 맨 위가 뚜렷한 줄
         rows[5, :50] = 4.0                                        # 같은 logit 이 많은 줄
+        이력 = [int(x) for x in g.integers(0, 60, 덧[5])] if 덧 else []        # 프롬프트 토큰의 끝(작은 번호 — 맨 위와 겹치게)
+        덧글 = b""
+        if 덧:
+            n_, r_, f_, p_, 편, _ = 덧
+            덧글 = np.array([n_, 비트(r_), 비트(f_), 비트(p_), len(편)] + [v for t, b in 편 for v in (t, 비트(b))] + [len(이력)] + 이력,
+                           np.int64).tobytes()
         with tempfile.TemporaryDirectory() as td:
             i, o = os.path.join(td, "in.bin"), os.path.join(td, "out.bin")
             with open(i, "wb") as f:
                 f.write(np.array([V, R, k, 비트(tp), 비트(mp), 비트(temp), seed, 판, keep], np.int64).tobytes())
                 f.write(rows.tobytes())
+                f.write(덧글)
             r = subprocess.run([exe, i, o], capture_output=True, text=True)
             if r.returncode != 0:
                 raise SystemExit(f"시험_라마고르기 실패({r.returncode}): {r.stdout}{r.stderr}")
             got = np.fromfile(o, np.int64)
         rng = MT19937(seed)
-        want = [고르기(rows[q], rng, 판, k, tp, mp, temp, keep) for q in range(R)]
+        if 덧:
+            bp = 벌점(덧[0], 덧[1], 덧[2], 덧[3], 덧[4])
+            for t in 이력:
+                bp.받기(t)
+            want = []
+            for q in range(R):
+                w = 고르기(bp.손질(rows[q]), rng, 판, k, tp, mp, temp, keep)
+                want.append(w)
+                bp.받기(w)
+        else:
+            want = [고르기(rows[q], rng, 판, k, tp, mp, temp, keep) for q in range(R)]
         d = sum(1 for a, b in zip(got, want) if int(a) != b)
         나쁨 += d
         전체 += R

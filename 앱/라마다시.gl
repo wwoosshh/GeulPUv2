@@ -490,6 +490,7 @@
         라마고르기칸(b, 몸, 명령줄, "repeat_penalty", "--repeat-penalty", "--repeat-penalty", "1.0").
         라마고르기칸(b, 몸, 명령줄, "frequency_penalty", "--frequency-penalty", "--frequency-penalty", "0.0").
         라마고르기칸(b, 몸, 명령줄, "presence_penalty", "--presence-penalty", "--presence-penalty", "0.0").
+        라마고르기칸(b, 몸, 명령줄, "repeat_last_n", "--repeat-last-n", "--repeat-last-n", "64").      (* 36단계 *)
         라마고르기칸(b, 몸, 명령줄, "mirostat", "--mirostat", "--mirostat", "0").
         라마고르기칸(b, 몸, 명령줄, "dry_multiplier", "--dry-multiplier", "--dry-multiplier", "0.0").
         라마고르기칸(b, 몸, 명령줄, "top_n_sigma", "--top-nsigma", "--top-nsigma", "-1.0").
@@ -503,8 +504,37 @@
             라마인자있나(명령줄, "--grammar") 또는 라마인자있나(명령줄, "--grammar-file") 또는 라마인자있나(명령줄, "--json-schema") 또는
             라마인자있나(명령줄, "-j") 또는 라마인자있나(명령줄, "--json-schema-file"))이면 { 날글넣기(b, "\"(요청 · 서버의 문법)\""). }
         아니면 { 날글넣기(b, "\"\""). }
-        날글넣기(b, ",\"logit_bias\":").
-        제찾기(몸, "logit_bias") != 없음이면 { 파이썬쓰기(b, 제찾기(몸, "logit_bias"), 0, 0). } 아니면 { 날글넣기(b, "[]"). }
+        (* 36단계 — logit_bias 를 서버의 꼴([{"bias": b, "token": t}] — false 는 −inf, null 로)로. 글(토큰으로 나눌 것)은 아직 *)
+        날글넣기(b, ",\"logit_bias\":[").
+        제이슨 참조 편j = 제찾기(몸, "logit_bias").
+        정수 편씀 = 0.
+        참거짓 편글 = 거짓.
+        (편j != 없음 그리고 (편j→종류 == 5 또는 편j→종류 == 6))이면 {
+            반복 (정수 ke는 0부터 제개수(편j) 전까지) {
+                제이슨 참조 tv = 없음.
+                제이슨 참조 bv = 없음.
+                정수 tk = -1.
+                편j→종류 == 5이면 {
+                    제이슨 참조 el = 제자식(편j, ke).
+                    (el != 없음 그리고 el→종류 == 5 그리고 제개수(el) == 2)이면 { tv = 제자식(el, 0). bv = 제자식(el, 1). }
+                    (tv != 없음 그리고 tv→정수인가)이면 { tk = tv→정수값. } 아니면 (tv != 없음 그리고 tv→종류 == 4)이면 { 편글 = 참. }
+                } 아니면 {
+                    문자열 키 = 정수목록_값(편j→열쇠들, ke) 으로 문자열.
+                    bv = 제자식(편j, ke).
+                    tk = 라마십진글(키).
+                    tk < 0이면 { 편글 = 참. }
+                }
+                (tk >= 0 그리고 bv != 없음 그리고 (bv→종류 == 3 또는 bv→종류 == 1))이면 {           (* 수 · false 만(true 는 서버가 건너뜀) *)
+                    편씀 > 0이면 { 날글넣기(b, ","). }
+                    날글넣기(b, "\{\"bias\":").
+                    bv→종류 == 1이면 { 날글넣기(b, "null"). } 아니면 { 파이썬쓰기(b, bv, 0, 0). }   (* false — −inf *)
+                    날글넣기(b, ",\"token\":"). 제수쓰기(b, tk). 날글넣기(b, "\}").
+                    편씀 += 1.
+                }
+            }
+        }
+        날글넣기(b, "]").
+        편글이면 { 날글넣기(b, ",\"logit_bias_unsupported\":true"). }
         날글넣기(b, "\}").
         (* 클라이언트가 요청한 로그 확률(OpenAI 꼴의 칸 — llama-server 는 id 를 더해 적는다) *)
         제이슨 참조 확 = 제찾기(제찾기(고, "logprobs"), "content").
