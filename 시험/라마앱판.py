@@ -418,8 +418,9 @@ def 올라마하기(a):
 
 def 슬롯하기(a):
     """23단계 — 기본 설정 서버(슬롯 4 · 통합 KV)에 세 대화: A1 · A2 · B1 · B2 · A3 · C1. B · C 의 첫 메시지는 길어 슬롯 고르기의 기준(LCP 비율
-    0.1) 아래 — 새 슬롯으로 간다. A3 는 B 뒤에 A 로 돌아온다(A 의 슬롯은 비워졌고 RAM 캐시에서 불러온다)"""
-    깃발대화 = ["-c", "32768"]
+    0.1) 아래 — 새 슬롯으로 간다. A3 는 B 뒤에 A 로 돌아온다(A 의 슬롯은 비워졌고 RAM 캐시에서 불러온다). --더깃발 은 서버 인자에
+    더한다(25단계 — 칸 배치를 기록하려고 -v)"""
+    깃발대화 = ["-c", "32768"] + (a.더깃발.split() if a.더깃발 else [])
     os.makedirs(a.out, exist_ok=True)
     s = 앱(a.꾸러미, a.자료, a.포트)
     srv = None
@@ -650,6 +651,7 @@ def main():
             q.add_argument("--시작", default="multi_turn")
             q.add_argument("--스트림", action="store_true")                 # 18단계 — 기록: /completion 을 스트리밍으로
             q.add_argument("--오감", action="store_true")                   # 24단계 — 슬롯: 대화를 더 오간다
+            q.add_argument("--더깃발", default="")                          # 25단계 — 슬롯: 서버 인자에 더함
         else:
             q.add_argument("--층", choices=["cuda", "vulkan"], required=True)
             q.add_argument("--장치", default="")
