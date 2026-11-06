@@ -187,9 +187,10 @@ def main():
             if (st.get("device") or {}).get("checked") and (st.get("job") or {}).get("state") != "running":
                 break
             time.sleep(1)
-        env = {"app": st.get("version"), "device": st.get("device"), "os": platform.platform(), "python": platform.python_version(),
+        ver = (st.get("app") or {}).get("version")
+        env = {"app": ver, "device": st.get("device"), "os": platform.platform(), "python": platform.python_version(),
                "layer": a.layer, "vulkan_device": a.device}
-        print(f"GeulPU {st.get('version')} — device check done", flush=True)
+        print(f"GeulPU {ver} — device check done", flush=True)
         # 4. verify each receipt
         for n in names:
             e = exp["receipts"][n]
