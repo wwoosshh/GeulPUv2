@@ -33,6 +33,8 @@ class 슬롯:
         self.tokens, self.cps, self.hist = [], [], []                 # cps: [n_tokens, 작업], hist: [(p0, T, 토큰들)]
         self.램 = []                                                  # 이 사슬에서 RAM 캐시에 저장했을 슬롯의 토큰들(위 집합)
         self.되살림 = -1
+        self.서버흉내 = False                                         # 24단계 — 참이면 슬롯 고르기 · RAM 캐시는 서버(아래)가 한다
+        self.옮김 = 0                                                 # 24단계 — 1: 이 상태의 칸이 위치 차례가 아니다(다른 칸이 있을 때 불러옴)
 
     def 체크만들기(self, b0, task):
         last, i = -1, 0
@@ -56,7 +58,7 @@ class 슬롯:
         lcp = 0
         while lcp < m and lcp < n and self.tokens[lcp] == prompt[lcp]:
             lcp += 1
-        if m > 0:                                                  # get_available_slot · server_prompt_cache::load
+        if m > 0 and not self.서버흉내:                             # get_available_slot · server_prompt_cache::load
             f_sim = F32(lcp) / F32(n)
             if self.sp > 0 and f_sim > self.sp:
                 고침 = (f_sim * F32(n)) / F32(m) < F32(0.5)
@@ -148,6 +150,80 @@ class 슬롯:
         return cache_n, 사슬
 
 
+def 겹침(a, b):
+    k = 0
+    while k < len(a) and k < len(b) and a[k] == b[k]:
+        k += 1
+    return k
+
+
+class 서버:
+    """24단계 — 쉬는 슬롯을 비우는 서버(슬롯 여럿 · 통합 KV · RAM 캐시 > 0 · --cache-idle-slots): 새 작업을 띄울 때 쉬는 슬롯을 모두 RAM
+    캐시에 저장하고 비우므로, KV 에는 마지막 작업의 슬롯(활성) 하나만 남는다. RAM 캐시 항목은 슬롯의 사본(토큰 · 이력 · 체크포인트) —
+    server_prompt_cache::alloc · load(server-task.cpp), get_available_slot(server-context.cpp)"""
+
+    def __init__(self, 설정):
+        self.설정 = 설정풀기(설정)[:8]
+        self.sp = F32(self.설정[4])
+        self.활성 = None                                             # (슬롯 번호, 슬롯)
+        self.항목 = []                                               # RAM 캐시 항목(오래된 것부터)
+
+    def 새슬롯(self):
+        s = 슬롯(*self.설정)
+        s.서버흉내 = True
+        return s
+
+    def 저장(self, s):                                             # prompt_save → alloc
+        if not s.tokens:
+            return
+        if any(겹침(e.tokens, s.tokens) == len(s.tokens) for e in self.항목):
+            return
+        self.항목 = [e for e in self.항목 if 겹침(e.tokens, s.tokens) != len(e.tokens)]
+        c = self.새슬롯()
+        c.tokens, c.hist, c.cps, c.옮김 = list(s.tokens), list(s.hist), [list(x) for x in s.cps], s.옮김
+        self.항목.append(c)
+
+    def 불러오기(self, s, prompt, 다른칸=False):                      # prompt_load → load
+        n = len(prompt)
+        l0 = 겹침(s.tokens, prompt)
+        fk_best = F32(l0) / F32(len(s.tokens)) if s.tokens else F32(-1.0)
+        fs_best = F32(l0) / F32(n)
+        best = None
+        for i, e in enumerate(self.항목):
+            l = 겹침(e.tokens, prompt)
+            fk, fs = F32(l) / F32(len(e.tokens)), F32(l) / F32(n)
+            if fk < F32(0.25):
+                continue
+            if fk_best < fk and fs_best < fs:
+                fk_best, fs_best, best = fk, fs, i
+        if best is not None:
+            e = self.항목.pop(best)
+            s.tokens, s.hist, s.cps = list(e.tokens), list(e.hist), [list(x) for x in e.cps]
+            # 다른 슬롯의 칸이 KV 에 있는 동안 불러오면 그 뒤의 칸에 놓인다 — 그 슬롯이 비워진 뒤 새 토큰은 앞 칸에(위치 차례와 칸 차례가 다름)
+            s.옮김 = 1 if (다른칸 or e.옮김) else 0
+
+    def 요청(self, prompt, gen, task, 사용자, 슬롯번호):
+        n = len(prompt)
+        if n < 1:
+            return -1, []
+        if self.활성 is not None and self.활성[0] == 슬롯번호:
+            s = self.활성[1]
+            l = 겹침(s.tokens, prompt)
+            f_sim = F32(l) / F32(n)
+            if not (s.tokens and self.sp > 0 and f_sim > self.sp):
+                return -1, []                                         # 서버는 LCP 비율로 이 슬롯을 고르지 않았을 것 — 흉내와 다르다
+            if (f_sim * F32(n)) / F32(len(s.tokens)) < F32(0.5):      # 남기는 몫 < 0.5 → 캐시 고침
+                self.저장(s)
+                self.불러오기(s, prompt)
+        else:
+            s = self.새슬롯()                                         # 빈 슬롯(다른 슬롯은 앞 작업을 띄울 때 비워졌다)
+            self.불러오기(s, prompt, self.활성 is not None and bool(self.활성[1].tokens))
+            if self.활성 is not None:
+                self.저장(self.활성[1])                               # 쉬는 슬롯을 저장하고 비운다(띄운 뒤)
+            self.활성 = (슬롯번호, s)
+        return s.요청(prompt, gen, task, 사용자)
+
+
 설정들 = [  # n_batch, n_ubatch, 체크수, 최소걸음, 유사, 램, 슬롯 수 — 서버 기본 · 작은 덩어리 · 체크포인트 적음 · 끔 · 최소걸음 ·
     # LCP 비율 끔 · 슬롯 하나(LRU 가 이 슬롯)
     (2048, 512, 32, 8192, 0.1, 8192, 4),
@@ -162,7 +238,50 @@ class 슬롯:
     (2048, 512, 32, 8192, 0.1, 8192, 4, 1),
     (2048, 512, 32, 8192, 0.1, 8192, 1, 1),
     (64, 16, 4, 0, 0.0, 8192, 1, 1),
+    # 24단계 — 쉬는 슬롯을 비우는 서버(여러 대화가 슬롯을 나눠 씀): dense 기본 · dense 작은 덩어리 · 하이브리드 기본 · LCP 비율 끔
+    (2048, 512, 32, 8192, 0.1, 8192, 4, 1, 1),
+    (64, 16, 4, 0, 0.1, 8192, 4, 1, 1),
+    (2048, 512, 32, 8192, 0.1, 8192, 4, 0, 1),
+    (512, 128, 32, 8192, 0.0, 8192, 4, 1, 1),
 ]
+
+
+def 서버사례(rnd, 설정):
+    """24단계 — 대화 서넛이 오가는 요청들. 슬롯 번호는 서버의 고르기(활성 슬롯과의 LCP 비율 > 유사 → 그 슬롯, 아니면 다른 빈 슬롯)를
+    참조 서버로 정한다"""
+    sv = 서버(설정)
+    ns = 설정풀기(설정)[6]
+    대화 = []                                                      # (프롬프트, 생성)
+    reqs = []
+    for k in range(rnd.randint(3, 9)):
+        새 = [rnd.randrange(1000) for _ in range(rnd.choice([1, 3, 20, 90]))]
+        if not 대화 or rnd.random() < 0.3:
+            p = [rnd.randrange(1000) for _ in range(rnd.choice([40, 300, 700, 1500]))]   # 새 대화(앞이 겹치지 않음)
+            i = len(대화)
+            대화.append(None)
+        else:
+            i = rnd.randrange(len(대화))
+            pp, pg = 대화[i]
+            갈래 = rnd.choice(["잇기", "잇기", "같음", "생성잇기", "고침"])
+            if 갈래 == "잇기":
+                p = pp + pg + 새
+            elif 갈래 == "같음":
+                p = list(pp)
+            elif 갈래 == "생성잇기":
+                p = pp + pg
+            else:
+                p = pp[:rnd.randrange(1, len(pp) + 1)] + 새
+        g = [rnd.randrange(1000) for _ in range(rnd.choice([1, 2, 8, 64]))]
+        if sv.활성 is not None and sv.활성[1].tokens and sv.sp > 0 and F32(겹침(sv.활성[1].tokens, p)) / F32(len(p)) > sv.sp:
+            번호 = sv.활성[0]
+        else:
+            번호 = ((sv.활성[0] if sv.활성 is not None else -1) + 1) % ns
+        c, _ = sv.요청(p, g, k + 1, [], 번호)
+        reqs.append((p, g, [], 번호))
+        대화[i] = (p, g)
+        if c < 0:
+            break
+    return reqs
 
 
 def 사례들(씨앗=7, 수=12):
@@ -170,6 +289,9 @@ def 사례들(씨앗=7, 수=12):
     out = []
     for 설정 in 설정들:
         for _ in range(수):
+            if 설정풀기(설정)[8]:
+                out.append((설정, 서버사례(rnd, 설정)))
+                continue
             길이 = rnd.choice([5, 40, 300, 700, 1500, 2600])
             prompt = [rnd.randrange(1000) for _ in range(길이)]
             reqs = []
@@ -195,14 +317,15 @@ def 사례들(씨앗=7, 수=12):
                         p = 새 + [rnd.randrange(1000) for _ in range(30)]
                 g = [rnd.randrange(1000) for _ in range(rnd.choice([1, 2, 8, 64]))]
                 자리 = sorted(set(rnd.randrange(len(p)) for _ in range(rnd.choice([0, 0, 1, 3, 8])))) if rnd.random() < 0.6 else []
-                reqs.append((p, g, 자리))
+                reqs.append((p, g, 자리, 0))
                 prev = (p, g)
             out.append((설정, reqs))
     return out
 
 
 def 설정풀기(설정):
-    return 설정 if len(설정) == 8 else (*설정, 0)
+    # n_batch, n_ubatch, 체크수, 최소걸음, 유사, 램, 슬롯 수, 되돌림(10단계), 서버(24단계)
+    return tuple(설정) + (0,) * (9 - len(설정))
 
 
 def 토큰셈(사슬):
@@ -218,31 +341,38 @@ def 토큰셈(사슬):
 def 참조출력(cases):
     out = []
     for 설정, reqs in cases:
-        s = 슬롯(*설정풀기(설정))
+        서버흉내 = 설정풀기(설정)[8]
+        s = 슬롯(*설정풀기(설정)[:8])
+        sv = 서버(설정)
         멈춤 = False
-        for r, (p, g, 자리) in enumerate(reqs):
+        for r, (p, g, 자리, 번호) in enumerate(reqs):
             if 멈춤:
                 continue
-            c, 사슬 = s.요청(p, g, r + 1, 자리)
+            if 서버흉내:
+                c, 사슬 = sv.요청(p, g, r + 1, 자리, 번호)
+                s = sv.활성[1] if sv.활성 is not None else s
+            else:
+                c, 사슬 = s.요청(p, g, r + 1, 자리)
             out.append(c)
             if c < 0:
                 멈춤 = True
-                out += [0, 0, 0]
+                out += [0, 0, 0, 0]
             else:
                 out += [s.되살림, len(s.tokens), len(사슬)]
                 for p0, T, _ in 사슬:
                     out += [p0, T]
                 out.append(토큰셈(사슬))
+                out.append(s.옮김)
     return out
 
 
 def 사례파일(cases, 경로):
     v = [len(cases)]
     for 설정, reqs in cases:
-        nb, nu, cp, ms, sp, ram, ns, dg = 설정풀기(설정)
-        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, ns, dg, len(reqs)]
-        for p, g, 자리 in reqs:
-            v += [len(p), *p, len(g), *g, len(자리), *자리]
+        nb, nu, cp, ms, sp, ram, ns, dg, sv = 설정풀기(설정)
+        v += [nb, nu, cp, ms, struct.unpack("<I", struct.pack("<f", sp))[0], ram, ns, dg, sv, len(reqs)]
+        for p, g, 자리, 번호 in reqs:
+            v += [len(p), *p, len(g), *g, len(자리), *자리, 번호]
     np.array(v, np.int64).tofile(경로)
 
 
@@ -259,11 +389,21 @@ def 시험(exe):
     같음 = got == want
     요청 = sum(1 for (_, reqs) in cases for _ in reqs)
     # 참조의 갈래 세기(되살림 · 셈하지 않음)
-    되살림 = 셈안함 = 이음 = 0
+    되살림 = 셈안함 = 이음 = 서버요청 = 불러옴 = 0
     for 설정, reqs in cases:
-        s = 슬롯(*설정풀기(설정))
-        for r, (p, g, 자리) in enumerate(reqs):
-            c, _ = s.요청(p, g, r + 1, 자리)
+        서버흉내 = 설정풀기(설정)[8]
+        s = 슬롯(*설정풀기(설정)[:8])
+        sv = 서버(설정)
+        for r, (p, g, 자리, 번호) in enumerate(reqs):
+            if 서버흉내:
+                앞항목 = len(sv.항목)
+                c, _ = sv.요청(p, g, r + 1, 자리, 번호)
+                서버요청 += 1
+                if c > 0 and len(sv.항목) < 앞항목 + (1 if r > 0 else 0) and sv.활성 is not None and r > 0:
+                    불러옴 += 1
+                s = sv.활성[1] if sv.활성 is not None else s
+            else:
+                c, _ = s.요청(p, g, r + 1, 자리)
             if c < 0:
                 셈안함 += 1
                 break
@@ -274,13 +414,32 @@ def 시험(exe):
     if not 같음:
         k = next((i for i, (a, b) in enumerate(zip(got, want)) if a != b), min(len(got), len(want)))
         print(f"처음 다른 자리 {k}: 글 {got[k:k + 8]} · 참조 {want[k:k + 8]} (길이 {len(got)} · {len(want)})")
-    print(f"사례 {len(cases)} · 요청 {요청} · 체크포인트 되살림 {되살림} · 되살리지 않고 이음 {이음} · 셈하지 않음 {셈안함}")
+    print(f"사례 {len(cases)} · 요청 {요청} · 체크포인트 되살림 {되살림} · 되살리지 않고 이음 {이음} · 셈하지 않음 {셈안함} · 서버 흉내 요청 {서버요청}")
     print(f"모두 같음: {같음}")
     return 0 if 같음 else 1
 
 
 def 자리찾기(tokens, 구분):
     return [i for i in range(len(tokens)) if 구분 and tokens[i:i + len(구분)] == 구분]
+
+
+def 서버영수증(자료, out):
+    """24단계 — 기록기의 영수증 폴더(자료\\영수증)와 out\\영수증.json 의 차례로 서버 단위 흉내의 cache_n · tokens_cached 를 서버와 견준다"""
+    표 = json.load(open(os.path.join(out, "영수증.json"), encoding="utf-8"))
+    sv = None
+    나쁨 = 0
+    for k, (이름, 파일) in enumerate(표.items()):
+        d = json.load(open(os.path.join(자료, "영수증", 파일 + ".json"), encoding="utf-8"))
+        r = d["response"]
+        if sv is None:
+            sv = 서버((2048, 512, 32, 8192, 0.1, 8192, 4, 1))
+        c, 사슬 = sv.요청(d["prompt_tokens"], r["tokens"], k + 1, [], r["id_slot"])
+        서c, 서t = r["timings"]["cache_n"], r.get("tokens_cached")
+        같음 = c == 서c and len(sv.활성[1].tokens) == 서t
+        나쁨 += not 같음
+        print(f"{이름}: 슬롯 {r['id_slot']} · cache_n 참조 {c} · 서버 {서c} · tokens_cached 참조 {len(sv.활성[1].tokens)} · 서버 {서t} · RAM 항목 {len(sv.항목)} · ubatch {len(사슬)} · 칸 옮김 {sv.활성[1].옮김}")
+    print(f"모두 같음: {나쁨 == 0}")
+    return 0 if 나쁨 == 0 else 1
 
 
 def 영수증(폴더):
@@ -307,6 +466,8 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     if len(sys.argv) == 3 and sys.argv[1] == "--영수증":
         sys.exit(영수증(sys.argv[2]))
+    if len(sys.argv) == 4 and sys.argv[1] == "--서버영수증":
+        sys.exit(서버영수증(sys.argv[2], sys.argv[3]))
     if len(sys.argv) != 2:
         raise SystemExit(__doc__)
     sys.exit(시험(sys.argv[1]))
