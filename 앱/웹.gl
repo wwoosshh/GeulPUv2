@@ -110,6 +110,7 @@
     코드 == 409이면 { 반환 "409 Conflict". }
     코드 == 411이면 { 반환 "411 Length Required". }
     코드 == 413이면 { 반환 "413 Payload Too Large". }
+    코드 == 415이면 { 반환 "415 Unsupported Media Type". }       (* 앱리디자인 E2 — experiment.read 의 텍스트가 아닌 파일 *)
     코드 == 431이면 { 반환 "431 Request Header Fields Too Large". }
     코드 == 502이면 { 반환 "502 Bad Gateway". }
     코드 == 503이면 { 반환 "503 Service Unavailable". }

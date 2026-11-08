@@ -2,12 +2,8 @@
 // CLI · AI 세션 · 파이썬), 입력 줄에 친 GeulPU 명령을 CLI 와 같은 요청으로 보낸다. 이벤트는 롱 폴링(GET /api/events)으로 받고, 보이는 명령은
 // 이벤트의 요청 본문(params)을 CLI 형식으로 다시 쓴 것이다. 앱은 기능 목록 클라이언트(ops.js)로만 부른다.
 import { callable, commandName, parse, toCommand } from './command.js';
+import { CHEVRON, EN, T, TM, baseName, clock, copyButton, el, fmtBytes, fmtMs, icon, sourceLabel as labelOf } from './dom.js';
 import { call, registry, send } from './ops.js';
-
-// 화면 문구 — app.js 의 T(한국어 키 → 영어 사전)를 쓴다
-const T = (s, ...v) => (typeof globalThis.T === 'function' ? globalThis.T(s, ...v) : typeof s === 'string' ? s : String.raw({ raw: s }, ...v));
-const TM = s => (typeof globalThis.TM === 'function' ? globalThis.TM(s) : s);
-const EN = () => document.documentElement.lang === 'en';
 
 const KEY = 'geulpu.console';
 const MIN_W = 280;
@@ -19,26 +15,6 @@ const OUT_MAX = 20000;         // 응답을 펼쳐 보일 때의 글자 수
 const app = document.getElementById('app');
 const box = document.getElementById('console');
 const handle = document.getElementById('c-handle');
-
-function el(tag, attrs, ...kids) {
-  const e = document.createElement(tag);
-  if (attrs) {
-    for (const [k, v] of Object.entries(attrs)) {
-      if (v === null || v === undefined || v === false) continue;
-      if (k === 'class') e.className = v;
-      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
-      else e.setAttribute(k, v === true ? '' : v);
-    }
-  }
-  for (const k of kids.flat(Infinity)) if (k !== null && k !== undefined && k !== false) e.append(k instanceof Node ? k : String(k));
-  return e;
-}
-const icon = d => {
-  const t = document.createElement('template');
-  t.innerHTML = `<svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-  return t.content.firstChild;
-};
-const CHEVRON = '<path d="m9.5 6 6 6-6 6"/>';
 
 // ---- 접기 · 폭(이 브라우저에 기억) ----
 function loadState() {
@@ -128,20 +104,7 @@ const lines = new Map();       // 호출 번호 → 줄 기록
 const pending = [];            // 입력 줄로 보낸 요청 — 그 호출의 이벤트가 오면 같은 줄에 잇는다
 
 // 출처 — 입력 줄에 친 명령은 사용자가 친 CLI 명령이다(화면설계.md §5 · 시안)
-function sourceLabel(rec) {
-  if (rec.typed || (rec.source === 'cli' && !rec.session)) return [T('사용자 CLI'), ''];
-  if (rec.source === 'gui') return ['GUI', ''];
-  if (rec.source === 'cli') return ['AI · ' + rec.session, 'ai'];
-  if (rec.source === 'python') return [T('파이썬'), ''];
-  return [T('알 수 없음'), ''];
-}
-const fmtMs = ms => (ms < 1000 ? `${ms} ms` : T`${(ms / 1000).toFixed(ms < 10000 ? 2 : 1)} 초`);
-const fmtBytes = n => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
-const clock = t => {
-  const d = new Date(t * 1000);
-  return [d.getHours(), d.getMinutes(), d.getSeconds()].map(x => String(x).padStart(2, '0')).join(':');
-};
-const baseName = p => String(p).replace(/[\\/]+$/, '').split(/[\\/]/).pop();
+const sourceLabel = rec => (rec.typed ? labelOf('cli', '') : labelOf(rec.source, rec.session));
 
 function commandText(rec, short) {
   if (rec.typed) return rec.text;
@@ -176,22 +139,15 @@ function render(rec) {
   const res = [];
   const st = stateText(rec);
   if (st) res.push(el('span', { class: 'state' }, st));
-  if (rec.experiment) res.push(el('span', { class: 'exp', title: rec.experiment }, T`실험 ${baseName(rec.experiment)}`));
-  if (rec.op && reg && reg.byId.has(rec.op) && !rec.local) {
+  // E2 — 실험이 있는 줄은 그 실험 화면으로(ui/experiments.js 가 연다)
+  if (rec.experiment) {
+    const path = rec.experiment;
     res.push(el('button', {
-      type: 'button', class: 'linkish',
-      onclick: async ev => {
-        const b = ev.currentTarget;
-        try {
-          await navigator.clipboard.writeText(rec.typed ? rec.text : commandText(rec, false));
-          b.textContent = T('복사함');
-        } catch (_) {
-          b.textContent = T('복사하지 못함');
-        }
-        setTimeout(() => { b.textContent = T('명령 복사', '줄'); }, 1500);
-      },
-    }, T('명령 복사', '줄')));
+      type: 'button', class: 'linkish exp', title: path,
+      onclick: () => document.dispatchEvent(new CustomEvent('geulpu:open-experiment', { detail: { path } })),
+    }, T`실험 ${baseName(path)}`));
   }
+  if (rec.op && reg && reg.byId.has(rec.op) && !rec.local) res.push(copyButton(() => (rec.typed ? rec.text : commandText(rec, false))));
   if (rec.result !== undefined) {
     res.push(el('button', { type: 'button', class: 'linkish', 'aria-expanded': String(!!rec.showOut), onclick: () => { rec.showOut = !rec.showOut; render(rec); } },
       rec.showOut ? T('응답 접기') : T('응답 보기')));
@@ -237,6 +193,8 @@ let reg = null;
 let after = 0;
 
 function onEvent(e) {
+  // E2 — 다른 화면 모듈도 이벤트를 받는다(실험 화면의 기록 탭 등)
+  document.dispatchEvent(new CustomEvent('geulpu:event', { detail: e }));
   if (e.type === 'start') {
     let rec = null;
     if (e.source === 'cli' && !e.session) {
