@@ -3982,11 +3982,11 @@
    "params": [
     {
      "name": "input",
-     "type": "object",
+     "type": "string",
      "required": true,
      "description": {
-      "ko": "입력(글 또는 항목 배열)",
-      "en": "input (text or items)"
+      "ko": "입력 텍스트(입력 항목의 배열은 --json 으로)",
+      "en": "input text (an array of input items via --json)"
      }
     },
     {
@@ -4136,12 +4136,21 @@
    },
    "params": [
     {
-     "name": "content",
+     "name": "prompt",
      "type": "string",
-     "required": true,
+     "required": false,
      "description": {
-      "ko": "글",
-      "en": "text"
+      "ko": "텍스트(채팅 템플릿 없이)",
+      "en": "text (without a chat template)"
+     }
+    },
+    {
+     "name": "messages",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "채팅 메시지(모델의 채팅 템플릿으로, 답 앞까지)",
+      "en": "chat messages (with the model's chat template, up to the answer)"
      }
     },
     {
@@ -4154,12 +4163,21 @@
      }
     },
     {
-     "name": "with_pieces",
+     "name": "chat_template_kwargs.enable_thinking",
      "type": "boolean",
      "required": false,
      "description": {
-      "ko": "조각 글도",
-      "en": "also the pieces"
+      "ko": "생각(thinking) 켜기 — 채팅 템플릿에 넘김",
+      "en": "enable thinking — passed to the chat template"
+     }
+    },
+    {
+     "name": "chat_template_kwargs.date_string",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "채팅 템플릿의 날짜 글",
+      "en": "date string for the chat template"
      }
     }
    ],
