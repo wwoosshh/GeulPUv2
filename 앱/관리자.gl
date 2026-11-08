@@ -34,6 +34,7 @@
 포함 "한줄.gl"                  (* --hf — Hugging Face 의 GGUF 하나를 받아 바로 불러오기(한 줄 설치) · 받기시작 · 허깅더하기 *)
 포함 "평가.gl"                  (* 모델 평가(문서/모델평가.md) — 작업 공간 · 데이터 · 평가 작업 · 결과 · 전후 비교 · /api/eval *)
 포함 "라마재현.gl"              (* llama.cpp 실행의 재현 검증(문서/라마재현.md 4단계) — 영수증 · 재현 검증 작업 · /api/llama *)
+포함 "명령줄.gl"                (* 앱리디자인 C1 — 하위 명령: 기능 목록에서 만든 CLI(문서/명령줄.md) *)
 
 정수 관리포트 = 44544.
 
@@ -1146,6 +1147,8 @@
     잠금준비().
     해시알고준비().
     일객체준비().
+    (* 앱리디자인 C1 — 첫 인자가 '-' 로 시작하지 않으면 하위 명령(명령줄.gl): 떠 있는 앱을 부르고 끝낸다 *)
+    (argc > 1 그리고 아닌 문자열_시작하는가(argv[1], "-" 로))이면 { 반환 명령줄돌리기(argc, argv). }
     문자열 자료인자 = 없음.
     참거짓 열기 = 참.
     문자열 검사 = 없음.
@@ -1158,6 +1161,7 @@
             알림("사용법: GeulPU [--포트|--port 44544] [--자료|--data 폴더] [--열지않음|--no-open] [--hf 저장소/파일.gguf] [--검사|--check 재현성(r1)|쌍(pair) [--빠름|--quick] [--파일|--files 목록]]").
             알림("영어 이름은 한글 이름의 별칭이다 — English names are aliases of the Korean ones. 자료 폴더: GEULPU_HOME 또는 --자료.").
             알림("--hf: Hugging Face 의 GGUF 하나를 받아 바로 불러온다 — GeulPU --hf Qwen/Qwen3-0.6B-GGUF/Qwen3-0.6B-Q8_0.gguf (파일의 주소를 그대로 붙여도 된다). 이미 GeulPU 가 떠 있으면 그 GeulPU 가 받는다.").
+            알림("하위 명령: GeulPU <명령> [--인자 값 …] — 떠 있는 GeulPU 의 기능을 부른다(결과는 JSON). 명령 목록: GeulPU ops · 하나: GeulPU help <명령> (문서/명령줄.md). Subcommands: GeulPU ops · GeulPU help <command>.").
             반환 0.
         }
         ((문자열_같은가(argv[k], "--포트") 또는 문자열_같은가(argv[k], "--port")) 그리고 k + 1 < argc)이면 { 관리포트 = 정수로_변환(argv[k + 1]). k += 1. }

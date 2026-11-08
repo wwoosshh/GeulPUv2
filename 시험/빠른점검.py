@@ -205,6 +205,18 @@ def 파이썬API(출력):
     알림("파이썬 API(가짜 앱 · GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
 
 
+def 명령줄(출력):
+    """앱리디자인 C1(문서/명령줄.md) — 빌드한 GeulPU 의 하위 명령(CLI): 부를 수 있는 모든 기능을 세 이름으로 --dry-run 해 기능 목록과
+    대조하고, 사용법 오류 · 앱 없음의 종료 코드를 본다(GPU · 앱 없이)"""
+    exe = os.path.join(출력, "GeulPU" + EXE)
+    if not os.path.exists(exe):
+        알림("명령줄(CLI — GPU 없이)", False, "GeulPU 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "명령줄점검.py"), exe], os.path.join(출력, "명령줄.txt"))
+    알림("명령줄(CLI — GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
+
+
 def 파이썬API앱(출력):
     """4t — 파이썬 API 의 start · add_model · close 를 빌드한 앱으로(임시 자료 · GPU 없이 — 윈도만)"""
     if 리눅스:
@@ -719,6 +731,7 @@ def main():
             망가진입력(출력)
             모델해시(출력)
             파이썬API앱(출력)
+            명령줄(출력)
             모델모양(출력)
             찾기표시(출력)
             명령줄별칭(출력)
