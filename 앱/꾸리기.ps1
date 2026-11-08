@@ -115,6 +115,11 @@ Copy-Item -LiteralPath (Join-Path $Here 'data\models.json') -Destination (Join-P
 Copy-Item -LiteralPath (Join-Path $Here 'data\tools.json') -Destination (Join-Path $Dist 'data')   # 모델 평가 4-1 — GGUF 만들기가 받는 llama.cpp 의 목록
 Copy-Item -LiteralPath (Join-Path $Here 'data\orig_compare.py') -Destination (Join-Path $Dist 'data')   # 모델 평가 2-3 — 원래 모델과 견주기(가상 환경에서)
 Copy-Item -LiteralPath (Join-Path $Here 'data\operations.json') -Destination (Join-Path $Dist 'data')   # 앱리디자인 B1 — 기능 목록(앱 · CLI 가 읽는다, 문서/기능목록.md)
+# 앱리디자인 C2 — 실험 기록의 템플릿 · 스키마 · 점검 도구(experiment create · check — 문서/명령줄.md §3)
+New-Item -ItemType Directory -Path (Join-Path $Dist 'data\experiment-template') -Force | Out-Null
+Copy-Item -Path (Join-Path $Root 'experiments\_template\*') -Destination (Join-Path $Dist 'data\experiment-template')
+Copy-Item -LiteralPath (Join-Path $Root 'experiments\experiment.schema.json') -Destination (Join-Path $Dist 'data')
+Copy-Item -LiteralPath (Join-Path $Root '도구\experiment_check.py') -Destination (Join-Path $Dist 'data')
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\expected.json') -Destination (Join-Path $Dist 'data\crosscheck')
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\requests.json') -Destination (Join-Path $Dist 'data\crosscheck')
 # 0.11.1 — 파일 쌍 재현성(Liu · Tsai 의 파일): 파일 목록 · 문제의 프롬프트 토큰 · 기준 PC 의 스텝마다 해시

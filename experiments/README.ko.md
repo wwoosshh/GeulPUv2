@@ -29,7 +29,7 @@ experiments/<YYYY-MM-DD>-<이름>/
 | `status` | `planned` · `running` · `done` |
 | `created` · `authors` | 날짜(`YYYY-MM-DD`)와 저자 |
 | `geulpu` | `version`(필수) · `commit` · `mode`(`exact` · `fast`) · `provenance`(파이썬 API `info(provenance=True)` 가 돌려주는 것) |
-| `devices` · `engines` | GPU 와 드라이버; 견주거나 재현하는 실험이면 다른 엔진(예: llama.cpp 빌드) |
+| `devices` · `engines` | GPU 와 드라이버; 비교하거나 재현하는 실험이면 다른 엔진(예: llama.cpp 빌드) |
 | `models` | 모델마다 이름 · SHA-256 · 출처(`{"hf_repo", "revision", "file"}` 또는 만든 방법) |
 | `runs` | 실행마다 `id` · `kind` · GeulPU 의 기능(`operation`) · 기록 파일(`record`) · `settings` · `seed`, 분기면 바탕 실행(`base`)과 개입(`intervention` — `type` · `step` · `value`) |
 | `criteria` | 하나 이상: `id` · `text`(실행 전에 적음) · `result`(`pending` · `pass` · `fail`) |
@@ -41,7 +41,7 @@ experiments/<YYYY-MM-DD>-<이름>/
 ## 무엇을 저장하나
 
 - 모델 파일은 넣지 않는다. SHA-256 과 출처로 가리킨다.
-- 다시 계산할 수 있는 값(스텝마다 확률 · 상위 k · 엔트로피)은 넣지 않는다. 해시를 넣고, 다시 실행할 때 계산해서 견준다.
+- 다시 계산할 수 있는 값(스텝마다 확률 · 상위 k · 엔트로피)은 넣지 않는다. 해시를 넣고, 다시 실행할 때 계산해서 비교한다.
 - 실험 하나는 압축(zip)해서 5 MB 이하. 더 큰 원자료는 저장소 밖(릴리스 첨부나 다른 저장소)에 두고 SHA-256 으로 가리킨다. Git LFS 는
   쓰지 않는다.
 - 판정 기준이 먼저다. `plan.md` 와 `criteria` 를 첫 실행 전에 커밋하면, git 이력이 판정 기준을 결과보다 먼저 적었음을 보여 준다.
@@ -54,6 +54,10 @@ experiments/<YYYY-MM-DD>-<이름>/
 4. `python 도구/experiment_check.py --files experiments/<폴더>` 가 `experiment.json` 에 붙일 `files` 목록을 출력한다.
 5. `results.md` 를 쓰고, 판정 기준마다 `result` 와 `"status": "done"` 을 적고, [index.md](index.md) 에 한 줄을 더한다.
 6. `python 도구/experiment_check.py experiments/<폴더>` 가 통과해야 한다.
+
+GeulPU 앱이 떠 있으면 CLI 가 1 단계와 6 단계를 하고 3 단계의 명령을 기록한다: `GeulPU experiment create --name <이름> --root experiments` 가
+이 템플릿에서 폴더를 만들고 `index.md` 에 더한다. 어느 명령에든 `--experiment <폴더>` 를 붙이면 그 호출이 `records/commands.jsonl` 에 남는다.
+`GeulPU experiment check --path <폴더> --wait` 가 이 점검 도구를 돌린다([문서/명령줄.md](../문서/명령줄.md)).
 
 ## 점검
 
@@ -68,4 +72,4 @@ python 도구/experiment_check.py --self-test            # 올바른 실험의 �
 실행인지, `expected.json` 의 실행이 `runs` 에 있는지, 폴더를 압축한 크기가 5 MB 이하인지, `index.md` 가 모든 실험 폴더를 링크하는지
 확인한다. GeulPU 의 CI 가 커밋마다 돌린다.
 
-실행을 다시 돌려 `expected.json` 과 견주는 일은 아직 자동이 아니다.
+실행을 다시 돌려 `expected.json` 과 비교하는 일은 아직 자동이 아니다.

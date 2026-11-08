@@ -58,6 +58,10 @@ Only `experiment.json` and `plan.md` are required, and `results.md` once the sta
 5. Write `results.md`, set each criterion's `result` and `"status": "done"`, and add a row to [index.md](index.md).
 6. `python 도구/experiment_check.py experiments/<folder>` must pass.
 
+With the GeulPU app running, the CLI does steps 1 and 6 and records the commands of step 3: `GeulPU experiment create --name <name> --root
+experiments` makes the folder from this template and adds it to `index.md`; `--experiment <folder>` on any command writes that call to
+`records/commands.jsonl`; `GeulPU experiment check --path <folder> --wait` runs this checker ([문서/명령줄.md](../문서/명령줄.md)).
+
 ## Check
 
 ```

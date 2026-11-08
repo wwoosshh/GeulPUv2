@@ -31,9 +31,13 @@ import tempfile
 import time
 import zipfile
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
 EXPERIMENTS = os.path.join(ROOT, "experiments")
-SCHEMA = os.path.join(EXPERIMENTS, "experiment.schema.json")
+# the GeulPU app ships this checker with the schema next to it (data/ — `GeulPU experiment check`); in the repository it is experiments/
+SCHEMA = os.path.join(HERE, "experiment.schema.json")
+if not os.path.isfile(SCHEMA):
+    SCHEMA = os.path.join(EXPERIMENTS, "experiment.schema.json")
 TEMPLATE = "_template"
 DOCUMENTS = ("experiment.json", "plan.md", "results.md")      # the three documents — every other file goes in `files`
 LIMIT = 5 * 1024 * 1024                                        # one experiment, compressed
@@ -295,25 +299,33 @@ def report(label, errors):
     return 1 if errors else 0
 
 
-def check(folders, whole):
-    """Check the folders and their index.md; print one line per folder (with its errors) and a summary. The exit code."""
+def check(folders, whole, as_json=False):
+    """Check the folders and their index.md. Text: one line per folder (with its errors) and a summary; with as_json one JSON object
+    {"format", "pass", "summary", "results": [{"path", "kind", "pass", "problems"}]} (the app's `experiment check` reads it). The exit code."""
     schema = load_schema()
-    failed = sum(report(shown(folder), check_folder(folder, schema)) for folder in folders)
+    results = [{"path": shown(folder), "kind": "folder", "problems": check_folder(folder, schema)} for folder in folders]
     by_root = {EXPERIMENTS: []} if whole else {}
     for folder in folders:
         full = os.path.normpath(os.path.abspath(folder))
         by_root.setdefault(os.path.dirname(full), []).append(os.path.basename(full))
-    index_failed = index_checked = 0
     for root, names in by_root.items():
         if whole or any(n != TEMPLATE for n in names):
-            index_checked += 1
-            index_failed += report(shown(os.path.join(root, "index.md")), index_errors(root, names, whole))
+            results.append({"path": shown(os.path.join(root, "index.md")), "kind": "index", "problems": index_errors(root, names, whole)})
     n = len(folders)
+    failed = sum(1 for r in results if r["kind"] == "folder" and r["problems"])
+    indexes = [r for r in results if r["kind"] == "index"]
     line = f"experiment check: folders {n - failed}/{n} pass"
-    if index_checked:
-        line += " · index.md " + ("passes" if not index_failed else "fails")
-    print(line)
-    return 1 if failed or index_failed else 0
+    if indexes:
+        line += " · index.md " + ("fails" if any(r["problems"] for r in indexes) else "passes")
+    ok = not any(r["problems"] for r in results)
+    if as_json:
+        print(json.dumps({"format": "geulpu-experiment-check/1", "pass": ok, "summary": line,
+                          "results": [{**r, "pass": not r["problems"]} for r in results]}, ensure_ascii=False))
+    else:
+        for r in results:
+            report(r["path"], r["problems"])
+        print(line)
+    return 0 if ok else 1
 
 
 # ---- self-test: break copies of a correct experiment ----
@@ -457,6 +469,7 @@ def main():
                                                     "and size")
     p.add_argument("--self-test", action="store_true", help="break copies of a correct experiment in every checked way; each fault must "
                                                             "be caught")
+    p.add_argument("--json", action="store_true", help="print one JSON object (pass, summary, results) instead of text")
     a = p.parse_args()
     if a.self_test:
         return self_test()
@@ -472,11 +485,11 @@ def main():
         if missing:
             print("not a folder: " + ", ".join(missing), file=sys.stderr)
             return 2
-        return check(a.folders, whole=False)
+        return check(a.folders, whole=False, as_json=a.json)
     if not os.path.isdir(EXPERIMENTS):
         print(f"no experiments folder: {EXPERIMENTS}", file=sys.stderr)
         return 2
-    return check([os.path.join(EXPERIMENTS, n) for n in experiment_folders(EXPERIMENTS)], whole=True)
+    return check([os.path.join(EXPERIMENTS, n) for n in experiment_folders(EXPERIMENTS)], whole=True, as_json=a.json)
 
 
 if __name__ == "__main__":
