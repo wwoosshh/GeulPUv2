@@ -1,0 +1,4696 @@
+{
+ "format": "geulpu-operations/1",
+ "note": {
+  "ko": "GeulPU 의 모든 기능 — 문서/기능목록.md. 앱 · CLI 가 이 목록을 읽는다. 고친 뒤에는 python -I -X utf8 시험/기능목록점검.py",
+  "en": "Every GeulPU operation — see 문서/기능목록.md. The app and the CLI read this list. After editing run python -I -X utf8 시험/기능목록점검.py"
+ },
+ "result_types": {
+  "agents": {
+   "gui_view": "에이전트",
+   "description": {
+    "ko": "에이전트 목록",
+    "en": "agents"
+   }
+  },
+  "branch": {
+   "gui_view": "연구 패널(분기)",
+   "description": {
+    "ko": "분기 결과",
+    "en": "branch"
+   }
+  },
+  "check_report": {
+   "gui_view": "재현(앱리디자인 단계 E)",
+   "description": {
+    "ko": "점검 보고",
+    "en": "check report"
+   }
+  },
+  "debug_status": {
+   "gui_view": "디버거(실행 목록)",
+   "description": {
+    "ko": "디버거 상태",
+    "en": "debugger status"
+   }
+  },
+  "devices": {
+   "gui_view": "장치",
+   "description": {
+    "ko": "장치 정보",
+    "en": "device details"
+   }
+  },
+  "eval_check": {
+   "gui_view": "모델 평가(변환 검증)",
+   "description": {
+    "ko": "변환 검증 결과",
+    "en": "conversion check"
+   }
+  },
+  "eval_comparison": {
+   "gui_view": "모델 평가(전후 비교)",
+   "description": {
+    "ko": "전후 비교",
+    "en": "comparison"
+   }
+  },
+  "eval_improve": {
+   "gui_view": "모델 평가(개선)",
+   "description": {
+    "ko": "개선 보고서",
+    "en": "improvement report"
+   }
+  },
+  "eval_item": {
+   "gui_view": "모델 평가(대화)",
+   "description": {
+    "ko": "대화 하나",
+    "en": "conversation"
+   }
+  },
+  "eval_meta": {
+   "gui_view": "모델 평가(메타데이터)",
+   "description": {
+    "ko": "메타데이터 고칠 거리",
+    "en": "metadata fixes"
+   }
+  },
+  "eval_original": {
+   "gui_view": "모델 평가(원래 모델과 견주기)",
+   "description": {
+    "ko": "원래 모델과 견준 값",
+    "en": "original-model comparison"
+   }
+  },
+  "eval_result": {
+   "gui_view": "모델 평가(결과)",
+   "description": {
+    "ko": "평가 결과",
+    "en": "evaluation result"
+   }
+  },
+  "eval_tools": {
+   "gui_view": "모델 평가(도구 준비)",
+   "description": {
+    "ko": "도구 준비 상태",
+    "en": "tool status"
+   }
+  },
+  "eval_workspaces": {
+   "gui_view": "모델 평가(작업 공간 목록)",
+   "description": {
+    "ko": "작업 공간 목록",
+    "en": "workspaces"
+   }
+  },
+  "events": {
+   "gui_view": "명령 창(앱리디자인 단계 E)",
+   "description": {
+    "ko": "이벤트",
+    "en": "events"
+   }
+  },
+  "experiment": {
+   "gui_view": "실험(앱리디자인 단계 E)",
+   "description": {
+    "ko": "실험",
+    "en": "experiment"
+   }
+  },
+  "experiment_list": {
+   "gui_view": "실험(앱리디자인 단계 E)",
+   "description": {
+    "ko": "실험 목록",
+    "en": "experiment list"
+   }
+  },
+  "file": {
+   "gui_view": "벤치마크(결과)",
+   "description": {
+    "ko": "파일",
+    "en": "file"
+   }
+  },
+  "files": {
+   "gui_view": "모델(파일 고르기)",
+   "description": {
+    "ko": "파일 목록",
+    "en": "file listing"
+   }
+  },
+  "generation": {
+   "gui_view": "채팅 · 연구 패널",
+   "description": {
+    "ko": "생성 결과",
+    "en": "generation"
+   }
+  },
+  "health": {
+   "gui_view": "공통",
+   "description": {
+    "ko": "건강 확인",
+    "en": "health"
+   }
+  },
+  "hf_file": {
+   "gui_view": "모델(모델 찾기)",
+   "description": {
+    "ko": "Hugging Face 파일 정보",
+    "en": "Hugging Face file info"
+   }
+  },
+  "jlens_file": {
+   "gui_view": "연구 패널(앱리디자인 단계 E)",
+   "description": {
+    "ko": "J 파일",
+    "en": "J file"
+   }
+  },
+  "job": {
+   "gui_view": "공통(일 카드)",
+   "description": {
+    "ko": "일 번호와 상태",
+    "en": "job id and state"
+   }
+  },
+  "job_log": {
+   "gui_view": "공통(일 카드)",
+   "description": {
+    "ko": "일의 기록",
+    "en": "job log"
+   }
+  },
+  "lens": {
+   "gui_view": "연구 패널(층 렌즈)",
+   "description": {
+    "ko": "층 렌즈",
+    "en": "lens"
+   }
+  },
+  "models": {
+   "gui_view": "모델",
+   "description": {
+    "ko": "모델 목록 · 정보",
+    "en": "models"
+   }
+  },
+  "ok": {
+   "gui_view": "공통(알림)",
+   "description": {
+    "ko": "처리 결과",
+    "en": "acknowledgement"
+   }
+  },
+  "panel_records": {
+   "gui_view": "연구 패널",
+   "description": {
+    "ko": "연구 패널 기록",
+    "en": "research-panel records"
+   }
+  },
+  "provenance": {
+   "gui_view": "연구 패널(재현 파일)",
+   "description": {
+    "ko": "출처",
+    "en": "provenance"
+   }
+  },
+  "receipts": {
+   "gui_view": "벤치마크(llama.cpp 재현)",
+   "description": {
+    "ko": "영수증 목록",
+    "en": "receipts"
+   }
+  },
+  "recorder": {
+   "gui_view": "벤치마크(llama.cpp 재현)",
+   "description": {
+    "ko": "기록기 설정",
+    "en": "recorder settings"
+   }
+  },
+  "results": {
+   "gui_view": "벤치마크(결과)",
+   "description": {
+    "ko": "결과 목록",
+    "en": "results"
+   }
+  },
+  "run_log": {
+   "gui_view": "디버거(실행 보기)",
+   "description": {
+    "ko": "실행 로그",
+    "en": "run log"
+   }
+  },
+  "score": {
+   "gui_view": "연구 패널(점수)",
+   "description": {
+    "ko": "점수",
+    "en": "score"
+   }
+  },
+  "settings": {
+   "gui_view": "설정",
+   "description": {
+    "ko": "설정",
+    "en": "settings"
+   }
+  },
+  "state": {
+   "gui_view": "공통(위 막대 · 상태 막대)",
+   "description": {
+    "ko": "앱 상태",
+    "en": "app state"
+   }
+  },
+  "store": {
+   "gui_view": "설정(문맥 저장소)",
+   "description": {
+    "ko": "문맥 저장소",
+    "en": "context store"
+   }
+  },
+  "tokens": {
+   "gui_view": "연구 패널(토큰)",
+   "description": {
+    "ko": "토큰",
+    "en": "tokens"
+   }
+  }
+ },
+ "operations": [
+  {
+   "id": "agents.launch",
+   "title": {
+    "ko": "에이전트 띄우기(새 터미널 창)",
+    "en": "Launch an agent in a new terminal"
+   },
+   "description": {
+    "ko": "에이전트 띄우기(새 터미널 창).",
+    "en": "Launch an agent in a new terminal."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/agents/launch"
+   },
+   "params": [
+    {
+     "name": "agent",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "에이전트 이름",
+      "en": "agent name"
+     }
+    },
+    {
+     "name": "folder",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 폴더",
+      "en": "working folder"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "에이전트 띄우기",
+    "en": "agents launch"
+   },
+   "gui": {
+    "view": "에이전트"
+   }
+  },
+  {
+   "id": "agents.list",
+   "title": {
+    "ko": "에이전트 목록",
+    "en": "List agents"
+   },
+   "description": {
+    "ko": "에이전트 목록.",
+    "en": "List agents."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/agents"
+   },
+   "params": [],
+   "result": "agents",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "에이전트 목록",
+    "en": "agents list"
+   },
+   "gui": {
+    "view": "에이전트"
+   }
+  },
+  {
+   "id": "bench.crosscheck",
+   "title": {
+    "ko": "교차검증(로짓 해시를 기준 PC 와 견줌)",
+    "en": "Cross-check logit hashes against the reference PC"
+   },
+   "description": {
+    "ko": "교차검증(로짓 해시를 기준 PC 와 견줌).",
+    "en": "Cross-check logit hashes against the reference PC."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/bench/crosscheck"
+   },
+   "params": [
+    {
+     "name": "modules",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모듈 목록(쉼표로)",
+      "en": "modules (comma-separated)"
+     }
+    },
+    {
+     "name": "quick",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "빠르게(일부만)",
+      "en": "quick (subset)"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "check",
+   "cli": {
+    "ko": "벤치 교차검증",
+    "en": "bench crosscheck"
+   },
+   "gui": {
+    "view": "벤치마크"
+   }
+  },
+  {
+   "id": "bench.diag",
+   "title": {
+    "ko": "자기 진단",
+    "en": "Self-diagnosis"
+   },
+   "description": {
+    "ko": "자기 진단.",
+    "en": "Self-diagnosis."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/bench/diag"
+   },
+   "params": [
+    {
+     "name": "model",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델(아이디 또는 파일)",
+      "en": "model (id or file)"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "check",
+   "cli": {
+    "ko": "벤치 진단",
+    "en": "bench diag"
+   },
+   "gui": {
+    "view": "벤치마크"
+   }
+  },
+  {
+   "id": "bench.pair",
+   "title": {
+    "ko": "파일 쌍 재현성",
+    "en": "File-pair reproducibility"
+   },
+   "description": {
+    "ko": "파일 쌍 재현성.",
+    "en": "File-pair reproducibility."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/bench/pair"
+   },
+   "params": [
+    {
+     "name": "files",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "파일 라벨(쉼표로)",
+      "en": "file labels (comma-separated)"
+     }
+    },
+    {
+     "name": "quick",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "빠르게(일부만)",
+      "en": "quick (subset)"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "check",
+   "cli": {
+    "ko": "벤치 파일쌍",
+    "en": "bench pair"
+   },
+   "gui": {
+    "view": "벤치마크"
+   }
+  },
+  {
+   "id": "bench.results",
+   "title": {
+    "ko": "결과 폴더 목록",
+    "en": "List result folders"
+   },
+   "description": {
+    "ko": "결과 폴더 목록.",
+    "en": "List result folders."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/results"
+   },
+   "params": [],
+   "result": "results",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "결과 목록",
+    "en": "bench results"
+   },
+   "gui": {
+    "view": "벤치마크(결과)"
+   }
+  },
+  {
+   "id": "bench.results.file",
+   "title": {
+    "ko": "결과 파일 받기",
+    "en": "Get a result file"
+   },
+   "description": {
+    "ko": "결과 파일 받기.",
+    "en": "Get a result file."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/results/file"
+   },
+   "params": [
+    {
+     "name": "file",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "파일 이름",
+      "en": "file name"
+     }
+    },
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    }
+   ],
+   "result": "file",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "결과 파일",
+    "en": "bench results file"
+   },
+   "gui": {
+    "view": "벤치마크(결과)"
+   }
+  },
+  {
+   "id": "bench.results.zip",
+   "title": {
+    "ko": "결과 zip 받기",
+    "en": "Get a result as zip"
+   },
+   "description": {
+    "ko": "결과 zip 받기.",
+    "en": "Get a result as zip."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/results/zip"
+   },
+   "params": [
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    }
+   ],
+   "result": "file",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "결과 압축",
+    "en": "bench results zip"
+   },
+   "gui": {
+    "view": "벤치마크(결과)"
+   }
+  },
+  {
+   "id": "bench.speed",
+   "title": {
+    "ko": "속도 재기",
+    "en": "Speed measurement"
+   },
+   "description": {
+    "ko": "속도 재기.",
+    "en": "Speed measurement."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/bench/speed"
+   },
+   "params": [
+    {
+     "name": "model",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델(아이디 또는 파일)",
+      "en": "model (id or file)"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "check",
+   "cli": {
+    "ko": "벤치 속도",
+    "en": "bench speed"
+   },
+   "gui": {
+    "view": "벤치마크"
+   }
+  },
+  {
+   "id": "check.repro",
+   "title": {
+    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 층 렌즈 — 도구/repro_check.py)",
+    "en": "GPU-free reproduction check (tool repro_check.py)"
+   },
+   "description": {
+    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 층 렌즈 — 도구/repro_check.py).",
+    "en": "GPU-free reproduction check (tool repro_check.py)."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "check_report",
+   "job": false,
+   "records": "check",
+   "cli": {
+    "ko": "재현 확인",
+    "en": "check repro"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "check.same_bits",
+   "title": {
+    "ko": "같은 비트 확인 — 혼자 · 동시 요청(도구/same_bits.py)",
+    "en": "Same-bits check — alone and in a batch (tool same_bits.py)"
+   },
+   "description": {
+    "ko": "같은 비트 확인 — 혼자 · 동시 요청(도구/same_bits.py).",
+    "en": "Same-bits check — alone and in a batch (tool same_bits.py)."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "check_report",
+   "job": false,
+   "records": "check",
+   "cli": {
+    "ko": "같은비트 확인",
+    "en": "check same-bits"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "debug.record.start",
+   "title": {
+    "ko": "실행 기록 시작",
+    "en": "Start recording a run"
+   },
+   "description": {
+    "ko": "실행 기록 시작.",
+    "en": "Start recording a run."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/debug/record/start"
+   },
+   "params": [
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "기록 시작",
+    "en": "debug record start"
+   },
+   "gui": {
+    "view": "디버거"
+   }
+  },
+  {
+   "id": "debug.record.stop",
+   "title": {
+    "ko": "실행 기록 멈춤",
+    "en": "Stop recording"
+   },
+   "description": {
+    "ko": "실행 기록 멈춤.",
+    "en": "Stop recording."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/debug/record/stop"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "기록 멈춤",
+    "en": "debug record stop"
+   },
+   "gui": {
+    "view": "디버거"
+   }
+  },
+  {
+   "id": "debug.run.append",
+   "title": {
+    "ko": "실행 로그에 분석 줄(분기 · 점수) 덧붙이기",
+    "en": "Append analysis lines (branch, score) to a run log"
+   },
+   "description": {
+    "ko": "실행 로그에 분석 줄(분기 · 점수) 덧붙이기.",
+    "en": "Append analysis lines (branch, score) to a run log."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/debug/run/append"
+   },
+   "params": [
+    {
+     "name": "lines",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "덧붙일 줄들",
+      "en": "lines to append"
+     }
+    },
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "run_log",
+   "cli": {
+    "ko": "실행로그 덧붙이기",
+    "en": "debug run append"
+   },
+   "gui": {
+    "view": "디버거"
+   }
+  },
+  {
+   "id": "debug.run.delete",
+   "title": {
+    "ko": "실행 로그 지우기",
+    "en": "Delete a run log"
+   },
+   "description": {
+    "ko": "실행 로그 지우기.",
+    "en": "Delete a run log."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/debug/run/delete"
+   },
+   "params": [
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실행로그 지우기",
+    "en": "debug run delete"
+   },
+   "gui": {
+    "view": "디버거"
+   }
+  },
+  {
+   "id": "debug.run.get",
+   "title": {
+    "ko": "실행 로그 받기",
+    "en": "Get a run log"
+   },
+   "description": {
+    "ko": "실행 로그 받기.",
+    "en": "Get a run log."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/debug/run"
+   },
+   "params": [
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    }
+   ],
+   "result": "run_log",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실행로그 받기",
+    "en": "debug run get"
+   },
+   "gui": {
+    "view": "디버거"
+   }
+  },
+  {
+   "id": "debug.run.import",
+   "title": {
+    "ko": "실행 로그 들여오기(조각으로)",
+    "en": "Import a run log in parts"
+   },
+   "description": {
+    "ko": "실행 로그 들여오기(조각으로).",
+    "en": "Import a run log in parts."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/debug/run/import"
+   },
+   "params": [
+    {
+     "name": "last",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "끝 조각인가",
+      "en": "last part"
+     }
+    },
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    },
+    {
+     "name": "part",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "조각 번호(0 부터)",
+      "en": "part index (from 0)"
+     }
+    },
+    {
+     "name": "text",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "조각의 글",
+      "en": "part text"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "run_log",
+   "cli": {
+    "ko": "실행로그 들여오기",
+    "en": "debug run import"
+   },
+   "gui": {
+    "view": "디버거"
+   }
+  },
+  {
+   "id": "debug.status",
+   "title": {
+    "ko": "디버거 상태와 실행 목록",
+    "en": "Debugger status and run list"
+   },
+   "description": {
+    "ko": "디버거 상태와 실행 목록.",
+    "en": "Debugger status and run list."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/debug"
+   },
+   "params": [],
+   "result": "debug_status",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "디버거 상태",
+    "en": "debug status"
+   },
+   "gui": {
+    "view": "디버거"
+   }
+  },
+  {
+   "id": "eval.check.get",
+   "title": {
+    "ko": "GGUF 변환 검증의 결과",
+    "en": "Result of the GGUF conversion check"
+   },
+   "description": {
+    "ko": "GGUF 변환 검증의 결과.",
+    "en": "Result of the GGUF conversion check."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/check"
+   },
+   "params": [
+    {
+     "name": "version",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "버전 아이디",
+      "en": "version id"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "eval_check",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 변환검증 결과",
+    "en": "eval check get"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.check.run",
+   "title": {
+    "ko": "GGUF 변환 검증(채팅 템플릿 · EOS · 토크나이저 · 설정값을 원래 모델과)",
+    "en": "Check a GGUF conversion against the original model"
+   },
+   "description": {
+    "ko": "GGUF 변환 검증(채팅 템플릿 · EOS · 토크나이저 · 설정값을 원래 모델과).",
+    "en": "Check a GGUF conversion against the original model."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/check"
+   },
+   "params": [
+    {
+     "name": "version",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "버전 아이디",
+      "en": "version id"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "check",
+   "cli": {
+    "ko": "평가 변환검증",
+    "en": "eval check run"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.compare",
+   "title": {
+    "ko": "두 결과 견주기(전후 비교)",
+    "en": "Compare two results (before and after)"
+   },
+   "description": {
+    "ko": "두 결과 견주기(전후 비교).",
+    "en": "Compare two results (before and after)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/compare"
+   },
+   "params": [
+    {
+     "name": "a",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "견줄 결과 폴더 A",
+      "en": "result folder A"
+     }
+    },
+    {
+     "name": "b",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "견줄 결과 폴더 B",
+      "en": "result folder B"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "eval_comparison",
+   "job": false,
+   "records": "comparison",
+   "cli": {
+    "ko": "평가 견주기",
+    "en": "eval compare"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.data.import",
+   "title": {
+    "ko": "평가 데이터 들여오기",
+    "en": "Import evaluation data"
+   },
+   "description": {
+    "ko": "평가 데이터 들여오기.",
+    "en": "Import evaluation data."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/data/import"
+   },
+   "params": [
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "경로",
+      "en": "path"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 데이터 들여오기",
+    "en": "eval data import"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.fix",
+   "title": {
+    "ko": "변환 검증에서 찾은 문제 고치기(새 버전)",
+    "en": "Fix problems found by the conversion check (new version)"
+   },
+   "description": {
+    "ko": "변환 검증에서 찾은 문제 고치기(새 버전).",
+    "en": "Fix problems found by the conversion check (new version)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/fix"
+   },
+   "params": [
+    {
+     "name": "changes",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "고칠 것들",
+      "en": "changes"
+     }
+    },
+    {
+     "name": "from",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "어디서부터(바이트 또는 바탕 버전)",
+      "en": "start (byte offset or base version)"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "none",
+   "cli": {
+    "ko": "평가 고치기",
+    "en": "eval fix"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.improve.get",
+   "title": {
+    "ko": "개선 측정 보고서",
+    "en": "Improvement measurement report"
+   },
+   "description": {
+    "ko": "개선 측정 보고서.",
+    "en": "Improvement measurement report."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/improve"
+   },
+   "params": [
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "eval_improve",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 개선 보고",
+    "en": "eval improve get"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.improve.run",
+   "title": {
+    "ko": "개선 — 행렬 무리마다 높은 형식으로 측정",
+    "en": "Improve — measure each tensor group at a higher format"
+   },
+   "description": {
+    "ko": "개선 — 행렬 무리마다 높은 형식으로 측정.",
+    "en": "Improve — measure each tensor group at a higher format."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/improve"
+   },
+   "params": [
+    {
+     "name": "base",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "바탕 버전",
+      "en": "base version"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "evaluation",
+   "cli": {
+    "ko": "평가 개선",
+    "en": "eval improve run"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.item",
+   "title": {
+    "ko": "결과의 대화 하나",
+    "en": "One conversation of a result"
+   },
+   "description": {
+    "ko": "결과의 대화 하나.",
+    "en": "One conversation of a result."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/item"
+   },
+   "params": [
+    {
+     "name": "dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "결과 폴더",
+      "en": "result folder"
+     }
+    },
+    {
+     "name": "i",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "대화 번호",
+      "en": "conversation index"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "eval_item",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 대화",
+    "en": "eval item"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.make",
+   "title": {
+    "ko": "GGUF 만들기(변환 · imatrix · 양자화)",
+    "en": "Make GGUF files (convert, imatrix, quantize)"
+   },
+   "description": {
+    "ko": "GGUF 만들기(변환 · imatrix · 양자화).",
+    "en": "Make GGUF files (convert, imatrix, quantize)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/make"
+   },
+   "params": [
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "none",
+   "cli": {
+    "ko": "평가 GGUF 만들기",
+    "en": "eval make"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.meta",
+   "title": {
+    "ko": "GGUF 메타데이터의 고칠 거리",
+    "en": "GGUF metadata fixes"
+   },
+   "description": {
+    "ko": "GGUF 메타데이터의 고칠 거리.",
+    "en": "GGUF metadata fixes."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/meta"
+   },
+   "params": [
+    {
+     "name": "model",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델(아이디 또는 파일)",
+      "en": "model (id or file)"
+     }
+    }
+   ],
+   "result": "eval_meta",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 메타데이터",
+    "en": "eval meta"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.open",
+   "title": {
+    "ko": "결과 폴더 열기",
+    "en": "Open a result folder"
+   },
+   "description": {
+    "ko": "결과 폴더 열기.",
+    "en": "Open a result folder."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/open"
+   },
+   "params": [
+    {
+     "name": "dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "결과 폴더",
+      "en": "result folder"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 폴더 열기",
+    "en": "eval open"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.original.get",
+   "title": {
+    "ko": "원래 모델과 견준 값",
+    "en": "Comparison with the original model"
+   },
+   "description": {
+    "ko": "원래 모델과 견준 값.",
+    "en": "Comparison with the original model."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/original"
+   },
+   "params": [
+    {
+     "name": "dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "결과 폴더",
+      "en": "result folder"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "eval_original",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 원래모델 결과",
+    "en": "eval original get"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.original.run",
+   "title": {
+    "ko": "원래 모델(transformers)과 견주기",
+    "en": "Compare with the original model (transformers)"
+   },
+   "description": {
+    "ko": "원래 모델(transformers)과 견주기.",
+    "en": "Compare with the original model (transformers)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/original"
+   },
+   "params": [
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "comparison",
+   "cli": {
+    "ko": "평가 원래모델 견주기",
+    "en": "eval original run"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.result",
+   "title": {
+    "ko": "평가 결과",
+    "en": "Evaluation result"
+   },
+   "description": {
+    "ko": "평가 결과.",
+    "en": "Evaluation result."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/result"
+   },
+   "params": [
+    {
+     "name": "dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "결과 폴더",
+      "en": "result folder"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "eval_result",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 결과",
+    "en": "eval result"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.run",
+   "title": {
+    "ko": "평가 돌리기",
+    "en": "Run an evaluation"
+   },
+   "description": {
+    "ko": "평가 돌리기.",
+    "en": "Run an evaluation."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/run"
+   },
+   "params": [
+    {
+     "name": "data",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "데이터 이름",
+      "en": "dataset name"
+     }
+    },
+    {
+     "name": "versions",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "버전들",
+      "en": "versions"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "evaluation",
+   "cli": {
+    "ko": "평가 돌리기",
+    "en": "eval run"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.to_debugger",
+   "title": {
+    "ko": "평가 결과의 실행 로그를 디버거로",
+    "en": "Send a result's run log to the debugger"
+   },
+   "description": {
+    "ko": "평가 결과의 실행 로그를 디버거로.",
+    "en": "Send a result's run log to the debugger."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/debug"
+   },
+   "params": [
+    {
+     "name": "dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "결과 폴더",
+      "en": "result folder"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 디버거로",
+    "en": "eval to-debugger"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.tools.get",
+   "title": {
+    "ko": "GGUF 만들기 도구의 준비 상태",
+    "en": "Status of the GGUF tools"
+   },
+   "description": {
+    "ko": "GGUF 만들기 도구의 준비 상태.",
+    "en": "Status of the GGUF tools."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval/tools"
+   },
+   "params": [],
+   "result": "eval_tools",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 도구 상태",
+    "en": "eval tools get"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.tools.prepare",
+   "title": {
+    "ko": "GGUF 만들기 도구 준비(llama.cpp 도구 · 파이썬 환경)",
+    "en": "Prepare the GGUF tools (llama.cpp tools, Python environment)"
+   },
+   "description": {
+    "ko": "GGUF 만들기 도구 준비(llama.cpp 도구 · 파이썬 환경).",
+    "en": "Prepare the GGUF tools (llama.cpp tools, Python environment)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/tools"
+   },
+   "params": [],
+   "result": "job",
+   "job": true,
+   "records": "none",
+   "cli": {
+    "ko": "평가 도구 준비",
+    "en": "eval tools prepare"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.version",
+   "title": {
+    "ko": "버전(비교할 GGUF) 더하기 · 빼기",
+    "en": "Add or remove a version (GGUF to compare)"
+   },
+   "description": {
+    "ko": "버전(비교할 GGUF) 더하기 · 빼기.",
+    "en": "Add or remove a version (GGUF to compare)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/version"
+   },
+   "params": [
+    {
+     "name": "action",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "할 일(더하기 · 지우기 등)",
+      "en": "action (add, delete, …)"
+     }
+    },
+    {
+     "name": "from",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "어디서부터(바이트 또는 바탕 버전)",
+      "en": "start (byte offset or base version)"
+     }
+    },
+    {
+     "name": "id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "아이디",
+      "en": "id"
+     }
+    },
+    {
+     "name": "kind",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "종류",
+      "en": "kind"
+     }
+    },
+    {
+     "name": "label",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "라벨",
+      "en": "label"
+     }
+    },
+    {
+     "name": "model",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델(아이디 또는 파일)",
+      "en": "model (id or file)"
+     }
+    },
+    {
+     "name": "workspace",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "작업 공간 아이디",
+      "en": "workspace id"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 버전",
+    "en": "eval version"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.workspace",
+   "title": {
+    "ko": "작업 공간 만들기 · 지우기",
+    "en": "Create or delete a workspace"
+   },
+   "description": {
+    "ko": "작업 공간 만들기 · 지우기.",
+    "en": "Create or delete a workspace."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/eval/workspace"
+   },
+   "params": [
+    {
+     "name": "action",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "할 일(더하기 · 지우기 등)",
+      "en": "action (add, delete, …)"
+     }
+    },
+    {
+     "name": "baseline",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "미세조정 전 모델",
+      "en": "pre-finetune baseline model"
+     }
+    },
+    {
+     "name": "current",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "지금 모델",
+      "en": "current model"
+     }
+    },
+    {
+     "name": "id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "아이디",
+      "en": "id"
+     }
+    },
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    },
+    {
+     "name": "original_dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "원래 모델 폴더",
+      "en": "original model folder"
+     }
+    },
+    {
+     "name": "original_repo",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "원래 모델의 Hugging Face 저장소",
+      "en": "original model Hugging Face repo"
+     }
+    },
+    {
+     "name": "reference",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "기준 모델",
+      "en": "reference model"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 작업공간",
+    "en": "eval workspace"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "eval.workspaces",
+   "title": {
+    "ko": "모델 평가 — 작업 공간 목록",
+    "en": "Model evaluation — list workspaces"
+   },
+   "description": {
+    "ko": "모델 평가 — 작업 공간 목록.",
+    "en": "Model evaluation — list workspaces."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/eval"
+   },
+   "params": [],
+   "result": "eval_workspaces",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "평가 작업공간 목록",
+    "en": "eval workspaces"
+   },
+   "gui": {
+    "view": "모델 평가"
+   }
+  },
+  {
+   "id": "experiment.check",
+   "title": {
+    "ko": "실험 점검 · 다시 내기 확인",
+    "en": "Check an experiment and its re-run"
+   },
+   "description": {
+    "ko": "실험 점검 · 다시 내기 확인.",
+    "en": "Check an experiment and its re-run."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "check_report",
+   "job": false,
+   "records": "check",
+   "cli": {
+    "ko": "실험 점검",
+    "en": "experiment check"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "experiment.create",
+   "title": {
+    "ko": "실험 만들기(폴더 · experiment.json · plan.md)",
+    "en": "Create an experiment (folder, experiment.json, plan.md)"
+   },
+   "description": {
+    "ko": "실험 만들기(폴더 · experiment.json · plan.md).",
+    "en": "Create an experiment (folder, experiment.json, plan.md)."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "experiment",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 만들기",
+    "en": "experiment create"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "experiment.list",
+   "title": {
+    "ko": "실험 목록",
+    "en": "List experiments"
+   },
+   "description": {
+    "ko": "실험 목록.",
+    "en": "List experiments."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "experiment_list",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 목록",
+    "en": "experiment list"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "experiment.show",
+   "title": {
+    "ko": "실험 보기",
+    "en": "Show an experiment"
+   },
+   "description": {
+    "ko": "실험 보기.",
+    "en": "Show an experiment."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "experiment",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 보기",
+    "en": "experiment show"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "job.cancel",
+   "title": {
+    "ko": "일 취소",
+    "en": "Cancel the job"
+   },
+   "description": {
+    "ko": "일 취소.",
+    "en": "Cancel the job."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/job/cancel"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "일 취소",
+    "en": "job cancel"
+   },
+   "gui": {
+    "view": "공통(일 카드)"
+   }
+  },
+  {
+   "id": "job.log",
+   "title": {
+    "ko": "일의 기록",
+    "en": "Job log"
+   },
+   "description": {
+    "ko": "일의 기록.",
+    "en": "Job log."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/job/log"
+   },
+   "params": [
+    {
+     "name": "from",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "어디서부터(바이트 또는 바탕 버전)",
+      "en": "start (byte offset or base version)"
+     }
+    }
+   ],
+   "result": "job_log",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "일 기록",
+    "en": "job log"
+   },
+   "gui": {
+    "view": "공통(일 카드)"
+   }
+  },
+  {
+   "id": "lens.jacobian_fit",
+   "title": {
+    "ko": "Jacobian lens 의 J 파일 맞추기(도구/jlens_fit.py)",
+    "en": "Fit a Jacobian lens J file (tool jlens_fit.py)"
+   },
+   "description": {
+    "ko": "Jacobian lens 의 J 파일 맞추기(도구/jlens_fit.py).",
+    "en": "Fit a Jacobian lens J file (tool jlens_fit.py)."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "jlens_file",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "렌즈 J파일 맞추기",
+    "en": "lens jacobian-fit"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "model.add",
+   "title": {
+    "ko": "로컬 GGUF 더하기",
+    "en": "Add a local GGUF"
+   },
+   "description": {
+    "ko": "로컬 GGUF 더하기.",
+    "en": "Add a local GGUF."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/models/add"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "경로",
+      "en": "path"
+     }
+    }
+   ],
+   "result": "models",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "모델 더하기",
+    "en": "model add"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.download.cancel",
+   "title": {
+    "ko": "받기 멈춤",
+    "en": "Pause a download"
+   },
+   "description": {
+    "ko": "받기 멈춤.",
+    "en": "Pause a download."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/models/cancel"
+   },
+   "params": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "아이디",
+      "en": "id"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "모델 받기 멈춤",
+    "en": "model download cancel"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.download.discard",
+   "title": {
+    "ko": "받다 만 파일 지우기",
+    "en": "Discard a partial download"
+   },
+   "description": {
+    "ko": "받다 만 파일 지우기.",
+    "en": "Discard a partial download."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/models/discard"
+   },
+   "params": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "아이디",
+      "en": "id"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "모델 받기 버리기",
+    "en": "model download discard"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.download.start",
+   "title": {
+    "ko": "받기 시작",
+    "en": "Start a download"
+   },
+   "description": {
+    "ko": "받기 시작.",
+    "en": "Start a download."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/models/download"
+   },
+   "params": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "아이디",
+      "en": "id"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "모델 받기",
+    "en": "model download start"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.hf.add",
+   "title": {
+    "ko": "Hugging Face 의 GGUF 를 모델 목록에 더하기",
+    "en": "Add a Hugging Face GGUF to the model list"
+   },
+   "description": {
+    "ko": "Hugging Face 의 GGUF 를 모델 목록에 더하기.",
+    "en": "Add a Hugging Face GGUF to the model list."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/hf/add"
+   },
+   "params": [
+    {
+     "name": "file",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "파일 이름",
+      "en": "file name"
+     }
+    },
+    {
+     "name": "license",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "라이선스",
+      "en": "license"
+     }
+    },
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    },
+    {
+     "name": "quant",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "양자화 형식",
+      "en": "quantization type"
+     }
+    },
+    {
+     "name": "repo",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "Hugging Face 저장소",
+      "en": "Hugging Face repo"
+     }
+    },
+    {
+     "name": "sha256",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "SHA-256",
+      "en": "SHA-256"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "허깅페이스 더하기",
+    "en": "model hf add"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.hf.check",
+   "title": {
+    "ko": "Hugging Face 파일 확인(앞부분)",
+    "en": "Check a Hugging Face file (head only)"
+   },
+   "description": {
+    "ko": "Hugging Face 파일 확인(앞부분).",
+    "en": "Check a Hugging Face file (head only)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/hf/check"
+   },
+   "params": [
+    {
+     "name": "file",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "파일 이름",
+      "en": "file name"
+     }
+    },
+    {
+     "name": "repo",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "Hugging Face 저장소",
+      "en": "Hugging Face repo"
+     }
+    },
+    {
+     "name": "size",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "크기(바이트)",
+      "en": "size (bytes)"
+     }
+    }
+   ],
+   "result": "hf_file",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "허깅페이스 확인",
+    "en": "model hf check"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.hf.check_status",
+   "title": {
+    "ko": "Hugging Face 파일 확인의 상태",
+    "en": "Status of the Hugging Face file check"
+   },
+   "description": {
+    "ko": "Hugging Face 파일 확인의 상태.",
+    "en": "Status of the Hugging Face file check."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/hf/check"
+   },
+   "params": [],
+   "result": "hf_file",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "허깅페이스 확인 상태",
+    "en": "model hf check-status"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.hf.pull",
+   "title": {
+    "ko": "Hugging Face 의 GGUF 한 줄 설치를 떠 있는 앱에 맡기기",
+    "en": "Hand a one-line Hugging Face install to the running app"
+   },
+   "description": {
+    "ko": "Hugging Face 의 GGUF 한 줄 설치를 떠 있는 앱에 맡기기.",
+    "en": "Hand a one-line Hugging Face install to the running app."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/hf/pull"
+   },
+   "params": [
+    {
+     "name": "file",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "파일 이름",
+      "en": "file name"
+     }
+    },
+    {
+     "name": "repo",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "Hugging Face 저장소",
+      "en": "Hugging Face repo"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "허깅페이스 받기",
+    "en": "model hf pull"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.load",
+   "title": {
+    "ko": "모델 불러오기(추론 서버 시작)",
+    "en": "Load a model (start the inference server)"
+   },
+   "description": {
+    "ko": "모델 불러오기(추론 서버 시작).",
+    "en": "Load a model (start the inference server)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/server/start"
+   },
+   "params": [
+    {
+     "name": "model",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델(아이디 또는 파일)",
+      "en": "model (id or file)"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "none",
+   "cli": {
+    "ko": "모델 불러오기",
+    "en": "model load"
+   },
+   "gui": {
+    "view": "공통(모델 불러오기) · 설정"
+   }
+  },
+  {
+   "id": "model.remove",
+   "title": {
+    "ko": "모델 빼기",
+    "en": "Remove a model"
+   },
+   "description": {
+    "ko": "모델 빼기.",
+    "en": "Remove a model."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/models/remove"
+   },
+   "params": [
+    {
+     "name": "delete_file",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "파일도 지우기",
+      "en": "also delete the file"
+     }
+    },
+    {
+     "name": "id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "아이디",
+      "en": "id"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "모델 빼기",
+    "en": "model remove"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "model.unload",
+   "title": {
+    "ko": "모델 내리기(추론 서버 멈춤)",
+    "en": "Unload the model (stop the inference server)"
+   },
+   "description": {
+    "ko": "모델 내리기(추론 서버 멈춤).",
+    "en": "Unload the model (stop the inference server)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/server/stop"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "모델 내리기",
+    "en": "model unload"
+   },
+   "gui": {
+    "view": "공통 · 설정"
+   }
+  },
+  {
+   "id": "model.verify",
+   "title": {
+    "ko": "모델 파일 확인(해시)",
+    "en": "Verify a model file (hash)"
+   },
+   "description": {
+    "ko": "모델 파일 확인(해시).",
+    "en": "Verify a model file (hash)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/models/verify"
+   },
+   "params": [
+    {
+     "name": "id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "아이디",
+      "en": "id"
+     }
+    }
+   ],
+   "result": "models",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "모델 확인",
+    "en": "model verify"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "panel.records",
+   "title": {
+    "ko": "연구 패널 기록을 앱에서 읽고 쓰기(지금은 브라우저에만)",
+    "en": "Read and write research-panel records in the app (now browser-only)"
+   },
+   "description": {
+    "ko": "연구 패널 기록을 앱에서 읽고 쓰기(지금은 브라우저에만).",
+    "en": "Read and write research-panel records in the app (now browser-only)."
+   },
+   "status": "planned",
+   "stage": "C",
+   "params": [],
+   "result": "panel_records",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "패널 기록",
+    "en": "panel records"
+   },
+   "gui": {
+    "view": "연구 패널"
+   }
+  },
+  {
+   "id": "proxy.detokenize",
+   "title": {
+    "ko": "토큰 풀기 별칭",
+    "en": "Detokenize alias"
+   },
+   "description": {
+    "ko": "토큰 풀기 별칭.",
+    "en": "Detokenize alias."
+   },
+   "status": "exists",
+   "http": {
+    "method": "ANY",
+    "path": "/detokenize"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "lm-evaluation-harness 용 별칭 — run.detokenize 와 같은 일",
+    "en": "alias for lm-evaluation-harness — same as run.detokenize"
+   }
+  },
+  {
+   "id": "proxy.server",
+   "title": {
+    "ko": "추론 서버로 전달",
+    "en": "Forward to the inference server"
+   },
+   "description": {
+    "ko": "추론 서버로 전달.",
+    "en": "Forward to the inference server."
+   },
+   "status": "exists",
+   "http": {
+    "method": "ANY",
+    "path": "/v1/*"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "추론 서버로의 전달 — 기능은 run.* 로 적는다",
+    "en": "forwarding to the inference server — the features are listed as run.*"
+   }
+  },
+  {
+   "id": "proxy.tokenize",
+   "title": {
+    "ko": "토큰화 별칭",
+    "en": "Tokenize alias"
+   },
+   "description": {
+    "ko": "토큰화 별칭.",
+    "en": "Tokenize alias."
+   },
+   "status": "exists",
+   "http": {
+    "method": "ANY",
+    "path": "/tokenize"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "lm-evaluation-harness 의 원격 토크나이저용 별칭 — run.tokenize 와 같은 일",
+    "en": "alias for lm-evaluation-harness's remote tokenizer — same as run.tokenize"
+   }
+  },
+  {
+   "id": "proxy.tokenizer_info",
+   "title": {
+    "ko": "토크나이저 정보 별칭",
+    "en": "Tokenizer info alias"
+   },
+   "description": {
+    "ko": "토크나이저 정보 별칭.",
+    "en": "Tokenizer info alias."
+   },
+   "status": "exists",
+   "http": {
+    "method": "ANY",
+    "path": "/tokenizer_info"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "lm-evaluation-harness 용 별칭 — run.tokenizer_info 와 같은 일",
+    "en": "alias for lm-evaluation-harness — same as run.tokenizer_info"
+   }
+  },
+  {
+   "id": "replay.branch",
+   "title": {
+    "ko": "llama.cpp 실행에서 같은 난수로 설정만 바꿔 잇기(반사실)",
+    "en": "Continue a llama.cpp run with the same random numbers and changed settings (counterfactual)"
+   },
+   "description": {
+    "ko": "llama.cpp 실행에서 같은 난수로 설정만 바꿔 잇기(반사실).",
+    "en": "Continue a llama.cpp run with the same random numbers and changed settings (counterfactual)."
+   },
+   "status": "planned",
+   "stage": "실험대 3",
+   "params": [],
+   "result": "branch",
+   "job": false,
+   "records": "branch",
+   "cli": {
+    "ko": "재현 분기",
+    "en": "replay branch"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "replay.import",
+   "title": {
+    "ko": "대화 기록 · 요청과 응답 기록에서 영수증 만들기",
+    "en": "Make receipts from conversation or request logs"
+   },
+   "description": {
+    "ko": "대화 기록 · 요청과 응답 기록에서 영수증 만들기.",
+    "en": "Make receipts from conversation or request logs."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/llama/import"
+   },
+   "params": [
+    {
+     "name": "log",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "대화 · 요청 기록",
+      "en": "conversation or request log"
+     }
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "경로",
+      "en": "path"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "재현 들여오기",
+    "en": "replay import"
+   },
+   "gui": {
+    "view": "벤치마크(llama.cpp 재현)"
+   }
+  },
+  {
+   "id": "replay.proxy",
+   "title": {
+    "ko": "기록기 — 사용자의 llama-server 로 전달하며 영수증을 남김",
+    "en": "Recorder — forward to the user's llama-server and keep receipts"
+   },
+   "description": {
+    "ko": "기록기 — 사용자의 llama-server 로 전달하며 영수증을 남김.",
+    "en": "Recorder — forward to the user's llama-server and keep receipts."
+   },
+   "status": "exists",
+   "http": {
+    "method": "ANY",
+    "path": "/llama/*"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "다른 프로그램이 llama-server 대신 부르는 기록기의 전달 경로 — 설정은 replay.recorder.*",
+    "en": "forwarding path that other programs call instead of llama-server — set it up with replay.recorder.*"
+   }
+  },
+  {
+   "id": "replay.receipts",
+   "title": {
+    "ko": "llama.cpp 재현 — 영수증 목록",
+    "en": "llama.cpp replay — list receipts"
+   },
+   "description": {
+    "ko": "llama.cpp 재현 — 영수증 목록.",
+    "en": "llama.cpp replay — list receipts."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/llama/receipts"
+   },
+   "params": [],
+   "result": "receipts",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "재현 영수증 목록",
+    "en": "replay receipts"
+   },
+   "gui": {
+    "view": "벤치마크(llama.cpp 재현)"
+   }
+  },
+  {
+   "id": "replay.recorder.get",
+   "title": {
+    "ko": "기록기 설정 보기",
+    "en": "Show the recorder settings"
+   },
+   "description": {
+    "ko": "기록기 설정 보기.",
+    "en": "Show the recorder settings."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/llama/recorder"
+   },
+   "params": [],
+   "result": "recorder",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "재현 기록기 보기",
+    "en": "replay recorder get"
+   },
+   "gui": {
+    "view": "벤치마크(llama.cpp 재현)"
+   }
+  },
+  {
+   "id": "replay.recorder.set",
+   "title": {
+    "ko": "기록기 설정(투명 · 탐침)",
+    "en": "Set the recorder (transparent, probe)"
+   },
+   "description": {
+    "ko": "기록기 설정(투명 · 탐침).",
+    "en": "Set the recorder (transparent, probe)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/llama/recorder"
+   },
+   "params": [
+    {
+     "name": "args",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "llama-server 의 명령줄",
+      "en": "llama-server command line"
+     }
+    },
+    {
+     "name": "exe",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "llama-server 실행 파일",
+      "en": "llama-server executable"
+     }
+    },
+    {
+     "name": "mode",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "기록기 방식(transparent · probe)",
+      "en": "recorder mode (transparent, probe)"
+     }
+    },
+    {
+     "name": "port",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "포트",
+      "en": "port"
+     }
+    }
+   ],
+   "result": "recorder",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "재현 기록기 설정",
+    "en": "replay recorder set"
+   },
+   "gui": {
+    "view": "벤치마크(llama.cpp 재현)"
+   }
+  },
+  {
+   "id": "replay.verify",
+   "title": {
+    "ko": "영수증 재현 검증(비트 단위)",
+    "en": "Verify a receipt bit for bit"
+   },
+   "description": {
+    "ko": "영수증 재현 검증(비트 단위).",
+    "en": "Verify a receipt bit for bit."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/llama/verify"
+   },
+   "params": [
+    {
+     "name": "receipt",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "영수증 이름",
+      "en": "receipt name"
+     }
+    }
+   ],
+   "result": "job",
+   "job": true,
+   "records": "verification",
+   "cli": {
+    "ko": "재현 검증",
+    "en": "replay verify"
+   },
+   "gui": {
+    "view": "벤치마크(llama.cpp 재현)"
+   }
+  },
+  {
+   "id": "run.branch",
+   "title": {
+    "ko": "분기 — 한 스텝에서 다른 토큰으로 원래 난수를 이어 생성",
+    "en": "Branch — continue from another token at a step with the original random numbers"
+   },
+   "description": {
+    "ko": "분기 — 한 스텝에서 다른 토큰으로 원래 난수를 이어 생성.",
+    "en": "Branch — continue from another token at a step with the original random numbers."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/completions"
+   },
+   "params": [
+    {
+     "name": "prompt",
+     "type": "array",
+     "required": true,
+     "description": {
+      "ko": "프롬프트 토큰 + 분기 스텝까지의 답 토큰 + 바꾼 토큰",
+      "en": "prompt tokens + answer tokens up to the step + the new token"
+     }
+    },
+    {
+     "name": "geulpu.step_offset",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "샘플링 난수의 스텝 번호를 이 수부터(원래 난수로 잇는 분기)",
+      "en": "start the sampling step counter here (branch with the original random numbers)"
+     }
+    },
+    {
+     "name": "geulpu.prompt_tokens",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 토큰 번호(채팅 템플릿 뒤)를 돌려받기",
+      "en": "return the prompt token ids (after the chat template)"
+     }
+    },
+    {
+     "name": "geulpu.logit_hash",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "스텝마다 로짓 해시를 돌려받기",
+      "en": "return a logit hash per step"
+     }
+    },
+    {
+     "name": "ignore_eos",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "끝 토큰을 무시하고 잇기",
+      "en": "ignore the end-of-sequence token"
+     }
+    },
+    {
+     "name": "max_tokens",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "생성할 최대 토큰 수",
+      "en": "maximum tokens to generate"
+     }
+    },
+    {
+     "name": "temperature",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "온도(0 이면 탐욕)",
+      "en": "temperature (0 = greedy)"
+     }
+    },
+    {
+     "name": "top_p",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "top-p",
+      "en": "top-p"
+     }
+    },
+    {
+     "name": "top_k",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "top-k",
+      "en": "top-k"
+     }
+    },
+    {
+     "name": "min_p",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "min-p",
+      "en": "min-p"
+     }
+    },
+    {
+     "name": "seed",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "시드",
+      "en": "seed"
+     }
+    },
+    {
+     "name": "stream",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "흘려보내기(SSE)",
+      "en": "stream (SSE)"
+     }
+    }
+   ],
+   "result": "branch",
+   "job": false,
+   "records": "branch",
+   "cli": {
+    "ko": "실행 분기",
+    "en": "run branch"
+   },
+   "gui": {
+    "view": "연구 패널 · 디버거"
+   }
+  },
+  {
+   "id": "run.chat",
+   "title": {
+    "ko": "대화 생성",
+    "en": "Chat generation"
+   },
+   "description": {
+    "ko": "대화 생성.",
+    "en": "Chat generation."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/chat/completions"
+   },
+   "params": [
+    {
+     "name": "messages",
+     "type": "array",
+     "required": true,
+     "description": {
+      "ko": "대화 메시지",
+      "en": "conversation messages"
+     }
+    },
+    {
+     "name": "model",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델 이름(불러온 모델이면 생략)",
+      "en": "model name (optional — the loaded model)"
+     }
+    },
+    {
+     "name": "max_tokens",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "생성할 최대 토큰 수",
+      "en": "maximum tokens to generate"
+     }
+    },
+    {
+     "name": "temperature",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "온도(0 이면 탐욕)",
+      "en": "temperature (0 = greedy)"
+     }
+    },
+    {
+     "name": "top_p",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "top-p",
+      "en": "top-p"
+     }
+    },
+    {
+     "name": "top_k",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "top-k",
+      "en": "top-k"
+     }
+    },
+    {
+     "name": "min_p",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "min-p",
+      "en": "min-p"
+     }
+    },
+    {
+     "name": "seed",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "시드",
+      "en": "seed"
+     }
+    },
+    {
+     "name": "stream",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "흘려보내기(SSE)",
+      "en": "stream (SSE)"
+     }
+    },
+    {
+     "name": "stop",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "멈춤 글",
+      "en": "stop strings"
+     }
+    },
+    {
+     "name": "logprobs",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "로그확률 돌려받기",
+      "en": "return log-probabilities"
+     }
+    },
+    {
+     "name": "top_logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "상위 로그확률 수(20 까지)",
+      "en": "top log-probabilities (up to 20)"
+     }
+    },
+    {
+     "name": "tools",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "도구 정의",
+      "en": "tool definitions"
+     }
+    },
+    {
+     "name": "tool_choice",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "도구 고르기",
+      "en": "tool choice"
+     }
+    },
+    {
+     "name": "chat_template_kwargs.enable_thinking",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "생각 켬 · 끔(채팅 템플릿)",
+      "en": "thinking on or off (chat template)"
+     }
+    },
+    {
+     "name": "chat_template_kwargs.date_string",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "채팅 템플릿의 날짜(Llama 3)",
+      "en": "chat template date (Llama 3)"
+     }
+    },
+    {
+     "name": "geulpu.logit_hash",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "스텝마다 로짓 해시를 돌려받기",
+      "en": "return a logit hash per step"
+     }
+    },
+    {
+     "name": "geulpu.prompt_tokens",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 토큰 번호(채팅 템플릿 뒤)를 돌려받기",
+      "en": "return the prompt token ids (after the chat template)"
+     }
+    },
+    {
+     "name": "geulpu.record",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이 요청을 이 이름의 실행 로그에 적기(서버를 --기록 으로 띄웠을 때)",
+      "en": "append this request to the named run log (server started with --기록)"
+     }
+    },
+    {
+     "name": "geulpu.special",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "사용자 정의 토큰(<think> 등)도 글로",
+      "en": "render user-defined tokens (<think>, …) as text"
+     }
+    },
+    {
+     "name": "geulpu.speculative",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "추측 디코딩 켬 · 끔(값은 같다 — 속도만)",
+      "en": "speculative decoding on or off (same values — speed only)"
+     }
+    },
+    {
+     "name": "geulpu.store",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "이 요청에서 문맥 저장소 읽기 · 쓰기",
+      "en": "use the context store for this request"
+     }
+    },
+    {
+     "name": "geulpu.top_logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "GeulPU 쪽 상위 로그확률의 수(0 ~ 128)",
+      "en": "number of top log-probabilities on the GeulPU side (0–128)"
+     }
+    },
+    {
+     "name": "geulpu_tool_errors",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "도구 오류를 모델에 전하는 방식(off · c1 · c2 · c3)",
+      "en": "how tool errors reach the model (off, c1, c2, c3)"
+     }
+    },
+    {
+     "name": "cache_prompt",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 캐시 쓰기",
+      "en": "use the prompt cache"
+     }
+    },
+    {
+     "name": "ignore_eos",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "끝 토큰을 무시하고 잇기",
+      "en": "ignore the end-of-sequence token"
+     }
+    }
+   ],
+   "result": "generation",
+   "job": false,
+   "records": "run",
+   "cli": {
+    "ko": "실행 대화",
+    "en": "run chat"
+   },
+   "gui": {
+    "view": "채팅 · 연구 패널"
+   }
+  },
+  {
+   "id": "run.complete",
+   "title": {
+    "ko": "글 이어 생성",
+    "en": "Text completion"
+   },
+   "description": {
+    "ko": "글 이어 생성.",
+    "en": "Text completion."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/completions"
+   },
+   "params": [
+    {
+     "name": "prompt",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "프롬프트(글 또는 토큰 번호 배열)",
+      "en": "prompt (text or token ids)"
+     }
+    },
+    {
+     "name": "model",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델 이름(불러온 모델이면 생략)",
+      "en": "model name (optional — the loaded model)"
+     }
+    },
+    {
+     "name": "max_tokens",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "생성할 최대 토큰 수",
+      "en": "maximum tokens to generate"
+     }
+    },
+    {
+     "name": "temperature",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "온도(0 이면 탐욕)",
+      "en": "temperature (0 = greedy)"
+     }
+    },
+    {
+     "name": "top_p",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "top-p",
+      "en": "top-p"
+     }
+    },
+    {
+     "name": "top_k",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "top-k",
+      "en": "top-k"
+     }
+    },
+    {
+     "name": "min_p",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "min-p",
+      "en": "min-p"
+     }
+    },
+    {
+     "name": "seed",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "시드",
+      "en": "seed"
+     }
+    },
+    {
+     "name": "stream",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "흘려보내기(SSE)",
+      "en": "stream (SSE)"
+     }
+    },
+    {
+     "name": "stop",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "멈춤 글",
+      "en": "stop strings"
+     }
+    },
+    {
+     "name": "logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "로그확률의 상위 수",
+      "en": "number of top log-probabilities"
+     }
+    },
+    {
+     "name": "echo",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 토큰의 로그확률도 돌려받기",
+      "en": "also return log-probabilities of the prompt tokens"
+     }
+    },
+    {
+     "name": "add_special_tokens",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "토큰화할 때 특수 토큰을 붙이기",
+      "en": "add special tokens when tokenizing"
+     }
+    },
+    {
+     "name": "geulpu.logit_hash",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "스텝마다 로짓 해시를 돌려받기",
+      "en": "return a logit hash per step"
+     }
+    },
+    {
+     "name": "geulpu.prompt_tokens",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 토큰 번호(채팅 템플릿 뒤)를 돌려받기",
+      "en": "return the prompt token ids (after the chat template)"
+     }
+    },
+    {
+     "name": "geulpu.record",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이 요청을 이 이름의 실행 로그에 적기(서버를 --기록 으로 띄웠을 때)",
+      "en": "append this request to the named run log (server started with --기록)"
+     }
+    },
+    {
+     "name": "geulpu.special",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "사용자 정의 토큰(<think> 등)도 글로",
+      "en": "render user-defined tokens (<think>, …) as text"
+     }
+    },
+    {
+     "name": "geulpu.speculative",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "추측 디코딩 켬 · 끔(값은 같다 — 속도만)",
+      "en": "speculative decoding on or off (same values — speed only)"
+     }
+    },
+    {
+     "name": "geulpu.draft_tokens",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "시험용 초안 토큰(서버를 --추측시험 으로 띄웠을 때만 — 개발용)",
+      "en": "test draft tokens (only with --추측시험 — development)"
+     }
+    },
+    {
+     "name": "geulpu.store",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "이 요청에서 문맥 저장소 읽기 · 쓰기",
+      "en": "use the context store for this request"
+     }
+    },
+    {
+     "name": "geulpu.top_logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "GeulPU 쪽 상위 로그확률의 수(0 ~ 128)",
+      "en": "number of top log-probabilities on the GeulPU side (0–128)"
+     }
+    },
+    {
+     "name": "cache_prompt",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 캐시 쓰기",
+      "en": "use the prompt cache"
+     }
+    },
+    {
+     "name": "ignore_eos",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "끝 토큰을 무시하고 잇기",
+      "en": "ignore the end-of-sequence token"
+     }
+    }
+   ],
+   "result": "generation",
+   "job": false,
+   "records": "run",
+   "cli": {
+    "ko": "실행 이어쓰기",
+    "en": "run complete"
+   },
+   "gui": {
+    "view": "연구 패널 · 디버거"
+   }
+  },
+  {
+   "id": "run.detokenize",
+   "title": {
+    "ko": "토큰을 글로",
+    "en": "Detokenize"
+   },
+   "description": {
+    "ko": "토큰을 글로.",
+    "en": "Detokenize."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/detokenize"
+   },
+   "params": [
+    {
+     "name": "tokens",
+     "type": "array",
+     "required": true,
+     "description": {
+      "ko": "토큰 번호",
+      "en": "token ids"
+     }
+    }
+   ],
+   "result": "tokens",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "토큰 풀기",
+    "en": "run detokenize"
+   },
+   "gui": {
+    "view": "연구 패널"
+   }
+  },
+  {
+   "id": "run.health",
+   "title": {
+    "ko": "추론 서버 확인",
+    "en": "Inference server health"
+   },
+   "description": {
+    "ko": "추론 서버 확인.",
+    "en": "Inference server health."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/v1/health"
+   },
+   "params": [],
+   "result": "health",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "클라이언트 · 스크립트의 확인용",
+    "en": "for client and script health checks"
+   }
+  },
+  {
+   "id": "run.lens",
+   "title": {
+    "ko": "층 렌즈 · Jacobian lens",
+    "en": "Layer lens and Jacobian lens"
+   },
+   "description": {
+    "ko": "층 렌즈 · Jacobian lens.",
+    "en": "Layer lens and Jacobian lens."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/completions"
+   },
+   "params": [
+    {
+     "name": "prompt",
+     "type": "array",
+     "required": true,
+     "description": {
+      "ko": "읽을 토큰들(프롬프트 + 답)",
+      "en": "tokens to read (prompt + answer)"
+     }
+    },
+    {
+     "name": "echo",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 토큰의 로그확률도 돌려받기",
+      "en": "also return log-probabilities of the prompt tokens"
+     }
+    },
+    {
+     "name": "geulpu.echo_from",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "echo 의 로그확률을 이 토큰 위치부터(1 이상)",
+      "en": "echo log-probabilities from this token position (≥ 1)"
+     }
+    },
+    {
+     "name": "geulpu.layer_lens",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "층 렌즈 — 층마다 끝 로짓 계산으로 읽기",
+      "en": "layer lens — read every layer with the final logit computation"
+     }
+    },
+    {
+     "name": "geulpu.layer_lens.top_k",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "층마다 보일 상위 후보 수(0 ~ 20)",
+      "en": "top candidates per layer (0–20)"
+     }
+    },
+    {
+     "name": "geulpu.layer_lens.jacobian",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "Jacobian lens 도(J 파일이 있을 때)",
+      "en": "also the Jacobian lens (with a J file)"
+     }
+    }
+   ],
+   "result": "lens",
+   "job": false,
+   "records": "lens",
+   "cli": {
+    "ko": "실행 렌즈",
+    "en": "run lens"
+   },
+   "gui": {
+    "view": "연구 패널"
+   }
+  },
+  {
+   "id": "run.messages",
+   "title": {
+    "ko": "Anthropic 호환 메시지",
+    "en": "Anthropic-compatible messages"
+   },
+   "description": {
+    "ko": "Anthropic 호환 메시지.",
+    "en": "Anthropic-compatible messages."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/messages"
+   },
+   "params": [
+    {
+     "name": "messages",
+     "type": "array",
+     "required": true,
+     "description": {
+      "ko": "대화 메시지",
+      "en": "messages"
+     }
+    },
+    {
+     "name": "system",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "시스템 프롬프트",
+      "en": "system prompt"
+     }
+    },
+    {
+     "name": "max_tokens",
+     "type": "integer",
+     "required": true,
+     "description": {
+      "ko": "최대 토큰",
+      "en": "max tokens"
+     }
+    },
+    {
+     "name": "tools",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "도구",
+      "en": "tools"
+     }
+    },
+    {
+     "name": "stop_sequences",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "멈춤 글",
+      "en": "stop sequences"
+     }
+    },
+    {
+     "name": "thinking",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "생각",
+      "en": "thinking"
+     }
+    }
+   ],
+   "result": "generation",
+   "job": false,
+   "records": "run",
+   "cli": {
+    "ko": "실행 메시지",
+    "en": "run messages"
+   },
+   "gui": {
+    "view": "채팅"
+   }
+  },
+  {
+   "id": "run.messages.count_tokens",
+   "title": {
+    "ko": "토큰 수 세기(Anthropic 호환)",
+    "en": "Count tokens (Anthropic-compatible)"
+   },
+   "description": {
+    "ko": "토큰 수 세기(Anthropic 호환).",
+    "en": "Count tokens (Anthropic-compatible)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/messages/count_tokens"
+   },
+   "params": [
+    {
+     "name": "messages",
+     "type": "array",
+     "required": true,
+     "description": {
+      "ko": "대화 메시지",
+      "en": "messages"
+     }
+    },
+    {
+     "name": "system",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "시스템 프롬프트",
+      "en": "system prompt"
+     }
+    },
+    {
+     "name": "tools",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "도구",
+      "en": "tools"
+     }
+    }
+   ],
+   "result": "tokens",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실행 토큰수",
+    "en": "run messages count-tokens"
+   },
+   "gui": {
+    "view": "채팅"
+   }
+  },
+  {
+   "id": "run.models",
+   "title": {
+    "ko": "불러온 모델",
+    "en": "Loaded model"
+   },
+   "description": {
+    "ko": "불러온 모델.",
+    "en": "Loaded model."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/v1/models"
+   },
+   "params": [],
+   "result": "models",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실행 모델",
+    "en": "run models"
+   },
+   "gui": {
+    "view": "공통"
+   }
+  },
+  {
+   "id": "run.responses",
+   "title": {
+    "ko": "OpenAI Responses 호환 생성",
+    "en": "OpenAI Responses-compatible generation"
+   },
+   "description": {
+    "ko": "OpenAI Responses 호환 생성.",
+    "en": "OpenAI Responses-compatible generation."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/responses"
+   },
+   "params": [
+    {
+     "name": "input",
+     "type": "object",
+     "required": true,
+     "description": {
+      "ko": "입력(글 또는 항목 배열)",
+      "en": "input (text or items)"
+     }
+    },
+    {
+     "name": "instructions",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "지시",
+      "en": "instructions"
+     }
+    },
+    {
+     "name": "previous_response_id",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "앞 응답",
+      "en": "previous response"
+     }
+    },
+    {
+     "name": "tools",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "도구",
+      "en": "tools"
+     }
+    },
+    {
+     "name": "reasoning",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "생각",
+      "en": "reasoning"
+     }
+    }
+   ],
+   "result": "generation",
+   "job": false,
+   "records": "run",
+   "cli": {
+    "ko": "실행 응답",
+    "en": "run responses"
+   },
+   "gui": {
+    "view": "채팅"
+   }
+  },
+  {
+   "id": "run.score",
+   "title": {
+    "ko": "점수 — 주어진 토큰의 로그확률(echo)",
+    "en": "Score — log-probabilities of given tokens (echo)"
+   },
+   "description": {
+    "ko": "점수 — 주어진 토큰의 로그확률(echo).",
+    "en": "Score — log-probabilities of given tokens (echo)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/completions"
+   },
+   "params": [
+    {
+     "name": "prompt",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "점수를 매길 글 또는 토큰 번호",
+      "en": "text or token ids to score"
+     }
+    },
+    {
+     "name": "echo",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 토큰의 로그확률도 돌려받기",
+      "en": "also return log-probabilities of the prompt tokens"
+     }
+    },
+    {
+     "name": "geulpu.echo_from",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "echo 의 로그확률을 이 토큰 위치부터(1 이상)",
+      "en": "echo log-probabilities from this token position (≥ 1)"
+     }
+    },
+    {
+     "name": "geulpu.token_ids_logprob",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "echo 의 위치마다 로그확률을 낼 토큰 번호 목록",
+      "en": "token ids per echo position whose log-probabilities to return"
+     }
+    },
+    {
+     "name": "geulpu.logit_hash",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "스텝마다 로짓 해시를 돌려받기",
+      "en": "return a logit hash per step"
+     }
+    },
+    {
+     "name": "logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "위치마다 상위 로그확률 수",
+      "en": "top log-probabilities per position"
+     }
+    }
+   ],
+   "result": "score",
+   "job": false,
+   "records": "score",
+   "cli": {
+    "ko": "실행 점수",
+    "en": "run score"
+   },
+   "gui": {
+    "view": "연구 패널 · 디버거"
+   }
+  },
+  {
+   "id": "run.tokenize",
+   "title": {
+    "ko": "토큰화",
+    "en": "Tokenize"
+   },
+   "description": {
+    "ko": "토큰화.",
+    "en": "Tokenize."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/v1/tokenize"
+   },
+   "params": [
+    {
+     "name": "content",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "글",
+      "en": "text"
+     }
+    },
+    {
+     "name": "add_special_tokens",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "토큰화할 때 특수 토큰을 붙이기",
+      "en": "add special tokens when tokenizing"
+     }
+    },
+    {
+     "name": "with_pieces",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "조각 글도",
+      "en": "also the pieces"
+     }
+    }
+   ],
+   "result": "tokens",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "토큰화",
+    "en": "run tokenize"
+   },
+   "gui": {
+    "view": "연구 패널"
+   }
+  },
+  {
+   "id": "run.tokenizer_info",
+   "title": {
+    "ko": "토크나이저 정보",
+    "en": "Tokenizer info"
+   },
+   "description": {
+    "ko": "토크나이저 정보.",
+    "en": "Tokenizer info."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/v1/tokenizer_info"
+   },
+   "params": [],
+   "result": "tokens",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "토크나이저 정보",
+    "en": "run tokenizer-info"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "settings.set",
+   "title": {
+    "ko": "설정 바꾸기",
+    "en": "Change settings"
+   },
+   "description": {
+    "ko": "설정 바꾸기.",
+    "en": "Change settings."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/settings"
+   },
+   "params": [
+    {
+     "name": "context",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "문맥 길이",
+      "en": "context length"
+     }
+    },
+    {
+     "name": "context_store",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "문맥 저장소",
+      "en": "context store"
+     }
+    },
+    {
+     "name": "context_store_dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "문맥 저장소 폴더",
+      "en": "context store folder"
+     }
+    },
+    {
+     "name": "context_store_gb",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "문맥 저장소 크기(GB)",
+      "en": "context store size (GB)"
+     }
+    },
+    {
+     "name": "context_store_write",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "문맥 저장소 쓰기",
+      "en": "context store writes"
+     }
+    },
+    {
+     "name": "fast_attention",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "빠른 어텐션",
+      "en": "fast attention"
+     }
+    },
+    {
+     "name": "gpu_layer",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "GPU 층(cuda · vulkan)",
+      "en": "GPU layer (cuda, vulkan)"
+     }
+    },
+    {
+     "name": "kv8_cache",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "8비트 KV 캐시",
+      "en": "8-bit KV cache"
+     }
+    },
+    {
+     "name": "models_dir",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "모델 폴더",
+      "en": "models folder"
+     }
+    },
+    {
+     "name": "precision",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "계산 방식(정밀 · 빠름)",
+      "en": "computation mode (exact, fast)"
+     }
+    },
+    {
+     "name": "precision_unquantized",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "양자화하지 않은 파일의 계산 방식",
+      "en": "computation mode for unquantized files"
+     }
+    },
+    {
+     "name": "slots",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "슬롯 수",
+      "en": "slots"
+     }
+    },
+    {
+     "name": "speculative",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "추측 디코딩",
+      "en": "speculative decoding"
+     }
+    },
+    {
+     "name": "tool_errors",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "도구 오류 전달 방식(off · c1 · c2 · c3)",
+      "en": "tool-error delivery (off, c1, c2, c3)"
+     }
+    },
+    {
+     "name": "update_check",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "새 버전 알림",
+      "en": "update check"
+     }
+    },
+    {
+     "name": "vulkan_device",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "Vulkan 장치",
+      "en": "Vulkan device"
+     }
+    }
+   ],
+   "result": "settings",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "설정 바꾸기",
+    "en": "settings set"
+   },
+   "gui": {
+    "view": "설정"
+   }
+  },
+  {
+   "id": "store.clear",
+   "title": {
+    "ko": "문맥 저장소 비우기",
+    "en": "Clear the context store"
+   },
+   "description": {
+    "ko": "문맥 저장소 비우기.",
+    "en": "Clear the context store."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/store/clear"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "저장소 비우기",
+    "en": "store clear"
+   },
+   "gui": {
+    "view": "설정"
+   }
+  },
+  {
+   "id": "store.status",
+   "title": {
+    "ko": "문맥 저장소의 설정 · 쓰는 양",
+    "en": "Context store settings and usage"
+   },
+   "description": {
+    "ko": "문맥 저장소의 설정 · 쓰는 양.",
+    "en": "Context store settings and usage."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/store"
+   },
+   "params": [],
+   "result": "store",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "저장소 상태",
+    "en": "store status"
+   },
+   "gui": {
+    "view": "설정"
+   }
+  },
+  {
+   "id": "system.device_check",
+   "title": {
+    "ko": "장치 확인",
+    "en": "Check the GPU devices"
+   },
+   "description": {
+    "ko": "장치 확인.",
+    "en": "Check the GPU devices."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/device/check"
+   },
+   "params": [],
+   "result": "job",
+   "job": true,
+   "records": "none",
+   "cli": {
+    "ko": "장치 확인",
+    "en": "system device-check"
+   },
+   "gui": {
+    "view": "장치"
+   }
+  },
+  {
+   "id": "system.devices",
+   "title": {
+    "ko": "장치 목록과 정보",
+    "en": "Devices and their details"
+   },
+   "description": {
+    "ko": "장치 목록과 정보.",
+    "en": "Devices and their details."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/device"
+   },
+   "params": [],
+   "result": "devices",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "장치 목록",
+    "en": "system devices"
+   },
+   "gui": {
+    "view": "장치"
+   }
+  },
+  {
+   "id": "system.events",
+   "title": {
+    "ko": "기능 호출 이벤트(시작 · 끝 · 출처)",
+    "en": "Operation-call events (start, end, source)"
+   },
+   "description": {
+    "ko": "기능 호출 이벤트(시작 · 끝 · 출처).",
+    "en": "Operation-call events (start, end, source)."
+   },
+   "status": "planned",
+   "stage": "B3",
+   "params": [],
+   "result": "events",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "이벤트",
+    "en": "system events"
+   },
+   "gui": {
+    "planned": "E"
+   }
+  },
+  {
+   "id": "system.fs",
+   "title": {
+    "ko": "파일 · 폴더 둘러보기",
+    "en": "Browse files and folders"
+   },
+   "description": {
+    "ko": "파일 · 폴더 둘러보기.",
+    "en": "Browse files and folders."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/fs"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "경로",
+      "en": "path"
+     }
+    }
+   ],
+   "result": "files",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "폴더 둘러보기",
+    "en": "system fs"
+   },
+   "gui": {
+    "view": "모델"
+   }
+  },
+  {
+   "id": "system.hello",
+   "title": {
+    "ko": "붙을 때의 확인(HEAD)",
+    "en": "Probe when a client attaches (HEAD)"
+   },
+   "description": {
+    "ko": "붙을 때의 확인(HEAD).",
+    "en": "Probe when a client attaches (HEAD)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/hello"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "Claude Code 가 붙을 때 찌르는 확인 — 사용자 기능이 아님",
+    "en": "probe used by Claude Code when attaching — not a user feature"
+   }
+  },
+  {
+   "id": "system.open",
+   "title": {
+    "ko": "폴더 열기(파일 탐색기)",
+    "en": "Open a folder in the file manager"
+   },
+   "description": {
+    "ko": "폴더 열기(파일 탐색기).",
+    "en": "Open a folder in the file manager."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/open"
+   },
+   "params": [
+    {
+     "name": "name",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "이름",
+      "en": "name"
+     }
+    },
+    {
+     "name": "what",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "열 것(종류)",
+      "en": "what to open"
+     }
+    }
+   ],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "폴더 열기",
+    "en": "system open"
+   },
+   "gui": {
+    "view": "모델 · 벤치마크"
+   }
+  },
+  {
+   "id": "system.ping",
+   "title": {
+    "ko": "앱이 떠 있는지",
+    "en": "Is the app up"
+   },
+   "description": {
+    "ko": "앱이 떠 있는지.",
+    "en": "Is the app up."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/ping"
+   },
+   "params": [],
+   "result": "ok",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "스크립트 · 파이썬 API 의 앱 확인 — 사용자 기능이 아님",
+    "en": "liveness check for scripts and the Python API — not a user feature"
+   }
+  },
+  {
+   "id": "system.provenance",
+   "title": {
+    "ko": "출처(판 · 커밋 · GPU · 모델 해시 · 계산 길)",
+    "en": "Provenance (version, commit, GPU, model hash, computation path)"
+   },
+   "description": {
+    "ko": "출처(판 · 커밋 · GPU · 모델 해시 · 계산 길).",
+    "en": "Provenance (version, commit, GPU, model hash, computation path)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/provenance"
+   },
+   "params": [],
+   "result": "provenance",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "출처",
+    "en": "system provenance"
+   },
+   "gui": {
+    "view": "연구 패널(재현 파일)"
+   }
+  },
+  {
+   "id": "system.state",
+   "title": {
+    "ko": "앱 상태(모델 · 일 · 장치 · 설정)",
+    "en": "App state (model, job, devices, settings)"
+   },
+   "description": {
+    "ko": "앱 상태(모델 · 일 · 장치 · 설정).",
+    "en": "App state (model, job, devices, settings)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/state"
+   },
+   "params": [],
+   "result": "state",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "상태",
+    "en": "system state"
+   },
+   "gui": {
+    "view": "공통"
+   }
+  }
+ ]
+}
