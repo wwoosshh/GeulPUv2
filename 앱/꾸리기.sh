@@ -83,6 +83,7 @@ cp "$HERE/data/operations.json" "$DIST/data/"                     # 앱리디자
 mkdir -p "$DIST/data/experiment-template"                          # 앱리디자인 C2 — 실험 기록의 템플릿 · 스키마 · 점검 도구(문서/명령줄.md §3)
 cp "$ROOT/experiments/_template/"* "$DIST/data/experiment-template/"
 cp "$ROOT/experiments/experiment.schema.json" "$ROOT/도구/experiment_check.py" "$DIST/data/"
+cp "$ROOT/docs/cli.md" "$DIST/data/cli-guide.md"                   # 앱리디자인 C3 — GeulPU guide
 cp "$ROOT/교차검증/expected.json" "$ROOT/교차검증/requests.json" "$DIST/data/crosscheck/"
 for f in models.json requests.json expected.json; do cp "$ROOT/교차검증/쌍/$f" "$DIST/data/crosscheck/pair/"; done
 cp "$HERE"/data/eval/* "$DIST/data/eval/"                       # 모델 평가 — 내장 데이터

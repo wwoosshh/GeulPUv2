@@ -23,6 +23,7 @@ import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY = os.path.join(ROOT, "앱", "data", "operations.json")
+GUIDE = os.path.join(ROOT, "docs", "cli.md")                      # C3 — GeulPU guide 가 내는 안내 한 쪽
 SAMPLE = {"integer": "3", "number": "0.5", "string": "x y 가", "array": "[1,2]", "object": '{"a":1}'}
 
 
@@ -126,6 +127,7 @@ def main():
         shutil.copy2(sys.argv[1], exe)
         os.makedirs(os.path.join(tmp, "data"))
         shutil.copy2(REGISTRY, os.path.join(tmp, "data", "operations.json"))
+        shutil.copy2(GUIDE, os.path.join(tmp, "data", "cli-guide.md"))            # 꾸리기 가 docs/cli.md 를 이 이름으로 넣는다
         problems = 0
         with concurrent.futures.ThreadPoolExecutor(8) as pool:
             for op, bad in zip(ops, pool.map(lambda o: check_op(exe, o), ops)):
@@ -154,6 +156,14 @@ def main():
         listed = {c["id"] for c in out.get("commands", [])} if rc == 0 else set()
         ops_ok = listed == {o["id"] for o in ops}
         print(f"{'맞음' if ops_ok else '틀림'} ops: {len(listed)} 개")
+        # C3 — guide 는 안내 한 쪽을 그대로(영어 이름 · 한국어 이름), 200 줄 안
+        want = open(GUIDE, encoding="utf-8").read().strip()
+        for name in ("guide", "안내"):
+            p = subprocess.run([exe, name], capture_output=True, stdin=subprocess.DEVNULL, timeout=60)
+            got = p.stdout.decode("utf-8", "replace").replace("\r\n", "\n").strip()
+            good = p.returncode == 0 and got == want and len(want.splitlines()) <= 200
+            ops_ok = ops_ok and good
+            print(f"{'맞음' if good else '틀림'} {name}: 종료 {p.returncode}, {len(got.splitlines())} 줄")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     ok = problems == 0 and wrong == 0 and ops_ok

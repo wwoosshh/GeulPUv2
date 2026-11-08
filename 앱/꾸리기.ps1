@@ -120,6 +120,7 @@ New-Item -ItemType Directory -Path (Join-Path $Dist 'data\experiment-template') 
 Copy-Item -Path (Join-Path $Root 'experiments\_template\*') -Destination (Join-Path $Dist 'data\experiment-template')
 Copy-Item -LiteralPath (Join-Path $Root 'experiments\experiment.schema.json') -Destination (Join-Path $Dist 'data')
 Copy-Item -LiteralPath (Join-Path $Root '도구\experiment_check.py') -Destination (Join-Path $Dist 'data')
+Copy-Item -LiteralPath (Join-Path $Root 'docs\cli.md') -Destination (Join-Path $Dist 'data\cli-guide.md')   # 앱리디자인 C3 — GeulPU guide
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\expected.json') -Destination (Join-Path $Dist 'data\crosscheck')
 Copy-Item -LiteralPath (Join-Path $Root '교차검증\requests.json') -Destination (Join-Path $Dist 'data\crosscheck')
 # 0.11.1 — 파일 쌍 재현성(Liu · Tsai 의 파일): 파일 목록 · 문제의 프롬프트 토큰 · 기준 PC 의 스텝마다 해시

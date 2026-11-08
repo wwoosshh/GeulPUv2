@@ -21,6 +21,23 @@
     알림(바이트열_자료(b)).
 }
 
+(* 내장 명령의 출력 — 파일이 있으면(--out) 그 파일에 쓰고 {"ok","file","bytes"} *)
+[바이트열 참조 b를 문자열 파일을 명령내기]는 -> 정수 {
+    파일 == 없음이면 {
+        명령바이트출력(b).
+        반환 명령성공.
+    }
+    아닌 파일쓰기(파일, 바이트열_자료(b), 바이트열_길이(b))이면 { 반환 명령틀림(잇기("cannot write ", 파일), 0, 없음, 없음, 명령실패). }
+    바이트열 참조 o = 바이트열_만들기().
+    날글넣기(o, "\{\"ok\":true,").
+    제쌍글(o, "file", 파일).
+    날글넣기(o, ",").
+    제쌍수(o, "bytes", 바이트열_길이(b)).
+    날글넣기(o, "\}").
+    명령바이트출력(o).
+    반환 명령성공.
+}
+
 (* {"error":{"message","status","op","next","exit"}} 를 내고 끝 코드를 돌려준다 *)
 [문자열 말을 정수 상태를 문자열 기능id를 문자열 다음을 정수 끝코드를 명령틀림]는 -> 정수 {
     바이트열 참조 b = 바이트열_만들기().
@@ -168,6 +185,7 @@
         제이슨 참조 h2 = 제찾기(o, "http").
         문자열_같은가(제글보기(h2, "method", ""), "POST")이면 { 날글넣기(u, " [--json <body>|@<file>]"). }
         제참값(o, "job", 거짓)이면 { 날글넣기(u, " [--wait]"). }
+        문자열_같은가(제글보기(h2, "method", ""), "POST")이면 { 날글넣기(u, " [--experiment <folder|id>]"). }       (* C3 — 사용성 시험: 안내에만 있었다 *)
         바이트열_넣기(u, 0).
         날글넣기(b, ",").
         제쌍글(b, "usage", 바이트열_자료(u)).
@@ -358,12 +376,17 @@
     제이슨 참조 기능들 = 제찾기(표나무, "operations").
     기능들 == 없음이면 { 반환 명령틀림(잇기("cannot read the operation registry: ", 데이터경로("operations.json")), 0, 없음, "reinstall GeulPU — the file comes with the app", 명령사용법). }
 
-    (* 3. 내장 명령 — ops · help *)
+    (* 3. 내장 명령 — ops · help · guide. C3 — 이것들도 --out 을 따른다(사용성 시험에서 ops --out 이 파일을 쓰지 않았다) *)
+    문자열 내장파일 = 없음.
+    반복 (정수 a1 = 1: a1 < argc: a1 += 1) {
+        (문자열_같은가(argv[a1], "--out") 그리고 a1 + 1 < argc)이면 { 내장파일 = argv[a1 + 1]. }
+        아니면 문자열_시작하는가(argv[a1], "--out=" 로)이면 { 내장파일 = argv[a1] + 6. }
+    }
     (문자열_같은가(명령글, "ops") 또는 문자열_같은가(명령글, "기능 목록"))이면 {
         바이트열 참조 b = 바이트열_만들기().
         날글넣기(b, "\{\"format\":\"geulpu-cli/1\",").
         제쌍글(b, "version", 앱판).
-        날글넣기(b, ",\"usage\":\"GeulPU <command> [--<param> <value> ...] [--json <body>|@<file>] [--wait] [--out <file>] [--app-port <port>] [--session <name>] [--timeout <s>] [--dry-run]\",\"commands\":[").
+        날글넣기(b, ",\"usage\":\"GeulPU <command> [--<param> <value> ...] [--json <body>|@<file>] [--wait] [--experiment <folder|id>] [--out <file>] [--app-port <port>] [--session <name>] [--timeout <s>] [--dry-run]\",\"commands\":[").
         참거짓 첫 = 참.
         반복 (정수 i는 0부터 제개수(기능들) 전까지) {
             제이슨 참조 o = 제자식(기능들, i).
@@ -374,8 +397,15 @@
             }
         }
         날글넣기(b, "]\}").
-        명령바이트출력(b).
-        반환 명령성공.
+        반환 명령내기(b, 내장파일).
+    }
+    (* C3 — 안내 한 쪽(docs/cli.md 의 사본 data/cli-guide.md)을 그대로 — 터미널만 가진 AI 도 읽게 *)
+    (문자열_같은가(명령글, "guide") 또는 문자열_같은가(명령글, "안내"))이면 {
+        문자열 안내글 = 글파일읽기(데이터경로("cli-guide.md")).
+        안내글 == 없음이면 { 반환 명령틀림(잇기("cannot read the guide: ", 데이터경로("cli-guide.md")), 0, 없음, "reinstall GeulPU — the file comes with the app; it is docs/cli.md in the repository", 명령사용법). }
+        바이트열 참조 gb = 바이트열_만들기().
+        날글넣기(gb, 안내글).
+        반환 명령내기(gb, 내장파일).
     }
     참거짓 도움 = 문자열_같은가(명령글, "help") 또는 문자열_같은가(명령글, "도움말").
     (문자열_시작하는가(명령글, "help " 로) 또는 문자열_시작하는가(명령글, "도움말 " 로))이면 {
@@ -386,8 +416,9 @@
         문자열_같은가(명령글, "")이면 { 명령글 = "help". }
     }
     (도움 그리고 (문자열_같은가(명령글, "help") 또는 문자열_같은가(명령글, "도움말")))이면 {
-        알림("\{\"usage\":\"GeulPU <command> [--<param> <value> ...] [--json <body>|@<file>] [--wait] [--out <file>] [--app-port <port>] [--session <name>] [--timeout <s>] [--dry-run]\",\"commands\":\"GeulPU ops lists every command with its parameters (JSON)\",\"help\":\"GeulPU help <command>\",\"names\":\"a command is its English name (run branch), its Korean name (실행 분기) or its id (run.branch)\",\"exit\":\{\"0\":\"ok\",\"1\":\"the operation failed\",\"2\":\"usage error\",\"3\":\"the GeulPU app is not reachable\"\},\"guide\":\"문서/명령줄.md\"\}").
-        반환 명령성공.
+        바이트열 참조 hb = 바이트열_만들기().
+        날글넣기(hb, "\{\"usage\":\"GeulPU <command> [--<param> <value> ...] [--json <body>|@<file>] [--wait] [--experiment <folder|id>] [--out <file>] [--app-port <port>] [--session <name>] [--timeout <s>] [--dry-run]\",\"commands\":\"GeulPU ops lists every command with its parameters (JSON)\",\"help\":\"GeulPU help <command>\",\"names\":\"a command is its English name (run branch), its Korean name (실행 분기) or its id (run.branch)\",\"exit\":\{\"0\":\"ok\",\"1\":\"the operation failed\",\"2\":\"usage error\",\"3\":\"the GeulPU app is not reachable\"\},\"guide\":\"GeulPU guide prints a one-page guide for agents\"\}").
+        반환 명령내기(hb, 내장파일).
     }
 
     (* 4. 기능 찾기 *)
@@ -426,8 +457,7 @@
     도움이면 {
         바이트열 참조 b2 = 바이트열_만들기().
         명령기능쓰기(b2, 기능, 참).
-        명령바이트출력(b2).
-        반환 명령성공.
+        반환 명령내기(b2, 내장파일).
     }
 
     (* 5. 옵션 — 기능의 인자와 CLI 의 옵션. 기능에 같은 이름의 인자가 있으면(replay recorder set 의 port · system events 의 wait) 기능의 인자다 *)

@@ -3243,6 +3243,51 @@
       "ko": "흘려보내기(SSE)",
       "en": "stream (SSE)"
      }
+    },
+    {
+     "name": "echo",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트 토큰의 로그확률도 돌려받기(분기 앞부분의 확인)",
+      "en": "also return log-probabilities of the prompt tokens (check the part before the branch)"
+     }
+    },
+    {
+     "name": "logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "상위 로그확률의 수",
+      "en": "number of top log-probabilities"
+     }
+    },
+    {
+     "name": "geulpu.echo_from",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "이 토큰 자리부터 로그확률(≥ 1)",
+      "en": "echo log-probabilities from this token position (≥ 1)"
+     }
+    },
+    {
+     "name": "geulpu.special",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "사용자 정의 토큰(<think> 등)을 글로",
+      "en": "render user-defined tokens (<think>, …) as text"
+     }
+    },
+    {
+     "name": "geulpu.top_logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "GeulPU 쪽 상위 로그확률의 수(0–128 — logprobs 와 함께)",
+      "en": "number of top log-probabilities on the GeulPU side (0–128, with logprobs)"
+     }
     }
    ],
    "result": "branch",
@@ -3883,6 +3928,33 @@
      "description": {
       "ko": "Jacobian lens 도(J 파일이 있을 때)",
       "en": "also the Jacobian lens (with a J file)"
+     }
+    },
+    {
+     "name": "max_tokens",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "생성할 토큰 수(렌즈는 0)",
+      "en": "tokens to generate (0 for the lens)"
+     }
+    },
+    {
+     "name": "logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "상위 로그확률의 수(렌즈는 1 이상 — echo 와 함께)",
+      "en": "number of top log-probabilities (1 or more for the lens — with echo)"
+     }
+    },
+    {
+     "name": "geulpu.logit_hash",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "스텝마다 로짓 해시를 돌려받기",
+      "en": "return a logit hash per step"
      }
     }
    ],
