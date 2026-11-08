@@ -319,7 +319,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "에이전트 띄우기",
+    "ko": "에이전트 실행",
     "en": "agents launch"
    },
    "gui": {
@@ -475,7 +475,7 @@
    "job": true,
    "records": "check",
    "cli": {
-    "ko": "벤치 파일쌍",
+    "ko": "벤치 파일 쌍",
     "en": "bench pair"
    },
    "gui": {
@@ -512,11 +512,11 @@
   {
    "id": "bench.results.file",
    "title": {
-    "ko": "결과 파일 받기",
+    "ko": "결과 파일 다운로드",
     "en": "Get a result file"
    },
    "description": {
-    "ko": "결과 파일 받기.",
+    "ko": "결과 파일 다운로드.",
     "en": "Get a result file."
    },
    "status": "exists",
@@ -558,11 +558,11 @@
   {
    "id": "bench.results.zip",
    "title": {
-    "ko": "결과 zip 받기",
+    "ko": "결과 zip 다운로드",
     "en": "Get a result as zip"
    },
    "description": {
-    "ko": "결과 zip 받기.",
+    "ko": "결과 zip 다운로드.",
     "en": "Get a result as zip."
    },
    "status": "exists",
@@ -670,7 +670,7 @@
    "job": false,
    "records": "check",
    "cli": {
-    "ko": "같은비트 확인",
+    "ko": "같은 비트 확인",
     "en": "check same-bits"
    },
    "gui": {
@@ -734,7 +734,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "기록 멈춤",
+    "ko": "기록 중지",
     "en": "debug record stop"
    },
    "gui": {
@@ -744,11 +744,11 @@
   {
    "id": "debug.run.append",
    "title": {
-    "ko": "실행 로그에 분석 줄(분기 · 점수) 덧붙이기",
+    "ko": "실행 로그에 분석 줄(분기 · 점수) 추가",
     "en": "Append analysis lines (branch, score) to a run log"
    },
    "description": {
-    "ko": "실행 로그에 분석 줄(분기 · 점수) 덧붙이기.",
+    "ko": "실행 로그에 분석 줄(분기 · 점수) 추가.",
     "en": "Append analysis lines (branch, score) to a run log."
    },
    "status": "exists",
@@ -762,7 +762,7 @@
      "type": "array",
      "required": false,
      "description": {
-      "ko": "덧붙일 줄들",
+      "ko": "추가할 줄",
       "en": "lines to append"
      }
     },
@@ -780,7 +780,7 @@
    "job": false,
    "records": "run_log",
    "cli": {
-    "ko": "실행로그 덧붙이기",
+    "ko": "실행 로그 추가",
     "en": "debug run append"
    },
    "gui": {
@@ -817,7 +817,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "실행로그 지우기",
+    "ko": "실행 로그 삭제",
     "en": "debug run delete"
    },
    "gui": {
@@ -827,11 +827,11 @@
   {
    "id": "debug.run.get",
    "title": {
-    "ko": "실행 로그 받기",
+    "ko": "실행 로그 보기",
     "en": "Get a run log"
    },
    "description": {
-    "ko": "실행 로그 받기.",
+    "ko": "실행 로그 보기.",
     "en": "Get a run log."
    },
    "status": "exists",
@@ -854,7 +854,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "실행로그 받기",
+    "ko": "실행 로그 보기",
     "en": "debug run get"
    },
    "gui": {
@@ -864,11 +864,11 @@
   {
    "id": "debug.run.import",
    "title": {
-    "ko": "실행 로그 들여오기(조각으로)",
+    "ko": "실행 로그 가져오기(조각으로)",
     "en": "Import a run log in parts"
    },
    "description": {
-    "ko": "실행 로그 들여오기(조각으로).",
+    "ko": "실행 로그 가져오기(조각으로).",
     "en": "Import a run log in parts."
    },
    "status": "exists",
@@ -918,7 +918,7 @@
    "job": false,
    "records": "run_log",
    "cli": {
-    "ko": "실행로그 들여오기",
+    "ko": "실행 로그 가져오기",
     "en": "debug run import"
    },
    "gui": {
@@ -991,7 +991,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "평가 변환검증 결과",
+    "ko": "평가 변환 검증 결과",
     "en": "eval check get"
    },
    "gui": {
@@ -1037,7 +1037,7 @@
    "job": true,
    "records": "check",
    "cli": {
-    "ko": "평가 변환검증",
+    "ko": "평가 변환 검증",
     "en": "eval check run"
    },
    "gui": {
@@ -1047,11 +1047,11 @@
   {
    "id": "eval.compare",
    "title": {
-    "ko": "두 결과 견주기(전후 비교)",
+    "ko": "두 결과의 전후 비교",
     "en": "Compare two results (before and after)"
    },
    "description": {
-    "ko": "두 결과 견주기(전후 비교).",
+    "ko": "두 결과의 전후 비교.",
     "en": "Compare two results (before and after)."
    },
    "status": "exists",
@@ -1092,7 +1092,7 @@
    "job": false,
    "records": "comparison",
    "cli": {
-    "ko": "평가 견주기",
+    "ko": "평가 비교",
     "en": "eval compare"
    },
    "gui": {
@@ -1102,11 +1102,11 @@
   {
    "id": "eval.data.import",
    "title": {
-    "ko": "평가 데이터 들여오기",
+    "ko": "평가 데이터 가져오기",
     "en": "Import evaluation data"
    },
    "description": {
-    "ko": "평가 데이터 들여오기.",
+    "ko": "평가 데이터 가져오기.",
     "en": "Import evaluation data."
    },
    "status": "exists",
@@ -1138,7 +1138,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "평가 데이터 들여오기",
+    "ko": "평가 데이터 가져오기",
     "en": "eval data import"
    },
    "gui": {
@@ -1193,7 +1193,7 @@
    "job": true,
    "records": "none",
    "cli": {
-    "ko": "평가 고치기",
+    "ko": "평가 수정",
     "en": "eval fix"
    },
    "gui": {
@@ -1331,7 +1331,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "평가 대화",
+    "ko": "평가 항목",
     "en": "eval item"
    },
    "gui": {
@@ -1497,7 +1497,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "평가 원래모델 결과",
+    "ko": "평가 원래 모델 비교 결과",
     "en": "eval original get"
    },
    "gui": {
@@ -1507,11 +1507,11 @@
   {
    "id": "eval.original.run",
    "title": {
-    "ko": "원래 모델(transformers)과 견주기",
+    "ko": "원래 모델(transformers)과 비교",
     "en": "Compare with the original model (transformers)"
    },
    "description": {
-    "ko": "원래 모델(transformers)과 견주기.",
+    "ko": "원래 모델(transformers)과 비교.",
     "en": "Compare with the original model (transformers)."
    },
    "status": "exists",
@@ -1534,7 +1534,7 @@
    "job": true,
    "records": "comparison",
    "cli": {
-    "ko": "평가 원래모델 견주기",
+    "ko": "평가 원래 모델 비교",
     "en": "eval original run"
    },
    "gui": {
@@ -1635,7 +1635,7 @@
    "job": true,
    "records": "evaluation",
    "cli": {
-    "ko": "평가 돌리기",
+    "ko": "평가 실행",
     "en": "eval run"
    },
    "gui": {
@@ -1681,7 +1681,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "평가 디버거로",
+    "ko": "평가 디버거로 보내기",
     "en": "eval to-debugger"
    },
    "gui": {
@@ -1745,11 +1745,11 @@
   {
    "id": "eval.version",
    "title": {
-    "ko": "버전(비교할 GGUF) 더하기 · 빼기",
+    "ko": "버전(비교할 GGUF) 추가 · 제거",
     "en": "Add or remove a version (GGUF to compare)"
    },
    "description": {
-    "ko": "버전(비교할 GGUF) 더하기 · 빼기.",
+    "ko": "버전(비교할 GGUF) 추가 · 제거.",
     "en": "Add or remove a version (GGUF to compare)."
    },
    "status": "exists",
@@ -1763,7 +1763,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "할 일(더하기 · 지우기 등)",
+      "ko": "동작(추가 · 삭제 등)",
       "en": "action (add, delete, …)"
      }
     },
@@ -1854,7 +1854,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "할 일(더하기 · 지우기 등)",
+      "ko": "동작(추가 · 삭제 등)",
       "en": "action (add, delete, …)"
      }
     },
@@ -1926,7 +1926,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "평가 작업공간",
+    "ko": "평가 작업 공간",
     "en": "eval workspace"
    },
    "gui": {
@@ -1953,7 +1953,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "평가 작업공간 목록",
+    "ko": "평가 작업 공간 목록",
     "en": "eval workspaces"
    },
    "gui": {
@@ -2059,11 +2059,11 @@
   {
    "id": "job.cancel",
    "title": {
-    "ko": "일 취소",
+    "ko": "작업 취소",
     "en": "Cancel the job"
    },
    "description": {
-    "ko": "일 취소.",
+    "ko": "작업 취소.",
     "en": "Cancel the job."
    },
    "status": "exists",
@@ -2076,7 +2076,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "일 취소",
+    "ko": "작업 취소",
     "en": "job cancel"
    },
    "gui": {
@@ -2113,7 +2113,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "일 기록",
+    "ko": "작업 로그",
     "en": "job log"
    },
    "gui": {
@@ -2123,11 +2123,11 @@
   {
    "id": "lens.jacobian_fit",
    "title": {
-    "ko": "Jacobian lens 의 J 파일 맞추기(도구/jlens_fit.py)",
+    "ko": "Jacobian lens 의 J 파일 만들기(도구/jlens_fit.py)",
     "en": "Fit a Jacobian lens J file (tool jlens_fit.py)"
    },
    "description": {
-    "ko": "Jacobian lens 의 J 파일 맞추기(도구/jlens_fit.py).",
+    "ko": "Jacobian lens 의 J 파일 만들기(도구/jlens_fit.py).",
     "en": "Fit a Jacobian lens J file (tool jlens_fit.py)."
    },
    "status": "planned",
@@ -2137,7 +2137,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "렌즈 J파일 맞추기",
+    "ko": "Jacobian 렌즈 파일 만들기",
     "en": "lens jacobian-fit"
    },
    "gui": {
@@ -2174,7 +2174,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "모델 더하기",
+    "ko": "모델 추가",
     "en": "model add"
    },
    "gui": {
@@ -2184,11 +2184,11 @@
   {
    "id": "model.download.cancel",
    "title": {
-    "ko": "받기 멈춤",
+    "ko": "다운로드 중지",
     "en": "Pause a download"
    },
    "description": {
-    "ko": "받기 멈춤.",
+    "ko": "다운로드 중지.",
     "en": "Pause a download."
    },
    "status": "exists",
@@ -2211,7 +2211,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "모델 받기 멈춤",
+    "ko": "모델 다운로드 중지",
     "en": "model download cancel"
    },
    "gui": {
@@ -2221,11 +2221,11 @@
   {
    "id": "model.download.discard",
    "title": {
-    "ko": "받다 만 파일 지우기",
+    "ko": "다운로드가 끝나지 않은 파일 삭제",
     "en": "Discard a partial download"
    },
    "description": {
-    "ko": "받다 만 파일 지우기.",
+    "ko": "다운로드가 끝나지 않은 파일 삭제.",
     "en": "Discard a partial download."
    },
    "status": "exists",
@@ -2248,7 +2248,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "모델 받기 버리기",
+    "ko": "모델 다운로드 삭제",
     "en": "model download discard"
    },
    "gui": {
@@ -2258,11 +2258,11 @@
   {
    "id": "model.download.start",
    "title": {
-    "ko": "받기 시작",
+    "ko": "다운로드 시작",
     "en": "Start a download"
    },
    "description": {
-    "ko": "받기 시작.",
+    "ko": "다운로드 시작.",
     "en": "Start a download."
    },
    "status": "exists",
@@ -2285,7 +2285,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "모델 받기",
+    "ko": "모델 다운로드",
     "en": "model download start"
    },
    "gui": {
@@ -2367,7 +2367,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "허깅페이스 더하기",
+    "ko": "Hugging Face 모델 추가",
     "en": "model hf add"
    },
    "gui": {
@@ -2422,7 +2422,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "허깅페이스 확인",
+    "ko": "Hugging Face 모델 확인",
     "en": "model hf check"
    },
    "gui": {
@@ -2449,7 +2449,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "허깅페이스 확인 상태",
+    "ko": "Hugging Face 모델 확인 상태",
     "en": "model hf check-status"
    },
    "gui": {
@@ -2495,7 +2495,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "허깅페이스 받기",
+    "ko": "Hugging Face 모델 다운로드",
     "en": "model hf pull"
    },
    "gui": {
@@ -2542,11 +2542,11 @@
   {
    "id": "model.remove",
    "title": {
-    "ko": "모델 빼기",
+    "ko": "목록에서 모델 제거",
     "en": "Remove a model"
    },
    "description": {
-    "ko": "모델 빼기.",
+    "ko": "목록에서 모델 제거.",
     "en": "Remove a model."
    },
    "status": "exists",
@@ -2578,7 +2578,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "모델 빼기",
+    "ko": "모델 제거",
     "en": "model remove"
    },
    "gui": {
@@ -2836,7 +2836,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "재현 들여오기",
+    "ko": "재현 가져오기",
     "en": "replay import"
    },
    "gui": {
@@ -3369,7 +3369,7 @@
      "type": "boolean",
      "required": false,
      "description": {
-      "ko": "이 요청에서 문맥 저장소 읽기 · 쓰기",
+      "ko": "이 요청에서 프롬프트 캐시 읽기 · 쓰기",
       "en": "use the context store for this request"
      }
     },
@@ -3414,7 +3414,7 @@
    "job": false,
    "records": "run",
    "cli": {
-    "ko": "실행 대화",
+    "ko": "실행 채팅",
     "en": "run chat"
    },
    "gui": {
@@ -3613,7 +3613,7 @@
      "type": "boolean",
      "required": false,
      "description": {
-      "ko": "이 요청에서 문맥 저장소 읽기 · 쓰기",
+      "ko": "이 요청에서 프롬프트 캐시 읽기 · 쓰기",
       "en": "use the context store for this request"
      }
     },
@@ -3649,7 +3649,7 @@
    "job": false,
    "records": "run",
    "cli": {
-    "ko": "실행 이어쓰기",
+    "ko": "실행 텍스트 완성",
     "en": "run complete"
    },
    "gui": {
@@ -3686,7 +3686,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "토큰 풀기",
+    "ko": "실행 역토큰화",
     "en": "run detokenize"
    },
    "gui": {
@@ -3930,7 +3930,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "실행 토큰수",
+    "ko": "실행 토큰 수 세기",
     "en": "run messages count-tokens"
    },
    "gui": {
@@ -3957,7 +3957,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "실행 모델",
+    "ko": "실행 모델 목록",
     "en": "run models"
    },
    "gui": {
@@ -4167,7 +4167,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "토큰화",
+    "ko": "실행 토큰화",
     "en": "run tokenize"
    },
    "gui": {
@@ -4194,7 +4194,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "토크나이저 정보",
+    "ko": "실행 토크나이저 정보",
     "en": "run tokenizer-info"
    },
    "gui": {
@@ -4231,7 +4231,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "문맥 저장소",
+      "ko": "프롬프트 캐시",
       "en": "context store"
      }
     },
@@ -4240,7 +4240,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "문맥 저장소 폴더",
+      "ko": "프롬프트 캐시 폴더",
       "en": "context store folder"
      }
     },
@@ -4249,7 +4249,7 @@
      "type": "integer",
      "required": false,
      "description": {
-      "ko": "문맥 저장소 크기(GB)",
+      "ko": "프롬프트 캐시 크기(GB)",
       "en": "context store size (GB)"
      }
     },
@@ -4258,7 +4258,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "문맥 저장소 쓰기",
+      "ko": "프롬프트 캐시 쓰기",
       "en": "context store writes"
      }
     },
@@ -4366,7 +4366,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "설정 바꾸기",
+    "ko": "설정 변경",
     "en": "settings set"
    },
    "gui": {
@@ -4376,11 +4376,11 @@
   {
    "id": "store.clear",
    "title": {
-    "ko": "문맥 저장소 비우기",
+    "ko": "프롬프트 캐시 비우기",
     "en": "Clear the context store"
    },
    "description": {
-    "ko": "문맥 저장소 비우기.",
+    "ko": "프롬프트 캐시 비우기.",
     "en": "Clear the context store."
    },
    "status": "exists",
@@ -4393,7 +4393,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "저장소 비우기",
+    "ko": "프롬프트 캐시 비우기",
     "en": "store clear"
    },
    "gui": {
@@ -4403,11 +4403,11 @@
   {
    "id": "store.status",
    "title": {
-    "ko": "문맥 저장소의 설정 · 쓰는 양",
+    "ko": "프롬프트 캐시의 설정 · 쓰는 양",
     "en": "Context store settings and usage"
    },
    "description": {
-    "ko": "문맥 저장소의 설정 · 쓰는 양.",
+    "ko": "프롬프트 캐시의 설정 · 쓰는 양.",
     "en": "Context store settings and usage."
    },
    "status": "exists",
@@ -4420,7 +4420,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "저장소 상태",
+    "ko": "프롬프트 캐시 상태",
     "en": "store status"
    },
    "gui": {
@@ -4520,7 +4520,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "이벤트",
+    "ko": "시스템 이벤트",
     "en": "system events"
    },
    "gui": {
@@ -4557,7 +4557,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "폴더 둘러보기",
+    "ko": "폴더 보기",
     "en": "system fs"
    },
    "gui": {
@@ -4680,7 +4680,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "출처",
+    "ko": "출처 정보",
     "en": "system provenance"
    },
    "gui": {
@@ -4707,7 +4707,7 @@
    "job": false,
    "records": "none",
    "cli": {
-    "ko": "상태",
+    "ko": "앱 상태",
     "en": "system state"
    },
    "gui": {
