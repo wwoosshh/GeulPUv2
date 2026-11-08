@@ -132,7 +132,7 @@
    }
   },
   "files": {
-   "gui_view": "모델(파일 고르기)",
+   "gui_view": "모델(파일 선택)",
    "description": {
     "ko": "파일 목록",
     "en": "file listing"
@@ -167,14 +167,14 @@
    }
   },
   "job": {
-   "gui_view": "공통(일 카드)",
+   "gui_view": "공통(작업 카드)",
    "description": {
     "ko": "일 번호와 상태",
     "en": "job id and state"
    }
   },
   "job_log": {
-   "gui_view": "공통(일 카드)",
+   "gui_view": "공통(작업 카드)",
    "description": {
     "ko": "일의 기록",
     "en": "job log"
@@ -2177,7 +2177,7 @@
     "en": "job cancel"
    },
    "gui": {
-    "view": "공통(일 카드)"
+    "view": "공통(작업 카드)"
    }
   },
   {
@@ -2214,7 +2214,7 @@
     "en": "job log"
    },
    "gui": {
-    "view": "공통(일 카드)"
+    "view": "공통(작업 카드)"
    }
   },
   {
@@ -3439,7 +3439,7 @@
      "type": "object",
      "required": false,
      "description": {
-      "ko": "도구 고르기",
+      "ko": "도구 선택",
       "en": "tool choice"
      }
     },

@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GeulPU 연구 화면 시안</title>
+<!-- 앱 리디자인 단계 D(문서/화면설계.md)의 정적 시안. 앱 패키지에 들지 않는다. 디자인 시스템은 앱/web/app.css 헤더 주석 · 앱/DESIGN.md 그대로.
+     값은 C3 사용성 시험의 등대 실험(Qwen3-0.6B Q8_0 · 시드 7 · 온도 0.8)에서 받은 실제 응답이다. 입력 줄은 실행하지 않는다. -->
+<style>
+:root {
+  --canvas: #0a0a0a; --canvas-raise: #111214; --canvas-soft: #1a1c20; --canvas-card: #191919; --canvas-mid: #363a3f;
+  --hairline: #212327; --hairline-strong: #2d3035; --line-pill: rgba(255,255,255,.25); --line-pill-hover: rgba(255,255,255,.5);
+  --line-field: rgba(255,255,255,.42); --ink: #fff; --body: #dadbdf; --mute: #8d9198; --faint: #6c7077;
+  --accent: #ff7a17; --accent-line: rgba(255,122,23,.6); --accent-wash: rgba(255,122,23,.1); --logo: #10b981;
+  --ok: #7fd6a4; --err: #ff6b81; --hover: rgba(255,255,255,.05); --press: rgba(255,255,255,.09); --fill: rgba(255,255,255,.07);
+  --r-sm: 8px; --r-pill: 9999px;
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", "Cascadia Mono", Consolas, "Pretendard Variable", "Noto Sans KR", "Malgun Gothic", ui-monospace, monospace;
+  --console-w: 380px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--canvas); overflow: hidden; }
+body { color: var(--body); font: 400 14px/20px var(--font-sans); word-break: keep-all; overflow-wrap: anywhere; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+code, kbd { font-family: var(--font-mono); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #26282c; border-radius: 99px; border: 3px solid var(--canvas); }
+
+/* ---- 레이아웃: 레일 | 왼쪽 | 손잡이 | 명령 창 ---- */
+.app { height: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) 6px var(--console-w); }
+.app.folded { grid-template-columns: 56px minmax(0, 1fr) 6px 40px; }
+.rail { border-right: 1px solid var(--hairline); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0; }
+.logo { width: 32px; height: 32px; display: grid; place-items: center; color: var(--logo); font: 700 20px/1 "Malgun Gothic", var(--font-sans); margin-bottom: 12px; }
+.rail-btn { width: 44px; padding: 8px 0 6px; border: 0; border-radius: var(--r-sm); background: none; color: var(--mute); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; line-height: 14px; }
+.rail-btn svg { width: 20px; height: 20px; }
+.rail-btn:hover { color: var(--ink); background: var(--hover); }
+.rail-btn.active { color: var(--ink); background: var(--canvas-soft); }
+.rail-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); position: absolute; margin: -2px 0 0 18px; animation: blink 1.4s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .rail-btn .dot, .running .state::before { animation: none; } }
+
+.left { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.head { padding: 14px 28px 12px; border-bottom: 1px solid var(--hairline); }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--mute); }
+.crumbs button { border: 0; background: none; padding: 2px 4px; border-radius: 4px; color: var(--mute); }
+.crumbs button:hover { color: var(--ink); background: var(--hover); }
+.crumbs .here { color: var(--ink); }
+.crumbs .sep { color: var(--faint); }
+.prov { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; line-height: 16px; color: var(--mute); }
+.prov b { font-weight: 400; color: var(--body); }
+.prov code { font-size: 12px; color: var(--body); }
+.mock-tag { float: right; font-size: 12px; color: var(--faint); border: 1px solid var(--hairline-strong); border-radius: 4px; padding: 1px 6px; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 28px 48px; }
+.screen { max-width: 980px; }
+.screen[hidden] { display: none; }
+
+.handle { cursor: col-resize; background: transparent; border-left: 1px solid var(--hairline); }
+.handle:hover, .handle:focus-visible { background: var(--hover); }
+
+/* ---- 공통 ---- */
+h1 { margin: 0 0 4px; font: 400 30px/38px var(--font-sans); color: var(--ink); letter-spacing: -.3px; }
+h2 { margin: 32px 0 12px; font: 400 17px/24px var(--font-sans); color: var(--ink); }
+.lead { margin: 0; color: var(--body); font-size: 15px; line-height: 24px; max-width: 72ch; }
+.muted { color: var(--mute); }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 8px; }
+.pill { border: 1px solid var(--line-pill); background: transparent; color: var(--ink); border-radius: var(--r-pill); padding: 7px 16px; font-size: 14px; line-height: 20px; }
+.pill:hover { border-color: var(--line-pill-hover); background: var(--hover); }
+.pill.primary { background: var(--ink); color: #0a0a0a; border-color: var(--ink); }
+.pill.primary:hover { background: #e8e8e6; }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--fill); font-size: 12px; line-height: 18px; color: var(--body); white-space: nowrap; }
+.tag.ok { color: var(--ok); }
+.tag.run { color: var(--accent); background: var(--accent-wash); }
+.hash { font: 12px/18px var(--font-mono); color: var(--body); background: var(--fill); border-radius: 4px; padding: 0 5px; }
+.same { color: var(--ok); font-size: 12px; }
+
+/* 목록(실험 · 실행) — 카드 대신 가는 구분선(hairline)으로 나눈 줄 */
+.list { border-top: 1px solid var(--hairline); }
+.item { width: 100%; text-align: left; display: grid; gap: 4px 16px; align-items: baseline; padding: 14px 8px; border: 0; border-bottom: 1px solid var(--hairline); background: none; border-radius: 0; }
+.item:hover { background: var(--hover); }
+.item .t { color: var(--ink); font-size: 15px; line-height: 22px; }
+.item .id { font: 12px/18px var(--font-mono); color: var(--mute); }
+.exp-item { grid-template-columns: minmax(0, 1fr) auto; }
+.exp-item .meta { grid-column: 1 / -1; font-size: 13px; color: var(--mute); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.run-item { grid-template-columns: 56px minmax(0, 1fr) auto; }
+.run-item .rid { font: 13px/20px var(--font-mono); color: var(--ink); }
+.run-item .meta { font-size: 13px; color: var(--mute); }
+
+.tabs { display: flex; gap: 4px; margin: 20px 0 0; border-bottom: 1px solid var(--hairline); }
+.tab { border: 0; background: none; color: var(--mute); padding: 8px 12px 10px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab:hover { color: var(--ink); }
+.tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+
+.criteria { margin: 12px 0 0; padding: 0; list-style: none; }
+.criteria li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
+.criteria code { color: var(--mute); }
+
+/* ---- 토큰 줄(이 시안의 중심): 밑줄 막대의 길이 = 그 스텝의 마진, 짧을수록 마진이 작은 스텝 ---- */
+.strip { margin-top: 16px; padding: 18px 18px 22px; background: var(--canvas-raise); border: 1px solid var(--hairline); border-radius: var(--r-sm); font-size: 17px; line-height: 40px; }
+.tok { position: relative; display: inline; white-space: pre-wrap; padding: 2px 0; border-radius: 3px; cursor: pointer; color: var(--ink); }
+.tok.p { color: var(--faint); cursor: default; }
+.tok:not(.p):hover { background: var(--hover); }
+.tok .bar { position: absolute; left: 0; bottom: -7px; height: 3px; border-radius: 2px; background: var(--line-pill); }
+.tok.sel { outline: 1px solid var(--ink); outline-offset: 1px; }
+.tok.hes::after { content: attr(data-note); position: absolute; left: 0; top: -18px; font-size: 11px; line-height: 14px; color: var(--ink); white-space: nowrap; border-bottom: 1px solid var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 12px; color: var(--mute); }
+.legend i { display: inline-block; width: 24px; height: 3px; background: var(--line-pill); vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 24px; align-items: start; }
+.stepcard { margin-top: 16px; padding: 16px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-card); }
+.stepcard h3 { margin: 0 0 8px; font: 400 17px/24px var(--font-sans); color: var(--ink); }
+.cand { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }
+.cand .w { font: 15px/22px var(--font-mono); color: var(--ink); white-space: pre; }
+.cand .lp { font: 13px/22px var(--font-mono); color: var(--body); }
+.cand .pb { grid-column: 1 / -1; height: 3px; background: var(--hairline-strong); border-radius: 2px; }
+.cand .pb span { display: block; height: 100%; background: var(--body); border-radius: 2px; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin-top: 12px; font-size: 13px; }
+.kv dt { color: var(--mute); } .kv dd { margin: 0; color: var(--body); }
+
+.cmp { margin-top: 12px; border-top: 1px solid var(--hairline); }
+.cmp-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--hairline); font-size: 15px; line-height: 24px; }
+.cmp-row .rid { font: 13px/24px var(--font-mono); color: var(--mute); }
+.cmp-row .same-part { color: var(--mute); }
+.cmp-row .fork { border-bottom: 1px solid var(--ink); color: var(--ink); }
+.hashline { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+
+/* ---- 층 렌즈 표 ---- */
+.ladder { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+.ladder th { text-align: left; font-weight: 400; color: var(--mute); padding: 6px 8px; border-bottom: 1px solid var(--hairline-strong); position: sticky; top: -24px; background: var(--canvas); }
+.ladder td { padding: 5px 8px; border-bottom: 1px solid var(--hairline); font-family: var(--font-mono); white-space: pre; }
+.ladder td.n { color: var(--mute); width: 48px; }
+.ladder td.rank { color: var(--body); text-align: right; width: 96px; }
+.ladder tr.fin td { color: var(--ink); }
+.ladder tr.fin td:first-child { box-shadow: inset 2px 0 0 var(--ink); }
+.ladder td.top1 { color: var(--ink); }
+.ladder td.lp { color: var(--mute); }
+.ladder-wrap { overflow-x: auto; }
+
+/* ---- 명령 창 ---- */
+.console { min-width: 0; display: flex; flex-direction: column; min-height: 0; background: var(--canvas-raise); }
+.c-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--hairline); }
+.c-head .ttl { color: var(--ink); font-size: 15px; flex: 1; }
+.switch { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--mute); border: 0; background: none; padding: 4px 6px; border-radius: 6px; }
+.switch:hover { color: var(--ink); background: var(--hover); }
+.switch .knob { width: 28px; height: 16px; border-radius: 99px; background: var(--canvas-mid); position: relative; }
+.switch .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--mute); transition: left .15s; }
+.switch[aria-checked="true"] { color: var(--ink); }
+.switch[aria-checked="true"] .knob { background: var(--body); }
+.switch[aria-checked="true"] .knob::after { left: 14px; background: #0a0a0a; }
+.icon-btn { width: 28px; height: 28px; border: 0; border-radius: 6px; background: none; color: var(--mute); display: grid; place-items: center; }
+.icon-btn:hover { color: var(--ink); background: var(--hover); }
+.lines { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; }
+.line { padding: 10px 16px 12px; border-bottom: 1px solid var(--hairline); }
+.line .who { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 18px; color: var(--mute); }
+.line .who .src { padding: 0 6px; border-radius: 4px; background: var(--fill); color: var(--body); }
+.line .who .src.ai { color: var(--ink); }
+.line .cmd { margin-top: 4px; font: 13px/20px var(--font-mono); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.line .cmd .opt { color: var(--mute); }
+.line .res { margin-top: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12px; line-height: 18px; color: var(--mute); }
+.line .res a { color: var(--body); text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 3px; cursor: pointer; }
+.line .res a:hover { text-decoration-color: var(--accent); }
+.line .state::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--faint); }
+.line.done .state::before { background: var(--ok); }
+.line.running .state { color: var(--accent); }
+.line.running .state::before { background: var(--accent); animation: blink 1.4s ease-in-out infinite; }
+.line.typed .cmd::before { content: "› "; color: var(--mute); }
+.c-input { display: flex; align-items: center; gap: 8px; padding: 10px 12px 12px 16px; border-top: 1px solid var(--hairline); }
+.c-input span { color: var(--mute); font-family: var(--font-mono); }
+.c-input input { flex: 1; min-width: 0; background: var(--canvas); border: 1px solid var(--line-field); border-radius: var(--r-sm); padding: 8px 10px; font: 13px/18px var(--font-mono); color: var(--ink); }
+.c-input input::placeholder { color: var(--faint); }
+.folded .c-head .ttl, .folded .c-head .switch, .folded .lines, .folded .c-input { display: none; }
+.folded .c-head { flex-direction: column; padding: 12px 6px; border: 0; }
+.fold-count { display: none; font: 12px/16px var(--font-mono); color: var(--accent); }
+.folded .fold-count { display: block; }
+
+/* ---- 좁은 화면: 레일은 위, 명령 창은 아래 창 ---- */
+@media (max-width: 767px) {
+  .app, .app.folded { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) 40vh; }
+  .app.folded { grid-template-rows: auto minmax(0, 1fr) 44px; }
+  .rail { flex-direction: row; justify-content: center; border-right: 0; border-bottom: 1px solid var(--hairline); padding: 4px 8px; }
+  .logo { margin: 0 8px 0 0; }
+  .handle { display: none; }
+  .console { border-top: 1px solid var(--hairline-strong); }
+  .folded .c-head { flex-direction: row; padding: 10px 16px; }
+  #fold svg { transform: rotate(90deg); }
+  .folded #fold svg { transform: rotate(-90deg); }
+  .head, .scroll { padding-left: 16px; padding-right: 16px; }
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .run-item { grid-template-columns: 48px minmax(0, 1fr); }
+  .run-item .meta:last-child { grid-column: 2; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <nav class="rail" aria-label="레일">
+    <div class="logo" aria-label="GeulPU">글</div>
+    <button class="rail-btn active" data-rail="exp" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/></svg>실험</button>
+    <button class="rail-btn" data-rail="model"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16M15 4v16M4 9h16M4 15h16"/></svg>모델</button>
+    <button class="rail-btn" data-rail="repro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 9M20 4v5h-5M20 12a8 8 0 0 1-13.7 5.6L4 15M4 20v-5h5"/></svg>재현</button>
+    <button class="rail-btn" data-rail="jobs"><span class="dot" aria-hidden="true"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h10M4 18h7"/></svg>작업</button>
+    <button class="rail-btn" data-rail="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>설정</button>
+  </nav>
+
+  <main class="left" aria-label="연구 화면">
+    <header class="head">
+      <span class="mock-tag">정적 시안</span>
+      <nav class="crumbs" id="crumbs" aria-label="경로"></nav>
+      <div class="prov" id="prov" aria-label="출처"></div>
+    </header>
+    <div class="scroll" id="leftScroll">
+
+      <section class="screen" data-screen="list" aria-label="실험 목록">
+        <h1>실험</h1>
+        <p class="lead">실험마다 연구 질문 · 판정 기준 · 실행 · 기록이 한 폴더에 남습니다. 자리 <code>E:\research\experiments</code></p>
+        <div class="row-actions">
+          <button class="pill primary">새 실험</button>
+          <button class="pill">자리 바꾸기</button>
+        </div>
+        <div class="list" role="list">
+          <button class="item exp-item" role="listitem" data-go="exp">
+            <span class="t">등대지기는 어디서 망설였나</span><span class="tag ok">끝</span>
+            <span class="meta"><span class="id">2026-11-08-c3-lighthouse</span><span>Qwen3-0.6B Q8_0</span><span>실행 4</span><span>판정 2 / 2 통과</span></span>
+          </button>
+          <button class="item exp-item" role="listitem">
+            <span class="t">양자화가 같은 답을 얼마나 바꾸나</span><span class="tag run">실행 중</span>
+            <span class="meta"><span class="id">2026-11-08-quant-drift</span><span>Qwen3-0.6B Q8_0 · Q4_K_M</span><span>실행 6</span><span>판정 0 / 3</span></span>
+          </button>
+          <button class="item exp-item" role="listitem">
+            <span class="t">대화</span><span class="tag">기본 실험</span>
+            <span class="meta"><span class="id">default</span><span>가볍게 나눈 대화가 실행으로 쌓입니다</span><span>실행 12</span></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="exp" aria-label="실험" hidden>
+        <h1>등대지기는 어디서 망설였나</h1>
+        <p class="lead">샘플링한 답에서 모델이 가장 망설인 스텝은 어디이고, 그 자리에서 다른 토큰을 고르면 답은 어떻게 달라지나?</p>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab">계획</button><button class="tab on" role="tab" aria-selected="true">실행</button><button class="tab" role="tab">비교</button><button class="tab" role="tab">결과</button><button class="tab" role="tab">기록</button>
+        </div>
+        <div class="row-actions"><button class="pill primary">새 실행</button><button class="pill">실행 둘 비교</button></div>
+        <div class="list" role="list">
+          <button class="item run-item" role="listitem" data-go="run"><span class="rid">r1</span><span class="t">이어쓰기, 시드 7 · 온도 0.8 · 40 토큰</span><span class="meta">0.44 초</span></button>
+          <button class="item run-item" role="listitem" data-go="run"><span class="rid">r1b</span><span class="t">r1 다시 보내기, 로짓 해시 <span class="same">40 / 40 같음</span></span><span class="meta">0.43 초</span></button>
+          <button class="item run-item" role="listitem" data-go="cmp"><span class="rid">r2</span><span class="t">분기: r1 의 스텝 3 에 "I", 같은 난수</span><span class="meta">36 토큰</span></button>
+          <button class="item run-item" role="listitem" data-go="step"><span class="rid">r3</span><span class="t">층 렌즈: 스텝 3, 28 층</span><span class="meta">0.05 초</span></button>
+        </div>
+        <h2>판정 기준 <span class="muted">(실행 전에 적음)</span></h2>
+        <ul class="criteria">
+          <li><code>C1</code><span>같은 요청을 다시 보내면 40 스텝의 로짓 해시가 모두 같다</span><span class="tag ok">통과</span></li>
+          <li><code>C2</code><span>마진이 가장 작은 스텝에서 2 위 토큰으로 분기하면 답이 그 스텝부터 달라진다</span><span class="tag ok">통과</span></li>
+        </ul>
+      </section>
+
+      <section class="screen" data-screen="run" aria-label="실행" hidden>
+        <h1>r1 이어쓰기</h1>
+        <p class="lead muted">토큰을 누르면 그 스텝의 후보가 보입니다. 밑줄 막대가 짧을수록 그 스텝의 마진이 작습니다.</p>
+        <div class="split">
+          <div>
+            <div class="strip" id="strip" aria-label="토큰 줄"></div>
+            <div class="legend"><span><i></i>밑줄 길이 = 마진(1 위와 2 위 로그확률의 차)</span><span>흐린 텍스트 = 프롬프트</span><span>← → 로 이전 · 다음 스텝</span></div>
+          </div>
+          <aside class="stepcard" id="stepcard" aria-live="polite"></aside>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="cmp" aria-label="실행 비교" hidden>
+        <h1>r1 과 r2 비교</h1>
+        <p class="lead muted">r2 는 r1 의 스텝 3 에 2 위 토큰 "I" 를 넣고 r1 과 같은 난수로 이어 생성했습니다. 두 답은 스텝 3 부터 다릅니다.</p>
+        <div class="cmp" id="cmp"></div>
+        <h2>스텝마다 로짓 해시</h2>
+        <div class="hashline" id="hashline"></div>
+      </section>
+
+      <section class="screen" data-screen="step" aria-label="스텝과 층" hidden>
+        <h1>스텝 3 의 층 렌즈</h1>
+        <p class="lead muted">층마다 다음 토큰의 1 위를 읽습니다. 마지막 층(27)이 모델의 출력입니다. 흰 선은 마지막 층의 1 위가 끝까지 1 위로 남는 층들입니다.</p>
+        <div class="ladder-wrap"><table class="ladder" id="ladder"></table></div>
+      </section>
+
+      <section class="screen" data-screen="other" aria-label="다른 레일" hidden>
+        <h1 id="otherTitle"></h1>
+        <p class="lead muted" id="otherText"></p>
+      </section>
+    </div>
+  </main>
+
+  <div class="handle" id="handle" role="separator" aria-orientation="vertical" aria-label="명령 창 폭" tabindex="0"></div>
+
+  <aside class="console" id="console" aria-label="명령 창">
+    <div class="c-head">
+      <span class="ttl">명령 창</span>
+      <button class="switch" id="follow" role="switch" aria-checked="false" title="켜면 AI 세션의 실행이 끝날 때 왼쪽이 그 실행으로 갑니다"><span class="knob"></span>AI 따라가기</button>
+      <button class="icon-btn" id="fold" aria-label="명령 창 접기" title="접기 · 펼치기 ( ] )"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></button>
+      <span class="fold-count" id="foldCount"></span>
+    </div>
+    <ol class="lines" id="lines" aria-live="polite"></ol>
+    <form class="c-input" id="cform"><span>›</span><input id="cin" placeholder="GeulPU 명령 (예: run complete --prompt …)" aria-label="GeulPU 명령"></form>
+  </aside>
+</div>
+
+<script>
+const DATA = {"prompt":["The"," old"," l","ighthouse"," keeper"," looked"," at"," the"," sea"," and"],"prompt_ids":[785,2310,326,57909,53416,6966,518,279,9396,323],"seed":7,"steps":[{"t":" said","id":1053,"lp":-1.5425,"c":[[5485," saw",-1.4547],[1053," said",-1.5425]],"m":0.0878,"h":"1a5c9b6d","e":3.433},{"t":",","id":11,"lp":-0.3729,"c":[[11,",",-0.3729],[25,":",-2.4595]],"m":2.0865,"h":"199ee172","e":1.419},{"t":" “","id":1036,"lp":-1.5865,"c":[[330," \"",-0.3013],[1036," “",-1.5865]],"m":1.2851,"h":"b05ba0f8","e":0.95},{"t":"The","id":785,"lp":-1.547,"c":[[40,"I",-1.5341],[785,"The",-1.547]],"m":0.0128,"h":"3108b7d9","e":3.598},{"t":" sea","id":9396,"lp":-1.1815,"c":[[9396," sea",-1.1815],[17788," moon",-2.7182]],"m":1.5367,"h":"8c619df1","e":4.24},{"t":" is","id":374,"lp":-0.3819,"c":[[374," is",-0.3819],[702," has",-2.772]],"m":2.3901,"h":"953bc66b","e":1.923},{"t":" so","id":773,"lp":-3.267,"c":[[537," not",-2.6451],[19300," calm",-2.6982]],"m":0.0532,"h":"35a0cb21","e":5.29},{"t":" beautiful","id":6233,"lp":-2.637,"c":[[6884," wide",-2.4891],[3041," far",-2.6018]],"m":0.1127,"h":"86ac5cfa","e":4.395},{"t":",","id":11,"lp":-0.5562,"c":[[11,",",-0.5562],[13,".",-2.5207]],"m":1.9645,"h":"3c22c68e","e":1.956},{"t":" but","id":714,"lp":-0.9164,"c":[[714," but",-0.9164],[323," and",-1.492]],"m":0.5755,"h":"ed7da69f","e":2.37},{"t":" I","id":358,"lp":-1.0073,"c":[[358," I",-1.0073],[432," it",-1.5645]],"m":0.5572,"h":"55763514","e":2.637},{"t":" need","id":1184,"lp":-3.9342,"c":[[646," can",-1.8988],[614," have",-2.0698]],"m":0.171,"h":"7a1ae2fa","e":3.231},{"t":" to","id":311,"lp":-0.2163,"c":[[311," to",-0.2163],[264," a",-2.8336]],"m":2.6173,"h":"e5b1c119","e":1.185},{"t":" stay","id":4717,"lp":-3.9117,"c":[[2506," keep",-2.2706],[728," go",-2.8118]],"m":0.5412,"h":"ff0c33f8","e":4.832},{"t":" at","id":518,"lp":-2.8858,"c":[[3123," away",-1.6541],[304," in",-1.7654]],"m":0.1113,"h":"16fcb8cd","e":3.412},{"t":" home","id":2114,"lp":-0.601,"c":[[2114," home",-0.601],[279," the",-1.5635]],"m":0.9624,"h":"c18f6186","e":1.652},{"t":" and","id":323,"lp":-2.8314,"c":[[1987,".”",-1.4986],[13,".",-1.8244]],"m":0.3258,"h":"5f8036e1","e":3.024},{"t":" rest","id":2732,"lp":-1.2976,"c":[[2732," rest",-1.2976],[6084," sleep",-2.407]],"m":1.1093,"h":"d6402ea6","e":3.733},{"t":" my","id":847,"lp":-1.906,"c":[[13,".",-1.6771],[1987,".”",-1.699]],"m":0.0219,"h":"867c8569","e":2.908},{"t":" mind","id":3971,"lp":-1.4915,"c":[[6414," eyes",-0.8776],[3971," mind",-1.4915]],"m":0.6139,"h":"4911e549","e":2.369},{"t":".","id":13,"lp":-1.4658,"c":[[1987,".”",-1.2585],[13,".",-1.4658]],"m":0.2073,"h":"5ef8f698","e":2.535},{"t":" I","id":358,"lp":-0.9792,"c":[[358," I",-0.9792],[1416," If",-2.3977]],"m":1.4184,"h":"eaa23345","e":3.203},{"t":" have","id":614,"lp":-2.1659,"c":[[686," will",-1.8905],[614," have",-2.1659]],"m":0.2753,"h":"459bbdbe","e":3.435},{"t":" to","id":311,"lp":-1.335,"c":[[311," to",-1.335],[902," no",-1.3697]],"m":0.0347,"h":"933b5d59","e":3.29},{"t":" give","id":2968,"lp":-4.2985,"c":[[2506," keep",-2.5957],[4717," stay",-2.6207]],"m":0.025,"h":"97268ae7","e":4.626},{"t":" the","id":279,"lp":-2.4741,"c":[[705," up",-0.8663],[432," it",-2.1357]],"m":1.2694,"h":"3a54ea90","e":2.488},{"t":" sea","id":9396,"lp":-2.6071,"c":[[9396," sea",-2.6071],[8286," signal",-3.0036]],"m":0.3965,"h":"963a33de","e":6.201},{"t":" a","id":264,"lp":-0.6516,"c":[[264," a",-0.6516],[279," the",-2.7732]],"m":2.1216,"h":"c12dcb55","e":2.679},{"t":" lot","id":2696,"lp":-4.8918,"c":[[501," new",-2.7749],[829," name",-3.1195]],"m":0.3446,"h":"b0610872","e":5.808},{"t":" of","id":315,"lp":-0.0433,"c":[[315," of",-0.0433],[803," more",-3.788]],"m":3.7448,"h":"09054b50","e":0.274},{"t":" good","id":1661,"lp":-4.6181,"c":[[6529," attention",-2.3734],[2948," love",-2.5067]],"m":0.1333,"h":"643ed9a6","e":5.126},{"t":" wishes","id":24240,"lp":-1.4833,"c":[[24240," wishes",-1.4833],[11,",",-2.8049]],"m":1.3217,"h":"5c705f9c","e":4.034},{"t":",","id":11,"lp":-1.0731,"c":[[11,",",-1.0731],[1987,".”",-1.9657]],"m":0.8926,"h":"958666ea","e":2.45},{"t":" but","id":714,"lp":-1.2306,"c":[[714," but",-1.2306],[323," and",-1.5324]],"m":0.3018,"h":"facf5b2c","e":2.838},{"t":" I","id":358,"lp":-0.5969,"c":[[358," I",-0.5969],[432," it",-2.7347]],"m":2.1378,"h":"1d5e2db8","e":2.444},{"t":" have","id":614,"lp":-1.9523,"c":[[646," can",-1.6396],[4157," cannot",-1.6767]],"m":0.037,"h":"e037a868","e":2.738},{"t":" to","id":311,"lp":-0.689,"c":[[311," to",-0.689],[902," no",-1.2403]],"m":0.5513,"h":"5c876dda","e":1.833},{"t":" remain","id":7146,"lp":-3.7804,"c":[[4717," stay",-1.6157],[2506," keep",-2.063]],"m":0.4474,"h":"7adb6773","e":3.834},{"t":" in","id":304,"lp":-1.4512,"c":[[304," in",-1.4512],[518," at",-1.8144]],"m":0.3632,"h":"d5c53eef","e":4.021},{"t":" the","id":279,"lp":-0.5904,"c":[[279," the",-0.5904],[847," my",-1.8824]],"m":1.2921,"h":"30bf7dd8","e":2.066}],"branch_tokens":[" have"," no"," choice"," but"," to"," do"," this"," work",".”"," Then"," he"," said"," to"," his"," apprentice",","," “","I"," will"," not"," allow"," your"," father"," to"," leave"," the"," work",".”"," The"," apprentice",","," however",","," noticed"," that"," the"],"branch_hashes":["1a404737","7d91f185","9708b729","6d775146","4bfd192b","dadc656b","a8b4b89c","06121bcf","65e1afea","f8aeef74","7526a719","7b58b523","ee79e4d2","347997f1","5a2c03b0","ea9dfffe","84968b61","c51e8f07","41c7b8d9","a7f00312","cc4b3b30","af789c8b","dea2d47b","214d8f40","86c11665","913f3786","e4bc7462","57f211f8","47a2adb9","d3c6b1af","3c76f50d","e3fe0e17","ddebc64c","d18d29f8","d5cbfcac","b9809bd5"],"lens":[{"top":[[40097,".\"</",-2.8],[15777,"'\\",-2.95],[21524,"'<",-3.035]],"rank":129484},{"top":[[15777,"'\\",-0.763],[13217," ourselves",-1.756],[1184," need",-2.246]],"rank":68509},{"top":[[59226,"arf",-2.54],[140001," fiyatlarÄ±",-3.636],[13217," ourselves",-3.76]],"rank":84337},{"top":[[87873,"=?\",",-2.196],[1184," need",-3.717],[104196,"æĢ§çļĦ",-3.821]],"rank":57505},{"top":[[15777,"'\\",-2.867],[7025," sometimes",-3.444],[97835,"sense",-3.568]],"rank":30714},{"top":[[15777,"'\\",-0.777],[1367," comp",-2.305],[21215,"...\"",-2.777]],"rank":34064},{"top":[[82,"s",-0.456],[59226,"arf",-3.641],[1367," comp",-3.676]],"rank":19404},{"top":[[36394,"instein",-1.545],[275,"it",-3.022],[278,"al",-3.226]],"rank":6438},{"top":[[12295,"cient",-2.745],[275,"it",-2.84],[1199,"its",-2.999]],"rank":2646},{"top":[[12295,"cient",-2.505],[99517,"å¥¹",-2.659],[33590,"”ï¼Į",-3.436]],"rank":5949},{"top":[[82,"s",-2.863],[170,"î",-3.07],[15777,"'\\",-3.426]],"rank":3522},{"top":[[19505,"erving",-1.824],[15777,"'\\",-3.053],[12536,"vol",-3.624]],"rank":6377},{"top":[[2130,"____",-2.888],[82,"s",-3.369],[482,"ine",-3.551]],"rank":2773},{"top":[[82,"s",-2.183],[36556,"æŃ£",-2.886],[2130,"____",-3.109]],"rank":1911},{"top":[[8948,"system",-1.945],[36556,"æŃ£",-2.746],[15777,"'\\",-3.069]],"rank":1818},{"top":[[21215,"...\"",-2.244],[482,"ine",-2.451],[276,"an",-2.818]],"rank":1194},{"top":[[82,"s",-0.797],[21215,"...\"",-1.828],[4427,"'.",-3.306]],"rank":726},{"top":[[21215,"...\"",-0.58],[1189,".\"",-2.84],[482,"ine",-2.894]],"rank":74},{"top":[[21215,"...\"",-1.995],[2130,"____",-2.45],[1112,"...",-2.774]],"rank":12},{"top":[[21215,"...\"",-2.131],[47486,"...\"\n\n",-2.846],[1112,"...",-2.87]],"rank":10},{"top":[[1112,"...",-1.873],[2130,"____",-1.927],[21215,"...\"",-2.439]],"rank":8},{"top":[[785,"The",-1.956],[3838,"What",-2.489],[1654,"We",-2.754]],"rank":1},{"top":[[785,"The",-1.107],[40,"I",-2.328],[2679,"If",-2.984]],"rank":1},{"top":[[785,"The",-0.583],[40,"I",-2.847],[2679,"If",-3.187]],"rank":1},{"top":[[785,"The",-1.363],[2679,"If",-2.631],[2403,"All",-2.876]],"rank":1},{"top":[[40,"I",-0.939],[785,"The",-1.901],[2679,"If",-2.843]],"rank":2},{"top":[[785,"The",-1.203],[40,"I",-1.459],[2679,"If",-2.52]],"rank":1},{"top":[[40,"I",-1.534],[785,"The",-1.547],[2132,"It",-2.717]],"rank":2}],"lens_token":[785,"The"]};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const EXP = "2026-11-08-c3-lighthouse";
+const HES = DATA.steps.reduce((b, s, i) => (s.m < DATA.steps[b].m ? i : b), 0);
+let sel = HES, screen = "list";
+
+// ---- 경로 · 출처 ----
+const CRUMBS = {
+  list: [["실험", "list"]],
+  exp: [["실험", "list"], [EXP, "exp"]],
+  run: [["실험", "list"], [EXP, "exp"], ["실행 r1", "run"]],
+  cmp: [["실험", "list"], [EXP, "exp"], ["r1 · r2 비교", "cmp"]],
+  step: [["실험", "list"], [EXP, "exp"], ["실행 r1", "run"], ["스텝 3", "step"]],
+};
+function crumbs(name) {
+  const c = CRUMBS[name] || [[document.getElementById("otherTitle").textContent, name]];
+  $("#crumbs").innerHTML = c.map(([t, go], i) => i === c.length - 1 ? `<span class="here">${esc(t)}</span>`
+    : `<button data-go="${go}">${esc(t)}</button><span class="sep">›</span>`).join("");
+  const p = name === "list" || name === "other" ? "" :
+    `<span>모델 <b>Qwen3-0.6B Q8_0</b></span><span>파일 <code>sha256 9465e63a…</code></span><span>계산 방식 <b>빠름</b></span><span>GeulPU <b>0.22.0</b></span><span>시드 <b>7</b></span>`;
+  $("#prov").innerHTML = p;
+}
+function go(name) {
+  screen = name;
+  document.querySelectorAll(".screen").forEach(s => { s.hidden = s.dataset.screen !== name; });
+  crumbs(name);
+  $("#leftScroll").scrollTop = 0;
+}
+
+// ---- 토큰 줄 ----
+function strip() {
+  const maxM = 3;
+  const p = DATA.prompt.map(t => `<span class="tok p">${esc(t)}</span>`).join("");
+  const a = DATA.steps.map((s, k) => {
+    const w = Math.max(6, Math.min(1, s.m / maxM) * 100);
+    const cls = ["tok", k === sel ? "sel" : "", k === HES ? "hes" : ""].join(" ");
+    const note = k === HES ? ` data-note="마진이 가장 작은 스텝 · ${s.m.toFixed(3)}"` : "";
+    return `<span class="${cls}" data-k="${k}" tabindex="${k === sel ? 0 : -1}" role="button" aria-label="스텝 ${k}: ${esc(s.t)}, 마진 ${s.m}"${note}>${esc(s.t)}<span class="bar" style="width:${w}%"></span></span>`;
+  }).join("");
+  $("#strip").innerHTML = p + a;
+  stepcard();
+}
+function stepcard() {
+  const s = DATA.steps[sel];
+  const other = s.c.find(c => c[0] !== s.id) || s.c[1];
+  const cand = s.c.map(([id, t, lp]) => `<div class="cand"><span class="w">${esc(JSON.stringify(t))}${id === s.id ? ' <span class="tag">생성됨</span>' : ""}</span><span class="lp">${lp.toFixed(3)}</span><div class="pb"><span style="width:${(Math.exp(lp) * 100).toFixed(1)}%"></span></div></div>`).join("");
+  $("#stepcard").innerHTML = `<h3>스텝 ${sel}</h3><div class="muted" style="font-size:13px">1 위와 2 위 후보 · 로그확률(샘플링 설정 전)</div>${cand}
+    <dl class="kv"><dt>마진</dt><dd>${s.m.toFixed(4)}</dd><dt>엔트로피</dt><dd>${s.e}</dd><dt>로짓 해시</dt><dd><span class="hash">${s.h}</span></dd></dl>
+    <div class="row-actions"><button class="pill primary" id="doBranch">${esc(JSON.stringify(other[1]))} 로 분기</button><button class="pill" id="doLens">층 렌즈</button><button class="pill">점수</button></div>`;
+  $("#doBranch").onclick = () => guiCall(`GeulPU run branch --json @branch-${sel}.json --experiment ${EXP}`, "200 · 36 토큰 · 0.31 초", "r2", "cmp");
+  $("#doLens").onclick = () => guiCall(`GeulPU run lens --json @lens-${sel}.json --experiment ${EXP}`, "200 · 28 층 · 0.05 초", "r3", "step");
+}
+$("#strip").addEventListener("click", e => { const t = e.target.closest(".tok:not(.p)"); if (t) { sel = +t.dataset.k; strip(); } });
+$("#strip").addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+    sel = Math.max(0, Math.min(DATA.steps.length - 1, sel + (e.key === "ArrowRight" ? 1 : -1)));
+    strip(); document.querySelector(`.tok[data-k="${sel}"]`).focus(); e.preventDefault();
+  } else if (e.key === "Enter") { go("step"); }
+});
+
+// ---- 비교 · 해시 ----
+function cmp() {
+  const head = DATA.steps.slice(0, 3).map(s => s.t).join("");
+  const r1 = DATA.steps.slice(3).map(s => s.t).join("");
+  const r2 = DATA.steps[3].c[0][1] + DATA.branch_tokens.join("");
+  $("#cmp").innerHTML = `<div class="cmp-row"><span class="rid">r1</span><span><span class="same-part">${esc(head)}</span><span class="fork">${esc(r1)}</span></span></div>
+    <div class="cmp-row"><span class="rid">r2</span><span><span class="same-part">${esc(head)}</span><span class="fork">${esc(r2)}</span></span></div>`;
+  $("#hashline").innerHTML = DATA.steps.slice(0, 8).map((s, k) => `<span class="hash" title="스텝 ${k}">${k}: ${s.h}</span>${k < 3 ? '<span class="same">같음</span>' : ""}`).join("")
+    + '<span class="muted" style="font-size:12px">스텝 0 ~ 2 는 r1 · r2 가 같고, 스텝 3 부터 다릅니다</span>';
+}
+
+// ---- 층 렌즈 표 ----
+function ladder() {
+  const L = DATA.lens, last = L.length - 1, fin = L[last].top[0][0];
+  let first = last; while (first > 0 && L[first - 1].top[0][0] === fin) first--;
+  const tok = DATA.lens_token[1];
+  $("#ladder").innerHTML = `<thead><tr><th>층</th><th>1 위</th><th>2 위</th><th>3 위</th><th style="text-align:right">${esc(JSON.stringify(tok))} 의 순위</th></tr></thead><tbody>` +
+    L.map((x, i) => `<tr class="${i >= first ? "fin" : ""}"><td class="n">${i}</td>${x.top.map((c, j) => `<td class="${j === 0 ? "top1" : ""}">${esc(JSON.stringify(c[1]))} <span class="lp">${c[2].toFixed(2)}</span></td>`).join("")}<td class="rank">${x.rank}</td></tr>`).join("") +
+    `</tbody><caption style="caption-side:bottom;text-align:left;padding-top:10px;color:var(--mute);font-size:13px">마지막 층의 1 위 ${esc(JSON.stringify(L[last].top[0][1]))} 는 ${first} 층부터 끝까지 1 위입니다. 생성된 토큰 ${esc(JSON.stringify(tok))} 는 21 ~ 24 · 26 층에서 1 위였습니다.</caption>`;
+}
+
+// ---- 명령 창 ----
+const LINES = [
+  { src: "GUI", cmd: `GeulPU experiment create --name c3-lighthouse --title "등대지기는 어디서 망설였나"`, res: "200 · 0.04 초", link: [EXP, "exp"] },
+  { src: "GUI", cmd: "GeulPU model load --model qwen3-0.6b-q8_0 --wait", res: "작업 3 끝 · 7.2 초" },
+  { src: "AI · c3-agent", ai: 1, cmd: `GeulPU run complete --prompt "The old lighthouse keeper looked at the sea and" --max_tokens 40 --temperature 0.8 --seed 7 --logprobs 2 --geulpu.top_logprobs 2 --geulpu.logit_hash --experiment ${EXP}`, res: "200 · 40 토큰 · 0.44 초", link: ["r1", "run"] },
+  { src: "AI · c3-agent", ai: 1, cmd: `GeulPU run complete … (r1 과 같은 요청) --experiment ${EXP}`, res: "200 · 로짓 해시 40 / 40 같음", link: ["r1b", "run"] },
+  { src: "사용자 CLI", typed: 1, cmd: `실행 분기 --json @branch.json --experiment ${EXP}`, res: "200 · 36 토큰 · 0.31 초", link: ["r2", "cmp"] },
+  { src: "AI · c3-agent", ai: 1, cmd: `GeulPU experiment check --path ${EXP} --wait`, running: 1, res: "점검 중" },
+];
+function lineHtml(l) {
+  const cmd = esc(l.cmd).replace(/(--[\w.-]+)/g, '<span class="opt">$1</span>');
+  const link = l.link ? `<a data-go="${l.link[1]}">${esc(l.link[0])} 열기</a>` : "";
+  return `<li class="line ${l.running ? "running" : "done"} ${l.typed ? "typed" : ""}"><div class="who"><span class="src ${l.ai ? "ai" : ""}">${esc(l.src)}</span><span>${l.t || "22:41"}</span></div>
+    <div class="cmd">${cmd}</div><div class="res"><span class="state">${esc(l.res)}</span>${link}<a class="copy">명령 복사</a></div></li>`;
+}
+function renderLines() {
+  $("#lines").innerHTML = LINES.map(lineHtml).join("");
+  $("#foldCount").textContent = String(LINES.length);
+  const box = $("#lines"); box.scrollTop = box.scrollHeight;
+}
+function guiCall(cmd, res, rid, target) {
+  const l = { src: "GUI", cmd, res: "실행 중", running: 1, t: "22:47" };
+  LINES.push(l); renderLines();
+  setTimeout(() => { l.running = 0; l.res = res; l.link = [rid, target]; renderLines(); go(target); }, 650);
+}
+$("#cform").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("#cin").value.trim(); if (!v) return;
+  LINES.push({ src: "사용자 CLI", typed: 1, cmd: v, res: "시안이라 실행하지 않음", t: "22:48" });
+  $("#cin").value = ""; renderLines();
+});
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-go]"); if (t) { go(t.dataset.go); return; }
+  const r = e.target.closest("[data-rail]");
+  if (r) {
+    document.querySelectorAll(".rail-btn").forEach(b => { b.classList.toggle("active", b === r); b.toggleAttribute("aria-current", b === r); });
+    if (r.dataset.rail === "exp") { go("list"); return; }
+    const T = { model: ["모델", "파일 · 다운로드 · 평가 · 성능. 지금의 모델 · 모델 평가 화면이 이리로 옵니다(문서/화면설계.md §3 · §6)."],
+      repro: ["재현", "실험 폴더 확인 · llama.cpp(기록기 · 영수증 · 재현 검증) · 검사(교차검증 · 파일 쌍 · 같은 비트) · 검사 결과."],
+      jobs: ["작업", "지금 · 지난 작업, GPU 큐, 작업 로그, 취소. 실행 중인 작업: 실험 점검(2026-11-08-c3-lighthouse)."],
+      settings: ["설정", "앱(계산 방식 · 자리 · 슬롯) · 장치(장치 확인 · 진단) · 프롬프트 캐시."] }[r.dataset.rail];
+    $("#otherTitle").textContent = T[0]; $("#otherText").textContent = T[1] + " 이 시안은 실험 레일의 화면만 그렸습니다.";
+    go("other");
+  }
+});
+$("#follow").onclick = e => { const b = e.currentTarget; b.setAttribute("aria-checked", String(b.getAttribute("aria-checked") !== "true")); };
+function fold() { $("#app").classList.toggle("folded"); $("#fold").setAttribute("aria-label", $("#app").classList.contains("folded") ? "명령 창 펼치기" : "명령 창 접기"); }
+$("#fold").onclick = fold;
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input")) { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.key === "/") { $("#cin").focus(); e.preventDefault(); }
+  else if (e.key === "]" || e.key === "[") fold();
+});
+// 손잡이로 명령 창 폭(280 ~ 640px)
+(() => {
+  const h = $("#handle"); let x0 = 0, w0 = 380;
+  const set = w => document.documentElement.style.setProperty("--console-w", Math.max(280, Math.min(640, w)) + "px");
+  h.addEventListener("pointerdown", e => { x0 = e.clientX; w0 = $("#console").getBoundingClientRect().width; h.setPointerCapture(e.pointerId); });
+  h.addEventListener("pointermove", e => { if (h.hasPointerCapture(e.pointerId)) set(w0 - (e.clientX - x0)); });
+  h.addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { set($("#console").getBoundingClientRect().width + (e.key === "ArrowLeft" ? 24 : -24)); e.preventDefault(); } });
+})();
+
+strip(); cmp(); ladder(); renderLines(); go("list");
+</script>
+</body>
+</html>
