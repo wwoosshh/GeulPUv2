@@ -487,7 +487,7 @@ def main():
             return 2
         return check(a.folders, whole=False, as_json=a.json)
     if not os.path.isdir(EXPERIMENTS):
-        print(f"no experiments folder: {EXPERIMENTS}", file=sys.stderr)
+        print(f"no experiments folder at {EXPERIMENTS} — give the experiment folder(s) to check: experiment_check.py <folder>", file=sys.stderr)
         return 2
     return check([os.path.join(EXPERIMENTS, n) for n in experiment_folders(EXPERIMENTS)], whole=True, as_json=a.json)
 
