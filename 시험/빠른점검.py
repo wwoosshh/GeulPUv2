@@ -78,6 +78,7 @@ import ast
 import hashlib
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -185,10 +186,16 @@ def 계약자체(출력):
 
 
 def 화면점검(출력):
-    """앱 화면 — app.js 문법(node 가 있으면) · 화면 문구(T 호출 · index.html)가 모두 영어 사전에 있는가"""
+    """앱 화면 — app.js 문법(node 가 있으면) · 화면 문구(T 호출 · index.html)가 모두 영어 사전에 있는가. 앱리디자인 E1 — node 가 있으면 명령 창의
+    명령 해석이 CLI 와 같은 요청을 만드는가(시험/명령창점검.mjs — CLI 쪽은 4 의 명령줄 점검)"""
     t0 = time.time()
     rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "화면사전.py")], os.path.join(출력, "화면사전.txt"))
     알림("앱 화면(문법 · 영어 사전)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+    node = shutil.which("node")
+    if node:
+        t0 = time.time()
+        rc, 꼬리 = 돌리기([node, os.path.join(ROOT, "시험", "명령창점검.mjs")], os.path.join(출력, "명령창점검.txt"))
+        알림("명령 창의 명령 해석(CLI 와 같은 요청)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
 
 
 def 디버거도구(출력):

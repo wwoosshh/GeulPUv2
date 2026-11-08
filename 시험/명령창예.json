@@ -1,0 +1,1189 @@
+{
+ "note": {
+  "ko": "앱리디자인 E1(문서/화면구현.md §1) — 명령 창의 명령 해석(앱/web/ui/command.js)과 CLI 가 같은 요청 · 같은 오류를 내는지 보는 예. argv 를 고치면 python -I -X utf8 시험/명령줄점검.py <GeulPU 실행 파일> --write-console-cases 로 line 과 expect 를 CLI 에서 다시 채운다. CLI 쪽은 시험/명령줄점검.py, 명령 창 쪽은 node 시험/명령창점검.mjs.",
+  "en": "App redesign E1 (문서/화면구현.md §1) — cases that check the command console's parser (앱/web/ui/command.js) and the CLI build the same request and fail the same way. After editing argv, refill line and expect from the CLI with python -I -X utf8 시험/명령줄점검.py <GeulPU executable> --write-console-cases. CLI side: 시험/명령줄점검.py; console side: node 시험/명령창점검.mjs."
+ },
+ "cases": [
+  {
+   "name": "영어 이름",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "Hello world",
+    "--max_tokens",
+    "8"
+   ],
+   "line": "run complete --prompt 'Hello world' --max_tokens 8",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "Hello world",
+      "max_tokens": 8
+     }
+    }
+   }
+  },
+  {
+   "name": "한국어 이름",
+   "argv": [
+    "실행",
+    "텍스트",
+    "완성",
+    "--prompt",
+    "안녕",
+    "--max_tokens",
+    "4"
+   ],
+   "line": "실행 텍스트 완성 --prompt 안녕 --max_tokens 4",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "안녕",
+      "max_tokens": 4
+     }
+    }
+   }
+  },
+  {
+   "name": "기능 id",
+   "argv": [
+    "run.complete",
+    "--prompt",
+    "x",
+    "--temperature",
+    "0.8",
+    "--seed",
+    "7"
+   ],
+   "line": "run.complete --prompt x --temperature 0.8 --seed 7",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "temperature": 0.8,
+      "seed": 7
+     }
+    }
+   }
+  },
+  {
+   "name": "boolean 값 없이",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--echo"
+   ],
+   "line": "run complete --prompt x --echo",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "echo": true
+     }
+    }
+   }
+  },
+  {
+   "name": "boolean 다음 낱말 false",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--echo",
+    "false"
+   ],
+   "line": "run complete --prompt x --echo false",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "echo": false
+     }
+    }
+   }
+  },
+  {
+   "name": "boolean = no",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--echo=no"
+   ],
+   "line": "run complete --prompt x --echo=no",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "echo": false
+     }
+    }
+   }
+  },
+  {
+   "name": "boolean 다음 낱말 1",
+   "argv": [
+    "run",
+    "complete",
+    "--echo",
+    "1",
+    "--prompt",
+    "x"
+   ],
+   "line": "run complete --echo 1 --prompt x",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "echo": true,
+      "prompt": "x"
+     }
+    }
+   }
+  },
+  {
+   "name": "점이 들어간 이름",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--geulpu.logit_hash",
+    "--geulpu.top_logprobs",
+    "2",
+    "--logprobs",
+    "2"
+   ],
+   "line": "run complete --prompt x --geulpu.logit_hash --geulpu.top_logprobs 2 --logprobs 2",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "geulpu": {
+       "logit_hash": true,
+       "top_logprobs": 2
+      },
+      "logprobs": 2
+     }
+    }
+   }
+  },
+  {
+   "name": "점이 들어간 이름 사이에 다른 인자",
+   "argv": [
+    "run",
+    "complete",
+    "--geulpu.logit_hash",
+    "--prompt",
+    "x",
+    "--geulpu.top_logprobs",
+    "3"
+   ],
+   "line": "run complete --geulpu.logit_hash --prompt x --geulpu.top_logprobs 3",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "geulpu": {
+       "logit_hash": true,
+       "top_logprobs": 3
+      },
+      "prompt": "x"
+     }
+    }
+   }
+  },
+  {
+   "name": "array",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--stop",
+    "[\"\\n\",\"END\"]"
+   ],
+   "line": "run complete --prompt x --stop '[\"\\n\",\"END\"]'",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "stop": [
+       "\n",
+       "END"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "분기",
+   "argv": [
+    "run",
+    "branch",
+    "--prompt",
+    "[1,2,3]",
+    "--geulpu.step_offset",
+    "3",
+    "--max_tokens",
+    "5",
+    "--seed",
+    "7",
+    "--temperature",
+    "0.8"
+   ],
+   "line": "run branch --prompt '[1,2,3]' --geulpu.step_offset 3 --max_tokens 5 --seed 7 --temperature 0.8",
+   "expect": {
+    "request": {
+     "op": "run.branch",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": [
+       1,
+       2,
+       3
+      ],
+      "geulpu": {
+       "step_offset": 3
+      },
+      "max_tokens": 5,
+      "seed": 7,
+      "temperature": 0.8
+     }
+    }
+   }
+  },
+  {
+   "name": "object",
+   "argv": [
+    "run",
+    "lens",
+    "--prompt",
+    "[785,2310]",
+    "--geulpu.layer_lens",
+    "{\"top_k\":3}",
+    "--echo",
+    "--max_tokens",
+    "0",
+    "--logprobs",
+    "1"
+   ],
+   "line": "run lens --prompt '[785,2310]' --geulpu.layer_lens '{\"top_k\":3}' --echo --max_tokens 0 --logprobs 1",
+   "expect": {
+    "request": {
+     "op": "run.lens",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": [
+       785,
+       2310
+      ],
+      "geulpu": {
+       "layer_lens": {
+        "top_k": 3
+       }
+      },
+      "echo": true,
+      "max_tokens": 0,
+      "logprobs": 1
+     }
+    }
+   }
+  },
+  {
+   "name": "object 의 안쪽 필드",
+   "argv": [
+    "run",
+    "lens",
+    "--prompt",
+    "[1]",
+    "--geulpu.layer_lens.top_k",
+    "5",
+    "--geulpu.layer_lens.jacobian"
+   ],
+   "line": "run lens --prompt '[1]' --geulpu.layer_lens.top_k 5 --geulpu.layer_lens.jacobian",
+   "expect": {
+    "request": {
+     "op": "run.lens",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": [
+       1
+      ],
+      "geulpu": {
+       "layer_lens": {
+        "top_k": 5,
+        "jacobian": true
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "채팅",
+   "argv": [
+    "run",
+    "chat",
+    "--messages",
+    "[{\"role\":\"user\",\"content\":\"hi\"}]",
+    "--max_tokens",
+    "16",
+    "--chat_template_kwargs.enable_thinking",
+    "false"
+   ],
+   "line": "run chat --messages '[{\"role\":\"user\",\"content\":\"hi\"}]' --max_tokens 16 --chat_template_kwargs.enable_thinking false",
+   "expect": {
+    "request": {
+     "op": "run.chat",
+     "method": "POST",
+     "path": "/v1/chat/completions",
+     "body": {
+      "messages": [
+       {
+        "role": "user",
+        "content": "hi"
+       }
+      ],
+      "max_tokens": 16,
+      "chat_template_kwargs": {
+       "enable_thinking": false
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "--json",
+   "argv": [
+    "run",
+    "complete",
+    "--json",
+    "{\"prompt\":\"x\",\"max_tokens\":2}"
+   ],
+   "line": "run complete --json '{\"prompt\":\"x\",\"max_tokens\":2}'",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "max_tokens": 2
+     }
+    }
+   }
+  },
+  {
+   "name": "--json=",
+   "argv": [
+    "run",
+    "complete",
+    "--json={\"prompt\":\"y\"}"
+   ],
+   "line": "run complete '--json={\"prompt\":\"y\"}'",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "y"
+     }
+    }
+   }
+  },
+  {
+   "name": "--이름=값 의 값에 =",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt=a=b"
+   ],
+   "line": "run complete --prompt=a=b",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "a=b"
+     }
+    }
+   }
+  },
+  {
+   "name": "- 로 시작하는 값",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "-5"
+   ],
+   "line": "run complete --prompt -5",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "-5"
+     }
+    }
+   }
+  },
+  {
+   "name": "따옴표 · 역슬래시 · 한글",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "He said \"hi\" \\ 한국어 'q'"
+   ],
+   "line": "run complete --prompt 'He said \"hi\" \\ 한국어 '\\''q'\\'''",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "He said \"hi\" \\ 한국어 'q'"
+     }
+    }
+   }
+  },
+  {
+   "name": "빈 글",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    ""
+   ],
+   "line": "run complete --prompt ''",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": ""
+     }
+    }
+   }
+  },
+  {
+   "name": "number 에 정수 글",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--temperature",
+    "1"
+   ],
+   "line": "run complete --prompt x --temperature 1",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "temperature": 1
+     }
+    }
+   }
+  },
+  {
+   "name": "음수 정수",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--seed",
+    "-3"
+   ],
+   "line": "run complete --prompt x --seed -3",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x",
+      "seed": -3
+     }
+    }
+   }
+  },
+  {
+   "name": "GET 쿼리(퍼센트)",
+   "argv": [
+    "experiment",
+    "list",
+    "--root",
+    "E:\\research dir\\exp(1)"
+   ],
+   "line": "experiment list --root 'E:\\research dir\\exp(1)'",
+   "expect": {
+    "request": {
+     "op": "experiment.list",
+     "method": "GET",
+     "path": "/api/experiments?root=E%3A%5Cresearch%20dir%5Cexp%281%29",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "GET 한국어 이름",
+   "argv": [
+    "실험",
+    "목록"
+   ],
+   "line": "실험 목록",
+   "expect": {
+    "request": {
+     "op": "experiment.list",
+     "method": "GET",
+     "path": "/api/experiments",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "GET 정수",
+   "argv": [
+    "system",
+    "events",
+    "--after",
+    "5",
+    "--wait",
+    "0"
+   ],
+   "line": "system events --after 5 --wait 0",
+   "expect": {
+    "request": {
+     "op": "system.events",
+     "method": "GET",
+     "path": "/api/events?after=5&wait=0",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "인자 없는 POST",
+   "argv": [
+    "store",
+    "clear"
+   ],
+   "line": "store clear",
+   "expect": {
+    "request": {
+     "op": "store.clear",
+     "method": "POST",
+     "path": "/api/store/clear",
+     "body": {}
+    }
+   }
+  },
+  {
+   "name": "인자 없는 POST(한국어)",
+   "argv": [
+    "프롬프트",
+    "캐시",
+    "비우기"
+   ],
+   "line": "프롬프트 캐시 비우기",
+   "expect": {
+    "request": {
+     "op": "store.clear",
+     "method": "POST",
+     "path": "/api/store/clear",
+     "body": {}
+    }
+   }
+  },
+  {
+   "name": "설정 — 형 여럿",
+   "argv": [
+    "settings",
+    "set",
+    "--slots",
+    "2",
+    "--kv8_cache",
+    "true",
+    "--precision",
+    "exact"
+   ],
+   "line": "settings set --slots 2 --kv8_cache true --precision exact",
+   "expect": {
+    "request": {
+     "op": "settings.set",
+     "method": "POST",
+     "path": "/api/settings",
+     "body": {
+      "slots": 2,
+      "kv8_cache": true,
+      "precision": "exact"
+     }
+    }
+   }
+  },
+  {
+   "name": "실험 만들기",
+   "argv": [
+    "experiment",
+    "create",
+    "--name",
+    "demo-1",
+    "--title",
+    "제목 있음",
+    "--question",
+    "무엇이 바뀌나?"
+   ],
+   "line": "experiment create --name demo-1 --title '제목 있음' --question '무엇이 바뀌나?'",
+   "expect": {
+    "request": {
+     "op": "experiment.create",
+     "method": "POST",
+     "path": "/api/experiments/create",
+     "body": {
+      "name": "demo-1",
+      "title": "제목 있음",
+      "question": "무엇이 바뀌나?"
+     }
+    }
+   }
+  },
+  {
+   "name": "옵션(wait · experiment · session)",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--wait",
+    "--experiment",
+    "2026-11-09-x",
+    "--session",
+    "ai-1"
+   ],
+   "line": "run complete --prompt x --wait --experiment 2026-11-09-x --session ai-1",
+   "expect": {
+    "request": {
+     "op": "run.complete",
+     "method": "POST",
+     "path": "/v1/completions",
+     "body": {
+      "prompt": "x"
+     }
+    }
+   }
+  },
+  {
+   "name": "기능의 인자 port 가 옵션보다 먼저",
+   "argv": [
+    "replay",
+    "recorder",
+    "set",
+    "--port",
+    "8080",
+    "--mode",
+    "probe"
+   ],
+   "line": "replay recorder set --port 8080 --mode probe",
+   "expect": {
+    "request": {
+     "op": "replay.recorder.set",
+     "method": "POST",
+     "path": "/api/llama/recorder",
+     "body": {
+      "port": 8080,
+      "mode": "probe"
+     }
+    }
+   }
+  },
+  {
+   "name": "기능의 인자 wait 가 옵션보다 먼저",
+   "argv": [
+    "system",
+    "events",
+    "--wait",
+    "100"
+   ],
+   "line": "system events --wait 100",
+   "expect": {
+    "request": {
+     "op": "system.events",
+     "method": "GET",
+     "path": "/api/events?wait=100",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "도움말(영어)",
+   "argv": [
+    "help",
+    "run",
+    "complete"
+   ],
+   "line": "help run complete",
+   "expect": {
+    "help": "run.complete"
+   }
+  },
+  {
+   "name": "도움말(한국어)",
+   "argv": [
+    "도움말",
+    "실행",
+    "분기"
+   ],
+   "line": "도움말 실행 분기",
+   "expect": {
+    "help": "run.branch"
+   }
+  },
+  {
+   "name": "도움말 전체",
+   "argv": [
+    "help"
+   ],
+   "line": "help",
+   "expect": {
+    "help": null
+   }
+  },
+  {
+   "name": "ops",
+   "argv": [
+    "ops"
+   ],
+   "line": "ops",
+   "expect": {
+    "ops": true
+   }
+  },
+  {
+   "name": "없는 명령(비슷한 명령)",
+   "argv": [
+    "run",
+    "completx",
+    "--prompt",
+    "x"
+   ],
+   "line": "run completx --prompt x",
+   "expect": {
+    "error": {
+     "message": "unknown command: run completx",
+     "next": "GeulPU ops lists every command — similar: run branch · run chat · run complete · run detokenize · run lens · run messages · run messages count-tokens · run models · run responses · run score · run tokenize · run tokenizer-info"
+    }
+   }
+  },
+  {
+   "name": "없는 명령(비슷한 것 없음)",
+   "argv": [
+    "zzz"
+   ],
+   "line": "zzz",
+   "expect": {
+    "error": {
+     "message": "unknown command: zzz",
+     "next": "GeulPU ops lists every command"
+    }
+   }
+  },
+  {
+   "name": "내부용 기능",
+   "argv": [
+    "system.ping"
+   ],
+   "line": "system.ping",
+   "expect": {
+    "error": {
+     "message": "system.ping is internal to the app, not a command",
+     "next": "GeulPU ops lists every command"
+    }
+   }
+  },
+  {
+   "name": "앞으로 만들 기능",
+   "argv": [
+    "panel.records"
+   ],
+   "line": "panel.records",
+   "expect": {
+    "error": {
+     "message": "panel.records is planned, not available yet",
+     "next": "GeulPU ops lists every command"
+    }
+   }
+  },
+  {
+   "name": "--인자 없는 값",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "stray"
+   ],
+   "line": "run complete --prompt x stray",
+   "expect": {
+    "error": {
+     "message": "the value 'stray' does not follow a --parameter",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "boolean 다음의 다른 낱말",
+   "argv": [
+    "run",
+    "complete",
+    "--echo",
+    "maybe",
+    "--prompt",
+    "x"
+   ],
+   "line": "run complete --echo maybe --prompt x",
+   "expect": {
+    "error": {
+     "message": "the value 'maybe' does not follow a --parameter",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "목록에 없는 인자",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--bogus",
+    "1"
+   ],
+   "line": "run complete --prompt x --bogus 1",
+   "expect": {
+    "error": {
+     "message": "unknown parameter --bogus for run complete",
+     "next": "pass fields the registry does not list with --json; parameters of this command: prompt, model, max_tokens, temperature, top_p, top_k, min_p, seed, stream, stop, logprobs, echo, add_special_tokens, geulpu.logit_hash, geulpu.prompt_tokens, geulpu.record, geulpu.special, geulpu.speculative, geulpu.draft_tokens, geulpu.store, geulpu.top_logprobs, cache_prompt, ignore_eos"
+    }
+   }
+  },
+  {
+   "name": "인자 없는 기능에 인자",
+   "argv": [
+    "store",
+    "clear",
+    "--x"
+   ],
+   "line": "store clear --x",
+   "expect": {
+    "error": {
+     "message": "unknown parameter --x for store clear",
+     "next": "this command takes no parameters"
+    }
+   }
+  },
+  {
+   "name": "같은 인자 두 번",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "a",
+    "--prompt",
+    "b"
+   ],
+   "line": "run complete --prompt a --prompt b",
+   "expect": {
+    "error": {
+     "message": "--prompt is given twice",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "integer 에 글",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--max_tokens",
+    "abc"
+   ],
+   "line": "run complete --prompt x --max_tokens abc",
+   "expect": {
+    "error": {
+     "message": "--max_tokens needs integer (JSON)",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "integer 에 소수",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--max_tokens",
+    "2.5"
+   ],
+   "line": "run complete --prompt x --max_tokens 2.5",
+   "expect": {
+    "error": {
+     "message": "--max_tokens needs integer (JSON)",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "boolean 에 다른 값",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--echo=maybe"
+   ],
+   "line": "run complete --prompt x --echo=maybe",
+   "expect": {
+    "error": {
+     "message": "--echo needs true or false",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "값 없는 string",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt"
+   ],
+   "line": "run complete --prompt",
+   "expect": {
+    "error": {
+     "message": "--prompt needs a value (string)",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "빠진 필수 인자",
+   "argv": [
+    "run",
+    "branch",
+    "--max_tokens",
+    "3"
+   ],
+   "line": "run branch --max_tokens 3",
+   "expect": {
+    "error": {
+     "message": "--prompt is required",
+     "next": "GeulPU help run branch"
+    }
+   }
+  },
+  {
+   "name": "--json 과 인자를 함께",
+   "argv": [
+    "run",
+    "complete",
+    "--json",
+    "{}",
+    "--prompt",
+    "x"
+   ],
+   "line": "run complete --json '{}' --prompt x",
+   "expect": {
+    "error": {
+     "message": "--json gives the whole body — do not add other parameters to it",
+     "next": "put every field into the --json body"
+    }
+   }
+  },
+  {
+   "name": "--json 이 객체가 아님",
+   "argv": [
+    "run",
+    "complete",
+    "--json",
+    "[1,2]"
+   ],
+   "line": "run complete --json '[1,2]'",
+   "expect": {
+    "error": {
+     "message": "--json must be a JSON object",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "GET 에 --json",
+   "argv": [
+    "experiment",
+    "list",
+    "--json",
+    "{}"
+   ],
+   "line": "experiment list --json '{}'",
+   "expect": {
+    "error": {
+     "message": "experiment list is a GET command — it takes no --json body",
+     "next": "GeulPU help experiment list"
+    }
+   }
+  },
+  {
+   "name": "stream 인자",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--stream"
+   ],
+   "line": "run complete --prompt x --stream",
+   "expect": {
+    "error": {
+     "message": "the CLI prints whole answers — leave stream off",
+     "next": null
+    }
+   }
+  },
+  {
+   "name": "--json 의 stream",
+   "argv": [
+    "run",
+    "complete",
+    "--json",
+    "{\"prompt\":\"x\",\"stream\":true}"
+   ],
+   "line": "run complete --json '{\"prompt\":\"x\",\"stream\":true}'",
+   "expect": {
+    "error": {
+     "message": "the CLI prints whole answers — leave stream off",
+     "next": null
+    }
+   }
+  },
+  {
+   "name": "값과 안쪽 필드를 함께",
+   "argv": [
+    "run",
+    "lens",
+    "--prompt",
+    "[1]",
+    "--geulpu.layer_lens",
+    "{}",
+    "--geulpu.layer_lens.top_k",
+    "3"
+   ],
+   "line": "run lens --prompt '[1]' --geulpu.layer_lens '{}' --geulpu.layer_lens.top_k 3",
+   "expect": {
+    "error": {
+     "message": "--geulpu.layer_lens and --geulpu.layer_lens.top_k cannot both be given",
+     "next": "give the inner fields only, or the whole value with --json"
+    }
+   }
+  },
+  {
+   "name": "값 없는 옵션",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--json"
+   ],
+   "line": "run complete --prompt x --json",
+   "expect": {
+    "error": {
+     "message": "--json needs a value",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "array 에 글",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--stop",
+    "abc"
+   ],
+   "line": "run complete --prompt x --stop abc",
+   "expect": {
+    "error": {
+     "message": "--stop needs array (JSON)",
+     "next": "GeulPU help run complete"
+    }
+   }
+  },
+  {
+   "name": "object 에 array",
+   "argv": [
+    "run",
+    "lens",
+    "--prompt",
+    "[1]",
+    "--geulpu.layer_lens",
+    "[1]"
+   ],
+   "line": "run lens --prompt '[1]' --geulpu.layer_lens '[1]'",
+   "expect": {
+    "error": {
+     "message": "--geulpu.layer_lens needs object (JSON)",
+     "next": "GeulPU help run lens"
+    }
+   }
+  }
+ ]
+}

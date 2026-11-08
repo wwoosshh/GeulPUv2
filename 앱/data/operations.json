@@ -201,6 +201,13 @@
     "en": "acknowledgement"
    }
   },
+  "operations": {
+   "gui_view": "명령 창(명령 해석)",
+   "description": {
+    "ko": "기능 목록",
+    "en": "operation registry"
+   }
+  },
   "panel_records": {
    "gui_view": "연구 패널",
    "description": {
@@ -4712,6 +4719,31 @@
    },
    "gui": {
     "planned": "E"
+   }
+  },
+  {
+   "id": "system.operations",
+   "title": {
+    "ko": "기능 목록(기능 · 인자 · 결과 형식)",
+    "en": "Operation registry (operations, parameters, result types)"
+   },
+   "description": {
+    "ko": "기능 목록 파일(data/operations.json) 그대로 — 명령 창이 입력한 명령을 해석할 때 읽는다.",
+    "en": "The operation registry file (data/operations.json) as is — the command console reads it to parse typed commands."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/operations"
+   },
+   "params": [],
+   "result": "operations",
+   "job": false,
+   "records": "none",
+   "internal": true,
+   "reason": {
+    "ko": "명령 창의 명령 해석이 읽는다 — CLI 에는 ops 가 있다",
+    "en": "read by the command console to parse commands — the CLI has ops"
    }
   },
   {

@@ -71,11 +71,14 @@
 
     <footer id="statusbar" aria-label="상태"></footer>
   </main>
+  <div id="c-handle" role="separator" aria-orientation="vertical" aria-label="명령 창 폭" aria-valuemin="280" aria-valuemax="640" tabindex="0"></div>
+  <aside id="console" aria-label="명령 창"></aside>
 </div>
 <div id="modal" hidden><div class="box" id="modalbox" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div></div>
 <div id="toast" aria-live="polite"></div>
 <div id="sr-live" class="sr" aria-live="polite"></div>
 <script src="/app.js"></script>
 <script src="/eval.js"></script>
+<script type="module" src="/ui/console.js"></script>
 </body>
 </html>
