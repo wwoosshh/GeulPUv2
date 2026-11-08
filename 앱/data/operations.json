@@ -1967,14 +1967,36 @@
     "en": "Check an experiment and its re-run"
    },
    "description": {
-    "ko": "실험 점검 · 다시 내기 확인.",
-    "en": "Check an experiment and its re-run."
+    "ko": "실험 점검(작업) — 앱 꾸러미의 data/experiment_check.py(= 도구/experiment_check.py)를 파이썬으로.",
+    "en": "Check an experiment (job) — runs data/experiment_check.py (= 도구/experiment_check.py) with Python."
    },
-   "status": "planned",
-   "stage": "C",
-   "params": [],
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/experiments/check"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 자리 안의 실험 id",
+      "en": "experiment folder, or an experiment id inside the root"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
    "result": "check_report",
-   "job": false,
+   "job": true,
    "records": "check",
    "cli": {
     "ko": "실험 점검",
@@ -1991,12 +2013,52 @@
     "en": "Create an experiment (folder, experiment.json, plan.md)"
    },
    "description": {
-    "ko": "실험 만들기(폴더 · experiment.json · plan.md).",
-    "en": "Create an experiment (folder, experiment.json, plan.md)."
+    "ko": "실험 만들기 — 템플릿에서 폴더 · experiment.json · plan.md · results.md 를 만들고 index.md 에 한 줄.",
+    "en": "Create an experiment from the template (folder, experiment.json, plan.md, results.md) and add it to index.md."
    },
-   "status": "planned",
-   "stage": "C",
-   "params": [],
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/experiments/create"
+   },
+   "params": [
+    {
+     "name": "name",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "이름 — 영어 소문자 · 숫자 · '-'(폴더는 <날짜>-<이름>)",
+      "en": "name — lower-case letters, digits and '-' (the folder is <date>-<name>)"
+     }
+    },
+    {
+     "name": "title",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "제목",
+      "en": "title"
+     }
+    },
+    {
+     "name": "question",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "연구 질문 하나",
+      "en": "the one research question"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
    "result": "experiment",
    "job": false,
    "records": "none",
@@ -2015,12 +2077,25 @@
     "en": "List experiments"
    },
    "description": {
-    "ko": "실험 목록.",
-    "en": "List experiments."
+    "ko": "실험 목록 — experiment.json 이 있는 폴더.",
+    "en": "List the experiments (folders that hold experiment.json)."
    },
-   "status": "planned",
-   "stage": "C",
-   "params": [],
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/experiments"
+   },
+   "params": [
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
    "result": "experiment_list",
    "job": false,
    "records": "none",
@@ -2039,12 +2114,34 @@
     "en": "Show an experiment"
    },
    "description": {
-    "ko": "실험 보기.",
-    "en": "Show an experiment."
+    "ko": "실험 보기 — experiment.json · 문서 · 명령 기록의 줄 수.",
+    "en": "Show an experiment: experiment.json, its documents and the number of recorded commands."
    },
-   "status": "planned",
-   "stage": "C",
-   "params": [],
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/experiments/show"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 자리 안의 실험 id",
+      "en": "experiment folder, or an experiment id inside the root"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
    "result": "experiment",
    "job": false,
    "records": "none",
@@ -2131,7 +2228,7 @@
     "en": "Fit a Jacobian lens J file (tool jlens_fit.py)."
    },
    "status": "planned",
-   "stage": "C",
+   "stage": "실험대",
    "params": [],
    "result": "jlens_file",
    "job": false,
@@ -2660,7 +2757,7 @@
     "en": "Read and write research-panel records in the app (now browser-only)."
    },
    "status": "planned",
-   "stage": "C",
+   "stage": "E",
    "params": [],
    "result": "panel_records",
    "job": false,
