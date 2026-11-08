@@ -4,13 +4,13 @@
 
 // 앱리디자인 B3(문서/기능목록.md §7) — 이 화면이 앱으로 보내는 요청('/' 로 시작하는 주소)에 출처 X-GeulPU-Source: gui 를 붙인다. 앱은
 // 계산하거나 기록을 바꾸는 기능의 호출마다 이벤트를 남긴다(/api/events). 다른 사이트(GitHub · Hugging Face 등)로 가는 요청에는 붙이지
-// 않는다 — 머리를 더하면 CORS 사전 요청이 생긴다. eval.js 도 이 fetch 를 쓴다.
+// 않는다 — 헤더를 더하면 CORS 사전 요청이 생긴다. eval.js 도 이 fetch 를 쓴다. 출처를 이미 적은 요청(E1 — 명령 창의 입력 줄은 cli)은 그대로 둔다.
 {
   const appFetch = window.fetch.bind(window);
   window.fetch = (url, opt) => {
     if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) {
       const headers = new Headers(opt && opt.headers);
-      headers.set('X-GeulPU-Source', 'gui');
+      if (!headers.has('X-GeulPU-Source')) headers.set('X-GeulPU-Source', 'gui');
       opt = Object.assign({}, opt, { headers });
     }
     return appFetch(url, opt);
@@ -1356,6 +1356,44 @@ const DICT = {
   "llama-server 기록기가 꺼져 있습니다 — 기록기 설정에 llama-server 의 포트를 적으세요(POST /api/llama/recorder)": "The llama-server recorder is off — set the llama-server port in the recorder settings (POST /api/llama/recorder)",
   "llama-server 에 연결하지 못했습니다 — 기록기 설정의 포트를 확인하세요": "Could not connect to llama-server — check the port in the recorder settings",
   "포트는 0(끔) … 65535, 앱의 포트가 아닌 것": "The port must be 0 (off) … 65535 and not the app's port",
+  // 앱리디자인 E1 — 명령 창(ui/console.js)
+  "명령 창": "Command console",
+  "명령 창 폭": "Command console width",
+  "명령 창 펼치기": "Expand the command console",
+  "명령 창 접기": "Collapse the command console",
+  "접기 · 펼치기 ( ] )": "Collapse or expand ( ] )",
+  "기능 호출": "Operation calls",
+  "GeulPU 명령": "GeulPU command",
+  "GeulPU 명령 (예: run complete --prompt …)": "GeulPU command (e.g. run complete --prompt …)",
+  "사용자 CLI": "User CLI",
+  "{} 초": "{} s",
+  "(본문 {} — 명령 창에는 담지 않음)": "(body {} — not kept in the console)",
+  "보내는 중": "Sending",
+  "{} · {} · 응답 전에 화면 쪽이 끊음": "{} · {} · the client closed before the answer",
+  "실험 {}": "Experiment {}",
+  "복사하지 못함": "Could not copy",
+  "응답 접기": "Hide answer",
+  "응답 보기": "Show answer",
+  "누르면 명령 전체": "Click for the whole command",
+  "앱이 다시 켜졌습니다 — 이벤트를 처음부터 받습니다": "The app restarted — receiving events from the start",
+  "이벤트 {}개를 놓쳤습니다(앱은 최근 1,024개만 둡니다)": "Missed {} events (the app keeps the latest 1,024)",
+  "명령은 영어 이름(run branch) · 한국어 이름(실행 분기) · 기능 id(run.branch) 가운데 하나입니다.": "A command is its English name (run branch), its Korean name (실행 분기) or its operation id (run.branch).",
+  "ops 는 모든 명령을, help <명령> 은 명령 하나의 인자를 보입니다.": "ops lists every command; help <command> shows the parameters of one.",
+  "필수": "required",
+  "인자 없음": "No parameters",
+  "작업 {}: 끝나기를 기다리는 중": "Job {}: waiting for it to finish",
+  "작업 {}: {}{}": "Job {}: {}{}",
+  "작업 {}: 결과를 읽기 전에 다음 작업({})이 시작되었습니다": "Job {}: the next job ({}) started before its result could be read",
+  "기능 목록을 읽지 못했습니다 — 앱이 켜져 있는지 확인하세요": "Could not read the operation registry — check that the app is running",
+  "에이전트용 안내 한 쪽은 터미널에서 GeulPU guide 로 봅니다(docs/cli.md).": "The one-page guide for agents is GeulPU guide in a terminal (docs/cli.md).",
+  "명령 창에서는 쓰지 않는 옵션입니다: --{}": "Not used in the command console: --{}",
+  "실험 폴더가 아닙니다: {}": "Not an experiment folder: {}",
+  "앱에 닿지 못했습니다": "Could not reach the app",
+  "작업 {}: 시작함(끝날 때까지 기다리려면 명령에 --wait)": "Job {}: started (add --wait to the command to wait for it)",
+  "명령을 마쳤습니다: {}": "Command finished: {}",
+  "명령이 실패했습니다: {}": "Command failed: {}",
+  "({}자 더 있음)": "({} more characters)",
+  "명령 복사|줄": "Copy command",
 };
 function T(s, ...v) {
   if (typeof s === 'string') {

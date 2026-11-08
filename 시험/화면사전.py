@@ -16,11 +16,14 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = os.path.join(ROOT, "앱", "web", "app.js")
 EVAL = os.path.join(ROOT, "앱", "web", "eval.js")          # 모델 평가 1-3 — 사전은 EVAL_DICT
 HTML = os.path.join(ROOT, "앱", "web", "index.html")
+UI = os.path.join(ROOT, "앱", "web", "ui")                   # 앱리디자인 E1 — 화면 모듈(ES 모듈). 문구는 app.js 의 T 와 DICT 를 쓴다
+UI_FILES = sorted(os.path.join(UI, f) for f in os.listdir(UI) if f.endswith(".js")) if os.path.isdir(UI) else []
 한글 = re.compile(r"[가-힣]")
 정규식앞 = set("(,=:[!&|?{};+-*%<>~^")
 정규식앞말 = ("return", "typeof", "case", "in", "of", "delete", "void", "throw", "new", "else", "do")
@@ -204,9 +207,20 @@ def main():
             r = subprocess.run([node, "--check", f], capture_output=True, text=True, encoding="utf-8")
             if r.returncode != 0:
                 틀림.append(os.path.basename(f) + " 문법: " + r.stderr.strip()[-400:])
-        문법 = "app.js · eval.js 문법 통과"
+        # 화면 모듈은 ES 모듈 — node 가 어느 버전이든 모듈로 읽도록 .mjs 로 옮겨 본다
+        tmp = tempfile.mkdtemp(prefix="화면사전_")
+        try:
+            for f in UI_FILES:
+                m = os.path.join(tmp, os.path.basename(f)[:-3] + ".mjs")
+                shutil.copyfile(f, m)
+                r = subprocess.run([node, "--check", m], capture_output=True, text=True, encoding="utf-8")
+                if r.returncode != 0:
+                    틀림.append("ui/" + os.path.basename(f) + " 문법: " + r.stderr.strip()[-400:])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        문법 = f"app.js · eval.js · 화면 모듈 {len(UI_FILES)} 개 문법 통과"
     else:
-        문법 = "node 가 없어 app.js · eval.js 문법은 건너뜀"
+        문법 = "node 가 없어 app.js · eval.js · 화면 모듈 문법은 건너뜀"
     s = open(APP, encoding="utf-8").read()
     se = open(EVAL, encoding="utf-8").read()
     열쇠, 겹침 = 사전(s)
@@ -220,7 +234,8 @@ def main():
             틀림.append(f"DICT(app.js 줄 {열쇠[key]})와 EVAL_DICT(eval.js 줄 {b})에 같은 열쇠: {key[:60]}")
     열쇠 = {**열쇠, **열쇠e}
     호출 = []
-    for 이름, 글 in (("app.js", s), ("eval.js", se)):
+    모듈 = [("ui/" + os.path.basename(f), open(f, encoding="utf-8").read()) for f in UI_FILES]
+    for 이름, 글 in [("app.js", s), ("eval.js", se)] + 모듈:
         for key, 문맥, 줄 in 뽑기(글):
             if not 한글.search(key):
                 continue

@@ -1083,3 +1083,79 @@ table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
 .ag-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 8px 12px; align-items: center; margin-top: 8px; }
 .ag-kvrow { display: contents; }
 .ag-kvrow code { overflow-wrap: anywhere; }
+
+/* ---------- 명령 창(앱리디자인 E1 — 문서/화면구현.md §1 · 화면설계.md §5 · §9) ----------
+   사이드바 | 지금 화면 | 크기 조절 핸들 | 명령 창. 처음에는 열림 380px, 접으면 폭 40px, 핸들로 280 ~ 640px(ui/console.js 가 --console-w 를 정한다).
+   폭 768px 아래에서는 명령 창이 아래 창(높이 40%). 두 창은 따로 스크롤한다. 줄의 출처는 태그(4px 모서리 · 옅은 배경색), 실행 중인 줄만 강조색,
+   끝난 줄은 상태 점(초록 · 빨강). */
+#app { display: grid; grid-template-columns: auto minmax(0, 1fr) 6px var(--console-w, 380px); grid-template-rows: minmax(0, 1fr); grid-template-areas: "rail main handle console"; }
+#app.c-folded { grid-template-columns: auto minmax(0, 1fr) 0 40px; }
+#rail { grid-area: rail; }
+#main { grid-area: main; }
+#c-handle { grid-area: handle; position: relative; cursor: col-resize; touch-action: none; background: var(--canvas); }
+#c-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 1px; background: var(--hairline); }
+#c-handle:hover::after, #c-handle:focus-visible::after, .c-resizing #c-handle::after { left: 2px; width: 3px; border-radius: 2px; background: var(--line-strong); }
+#c-handle:focus-visible { outline: none; }
+.c-folded #c-handle { visibility: hidden; }
+#app.c-resizing { cursor: col-resize; user-select: none; }
+#console { grid-area: console; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--canvas-raise); }
+.c-head { display: flex; align-items: center; gap: 8px; padding: 12px 8px 10px 16px; border-bottom: 1px solid var(--hairline); }
+.c-title { flex: 1; color: var(--ink); font-size: 15px; line-height: 20px; }
+.c-count { font: 12px/16px var(--font-mono); color: var(--accent); }
+.c-fold svg { transition: transform .15s; }
+.c-folded .c-fold svg { transform: rotate(180deg); }
+.c-lines { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.c-line { padding: 10px 16px 12px; border-bottom: 1px solid var(--hairline); }
+.c-line .who { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 18px; color: var(--mute); }
+.c-line .who .grow { flex: 1; }
+.c-line .src { padding: 0 6px; border-radius: 4px; background: var(--fill); color: var(--body); white-space: nowrap; }
+.c-line .src.ai { color: var(--ink); }
+.c-line .op, .c-line .at { font-family: var(--font-mono); }
+.c-line .at { color: var(--faint); }
+.c-line .cmd { margin-top: 4px; font: 13px/20px var(--font-mono); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; cursor: pointer; }
+.c-line.typed .cmd { cursor: text; }
+.c-line.typed .cmd::before { content: "› "; color: var(--mute); }
+.c-line .msg { margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--body); overflow-wrap: anywhere; }
+.c-line.note .msg { margin-top: 0; color: var(--mute); }
+.c-line .next { margin-top: 2px; font: 12px/18px var(--font-mono); color: var(--mute); overflow-wrap: anywhere; }
+.c-line .res { margin-top: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; line-height: 18px; color: var(--mute); }
+.c-line .exp { color: var(--body); }
+.c-line .state::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--faint); }
+.c-line.done .state::before { background: var(--ok); }
+.c-line.fail .state::before { background: var(--err); }
+.c-line.run .state, .c-line.sent .state { color: var(--accent); }
+.c-line.run .state::before, .c-line.sent .state::before { background: var(--accent); animation: c-blink 1.4s ease-in-out infinite; }
+@keyframes c-blink { 50% { opacity: .3; } }
+.linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--body); text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 3px; cursor: pointer; }
+.linkish:hover { color: var(--ink); text-decoration-color: var(--line-strong); }
+.c-line .out { margin: 8px 0 0; max-height: 320px; overflow: auto; padding: 8px 10px; background: var(--canvas); border: 1px solid var(--hairline); border-radius: var(--r-sm); font: 12px/18px var(--font-mono); color: var(--body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.c-line .help { margin-top: 6px; font-size: 13px; line-height: 18px; }
+.c-line .help p { margin: 4px 0; }
+.c-line .help .muted { color: var(--mute); }
+.c-line .help table { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 16px; }
+.c-line .help td { padding: 4px 8px 4px 0; vertical-align: top; border-top: 1px solid var(--hairline); }
+.c-line .help code { font-family: var(--font-mono); color: var(--ink); }
+.c-line .help.ops { list-style: none; margin: 6px 0 0; padding: 0; max-height: 360px; overflow: auto; }
+.c-line .help.ops li { padding: 2px 0; }
+.c-input { display: flex; align-items: center; gap: 8px; padding: 10px 12px 12px 16px; border-top: 1px solid var(--hairline); }
+.c-input > span { color: var(--mute); font-family: var(--font-mono); }
+.c-input input { flex: 1; min-width: 0; background: var(--canvas); border: 1px solid var(--line-field); border-radius: var(--r-sm); padding: 8px 10px; font: 13px/18px var(--font-mono); color: var(--ink); }
+.c-input input::placeholder { color: var(--faint); }
+.c-folded #console .c-title, .c-folded #console .c-lines, .c-folded #console .c-input { display: none; }
+.c-folded #console .c-head { flex-direction: column; padding: 12px 6px; border-bottom: 0; }
+.c-folded #console { border-left: 1px solid var(--hairline); }
+@media (prefers-reduced-motion: reduce) { .c-line.run .state::before, .c-line.sent .state::before { animation: none; } .c-fold svg { transition: none; } }
+@media (max-width: 767px) {
+  #app { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 40vh; grid-template-areas: "rail main" "rail console"; }
+  #app.c-folded { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 44px; }
+  #c-handle { display: none; }
+  #console { border-top: 1px solid var(--hairline-strong); }
+  .c-folded #console .c-head { flex-direction: row; padding: 10px 16px; }
+  .c-fold svg { transform: rotate(90deg); }
+  .c-folded .c-fold svg { transform: rotate(-90deg); }
+}
+@media (max-width: 640px) {
+  #app, #app.c-folded { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "console" "rail"; }
+  #app { grid-template-rows: minmax(0, 1fr) 40vh auto; }
+  #app.c-folded { grid-template-rows: minmax(0, 1fr) 44px auto; }
+}

@@ -7,12 +7,17 @@
   2. 사용법 오류 다섯(없는 명령 · 목록에 없는 인자 · 빠진 필수 인자 · 형이 틀린 값 · --json 과 인자를 함께 씀)이 종료 코드 2 와 오류 JSON 을,
      앱이 없는 포트로 부르면 3 을 내는지,
   3. `ops` 가 부를 수 있는 기능을 모두 내는지 본다.
+  4. 앱리디자인 E1(문서/화면구현.md §1) — 명령 창과 함께 쓰는 예(시험/명령창예.json)마다 CLI 가 적어 둔 요청 · 오류 · 도움말을 내는지 본다. 명령 창의
+     명령 해석(앱/web/ui/command.js)은 같은 예를 node 시험/명령창점검.mjs 로 통과한다 — 두 쪽이 같은 요청을 만든다.
 
-    python -I -X utf8 시험/명령줄점검.py <빌드한 GeulPU 실행 파일>
+    python -I -X utf8 시험/명령줄점검.py <빌드한 GeulPU 실행 파일> [--write-console-cases]
+
+--write-console-cases 는 예 파일의 argv 로 CLI 를 돌려 line(명령 창에 칠 한 줄)과 expect 를 다시 채운다(argv 를 고친 뒤에만).
 """
 import concurrent.futures
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -106,6 +111,55 @@ def check_op(exe, op):
     return bad
 
 
+CASES = os.path.join(ROOT, "시험", "명령창예.json")
+SAFE_WORD = re.compile(r"^[A-Za-z0-9._\-/:@%+=,가-힣]+$")       # 앱/web/ui/command.js 의 quote 와 같은 규칙
+
+
+def quote(s):
+    return s if s and SAFE_WORD.match(s) else "'" + s.replace("'", "'\\''") + "'"
+
+
+def cli_outcome(exe, argv):
+    """예 하나를 CLI 로 — 요청(--dry-run) · 오류 · 도움말 · ops 가운데 하나를 예 파일의 expect 형식으로(모르는 답이면 None)."""
+    rc, out = run(exe, argv + ["--dry-run"])
+    if not isinstance(out, dict):
+        return None
+    if rc == 2 and isinstance(out.get("error"), dict):
+        return {"error": {"message": out["error"].get("message"), "next": out["error"].get("next")}}
+    if rc != 0:
+        return None
+    if out.get("format") == "geulpu-cli/1":
+        return {"ops": True}
+    if "method" in out and "path" in out and "op" in out:
+        return {"request": {"op": out["op"], "method": out["method"], "path": out["path"], "body": out.get("body")}}
+    if "id" in out:
+        return {"help": out["id"]}
+    if "usage" in out:
+        return {"help": None}
+    return None
+
+
+def console_cases(exe, write):
+    doc = json.load(open(CASES, encoding="utf-8"))
+    bad = 0
+    for c in doc["cases"]:
+        got = cli_outcome(exe, c["argv"])
+        if write:
+            if got is None:
+                print(f"틀림 예 '{c['name']}': CLI 의 답을 읽지 못함")
+                bad += 1
+                continue
+            c["line"] = " ".join(quote(a) for a in c["argv"])
+            c["expect"] = got
+        elif got != c.get("expect"):
+            bad += 1
+            print(f"틀림 예 '{c['name']}': CLI {json.dumps(got, ensure_ascii=False)[:200]} · 적어 둔 것 {json.dumps(c.get('expect'), ensure_ascii=False)[:200]}")
+    if write and not bad:
+        open(CASES, "w", encoding="utf-8", newline="\n").write(json.dumps(doc, ensure_ascii=False, indent=1) + "\n")
+        print(f"예 파일을 다시 썼습니다: {len(doc['cases'])} 개")
+    return len(doc["cases"]), bad
+
+
 def free_port():
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
@@ -115,8 +169,9 @@ def free_port():
 
 
 def main():
-    if len(sys.argv) != 2 or not os.path.isfile(sys.argv[1]):
-        print("쓰는 법: python -I -X utf8 시험/명령줄점검.py <빌드한 GeulPU 실행 파일>")
+    write = sys.argv[2:] == ["--write-console-cases"]
+    if len(sys.argv) not in (2, 3) or not os.path.isfile(sys.argv[1]) or (len(sys.argv) == 3 and not write):
+        print("쓰는 법: python -I -X utf8 시험/명령줄점검.py <빌드한 GeulPU 실행 파일> [--write-console-cases]")
         return 2
     t0 = time.time()
     reg = json.load(open(REGISTRY, encoding="utf-8"))
@@ -164,11 +219,14 @@ def main():
             good = p.returncode == 0 and got == want and len(want.splitlines()) <= 200
             ops_ok = ops_ok and good
             print(f"{'맞음' if good else '틀림'} {name}: 종료 {p.returncode}, {len(got.splitlines())} 줄")
+        # E1 — 명령 창과 함께 쓰는 예
+        n_cases, bad_cases = console_cases(exe, write)
+        print(f"{'맞음' if not bad_cases else '틀림'} 명령 창과 함께 쓰는 예: {n_cases - bad_cases}/{n_cases}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    ok = problems == 0 and wrong == 0 and ops_ok
+    ok = problems == 0 and wrong == 0 and ops_ok and bad_cases == 0
     print(f"명령줄 점검: 기능 {len(ops) - problems}/{len(ops)} · 오류 경우 {len(cases) - wrong}/{len(cases)} · ops {'맞음' if ops_ok else '틀림'}"
-          f" ({time.time() - t0:.1f} 초)")
+          f" · 명령 창 예 {n_cases - bad_cases}/{n_cases} ({time.time() - t0:.1f} 초)")
     return 0 if ok else 1
 
 

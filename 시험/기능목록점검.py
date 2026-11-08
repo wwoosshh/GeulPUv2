@@ -26,7 +26,8 @@ REG = os.path.join(ROOT, "앱", "data", "operations.json")
 처리함수 = [("앱/관리자.gl", "관리나눠주기", "GET"), ("앱/관리자.gl", "관리보냄", "POST"),
            ("앱/평가.gl", "평가가져오기", "GET"), ("앱/평가.gl", "평가보냄", "POST"),
            ("앱/라마재현.gl", "라마가져오기", "GET"), ("앱/라마재현.gl", "라마보냄", "POST")]
-웹파일 = ["앱/web/app.js", "앱/web/eval.js"]
+웹파일 = ["앱/web/app.js", "앱/web/eval.js"] + sorted("앱/web/ui/" + f for f in os.listdir(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "앱", "web", "ui"))
+                                                if f.endswith(".js"))    # 앱리디자인 E1 — 화면 모듈
 서버파일 = "엔진/서버몸.gl"
 # 앱이 그대로 넘기는 경로(관리나눠주기): 추론 서버로 · 사용자의 llama-server(기록기)로
 전달경로 = ["/v1/*", "/tokenize", "/detokenize", "/tokenizer_info", "/llama/*"]
