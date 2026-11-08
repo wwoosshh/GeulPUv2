@@ -2,6 +2,21 @@
 // 디자인: x.ai 디자인 시스템(앱/DESIGN.md) — 어둠 한 가지, 알약 버튼, 8px 카드 · 머리카락 선, 강조색 선셋 오렌지 하나.
 'use strict';
 
+// 앱리디자인 B3(문서/기능목록.md §7) — 이 화면이 앱으로 보내는 요청('/' 로 시작하는 주소)에 출처 X-GeulPU-Source: gui 를 붙인다. 앱은
+// 계산하거나 기록을 바꾸는 기능의 호출마다 이벤트를 남긴다(/api/events). 다른 사이트(GitHub · Hugging Face 등)로 가는 요청에는 붙이지
+// 않는다 — 머리를 더하면 CORS 사전 요청이 생긴다. eval.js 도 이 fetch 를 쓴다.
+{
+  const appFetch = window.fetch.bind(window);
+  window.fetch = (url, opt) => {
+    if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) {
+      const headers = new Headers(opt && opt.headers);
+      headers.set('X-GeulPU-Source', 'gui');
+      opt = Object.assign({}, opt, { headers });
+    }
+    return appFetch(url, opt);
+  };
+}
+
 // ---------- 말(한국어 · 영어) ----------
 // 화면 문구는 한국어로 쓰고 T('…') · T`…${x}…` 로 감싼다 — 영어 화면이면 아래 사전에서 바꾼다(열쇠 = 한국어 원문, ${} 자리는 {}).
 // 같은 낱말이 자리에 따라 달라야 하면 T('파일', 'k') 처럼 문맥을 붙인다(사전 열쇠 '파일|k').

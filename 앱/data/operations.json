@@ -4488,12 +4488,34 @@
     "en": "Operation-call events (start, end, source)"
    },
    "description": {
-    "ko": "기능 호출 이벤트(시작 · 끝 · 출처).",
-    "en": "Operation-call events (start, end, source)."
+    "ko": "기능 호출 이벤트 — 계산하거나 기록을 바꾸는 기능(POST)마다 시작 · 끝 · 출처. after 뒤의 것을 바로, 없으면 wait 동안 기다려 돌려준다(긴 폴링, 문서/기능목록.md §7).",
+    "en": "Operation-call events: start, end and source of every operation that computes or changes records (POST). Returns the events after `after` at once, or waits up to `wait` for one (long polling; 문서/기능목록.md §7)."
    },
-   "status": "planned",
-   "stage": "B3",
-   "params": [],
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/events"
+   },
+   "params": [
+    {
+     "name": "after",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "이 seq 뒤의 이벤트(기본 0)",
+      "en": "events after this seq (default 0)"
+     }
+    },
+    {
+     "name": "wait",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "새 이벤트를 기다릴 밀리초(기본 0, 최대 30000)",
+      "en": "milliseconds to wait for a new event (default 0, at most 30000)"
+     }
+    }
+   ],
    "result": "events",
    "job": false,
    "records": "none",

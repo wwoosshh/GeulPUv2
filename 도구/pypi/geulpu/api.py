@@ -196,7 +196,9 @@ class GeulPU:
     def request(self, method, path, body=None, timeout=None):
         """Send one request to the app and return its JSON (None for an empty answer). HTTP errors raise GeulPUError."""
         data = None if body is None else json.dumps(body, ensure_ascii=False).encode("utf-8")
-        rq = urllib.request.Request(self.url + path, data=data, method=method, headers={"Content-Type": "application/json"})
+        # X-GeulPU-Source: the app records an event for every call that computes or changes records, with its source (/api/events)
+        rq = urllib.request.Request(self.url + path, data=data, method=method,
+                                    headers={"Content-Type": "application/json", "X-GeulPU-Source": "python"})
         t = self.timeout if timeout is None else timeout
         try:
             with urllib.request.urlopen(rq, timeout=t) as r:
