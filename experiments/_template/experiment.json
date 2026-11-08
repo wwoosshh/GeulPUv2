@@ -1,0 +1,19 @@
+{
+ "format": "geulpu-experiment/1",
+ "id": "_template",
+ "title": "Short title of the experiment",
+ "question": "The one question this experiment answers",
+ "status": "planned",
+ "created": "2026-11-08",
+ "authors": ["Your name"],
+ "geulpu": {"version": "0.22.0", "mode": "exact"},
+ "devices": [],
+ "models": [],
+ "runs": [],
+ "criteria": [
+  {"id": "C1", "text": "What has to hold for the answer to be yes — written before any run", "result": "pending"}
+ ],
+ "files": [],
+ "reproduce": {"commands": []},
+ "links": []
+}

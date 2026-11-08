@@ -1,0 +1,93 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://github.com/wwoosshh/GeulPUv2/blob/main/experiments/experiment.schema.json",
+ "title": "GeulPU experiment record (geulpu-experiment/1)",
+ "description": "One experiment = one folder. experiment.json describes the question, the models (by SHA-256 and source), the runs and interventions, the criteria written before any run, and every included file with its SHA-256. Checked by 도구/experiment_check.py.",
+ "type": "object",
+ "required": ["format", "id", "title", "question", "status", "created", "authors", "geulpu", "models", "runs", "criteria", "files"],
+ "properties": {
+  "format": {"const": "geulpu-experiment/1"},
+  "id": {"type": "string", "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]*|_template)$", "description": "the folder name: YYYY-MM-DD-name"},
+  "title": {"type": "string", "minLength": 1},
+  "question": {"type": "string", "minLength": 1, "description": "the one question the experiment answers"},
+  "status": {"enum": ["planned", "running", "done"]},
+  "created": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+  "authors": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+  "geulpu": {
+   "type": "object",
+   "required": ["version"],
+   "properties": {
+    "version": {"type": "string", "minLength": 1},
+    "commit": {"type": "string"},
+    "mode": {"enum": ["exact", "fast"]},
+    "provenance": {"type": "object", "description": "what the Python API's info(provenance=True) returns"}
+   }
+  },
+  "devices": {"type": "array", "items": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "driver": {"type": "string"}}}},
+  "models": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["name", "sha256", "source"],
+    "properties": {
+     "name": {"type": "string", "minLength": 1},
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+     "bytes": {"type": "integer", "minimum": 0},
+     "format": {"type": "string"},
+     "source": {"type": "object", "description": "{hf_repo, revision, file} or {local: how it was made}"}
+    }
+   }
+  },
+  "engines": {"type": "array", "items": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "build": {"type": "string"}}}},
+  "runs": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["id", "kind"],
+    "properties": {
+     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"},
+     "kind": {"enum": ["generate", "score", "branch", "lens", "compare", "replay", "evaluate", "check"]},
+     "operation": {"type": "string", "description": "the GeulPU operation id (앱/data/operations.json), e.g. run.branch"},
+     "record": {"type": "string", "description": "path of the run's record inside the folder (listed in files)"},
+     "settings": {"type": "object"},
+     "seed": {"type": "integer"},
+     "base": {"type": "string", "description": "id of the run this one branches from"},
+     "intervention": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {"type": {"enum": ["token", "settings", "activation"]}, "step": {"type": "integer", "minimum": 0}, "value": {}}
+     }
+    }
+   }
+  },
+  "criteria": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "required": ["id", "text", "result"],
+    "properties": {
+     "id": {"type": "string", "minLength": 1},
+     "text": {"type": "string", "minLength": 1},
+     "result": {"enum": ["pending", "pass", "fail"]},
+     "note": {"type": "string"}
+    }
+   }
+  },
+  "files": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["path", "sha256", "bytes"],
+    "properties": {
+     "path": {"type": "string", "pattern": "^[^/]+(/[^/]+)*$"},
+     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+     "bytes": {"type": "integer", "minimum": 0}
+    }
+   }
+  },
+  "reproduce": {"type": "object", "properties": {"commands": {"type": "array", "items": {"type": "string"}}, "expected": {"type": "string"}}},
+  "links": {"type": "array", "items": {"type": "string"}}
+ }
+}

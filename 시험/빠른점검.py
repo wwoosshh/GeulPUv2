@@ -229,6 +229,17 @@ def 기능목록(출력):
     알림("기능 목록 — 자체 시험", rc == 0, 꼬리)
 
 
+def 실험기록(출력):
+    """앱리디자인 B2(문서/기능목록.md §6) — experiments/ 의 실험 기록 점검(형식 · 해시 · 크기 · index.md)과, 올바른 실험의 복사본을
+    망가뜨려 잘못마다 잡는지 보는 자체 시험(GPU 없이)"""
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "도구", "experiment_check.py")], os.path.join(출력, "실험기록.txt"))
+    알림("실험 기록(GPU 없이)", rc == 0, f"{꼬리} ({time.time() - t0:.1f} 초)")
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "도구", "experiment_check.py"), "--self-test"],
+                      os.path.join(출력, "실험기록자체.txt"))
+    알림("실험 기록 — 자체 시험", rc == 0, 꼬리)
+
+
 def 개발도구(출력):
     """여러 세션으로 개발하기(문서/개발.md) — GPU 줄의 자체 시험(GPU 없이: 겹침 · 선 차례 · 죽은 대기자의 자리)과 바뀐 것 조각의 꼴"""
     t0 = time.time()
@@ -686,6 +697,7 @@ def main():
     파이썬API(출력)
     화면점검(출력)
     기능목록(출력)
+    실험기록(출력)
     개발도구(출력)
     판표()
     벌칸선언짝()
