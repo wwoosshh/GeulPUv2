@@ -805,6 +805,47 @@
    }
   },
   {
+   "name": "실험 파일 읽기(GET 쿼리)",
+   "argv": [
+    "experiment",
+    "read",
+    "--path",
+    "2026-11-09-x",
+    "--file",
+    "records/commands.jsonl"
+   ],
+   "line": "experiment read --path 2026-11-09-x --file records/commands.jsonl",
+   "expect": {
+    "request": {
+     "op": "experiment.read",
+     "method": "GET",
+     "path": "/api/experiments/read?path=2026-11-09-x&file=records%2Fcommands.jsonl",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "실험 파일 읽기(한국어 이름)",
+   "argv": [
+    "실험",
+    "파일",
+    "읽기",
+    "--path",
+    "x",
+    "--file",
+    "plan.md"
+   ],
+   "line": "실험 파일 읽기 --path x --file plan.md",
+   "expect": {
+    "request": {
+     "op": "experiment.read",
+     "method": "GET",
+     "path": "/api/experiments/read?path=x&file=plan.md",
+     "body": null
+    }
+   }
+  },
+  {
    "name": "없는 명령(비슷한 명령)",
    "argv": [
     "run",
@@ -1182,6 +1223,22 @@
     "error": {
      "message": "--geulpu.layer_lens needs object (JSON)",
      "next": "GeulPU help run lens"
+    }
+   }
+  },
+  {
+   "name": "실험 파일 읽기의 빠진 필수 인자",
+   "argv": [
+    "experiment",
+    "read",
+    "--path",
+    "x"
+   ],
+   "line": "experiment read --path x",
+   "expect": {
+    "error": {
+     "message": "--file is required",
+     "next": "GeulPU help experiment read"
     }
    }
   }

@@ -1159,3 +1159,60 @@ table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
   #app { grid-template-rows: minmax(0, 1fr) 40vh auto; }
   #app.c-folded { grid-template-rows: minmax(0, 1fr) 44px auto; }
 }
+
+/* ---------- 실험 화면(앱리디자인 E2 — 문서/화면구현.md §2 · 화면설계.md §3) ----------
+   목록은 카드 대신 가는 구분선(hairline)으로 나눈 줄, 상태는 태그(누를 수 없음), 판정만 초록 · 빨강. 탭은 밑줄 하나로 지금 탭을 보인다. */
+.xp h1 { margin: 0 0 6px; }
+.xp .lead { margin: 0; color: var(--body); font-size: 15px; line-height: 24px; max-width: 72ch; }
+.xp h2 { margin: 28px 0 10px; font-size: 17px; line-height: 24px; }
+.xp .muted { color: var(--mute); }
+.xp .bad { color: var(--err); }
+.xp .id { font: 12px/18px var(--font-mono); }
+.xp-root { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 16px 0 0; font-size: 13px; color: var(--mute); }
+.xp-root code { font: 12px/18px var(--font-mono); color: var(--body); overflow-wrap: anywhere; }
+.xp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 20px 0 12px; font-size: 13px; }
+.xp-list { border-top: 1px solid var(--hairline); }
+.xp-item { width: 100%; text-align: left; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: baseline; padding: 14px 8px; border: 0; border-bottom: 1px solid var(--hairline); background: none; color: inherit; font: inherit; cursor: pointer; }
+.xp-item:hover { background: var(--hover); }
+.xp-item .t { color: var(--ink); font-size: 15px; line-height: 22px; }
+.xp-item .meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; line-height: 18px; color: var(--mute); }
+.xp-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 16px; font-size: 13px; color: var(--mute); }
+.xp-crumbs button { border: 0; background: none; padding: 2px 4px; border-radius: 4px; color: var(--mute); font: inherit; cursor: pointer; }
+.xp-crumbs button:hover { color: var(--ink); background: var(--hover); }
+.xp-crumbs .here { color: var(--ink); font: 12px/18px var(--font-mono); }
+.xp-crumbs .sep { color: var(--faint); }
+.xp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 12px; font-size: 13px; color: var(--mute); }
+.xp-prov { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; line-height: 16px; color: var(--mute); }
+.xp-prov b { font-weight: 400; color: var(--body); }
+.xp-prov code { font: 12px/16px var(--font-mono); color: var(--body); }
+.xp-tabs { display: flex; gap: 4px; margin: 20px 0 0; border-bottom: 1px solid var(--hairline); }
+.xp-tab { border: 0; background: none; color: var(--mute); padding: 8px 12px 10px; border-bottom: 2px solid transparent; margin-bottom: -1px; font: inherit; cursor: pointer; }
+.xp-tab:hover { color: var(--ink); }
+.xp-tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+.xp-criteria { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--hairline); }
+.xp-criteria li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
+.xp-criteria code { font: 12px/18px var(--font-mono); color: var(--mute); }
+.xp-doc { max-width: 80ch; font-size: 14px; line-height: 22px; color: var(--body); overflow-wrap: anywhere; }
+.xp-doc h1, .xp-doc h2, .xp-doc h3, .xp-doc h4 { margin: 20px 0 8px; font-size: 17px; line-height: 24px; color: var(--ink); }
+.xp-doc p { margin: 8px 0; }
+.xp-doc ul, .xp-doc ol { margin: 8px 0; padding-left: 22px; }
+.xp-doc code { font: 13px/20px var(--font-mono); }
+.xp-doc pre { overflow: auto; padding: 10px 12px; background: var(--canvas-raise); border: 1px solid var(--hairline); border-radius: var(--r-sm); }
+.xp-doc table { border-collapse: collapse; display: block; overflow-x: auto; }
+.xp-doc th, .xp-doc td { padding: 4px 12px 4px 0; border-bottom: 1px solid var(--hairline); text-align: left; vertical-align: top; }
+.xp-cmds { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hairline); }
+.xp-cmds .c-line { padding-left: 0; padding-right: 0; }
+.xp-cmds .c-line .cmd { cursor: text; }
+.xp-files { width: 100%; border-collapse: collapse; font-size: 13px; }
+.xp-files td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; color: var(--body); }
+.xp-files code { font: 12px/18px var(--font-mono); overflow-wrap: anywhere; }
+.xp-pre { margin: 0; padding: 10px 12px; max-height: 360px; overflow: auto; background: var(--canvas-raise); border: 1px solid var(--hairline); border-radius: var(--r-sm); font: 12px/18px var(--font-mono); color: var(--body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.xp-check { margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 13px; color: var(--body); }
+.xp-form { display: grid; gap: 6px; width: min(480px, 80vw); }
+.xp-form label { margin-top: 8px; font-size: 13px; color: var(--ink); }
+.xp-form .muted { margin: 0; font-size: 12px; line-height: 16px; color: var(--mute); }
+.xp-err { margin: 8px 0 0; min-height: 18px; color: var(--err); font-size: 13px; }
+@media (max-width: 640px) {
+  .xp-criteria li { grid-template-columns: 40px minmax(0, 1fr); }
+  .xp-criteria li .tag { grid-column: 2; justify-self: start; }
+}

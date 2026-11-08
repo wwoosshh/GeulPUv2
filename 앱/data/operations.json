@@ -111,14 +111,21 @@
    }
   },
   "experiment": {
-   "gui_view": "실험(앱리디자인 단계 E)",
+   "gui_view": "실험(실험 화면)",
    "description": {
     "ko": "실험",
     "en": "experiment"
    }
   },
+  "experiment_file": {
+   "gui_view": "실험(계획 · 결과 · 기록 탭)",
+   "description": {
+    "ko": "실험 파일",
+    "en": "experiment file"
+   }
+  },
   "experiment_list": {
-   "gui_view": "실험(앱리디자인 단계 E)",
+   "gui_view": "실험(목록)",
    "description": {
     "ko": "실험 목록",
     "en": "experiment list"
@@ -1988,7 +1995,7 @@
      "type": "string",
      "required": true,
      "description": {
-      "ko": "실험 폴더의 경로, 또는 자리 안의 실험 id",
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id",
       "en": "experiment folder, or an experiment id inside the root"
      }
     },
@@ -1997,7 +2004,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
       "en": "folder that holds the experiments (default: experiments in the data folder)"
      }
     }
@@ -2010,7 +2017,7 @@
     "en": "experiment check"
    },
    "gui": {
-    "planned": "E"
+    "view": "실험(기록 탭 — 점검)"
    }
   },
   {
@@ -2061,7 +2068,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
       "en": "folder that holds the experiments (default: experiments in the data folder)"
      }
     }
@@ -2074,7 +2081,7 @@
     "en": "experiment create"
    },
    "gui": {
-    "planned": "E"
+    "view": "실험(새 실험)"
    }
   },
   {
@@ -2084,8 +2091,8 @@
     "en": "List experiments"
    },
    "description": {
-    "ko": "실험 목록 — experiment.json 이 있는 폴더.",
-    "en": "List the experiments (folders that hold experiment.json)."
+    "ko": "실험 목록 — experiment.json 이 있는 폴더. 실험마다 모델 이름 · 실행 수 · 판정 기준(전체 · 통과 · 실패) · 명령 기록의 줄 수도.",
+    "en": "List the experiments (folders that hold experiment.json), each with its model names, number of runs, criteria (total, pass, fail) and number of recorded commands."
    },
    "status": "exists",
    "http": {
@@ -2098,7 +2105,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
       "en": "folder that holds the experiments (default: experiments in the data folder)"
      }
     }
@@ -2111,7 +2118,7 @@
     "en": "experiment list"
    },
    "gui": {
-    "planned": "E"
+    "view": "실험(목록)"
    }
   },
   {
@@ -2135,7 +2142,7 @@
      "type": "string",
      "required": true,
      "description": {
-      "ko": "실험 폴더의 경로, 또는 자리 안의 실험 id",
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id",
       "en": "experiment folder, or an experiment id inside the root"
      }
     },
@@ -2144,7 +2151,7 @@
      "type": "string",
      "required": false,
      "description": {
-      "ko": "실험들의 자리(기본: 데이터 폴더의 experiments)",
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
       "en": "folder that holds the experiments (default: experiments in the data folder)"
      }
     }
@@ -2157,7 +2164,62 @@
     "en": "experiment show"
    },
    "gui": {
-    "planned": "E"
+    "view": "실험(실험 화면)"
+   }
+  },
+  {
+   "id": "experiment.read",
+   "title": {
+    "ko": "실험 파일 읽기",
+    "en": "Read an experiment file"
+   },
+   "description": {
+    "ko": "실험 폴더 안의 텍스트 파일(plan.md · results.md · records/commands.jsonl 등)을 읽는다 — 2 MB 까지, 실험 폴더 밖은 읽지 않는다.",
+    "en": "Read a text file inside an experiment folder (plan.md, results.md, records/commands.jsonl …) — up to 2 MB, nothing outside the folder."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/experiments/read"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id",
+      "en": "experiment folder, or an experiment id inside the root"
+     }
+    },
+    {
+     "name": "file",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더 안의 상대 경로(예: plan.md · records/commands.jsonl)",
+      "en": "path inside the experiment folder (e.g. plan.md, records/commands.jsonl)"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "experiment_file",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 파일 읽기",
+    "en": "experiment read"
+   },
+   "gui": {
+    "view": "실험(계획 · 결과 · 기록 탭)"
    }
   },
   {

@@ -1394,6 +1394,56 @@ const DICT = {
   "명령이 실패했습니다: {}": "Command failed: {}",
   "({}자 더 있음)": "({} more characters)",
   "명령 복사|줄": "Copy command",
+  // 앱리디자인 E2 — 실험 화면(ui/experiments.js)
+  "실험": "Experiments",
+  "계획": "Plan",
+  "기록": "Records",
+  "진행 중": "In progress",
+  "아직": "Pending",
+  "결과를 읽기 전에 다음 작업이 시작되었습니다": "Another job started before the result could be read",
+  "새 실험": "New experiment",
+  "영어 소문자 · 숫자 · - 만 씁니다. 폴더 이름은 오늘 날짜와 이 이름입니다.": "Lowercase letters, digits and - only. The folder name is today's date and this name.",
+  "제목": "Title",
+  "연구 질문": "Research question",
+  "이름은 영어 소문자 · 숫자로 시작하고 영어 소문자 · 숫자 · - 만 64 자까지 씁니다": "The name starts with a lowercase letter or a digit and uses lowercase letters, digits and - only, up to 64 characters",
+  "실행 {}": "Runs {}",
+  "판정 {} / {} 통과": "Criteria {} / {} passed",
+  "실패 {}": "Failed {}",
+  "명령 {}": "Commands {}",
+  "실험마다 연구 질문 · 판정 기준 · 실행 · 기록이 한 폴더에 남습니다.": "Each experiment keeps its research question, criteria, runs and records in one folder.",
+  "실험 폴더 위치": "Experiments folder",
+  "위치 바꾸기": "Change folder",
+  "기본 위치로": "Default folder",
+  "실험 목록을 읽지 못했습니다": "Could not read the experiment list",
+  "아직 실험이 없습니다": "No experiments yet",
+  "새 실험을 만들거나, CLI 에서 GeulPU experiment create --name <이름> 으로 만듭니다.": "Create a new experiment here, or with GeulPU experiment create --name <name> in the CLI.",
+  "실험 목록": "Experiment list",
+  "채팅 화면으로 — 대화는 지금 이 브라우저에 저장됩니다": "Go to chat — chats are stored in this browser for now",
+  "실행 정보": "Run information",
+  "판정 기준이 없습니다": "No criteria",
+  "아직 없습니다: {}": "Not written yet: {}",
+  "읽지 못한 줄": "Unreadable line",
+  "점검하지 못함": "The check did not start",
+  "점검 중": "Checking",
+  "작업 {}": "Job {}",
+  "판정 기준": "Criteria",
+  "(실행 전에 적음)": "(written before any run)",
+  "점검": "Check",
+  "형식과 파일 해시를 점검 도구로 확인합니다(experiment check).": "Checks the format and file hashes with the experiment checker (experiment check).",
+  "명령 기록": "Commands log",
+  "아직 없습니다 — 이 실험 화면에서 기능을 부르면 남고, CLI 에서는 명령에 이 옵션을 붙입니다: --experiment {}": "None yet — calls made on this experiment screen are recorded; in the CLI add this option to a command: --experiment {}",
+  "experiment.json 의 files": "files in experiment.json",
+  "목록에 적은 파일이 없습니다": "No files listed",
+  "재현 명령": "Commands to reproduce",
+  "실험을 읽지 못했습니다": "Could not read the experiment",
+  "만든 날 {}": "Created {}",
+  "실험 탭": "Experiment tabs",
+  "결과|탭": "Results",
+  "계획|상태": "Planned",
+  "끝|상태": "Done",
+  "모델|하나": "Model",
+  "실험 폴더 위치 선택": "Choose the experiments folder",
+  "실험 폴더들을 담을 폴더를 선택하세요. 이 브라우저에 기억합니다.": "Choose the folder that holds the experiment folders. This browser remembers it.",
 };
 function T(s, ...v) {
   if (typeof s === 'string') {
@@ -1884,6 +1934,7 @@ const IC = {
   clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   bug: '<path d="M9 6.5a3 3 0 0 1 6 0"/><rect x="6.5" y="7.5" width="11" height="13" rx="5.5"/><path d="M12 11v9.5M6.5 11.5 3 10M17.5 11.5 21 10M6.5 15H2.5M17.5 15h4M7 18.5l-3.5 2M17 18.5l3.5 2"/>',
   flask: '<path d="M9.5 3.5h5M10.5 3.5v5.4l-5.3 9.2a1.6 1.6 0 0 0 1.4 2.4h10.8a1.6 1.6 0 0 0 1.4-2.4l-5.3-9.2V3.5"/><path d="M7.6 14.5h8.8"/>',
+  notes: '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/>',   // 앱리디자인 E2 — 사이드바의 실험(실험 기록)
 };
 const svg = (n, cls) => `<svg class="i ${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || ''}</svg>`;
 
@@ -2293,7 +2344,7 @@ function fitTag(f) {
 }
 
 // ---------- 레일 · 상태 막대 ----------
-const RAIL_ICON = { chat: 'chat', models: 'box', eval: 'flask', agents: 'term', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
+const RAIL_ICON = { exp: 'notes', chat: 'chat', models: 'box', eval: 'flask', agents: 'term', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
 document.querySelectorAll('.rail-btn').forEach(b => {
   b.innerHTML = svg(RAIL_ICON[b.dataset.view], 'l') + `<span class="lbl" aria-hidden="true">${esc(b.getAttribute('aria-label'))}</span>`;
   b.addEventListener('click', () => show(b.dataset.view));
@@ -2317,6 +2368,8 @@ function show(view) {
   if (view === 'agents') loadAgents(true);
   if (view === 'chat') { if (!same) renderMsgs(); setTimeout(() => { if (!$('#input').disabled) $('#input').focus(); }, 0); }
   try { sessionStorage.setItem('geulpu.view', view); } catch (_) { }
+  // 앱리디자인 E2 — 화면 모듈(ui/*.js)이 자기 화면이 열린 것을 안다(실험 화면 등)
+  document.dispatchEvent(new CustomEvent('geulpu:view', { detail: { view, same } }));
 }
 // 상태 막대는 칸마다 제자리에서 고친다 — 초점이 있는 단추를 갈아 끼우지 않게
 function renderStatus() {
@@ -4348,17 +4401,18 @@ async function startDownload(c) {
   catch (e) { toast(e.message, 'err'); }
 }
 // 파일 고르기 — pick 이 있으면 폴더 고르기(설정의 모델 폴더): 파일은 감추고 '이 폴더 선택'
-async function browse(path, pick) {
+// text — 폴더를 고를 때(pick) 창의 제목 · 설명을 바꾼다({title, lead} — 앱리디자인 E2 의 실험 폴더 위치). 없으면 모델 폴더
+async function browse(path, pick, text) {
   let j;
   try { j = await api('/api/fs?path=' + encodeURIComponent(path)); }
   catch (e) { toast(e.message, 'err'); return; }
   const list = h('div', { class: 'fs-list' });
-  if (j.path) list.append(h('button', { class: 'fs-item', onclick: () => browse(j.parent || '', pick) }, I('chevU', 's'), h('span', { class: 'n' }, T('상위 폴더'))));
+  if (j.path) list.append(h('button', { class: 'fs-item', onclick: () => browse(j.parent || '', pick, text) }, I('chevU', 's'), h('span', { class: 'n' }, T('상위 폴더'))));
   const entries = pick ? j.entries.filter(e => e.dir) : j.entries;
   for (const e of entries) {
     list.append(h('button', {
       class: 'fs-item', onclick: async () => {
-        if (e.dir) { browse(e.path, pick); return; }
+        if (e.dir) { browse(e.path, pick, text); return; }
         closeModal();
         try { await api('/api/models/add', { path: e.path }); toast(T`추가했습니다: ${e.name}`, 'ok'); resetSig(); refresh(); }
         catch (err) { toast(err.message, 'err'); }
@@ -4367,10 +4421,10 @@ async function browse(path, pick) {
   }
   if (!entries.length) list.append(h('div', { class: 'fs-item muted' }, pick ? T('하위 폴더가 없습니다') : T('이 폴더에는 .gguf 파일이나 하위 폴더가 없습니다')));
   const inp = h('input', { type: 'text', value: j.path || '', placeholder: T('폴더 경로(예: D:\\models)'), 'aria-label': T('폴더 경로') });
-  const go = () => browse(inp.value.trim(), pick);
+  const go = () => browse(inp.value.trim(), pick, text);
   inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
-  modal(h('div', null, h('h2', null, pick ? T('모델 폴더 고르기') : T('GGUF 파일 추가')),
-    h('p', { class: 'small muted m0 mb12' }, pick ? T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.') : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
+  modal(h('div', null, h('h2', null, pick ? ((text && text.title) || T('모델 폴더 고르기')) : T('GGUF 파일 추가')),
+    h('p', { class: 'small muted m0 mb12' }, pick ? ((text && text.lead) || T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.')) : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
     h('div', { class: 'fs-path' }, inp, h('button', { class: 'btn', onclick: go }, T('이동'))), list),
     [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('닫기')),
       pick ? h('button', { class: 'btn primary', disabled: j.path ? null : true, onclick: () => { closeModal(); pick(j.path); } }, T('이 폴더 선택')) : null].filter(Boolean), false, '.fs-item');
@@ -7810,6 +7864,6 @@ function renderDebug(force) {
   renderChatTop(true);
   let v = null;
   try { v = sessionStorage.getItem('geulpu.view'); } catch (_) { }
-  show(v || 'chat');
+  show(v || 'exp');                                  // 앱리디자인 E2 — 첫 화면은 실험 목록(화면설계.md §10 결정 2)
   checkUpdate();
 })();
