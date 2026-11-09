@@ -538,7 +538,9 @@ export function toolsView(ctx, d, text, busy) {
         title: T('요청 · 결과 · 만든 곳 — 재현 › 검사의 재현 파일 확인 · 도구/repro_check.py 가 읽는 파일'), onclick: () => exportCapsule(ctx, d),
       }, T('재현 파일(JSON)'))),
     el('p', { class: 'muted' }, full ? T`토큰 표 · 재현 파일의 스텝마다의 값은 점수 실행 ${full.entry.id} 에서(끝 토큰의 스텝까지).`
-      : T('재현 파일은 끝 토큰의 스텝까지 값이 있어야 해서, 없으면 먼저 답 전체를 점수 매깁니다(상위 후보 10).')),
+      : T('재현 파일은 끝 토큰의 스텝까지 값이 있어야 해서, 없으면 먼저 답 전체를 점수 매깁니다(상위 후보 10 — 그 점수 실행은 이 실험에 남습니다).')),
+    // F3-5 — 다시 확인 세션: 받은 파일을 확인하는 곳을 내보내기 옆에서도
+    el('p', { class: 'muted' }, T('받은 재현 파일을 확인하는 곳: 재현 › 검사 › 재현 파일 확인.')),
     pythonCode(ctx, d)));
   return out;
 }
