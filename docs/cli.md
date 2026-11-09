@@ -77,19 +77,21 @@ switch with `GeulPU settings set --precision exact`, then load the model again.
 
 ## Branching (what if another token had been chosen at step k?)
 
-Send the prompt tokens, the answer up to step k, and the new token, with `step_offset = k + 1` so sampling continues with the original
-run's random numbers, and the same sampling settings and seed (`body.json`):
-
 ```
-{"prompt": [<prompt_tokens>..., <tokens[0..k-1]>..., <new token>], "max_tokens": <40 - (k + 1)>, "temperature": 0.8, "seed": 7,
- "echo": true, "logprobs": 2, "geulpu": {"echo_from": <len(prompt_tokens)>, "step_offset": <k + 1>, "logit_hash": true}}
+GeulPU experiment branch --run r1 --step 3 --token 785 --experiment <id>   # step 3 becomes token 785, then it continues
 ```
 
-`GeulPU run branch --json @body.json` — `geulpu.tokens` holds the tokens generated after the new one; with `echo` the text starts
-with the prompt. The whole branched answer is the original `tokens[0..k-1]`, the new token, then `geulpu.tokens`.
+The app builds the request from r1's record — the prompt tokens, the answer before step 3, the new token, the same sampling settings
+and seed, `step_offset` = step + 1 so sampling continues with r1's random numbers, and r1's length (`--max_tokens` to change it) —
+sends it and records a branch run (base r1). The answer is `run branch`'s: `geulpu.tokens` are the tokens after the new one; with `echo`
+the text starts with the prompt. The new run is the experiment's last (`experiment show --path <id> --select experiment.runs`), and
+its record holds the whole request (`--path <id>` instead of `--experiment` works too).
 
 ## Scoring and the logit lens
 
+- A recorded run: `GeulPU experiment score --run r1 --experiment <id>` scores its whole answer (top 10 candidates; `--top_logprobs N`),
+  `--step 3` that step's top candidates (20). `GeulPU experiment lens --run r1 --step 3` is the logit lens at that step (`--top_k`,
+  `--jacobian`). Both build the request like `experiment branch` and record the run.
 - Score given tokens without generating: `run score` with `{"prompt": [ids], "echo": true, "max_tokens": 0, "logprobs": 1,
   "geulpu": {"echo_from": n}}` — `choices[0].logprobs.token_logprobs` from position n on. With `"geulpu": {"top_logprobs": N}`
   (≤ 128) also `geulpu.prompt_top_ids` · `prompt_top_logprobs` — indexed by prompt position like `token_logprobs` (null before n);
@@ -157,7 +159,7 @@ criteria came first; the check does not require it.
 recorded as kind `check` with `base`, and its `geulpu.tokens` and `geulpu.logit_hashes` must equal the original's. To hand a run to
 someone else, make its reproduction file (`geulpu-capsule/1`: prompt and answer tokens, every step's log-probability, entropy, top
 candidates and logit hash, the model's SHA-256, the seed): `GeulPU experiment repro --path <id> --run r1 --out repro.json`. It needs a
-whole-answer score run in the experiment; without one the 409's message ends with the `run score` request (a JSON object) to send first.
+whole-answer score run in the experiment — `GeulPU experiment score --run r1` makes one (the 409 says so too).
 `GeulPU check repro --json @repro.json` checks a file on this PC with its model loaded: `ok`, `score.first_diff_step` (1 = the answer's
 first token), whether regenerating gives the same tokens and logit hashes, the fingerprint, and the settings that differ from the file
 (`differences`); `check_seed` is true when scoring matches but regenerating does not at a temperature above 0 — look at the seed. The run
