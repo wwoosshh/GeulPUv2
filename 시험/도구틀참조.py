@@ -6,10 +6,12 @@ trim_blocks · lstrip_blocks · loopcontrols, tojson = json.dumps(ensure_ascii=F
 
 0.12.0 12-G1b — 서버가 이 틀을 jinja 해석기(엔진/채팅틀.gl)로 그대로 실행하므로, 메시지 다듬기도 서버와 같은 일반 규칙이다(모델마다의
 갈래 없이): role 의 developer → system · ipython → tool, content 조각은 이어 붙인 글 · null · 없음은 빈 글, 호출의 arguments 글은 JSON 으로
-풀어서(틀이 'arguments is string' 으로 글을 그대로 쓰면 글 그대로 — Qwen3), 틀이 system 말을 그리지 않으면(그려 보아 정한다 — Mistral
+풀어서(틀이 'arguments is string' 으로 글을 그대로 쓰거나 — Qwen3, 0.24.0 — 객체로 그려 오류이고 글로 그려지면 글 그대로 — Kanana 1.5),
+틀이 system 말을 그리지 않으면(그려 보아 정한다 — Mistral
 v0.3) 맨 앞 system 말을 첫 user 말 앞에 '<system>\n\n' 으로. 맥락: bos_token · eos_token(GGUF 의 번호의 글), date_string '26 Jul 2024',
 --생각끔 이면 enable_thinking 거짓. tools 는 서버가 그 호출 꼴을 읽는 틀만(Qwen <tool_call> JSON · Llama 3 JSON · Qwen3.5 · Coder XML ·
-MiniCPM XML · 0.13.0 Gemma 4 의 <|tool_call>call: — 아니면 서버는 400 이라 참조도 오류). 출력: {경우 id: 그린 글 | {"error": 까닭}}. 대조는 시험/채팅틀대조.py(GPU 없이 —
+MiniCPM XML · 0.13.0 Gemma 4 의 <|tool_call>call: · 0.24.0 글로 쓴 <tool_call> JSON · functionary 의 <function=이름> — 아니면
+서버는 400 이라 참조도 오류). 출력: {경우 id: 그린 글 | {"error": 까닭}}. 대조는 시험/채팅틀대조.py(GPU 없이 —
 엔진/시험_채팅틀.gl) · 시험/도구틀.py(서버로).
 """
 import json
@@ -117,7 +119,8 @@ def 고치기(msgs, 인자글, 시스템받음):
 
 
 def 도구꼴(틀글, 앞꼴, 낱말):
-    """서버의 틀도구꼴 — 1 Qwen <tool_call> JSON · 2 Llama 3 JSON · 3 Qwen3.5 · Coder XML · 4 MiniCPM XML · 5 Gemma 4(0.13.0) · 0 받지 않음"""
+    """서버의 틀도구꼴 — 1 Qwen <tool_call> JSON · 2 Llama 3 JSON · 3 Qwen3.5 · Coder XML · 4 MiniCPM XML · 5 Gemma 4(0.13.0) ·
+    0.24.0 6 <tool_call> JSON 을 글로(어휘에 그 토큰이 없다) · 7 functionary v3.1 의 <function=이름> · 0 받지 않음"""
     낱 = set(낱말 or [])
     꼴 = 0
     if "<|tool_call>call:" in 틀글:
@@ -128,9 +131,13 @@ def 도구꼴(틀글, 앞꼴, 낱말):
         꼴 = 4
     elif "<tool_call>" in 틀글 and "tojson" in 틀글:
         꼴 = 1
+    elif "<function=" in 틀글:
+        꼴 = 7
     elif 앞꼴 in ("llama-bpe", "llama3", "llama-v3") and "<|start_header_id|>" in 틀글 and "tojson" in 틀글:
         꼴 = 2
-    if 꼴 in (1, 3) and not {"<tool_call>", "</tool_call>"} <= 낱:
+    if 꼴 == 1 and not {"<tool_call>", "</tool_call>"} <= 낱:
+        꼴 = 6
+    if 꼴 == 3 and not {"<tool_call>", "</tool_call>"} <= 낱:
         꼴 = 0
     if 꼴 == 4 and not {"<function", "</function>", "<param", "</param>"} <= 낱:
         꼴 = 0
@@ -162,6 +169,17 @@ def 참조들(gguf, 경우, 생각끔):
                                                    **dict(기본, bos_token="", eos_token=""))
     except Exception:                               # noqa: BLE001 — system 을 받지 않는 틀(Mistral v0.3)
         시스템받음 = False
+    if not 인자글:                                  # 0.24.0 — 서버의 채팅틀준비 와 같은 시험: 호출 인자를 객체로 그려 오류, 글로 되면 글 그대로
+        def 그림(인자):
+            try:
+                틀.render(messages=[{"role": "user", "content": "hi"},
+                                    {"role": "assistant", "content": "", "tool_calls": [{"id": "call_1", "type": "function",
+                                                                                       "function": {"name": "get_weather", "arguments": 인자}}]},
+                                    {"role": "tool", "tool_call_id": "call_1", "content": "sunny"}], **dict(기본, bos_token="", eos_token=""))
+                return True
+            except Exception:                       # noqa: BLE001
+                return False
+        인자글 = not 그림({}) and 그림("{}")
     도구표 = 경우["도구"]
     out = {}
     for c in 경우["경우"]:
