@@ -109,7 +109,6 @@
   "branch": {
    "screens": [
     "run",
-    "chat",
     "debug"
    ],
    "description": {
@@ -340,8 +339,7 @@
   },
   "lens": {
    "screens": [
-    "step",
-    "chat"
+    "step"
    ],
    "description": {
     "ko": "로짓 렌즈",
@@ -375,16 +373,9 @@
     "en": "operation registry"
    }
   },
-  "panel_records": {
-   "planned": "E6-2",
-   "description": {
-    "ko": "연구 패널 기록",
-    "en": "research-panel records"
-   }
-  },
   "provenance": {
    "screens": [
-    "chat"
+    "checks"
    ],
    "description": {
     "ko": "출처",
@@ -429,9 +420,10 @@
   },
   "score": {
    "screens": [
+    "run",
     "step",
-    "chat",
-    "debug"
+    "debug",
+    "checks"
    ],
    "description": {
     "ko": "점수",
@@ -469,7 +461,6 @@
   "tokens": {
    "screens": [
     "step",
-    "chat",
     "models",
     "exp"
    ],
@@ -3109,7 +3100,9 @@
    "gui": {
     "screens": [
      "common",
-     "models"
+     "models",
+     "run",
+     "checks"
     ]
    }
   },
@@ -3228,30 +3221,6 @@
     "screens": [
      "models"
     ]
-   }
-  },
-  {
-   "id": "panel.records",
-   "title": {
-    "ko": "연구 패널 기록을 앱에서 읽고 쓰기(지금은 브라우저에만)",
-    "en": "Read and write research-panel records in the app (now browser-only)"
-   },
-   "description": {
-    "ko": "연구 패널 기록을 앱에서 읽고 쓰기(지금은 브라우저에만).",
-    "en": "Read and write research-panel records in the app (now browser-only)."
-   },
-   "status": "planned",
-   "stage": "E6-2",
-   "params": [],
-   "result": "panel_records",
-   "job": false,
-   "records": "none",
-   "cli": {
-    "ko": "패널 기록",
-    "en": "panel records"
-   },
-   "gui": {
-    "planned": "E6-2"
    }
   },
   {
@@ -3794,8 +3763,8 @@
    "gui": {
     "screens": [
      "run",
-     "chat",
-     "debug"
+     "debug",
+     "checks"
     ]
    }
   },
@@ -4299,7 +4268,8 @@
     "screens": [
      "exp",
      "chat",
-     "debug"
+     "debug",
+     "checks"
     ]
    }
   },
@@ -4474,8 +4444,7 @@
    },
    "gui": {
     "screens": [
-     "step",
-     "chat"
+     "step"
     ]
    }
   },
@@ -4804,9 +4773,10 @@
    },
    "gui": {
     "screens": [
+     "run",
      "step",
-     "chat",
-     "debug"
+     "debug",
+     "checks"
     ]
    }
   },
@@ -4881,8 +4851,7 @@
    },
    "gui": {
     "screens": [
-     "step",
-     "chat"
+     "step"
     ]
    }
   },
@@ -5086,7 +5055,8 @@
    "gui": {
     "screens": [
      "settings",
-     "cache"
+     "cache",
+     "common"
     ]
    }
   },
@@ -5444,7 +5414,7 @@
    },
    "gui": {
     "screens": [
-     "chat"
+     "checks"
     ]
    }
   },

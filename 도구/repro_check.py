@@ -4,7 +4,7 @@
 
     python -I 도구/repro_check.py <재현 파일.json> <모델.gguf> [--out 결과.json] [--skip-hash]
 
-재현 파일(연구 패널 · 재현 → 재현 파일 내보내기)의 프롬프트 + 결과 토큰을 계약의 CPU 참조 구현(시험/참조7B.py — 정수 계약의 Qwen2 ·
+재현 파일(실행 화면의 내보내기 → 재현 파일 — 0.22 까지는 연구 패널의 재현 탭)의 프롬프트 + 결과 토큰을 계약의 CPU 참조 구현(시험/참조7B.py — 정수 계약의 Qwen2 ·
 Qwen3 순전파, 22 · 26 · 37단계에서 GPU 와 모든 값이 같았던 것)으로 계산해, 스텝마다
 
   1. 로짓 해시 — 로짓 행(짧은실수 V 개)의 FNV-1a 64(서버와 같은 정의: 32비트 값마다 h = (h ^ w) × 1099511628211, 처음 h = cbf29ce484222325)
@@ -25,9 +25,9 @@ Qwen3 순전파, 22 · 26 · 37단계에서 GPU 와 모든 값이 같았던 것)
 
 샘플링 설정이 요청에 없으면 서버의 기본값(온도 0.8 · top_k 40 · top_p 0.95 · min_p 0.05)이다.
 
-#96 — 층 렌즈(logit lens, 계약 5.3): 재현 파일의 고른 스텝(1 부터 — 연구 패널의 '스텝 N')에서 그 토큰을 매긴 행의 residual stream 을
+#96 — 로짓 렌즈(logit lens, 계약 5.3): 재현 파일의 고른 스텝(1 부터 — 재현 파일의 답 토큰 순서)에서 그 토큰을 매긴 행의 residual stream 을
 층마다 끝의 로짓 계산으로 읽어 층마다 1위 토큰 · 고른 토큰의 확률과 순위 · 엔트로피 · 상위 k · 로짓 해시를 보인다(--out 이면 JSON 에도).
-마지막 층은 끝 로짓과 비트까지 같아야 한다(계약 5.3 의 2). 같은 CPU 계산 한 번에 함께 셈한다. 재현 파일에 연구 패널이 셈한 층 렌즈
+마지막 층은 끝 로짓과 비트까지 같아야 한다(계약 5.3 의 2). 같은 CPU 계산 한 번에 함께 계산한다. 재현 파일에 내보낼 때 담은 로짓 렌즈(실행 화면 — 그 실행의 로짓 렌즈 실행)
 (result.layer_lens — 스텝마다 서버의 geulpu.layer_lens)가 들어 있으면 --layer-lens 없이도 그 스텝들을 셈해 층마다 비트까지 견준다
 (Jacobian lens — result.jacobian_lens 와 jlens.sha256 — 은 같은 J 파일을 --jlens 로 줄 때):
 
@@ -288,7 +288,7 @@ def main():
     ap.add_argument("--requests", help="실행 로그 — 확인할 요청 차례(i), 쉼표로")
     ap.add_argument("--branches", help="실행 로그 — 확인할 분기(b), 쉼표로")
     ap.add_argument("--layer-lens", "--층렌즈", dest="layer_lens", metavar="5,12",
-                    help="재현 파일 — 층 렌즈(계약 5.3)를 셈할 스텝(1 부터, 연구 패널의 '스텝 N'), 쉼표로")
+                    help="재현 파일 — 로짓 렌즈(계약 5.3)를 계산할 스텝(1 부터 — 재현 파일의 답 토큰 순서), 쉼표로")
     ap.add_argument("--jlens", metavar="model.jlens.safetensors",
                     help="J 파일(계약 5.4 — geulpu-jlens/1) — 층 렌즈의 스텝들에서 Jacobian lens 도 셈한다")
     a = ap.parse_args()
@@ -300,7 +300,7 @@ def main():
         첫줄 = None
     if 헤더인가(첫줄):                                      # 실행 로그(JSONL)
         if a.layer_lens or a.jlens:
-            sys.exit("--layer-lens · --jlens 는 아직 재현 파일(geulpu-capsule/1)만 받는다 — 연구 패널에서 그 답의 재현 파일을 내보내 쓴다")
+            sys.exit("--layer-lens · --jlens 는 아직 재현 파일(geulpu-capsule/1)만 받는다 — 실행 화면의 내보내기에서 그 실행의 재현 파일을 내보내 쓴다")
         실행확인(a, [json.loads(l) for l in raw.splitlines() if l.strip()])
         return
     cap = json.loads(raw)                                   # 파이썬의 json 은 큰 정수(시드)를 그대로 읽는다
