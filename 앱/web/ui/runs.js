@@ -363,7 +363,9 @@ function describe(ctx, entry, d) {
     const seed = d && d.seedText ? d.seedText : entry.seed;
     if (seed !== undefined && seed !== null) parts.push(T`시드 ${seed}`);
     if (typeof s.temperature === 'number') parts.push(T`온도 ${s.temperature}`);
-    if (d) parts.push(T`${d.n} 토큰`);
+    // F3-1 — 분기는 앞에서 받은 토큰(개입한 토큰까지 — step_offset)과 새로 만든 토큰을 나눠 적고, 원래 난수로 이은 위치를 적는다
+    if (d && entry.kind === 'branch' && d.off > 0) parts.push(T`앞 ${d.off} 토큰 + 새 ${d.n} 토큰 = ${d.off + d.n} 토큰`, T`스텝 ${d.off} 부터 원래 난수로 이음`);
+    else if (d) parts.push(T`${d.n} 토큰`);
   } else if (entry.kind !== 'check') {
     const n = d && d.ptoks ? d.ptoks.length : null;
     if (n !== null) parts.push(entry.base ? T`${entry.base} 의 토큰 ${n} 개` : T`토큰 ${n} 개`);
@@ -574,6 +576,8 @@ async function doRerun(ctx, d, text) {
 // ---- 새 실행 ----
 
 function field(label, input, hint) {
+  // F3-1 — 라벨로 감싼 입력의 접근성 이름에 입력의 값이 섞이지 않게 라벨 글을 이름으로
+  if (typeof label === 'string' && input && input.setAttribute && !input.getAttribute('aria-label')) input.setAttribute('aria-label', label);
   return el('label', { class: 'run-field' }, el('span', null, label), input, hint ? el('small', { class: 'muted' }, hint) : null);
 }
 const num = (v, int) => {
@@ -776,13 +780,32 @@ export async function newRun(ctx, prefill) {
 
 // ---- 실행 탭 ----
 
+/** F3-1 — 생성 실행의 프롬프트(채팅은 마지막 사용자 메시지) 앞부분 — 실행 목록에서 같은 설정의 실행끼리 가려 보게 */
+function promptHead(entry, d) {
+  if (!d || !d.req || (entry.kind !== 'generate' && entry.kind !== 'check')) return null;
+  const q = d.req;
+  let s = typeof q.prompt === 'string' ? q.prompt : null;
+  const msgs = Array.isArray(q.messages) ? q.messages : null;
+  if (s === null && msgs) {
+    const u = [...msgs].reverse().find(m => m && m.role === 'user');
+    const c = u ? u.content : null;
+    s = typeof c === 'string' ? c : Array.isArray(c) ? c.map(x => (x && typeof x.text === 'string' ? x.text : '')).join('') : null;
+  }
+  if (s === null && typeof q.input === 'string') s = q.input;
+  if (!s) return null;
+  s = s.replace(/\s+/g, ' ').trim();
+  return s.length > 56 ? s.slice(0, 55) + '…' : s;
+}
+
 function runItem(ctx, entry) {
   const c = recordOf(ctx, entry);
   const d = c.rec ? dataOf(entry, c.rec, c.text) : null;
   const [src, kindCls] = d ? sourceLabel(d.rec.source, d.rec.session) : ['', ''];
+  const head = c.error ? null : promptHead(entry, d);
   return el('button', { class: 'xp-item run-item', role: 'listitem', type: 'button', onclick: () => ctx.openRun(entry.id) },
     el('span', { class: 'rid' }, entry.id),
-    el('span', { class: 't' }, el('span', { class: 'k' }, kindLabel(entry)), ' ', el('span', null, c.error ? c.error : describe(ctx, entry, d))),
+    el('span', { class: 't' }, el('span', { class: 'k' }, kindLabel(entry)), ' ', el('span', null, c.error ? c.error : describe(ctx, entry, d)),
+      head ? el('span', { class: 'run-prompt muted' }, ' · “' + head + '”') : null),
     el('span', { class: 'meta' },
       d && typeof d.rec.ms === 'number' ? el('span', null, fmtMs(d.rec.ms)) : null,
       src ? el('span', { class: 'src ' + kindCls }, src) : null));
@@ -1084,8 +1107,9 @@ function defaultPair(ctx) {
   const all = runsOf(ctx);
   const runs = all.filter(r => !MEASURE_OPS.has(r.operation));
   if (runs.length < 2) return all.length >= 2 ? [all[all.length - 2].id, all[all.length - 1].id] : [null, null];
+  // F3-1 — 가장 최근 생성 실행과 그 base, base 가 없으면 그 실험의 첫 생성 실행과(바로 앞 실행보다 연구의 기준 실행과 견줄 일이 많다)
   const last = runs[runs.length - 1];
-  const base = last.base && runs.find(r => r.id === last.base) ? last.base : runs[runs.length - 2].id;
+  const base = last.base && runs.find(r => r.id === last.base) ? last.base : runs[0].id;
   return [base, last.id];
 }
 
