@@ -1608,6 +1608,7 @@ const DICT = {
   "이 실험의 점수 · 로짓 렌즈 실행을 읽는 중…": "Reading this experiment's score and logit lens runs…",
   "재현 › 검사로": "To Reproduce › Checks",
   "작업 보기": "Show the job",
+  "기능 목록에 없는 경로입니다": "This path is not in the operation registry",
   // 앱리디자인 E5 — 사이드바의 그룹 · 탭(ui/nav.js), 작업 화면(ui/jobs.js), 명령 창의 AI 세션 · 작업 줄, 기본 실험 "대화", 나눠 그린 옛 화면
   "작업": "Jobs",
   "화면 탭": "Screen tabs",
@@ -1642,6 +1643,36 @@ const DICT = {
   "지금 작업": "Current job",
   "지난 작업": "Earlier jobs",
   "이 브라우저가 본 것 — 최근 30 개": "seen by this browser — the latest 30",
+  // 앱리디자인 E6 — 모델 › 파일의 서버 정보, 새 실행의 Anthropic Messages · OpenAI Responses, 스텝 · 층 화면의 토큰 id 점수
+  "서버 정보": "Server info",
+  "서버가 알리는 모델 이름 · 문맥 길이 · 토크나이저": "Model name, context length and tokenizer as the server reports them",
+  "모델 이름": "Model name",
+  "문맥 길이": "Context length",
+  "어휘 크기": "Vocabulary size",
+  "끝 토큰(EOS)": "End token (EOS)",
+  "시작 토큰(BOS)": "Start token (BOS)",
+  "프롬프트 앞의 시작 토큰": "Start token before the prompt",
+  "붙임": "Added",
+  "붙이지 않음": "Not added",
+  "생성을 멈추는 토큰": "Tokens that stop generation",
+  "패딩 토큰": "Padding token",
+  "{} {} — 서버가 OpenAI 호환 경로로 알리는 값입니다.": "{} {} — the values the server reports on its OpenAI-compatible routes.",
+  "같은 값을 CLI 로: GeulPU run models · GeulPU run tokenizer-info": "The same values from the CLI: GeulPU run models · GeulPU run tokenizer-info",
+  "출력 토큰 {}": "{0} output {0|token|tokens}",
+  "세는 중…": "Counting…",
+  "입력 토큰 {}": "{0} input {0|token|tokens}",
+  "토큰 수 세기": "Count tokens",
+  "이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않습니다 — 결과는 이 실험의 실행으로 남지만 답의 텍스트 · 도구 호출 · 사용량만 있고 토큰별 값은 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.": "The server does not take a seed or GeulPU extension fields in this format — the result is recorded as a run of this experiment with the answer text, tool calls and usage, but no per-token values. At temperature 0 the same request gives the same answer.",
+  "이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않아 토큰별 값(확률 · 마진 · 로짓 해시)이 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.": "The server does not take a seed or GeulPU extension fields in this format, so there are no per-token values (probability, margin, logit hash). At temperature 0 the same request gives the same answer.",
+  "답에 텍스트가 없습니다.": "The answer has no text.",
+  "입력 토큰 {} · 출력 토큰 {} · 끝난 까닭 {}": "Input tokens {} · output tokens {} · stop reason {}",
+  "점수를 계산할 토큰 id 를 적으세요": "Enter the token ids to score",
+  "토큰 id 는 0 이상의 정수를 쉼표나 공백으로 나눠 적습니다": "Token ids are integers of 0 or more, separated by commas or spaces",
+  "점수 입력의 종류": "Score input type",
+  "토큰 id": "Token ids",
+  "예: 151645, 198": "e.g. 151645, 198",
+  "토큰 id 의 글: ": "Text of the token ids: ",
+  "토큰 id 를 그대로 이 스텝부터 이어 붙이고, 토큰마다의 로그확률을 계산합니다(echo 스코어링) — 텍스트로 적을 수 없는 특수 토큰(예: <|im_end|>)도 됩니다. 글은 run.detokenize 로 보입니다.": "Appends the token ids as they are from this step and computes each token's log-probability (echo scoring) — special tokens that cannot be typed as text (e.g. <|im_end|>) work too. Their text comes from run.detokenize.",
 };
 function T(s, ...v) {
   if (typeof s === 'string') {
@@ -2186,14 +2217,13 @@ function fmtLeft(s) {
   return T`약 ${Math.floor(m / 60)}시간 ${m % 60}분 남음`;
 }
 const fmtCtx = n => (n >= 1024 && n % 1024 === 0 ? (n / 1024) + 'K' : fmtNum(n || 0));
-async function api(path, body) {
-  const opt = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
-  const r = await fetch(path, opt);
-  let j = null;
-  try { j = await r.json(); } catch (_) { }
-  if (!r.ok) throw new Error((j && j.error && j.error.message) || ('HTTP ' + r.status));
-  return j;
-}
+// 앱리디자인 E6(문서/화면구현.md §6) — 앱은 기능 id 로 부른다: 기능 목록 클라이언트(ui/ops.js — 앱 · 서버의 경로는 기능 목록에만).
+// app.js · eval.js 는 고전 스크립트라 모듈을 동적 import 로 읽는다. callOp 은 답의 JSON 을 돌려주고 앱이 오류로 답하면 그 메시지로 던진다
+// (e.status — 옛 api(path, body) 와 같은 형식). opt 는 {body(이미 만든 본문 글), signal, experiment}. OPS 는 읽은 뒤의 모듈(링크의 주소)
+let OPS = null;
+const opsReady = import('/ui/ops.js').then(m => (OPS = m));
+async function callOp(id, params, opt) { return (await opsReady).callJ(id, params === undefined ? {} : params, opt); }
+const opUrl = (id, params) => (OPS ? OPS.urlFor(id, params) : null);
 function toast(msg, kind) {
   const close = h('button', { class: 'icon-btn', 'aria-label': T('알림 닫기') }, I('x', 's'));
   const d = h('div', { class: kind || '', role: kind === 'err' ? 'alert' : 'status' }, I(kind === 'err' ? 'alert' : kind === 'ok' ? 'check' : 'info', 's'), h('span', null, TM(msg)), close);
@@ -2372,7 +2402,7 @@ const streamingHere = () => !!(S.streaming && S.streaming.roomId === S.roomId);
 let failCount = 0;
 async function refresh() {
   try {
-    const st = await api('/api/state');
+    const st = await callOp('system.state');
     S.st = st;
     failCount = 0;
     if (!S.conn) { S.conn = true; setOffline(false); }
@@ -2552,6 +2582,7 @@ const VIEW_GROUP = {
 const VIEW_ALIAS = { bench: 'checks' };               // 옛 화면 이름(세션에 남은 값 · 옛 링크)
 const GROUP_VIEW = { exp: 'exp', model: 'models', repro: 'checks', jobs: 'jobs', settings: 'settings' };
 const BENCH_VIEW = { perf: 'perf', checks: 'checks', llama: 'llama', results: 'results' };   // 벤치마크의 카드를 나눠 그리는 화면 → 부분
+const BENCH_OP = { speed: 'bench.speed', diag: 'bench.diag', crosscheck: 'bench.crosscheck', pair: 'bench.pair' };   // 벤치마크 카드의 기능
 const JOB_VIEW = { speed: 'perf', diag: 'device', crosscheck: 'checks', pair: 'checks', 'llama-verify': 'llama' };   // 상태 막대의 작업 → 그 작업을 시작하는 탭
 function viewGroup(v) { return VIEW_GROUP[VIEW_ALIAS[v] || v] || ''; }
 function groupView(g) { const m = load('geulpu.groupView', {}) || {}; return m[g] && VIEW_GROUP[m[g]] === g ? m[g] : GROUP_VIEW[g]; }
@@ -2886,7 +2917,7 @@ async function setMode(p, ex) {
     if (precSet(mm, set) !== p) body[precKey(mm)] = p;
     if (ex && !!set.kv8_cache !== !!ex.kv8) body.kv8_cache = !!ex.kv8;
     if (ex && !!set.fast_attention !== !!ex.f2) body.fast_attention = !!ex.f2;
-    if (Object.keys(body).length) await api('/api/settings', body);
+    if (Object.keys(body).length) await callOp('settings.set', body);
     await refresh();
     const sv = S.st.server, now = modeNow();
     const off = now && (ex ? modeLabel(now) !== modeLabel({ p, kv8: !!ex.kv8, f2: !!ex.f2 }) : now.p !== p);
@@ -2894,7 +2925,7 @@ async function setMode(p, ex) {
       const id = sv.model;
       MODEBUSY = T('다시 불러오는 중');
       renderModeChip();
-      await api('/api/server/stop', {});
+      await callOp('model.unload', {});
       for (let k = 0; k < 120; k++) { await new Promise(r => setTimeout(r, 500)); await refresh(); if (S.st.server.state !== 'ready') break; }
       await ensureServer(id, null);
     }
@@ -3700,18 +3731,15 @@ function sentText(x) {
 }
 const utf8Len = s => new TextEncoder().encode(String(s || '')).length;
 // 압축 중의 작은 요청 — 중지 단추가 먹게(S.streaming.ctrl), 오류에 상태 번호
-async function postJ(path, body) {
+// 화면을 그리려고 세는 토큰 수(문맥에 드는지 · 요약의 길이)는 내부용 전달 경로(proxy.tokenize — 이벤트 없음, 명령 창에 줄을 남기지 않는다)
+async function postJ(id, body) {
   const ctrl = new AbortController();
   if (S.streaming) { if (S.streaming.aborted) throw new Error('중지했습니다'); S.streaming.ctrl = ctrl; }
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
-  let j = null;
-  try { j = await r.json(); } catch (_) { }
-  if (!r.ok) { const e = new Error((j && j.error && j.error.message) || ('HTTP ' + r.status)); e.status = r.status; throw e; }
-  return j;
+  return callOp(id, body, { signal: ctrl.signal, method: 'POST' });
 }
 // 요청 그대로(채팅 틀 · 생각 켬끔까지) 서버에 잰다 — { n: 프롬프트 토큰 수, L: 슬롯의 문맥 }
 async function tokOf(req) {
-  const j = await postJ('/tokenize', req.url === '/v1/completions' ? { prompt: req.body.prompt } : { messages: req.body.messages, chat_template_kwargs: req.body.chat_template_kwargs });
+  const j = await postJ('proxy.tokenize', req.op === 'run.complete' ? { prompt: req.body.prompt } : { messages: req.body.messages, chat_template_kwargs: req.body.chat_template_kwargs });
   return { n: j.count, L: j.max_model_len };
 }
 // 메시지 하나의 토큰 수(어림 — 틀 몫 8 을 더함). 압축할 때만 잰다
@@ -3720,7 +3748,7 @@ async function msgTok(x, mid) {
   const t = x.role === 'assistant' ? sentText(x) : String(x.content || '');
   const c = TOKN.get(x);
   if (c && c.mid === mid && c.len === t.length) return c.n;
-  const n = (t ? (await postJ('/tokenize', { prompt: t, add_special_tokens: false })).count : 0) + 8;
+  const n = (t ? (await postJ('proxy.tokenize', { prompt: t, add_special_tokens: false })).count : 0) + 8;
   TOKN.set(x, { mid, len: t.length, n });
   return n;
 }
@@ -3830,7 +3858,7 @@ function sumNotice(nt) {
 }
 async function sumRun(req, rp, notice, room) {
   const tmp = { role: 'summary', content: '', template: rp.tpl };
-  const rr = await streamReply(tmp, room, req.url, req.body, { onPaint: k => { notice.got = k; sumNotice(notice); } });
+  const rr = await streamReply(tmp, room, req.op, req.body, { onPaint: k => { notice.got = k; sumNotice(notice); } });
   return sumClean(tmp.content, rr.finish);
 }
 // (나) 구르는 요약 — 요약할 범위를 글 기록으로 덩이에 나눠, 앞 요약에 덩이를 하나씩 더해 요약한다(시스템 프롬프트 없이 · 덩이마다 캐시 없이)
@@ -3844,12 +3872,12 @@ async function sumRoll(room, rp, plan, L, B, notice) {
   }
   // 덩이의 자리 = 문맥 − 요약 한도 둘(앞 요약 · 새 요약) − 지시 · 머리, 5 % 여유
   const ask = sumRollAsk(B.S, userKo(room, plan.keepFrom));
-  const fixed = (await postJ('/tokenize', { prompt: ask, add_special_tokens: false })).count + 64;
+  const fixed = (await postJ('proxy.tokenize', { prompt: ask, add_special_tokens: false })).count + 64;
   const cap = Math.floor((L - 2 * B.S - fixed) * 0.95);
   if (cap < 128) return null;
   const pieces = [];
   for (const t of items) {
-    const n = (await postJ('/tokenize', { prompt: t, add_special_tokens: false })).count + 4;
+    const n = (await postJ('proxy.tokenize', { prompt: t, add_special_tokens: false })).count + 4;
     if (n <= cap) { pieces.push({ t, n }); continue; }
     const per = n / t.length, most = Math.max(64, Math.floor(cap / per));   // 덩이보다 큰 글은 줄 · 글자로 나눈다(글자 수에 비례해 어림)
     for (let rest = t; rest.length;) {
@@ -3905,7 +3933,7 @@ async function summarize(room, rp, plan, L, B) {
   }
   if (!res) { path = '나'; res = await sumRoll(room, rp, plan, L, B, notice); }
   if (!res || res.text.length < 20) throw new Error('앞의 대화를 요약하지 못했습니다 — 요약이 비었습니다');
-  const tokOut = (await postJ('/tokenize', { prompt: res.text, add_special_tokens: false })).count;
+  const tokOut = (await postJ('proxy.tokenize', { prompt: res.text, add_special_tokens: false })).count;
   const sm = {
     role: 'summary', id: 's' + newTid(), content: res.text, at: Date.now(), v: SUM_V, model: rp.model, tpl: rp.tpl, path, chunks: res.chunks || 1,
     L, lim: B.S, ko, finish: res.finish, cut: res.cut, precision: (S.st && S.st.server.precision) || 'exact', kv8: !!(S.st && S.st.server.kv8), fast_attention: !!(S.st && S.st.server.fast_attention), think: false,
@@ -3925,7 +3953,7 @@ async function ensureServer(modelId, notice) {
   if (st.server.state === 'ready' && st.server.model === modelId) return;
   if (S.streaming) S.streaming.loading = true;
   if (!(st.server.state === 'starting' && st.server.model === modelId)) {
-    try { await api('/api/server/start', { model: modelId }); }
+    try { await callOp('model.load', { model: modelId }); }
     catch (e) { throw new Error('모델을 불러오지 못했습니다 — ' + e.message); }
   }
   for (;;) {
@@ -4043,7 +4071,7 @@ function submitEdit(room, k, text) {
 // 흘림 하나를 받아 asst 에 붙인다(보내기 · 이어서 생성이 함께 쓴다). 그릴 요소는 늘 S.streaming.el(다시 그려도 이어진다)
 // 38단계 — 돌려주는 것: { stats(통계 글), gp(geulpu 덧붙임), seed(씨앗의 원문 숫자 — JSON 수로 읽으면 2⁵³ 위에서 바뀐다), bodyStr, finish }.
 // text: 완성 꼴의 조각(c.text)을 읽는다(R1 · 연구 패널의 갈래). bodyStr 를 주면 그 글을 그대로 보낸다(씨앗 숫자를 그대로 — 갈래)
-async function streamReply(asst, room, url, body, opt) {
+async function streamReply(asst, room, opId, body, opt) {
   opt = opt || {};
   const tpl = asst.template;
   const textChunks = tpl === 'deepseek-r1' || !!opt.text;
@@ -4055,11 +4083,9 @@ async function streamReply(asst, room, url, body, opt) {
   // 앱리디자인 E5(문서/화면구현.md §5) — 채팅의 답은 기본 실험 "대화"의 실행으로 남는다: 실험 헤더를 붙이면 앱이 응답을 실행으로 남기고(실험.gl),
   // 그 호출의 end 이벤트에서 실행 id 를 받아 답에 링크로 둔다. 실험을 찾거나 만들지 못하면 지금처럼 보낸다
   const exp = typeof globalThis.geulpuChatExperiment === 'function' ? await globalThis.geulpuChatExperiment().catch(() => null) : null;
-  const headers = { 'Content-Type': 'application/json' };
-  if (exp) headers['X-GeulPU-Experiment'] = exp;
   const runWait = exp && typeof globalThis.geulpuAwaitRun === 'function' ? globalThis.geulpuAwaitRun(exp, bodyStr) : null;
   let res;
-  try { res = await fetch(url, { method: 'POST', headers, body: bodyStr, signal: ctrl.signal }); } catch (e) { if (runWait) runWait.giveUp(0); throw e; }
+  try { res = await (await opsReady).open(opId, {}, { body: bodyStr, experiment: exp || '', signal: ctrl.signal }); } catch (e) { if (runWait) runWait.giveUp(0); throw e; }
   if (runWait) {
     runWait.giveUp(res.ok ? 600000 : 0);
     runWait.promise.then(id => { if (id) { asst.run = id; asst.exp = exp; saveRooms(); if (S.view === 'chat' && !S.streaming) renderMsgs(); } });
@@ -4153,7 +4179,7 @@ function replyBody(room, upto, p) { return reqOf(convView(room, upto, p.sum || n
 // 앱리디자인 E5 — 답은 기본 실험 "대화"의 실행으로 남으므로 상위 후보 2 개 · 로짓 해시를 함께 묻는다(실행 화면의 막대 · 스텝 · 층 화면이 그 답에도).
 // 생성되는 토큰은 같다 — 로그확률은 샘플링과 따로 계산한다(계약 5.2)
 function reqOf(view, p) {
-  if (p.tpl === 'deepseek-r1') return { url: '/v1/completions', body: { prompt: r1Prompt(view, p.system), max_tokens: p.max, temperature: p.temp, stream: true, logprobs: 2, geulpu: { prompt_tokens: true, top_logprobs: 2, logit_hash: true } } };
+  if (p.tpl === 'deepseek-r1') return { op: 'run.complete', body: { prompt: r1Prompt(view, p.system), max_tokens: p.max, temperature: p.temp, stream: true, logprobs: 2, geulpu: { prompt_tokens: true, top_logprobs: 2, logit_hash: true } } };
   const msgs = [];
   if (p.system) msgs.push({ role: 'system', content: p.system });
   for (const v of view) msgs.push({ role: v.role, content: v.content });
@@ -4162,7 +4188,7 @@ function reqOf(view, p) {
     body.geulpu.special = true;
     body.chat_template_kwargs = { enable_thinking: p.think !== false };
   }
-  return { url: '/v1/chat/completions', body };
+  return { op: 'run.chat', body };
 }
 // 방의 마지막 사용자 메시지에 답한다(보내기 · 다시 생성 · 고쳐 보내기가 함께 쓴다).
 // ov — 연구 패널의 '설정을 바꿔 다시'(38단계): { model, temp, seed(원문 숫자), system, think, sum, lab: 참 } 가운데 준 것만 바꾼다 —
@@ -4198,13 +4224,13 @@ async function replyTo(room, maxOverride, ov) {
     phase = 'send';
     const asst = { role: 'assistant', content: '', template: tpl, model: mid, max, partial: true, mode: modeNow() };
     if (rp.sum) asst.sum = rp.sum;
-    let { url, body } = replyBody(room, room.messages.length, rp);
+    let { op, body } = replyBody(room, room.messages.length, rp);
     room.messages.push(asst);
     S.streaming.msg = asst;
     if (S.roomId === room.id) renderMsgs();
     const sopt = () => (ov.seed ? { bodyStr: seedBody(body, ov.seed) } : undefined);
     let rr;
-    try { rr = await streamReply(asst, room, url, body, sopt()); }
+    try { rr = await streamReply(asst, room, op, body, sopt()); }
     catch (e) {
       // 어림이 틀려 서버가 문맥 400 을 주면 — 아직 압축하지 않았으면 정확히 재고 한 번 더
       if (!(auto && !fit.done && e.status === 400 && /문맥보다 길다/.test(e.message) && !asst.content && !(S.streaming && S.streaming.aborted))) throw e;
@@ -4214,11 +4240,11 @@ async function replyTo(room, maxOverride, ov) {
       fit = await fitContext(room, rp, max, false, true);
       phase = 'send';
       if (rp.sum) asst.sum = rp.sum;
-      ({ url, body } = replyBody(room, room.messages.length, rp));
+      ({ op, body } = replyBody(room, room.messages.length, rp));
       room.messages.push(asst);
       S.streaming.msg = asst;
       if (S.roomId === room.id) renderMsgs();
-      rr = await streamReply(asst, room, url, body, sopt());
+      rr = await streamReply(asst, room, op, body, sopt());
     }
     asst.stats = rr.stats;
     if (rr.np > 0) { asst.np = rr.np; asst.nc = rr.nc; asst.L = fit.L || (S.st.server.context) || 0; asst.ck = ctxKey(rp); }
@@ -4271,24 +4297,24 @@ async function continueLast() {
     const mk = () => r1Prompt(convView(room, room.messages.indexOf(m), rp.sum), rp.system) + '<think>' + m.content;
     let prompt = mk(), np = 0, L = (S.st.server.context) || 0;
     if (OPT.compact !== false) {
-      let t = await tokOf({ url: '/v1/completions', body: { prompt } });
+      let t = await tokOf({ op: 'run.complete', body: { prompt } });
       L = t.L;
       const B = ctxBudget(L, OPT.max, true);
       if (t.n + B.R > L) {
         const qk = room.messages.map(x => x.role).lastIndexOf('user', room.messages.indexOf(m));
-        const n0 = qk < 0 ? t.n : (await tokOf({ url: '/v1/completions', body: { prompt: r1Prompt([{ role: 'user', content: room.messages[qk].content }], rp.system) + '<think>' + m.content } })).n;
+        const n0 = qk < 0 ? t.n : (await tokOf({ op: 'run.complete', body: { prompt: r1Prompt([{ role: 'user', content: room.messages[qk].content }], rp.system) + '<think>' + m.content } })).n;
         const plan = n0 + B.r <= L && qk > 0 ? await planKeep(room, qk, rp, n0, L, B, B.R) : null;
         if (plan) {
           await summarize(room, rp, plan, L, B);
           m.sum = rp.sum;
           prompt = mk();
-          t = await tokOf({ url: '/v1/completions', body: { prompt } });
+          t = await tokOf({ op: 'run.complete', body: { prompt } });
         }
         if (t.n + B.r > L) throw new Error('문맥이 가득 차 이어서 생성할 수 없습니다');
       }
       np = t.n;
     }
-    const rr = await streamReply(m, room, '/v1/completions', { prompt, max_tokens: OPT.max, temperature: OPT.temp, stream: true, geulpu: {} });
+    const rr = await streamReply(m, room, 'run.complete', { prompt, max_tokens: OPT.max, temperature: OPT.temp, stream: true, geulpu: {} });
     const stat = rr.stats;
     m.stats = stat ? '이어서 ' + stat : m.stats;
     if (np > 0) { m.np = np; m.nc = rr.nc; m.L = L; } else { delete m.np; delete m.nc; }
@@ -4312,7 +4338,7 @@ function stopStream() {
   if (!S.streaming) return;
   S.streaming.aborted = true;
   if (S.streaming.ctrl) S.streaming.ctrl.abort();
-  if (S.streaming.loading) api('/api/job/cancel', {}).catch(() => { });
+  if (S.streaming.loading) callOp('job.cancel', {}).catch(() => { });
 }
 function autosize() { const t = $('#input'); t.style.height = 'auto'; t.style.height = Math.min(240, t.scrollHeight) + 'px'; updateSend(); }
 $('#input').addEventListener('input', autosize);
@@ -4377,7 +4403,7 @@ function renderModels() {
     rebuild(page,
       pageHead(eyebrow, T('모델'), null,
         [h('button', { class: 'btn needs-conn', 'data-fk': 'add', onclick: () => browse('') }, I('plus', 's'), T('GGUF 파일 추가')),
-          h('button', { class: 'icon-btn needs-conn', 'data-tip': T('모델 폴더 열기'), 'data-tip-pos': 'bottom', 'aria-label': T('모델 폴더 열기'), onclick: () => api('/api/open', { what: 'models' }).catch(e => toast(e.message, 'err')) }, I('folder'))]),
+          h('button', { class: 'icon-btn needs-conn', 'data-tip': T('모델 폴더 열기'), 'data-tip-pos': 'bottom', 'aria-label': T('모델 폴더 열기'), onclick: () => callOp('system.open', { what: 'models' }).catch(e => toast(e.message, 'err')) }, I('folder'))]),
       modelTabs(tab),
       tab === 'mine' ? mineView() : finderEl());
     if (tab === 'find') finderStart();
@@ -4470,6 +4496,7 @@ function quantLine(m) {
         class: 'icon-btn', 'data-fk': 'more:' + m.id, 'aria-label': T`메뉴: ${name} ${q}`, 'aria-haspopup': 'menu', 'aria-expanded': 'false',
         onclick: ev => menu(ev.currentTarget, T('모델 메뉴'), [
           loaded ? { icon: 'eject', label: T('모델 내리기'), sub: T('GPU 메모리를 비웁니다'), disabled: !!S.streaming, run: unloadModel } : null,
+          loaded && srv.state === 'ready' ? { icon: 'info', label: T('서버 정보'), sub: T('서버가 알리는 모델 이름 · 문맥 길이 · 토크나이저'), run: () => serverInfo(m) } : null,
           { icon: 'hash', label: T('파일 무결성 다시 확인'), sub: m.verified ? T('받은 그대로임을 확인했습니다(SHA-256) · 몇 초') : T('받은 그대로인지 SHA-256으로 확인 · 몇 초'), disabled: m.verifying, run: () => verifyModel(m.id) },
           '-',
           { icon: 'trash', label: loaded ? T('내리고 목록에서 제거') : T('목록에서 제거'), danger: true, disabled: loaded && !!S.streaming, run: () => removeModel(m, loaded) }], 'right'),
@@ -4478,7 +4505,7 @@ function quantLine(m) {
 }
 async function unloadModel() {
   if (S.streaming) return;
-  try { await api('/api/server/stop', {}); toast(T('모델을 내렸습니다'), 'ok'); resetSig(); refresh(); }
+  try { await callOp('model.unload', {}); toast(T('모델을 내렸습니다'), 'ok'); resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
 // 이 모델로 채팅 — 늘 새 채팅(흐르는 채팅의 모델을 바꾸지 않는다)
@@ -4496,8 +4523,34 @@ function chatWith(id) {
   saveRooms(); renderRooms(); renderMsgs(); renderChatTop(true);
   $('#input').focus();
 }
+// 앱리디자인 E6 — 서버 정보: 불러온 모델을 서버가 OpenAI 호환 경로로 어떻게 알리는가(run.models — 모델 이름 · 문맥 길이, run.tokenizer_info —
+// 끝 · 시작 · 패딩 토큰 · 어휘 크기 · 생성을 멈추는 토큰). CLI 의 run models · run tokenizer-info 와 같은 값
+async function serverInfo(m) {
+  modal(h('div', { class: 'muted' }, T('불러오는 중…')), null, false);
+  let ms, tk;
+  try { [ms, tk] = await Promise.all([callOp('run.models'), callOp('run.tokenizer_info')]); }
+  catch (e) { closeModal(); toast(TM(e.message), 'err'); return; }
+  const d = (ms && Array.isArray(ms.data) && ms.data[0]) || {};
+  tk = tk || {};
+  const tok = (t, id) => (t === null || t === undefined ? T('없음') : `${JSON.stringify(t)}${id === undefined ? '' : NB + '(' + id + ')'}`);
+  const rows = [
+    [T('모델 이름'), d.id || '-'],
+    [T('문맥 길이'), d.max_model_len ? fmtNum(d.max_model_len) : '-'],
+    [T('어휘 크기'), tk.vocab_size ? fmtNum(tk.vocab_size) : '-'],
+    [T('끝 토큰(EOS)'), tok(tk.eos_token, tk.eos_token_id)],
+    [T('시작 토큰(BOS)'), tok(tk.bos_token, tk.bos_token_id)],
+    [T('프롬프트 앞의 시작 토큰'), tk.add_bos_token ? T('붙임') : T('붙이지 않음')],
+    [T('생성을 멈추는 토큰'), (tk.eog_token_ids || []).join(', ') || '-'],
+    [T('패딩 토큰'), tok(tk.pad_token)],
+  ];
+  modal(h('div', { class: 'col g16' }, h('h2', null, T('서버 정보')),
+    h('p', { class: 'muted m0' }, T`${displayName(m)} ${quantOf(m)} — 서버가 OpenAI 호환 경로로 알리는 값입니다.`),
+    h('div', { class: 'kv' }, rows.flatMap(([k, v]) => [h('div', { class: 'k' }, k), h('div', { class: 'v mono small break' }, v)])),
+    h('p', { class: 'small muted m0' }, T('같은 값을 CLI 로: GeulPU run models · GeulPU run tokenizer-info'))),
+  [h('button', { class: 'btn', onclick: () => closeModal() }, T('닫기'))], false, '.foot .btn');
+}
 async function verifyModel(id) {
-  try { await api('/api/models/verify', { id }); toast(T('파일 무결성(SHA-256)을 확인합니다 — 8 GB 파일에 몇 초 걸립니다'), 'ok'); resetSig(); refresh(); }
+  try { await callOp('model.verify', { id }); toast(T('파일 무결성(SHA-256)을 확인합니다 — 8 GB 파일에 몇 초 걸립니다'), 'ok'); resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
 async function removeModel(m, loaded) {
@@ -4507,8 +4560,8 @@ async function removeModel(m, loaded) {
     inside ? h('label', { class: 'check' }, cb, T`파일도 삭제 (${fmtBytes(m.size)})`) : h('p', { class: 'small muted m0' }, T('GeulPU 모델 폴더 밖의 파일은 삭제하지 않고 목록에서만 제거합니다.')));
   if (!(await confirmBox(T('모델 제거'), body, T('제거'), 'danger'))) return;
   try {
-    if (loaded) await api('/api/server/stop', {});
-    await api('/api/models/remove', { id: m.id, delete_file: inside && cb.checked });
+    if (loaded) await callOp('model.unload', {});
+    await callOp('model.remove', { id: m.id, delete_file: inside && cb.checked });
     resetSig(); refresh();
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -4554,11 +4607,11 @@ function checkWhy(reason) {
   return TM(s) || T('확인하지 못했습니다');
 }
 async function resumeDownload(c) {
-  try { await api('/api/models/download', { id: c.id }); resetSig(); refresh(); }
+  try { await callOp('model.download.start', { id: c.id }); resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
 function pauseDownload(c) {
-  api('/api/models/cancel', { id: c.id }).then(() => { resetSig(); refresh(); }).catch(e => toast(e.message, 'err'));
+  callOp('model.download.cancel', { id: c.id }).then(() => { resetSig(); refresh(); }).catch(e => toast(e.message, 'err'));
 }
 // 단일 선택(radiogroup) — 화살표로 옮기고 고른다(다시 그려지면 새로 고른 것에 초점)
 function radioKeys(ev) {
@@ -4630,14 +4683,14 @@ async function startDownload(c) {
     c.check === 'untested' ? h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('이 파일로는 아직 GeulPU에서 실행해 보지 않았습니다. 다운로드가 끝나면 지원 여부를 바로 알려 드립니다.'))) : null,
     h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('중간에 끊겨도 다시 누르면 이어서 받고, 다 받으면 SHA-256으로 파일이 맞는지 확인합니다.'))));
   if (!(await confirmBox(T('모델 다운로드'), body, T('다운로드'), bad ? 'quiet' : null))) return;
-  try { await api('/api/models/download', { id: c.id }); resetSig(); refresh(); }
+  try { await callOp('model.download.start', { id: c.id }); resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
 // 파일 고르기 — pick 이 있으면 폴더 고르기(설정의 모델 폴더): 파일은 감추고 '이 폴더 선택'
 // text — 폴더를 고를 때(pick) 창의 제목 · 설명을 바꾼다({title, lead} — 앱리디자인 E2 의 실험 폴더 위치). 없으면 모델 폴더
 async function browse(path, pick, text) {
   let j;
-  try { j = await api('/api/fs?path=' + encodeURIComponent(path)); }
+  try { j = await callOp('system.fs', { path }); }
   catch (e) { toast(e.message, 'err'); return; }
   const list = h('div', { class: 'fs-list' });
   if (j.path) list.append(h('button', { class: 'fs-item', onclick: () => browse(j.parent || '', pick, text) }, I('chevU', 's'), h('span', { class: 'n' }, T('상위 폴더'))));
@@ -4647,7 +4700,7 @@ async function browse(path, pick, text) {
       class: 'fs-item', onclick: async () => {
         if (e.dir) { browse(e.path, pick, text); return; }
         closeModal();
-        try { await api('/api/models/add', { path: e.path }); toast(T`추가했습니다: ${e.name}`, 'ok'); resetSig(); refresh(); }
+        try { await callOp('model.add', { path: e.path }); toast(T`추가했습니다: ${e.name}`, 'ok'); resetSig(); refresh(); }
         catch (err) { toast(err.message, 'err'); }
       },
     }, I(e.dir ? 'folder' : 'file', 's'), h('span', { class: 'n' }, e.name), e.dir ? I('chevR', 's') : h('span', { class: 'num muted small' }, fmtBytes(e.size))));
@@ -5211,10 +5264,10 @@ async function fdGet(repo, f, q, m) {
 }
 async function hfCheckFile(repo, f) {
   try {
-    await api('/api/hf/check', { repo, file: f.path, size: f.size });
+    await callOp('model.hf.check', { repo, file: f.path, size: f.size });
     for (let i = 0; i < 240; i++) {
       await new Promise(r => setTimeout(r, 400));
-      const r = await api('/api/hf/check');
+      const r = await callOp('model.hf.check_status');
       if (r.state === 'done' || r.state === 'failed') {
         if (r.state === 'failed') return { state: 'bad', why: checkWhy(r.reason) };
         if (!r.shape || !r.shape.ok) return { state: 'bad', why: (r.shape && r.shape.reason) || T('이 엔진이 받지 않는 파일입니다') };
@@ -5246,15 +5299,15 @@ async function hfDownload(x, f, q, shape) {
     h('div', { class: 'note-line' }, I('info', 's'), h('span', null, T('이 파일의 답 품질은 GeulPU에서 확인하지 않았습니다. 구조와 형식은 받기 전에 확인했고, 다 받으면 SHA-256으로 파일이 맞는지 확인합니다.'))));
   if (!(await confirmBox(T('모델 다운로드'), body, T('다운로드'), bad ? 'quiet' : null))) return;
   try {
-    const r = await api('/api/hf/add', { repo: x.id, file: f.path, size: f.size, sha256: f.lfs.oid, name: hfName(x.id), quant: q, license: lic });
-    await api('/api/models/download', { id: r.id });
+    const r = await callOp('model.hf.add', { repo: x.id, file: f.path, size: f.size, sha256: f.lfs.oid, name: hfName(x.id), quant: q, license: lic });
+    await callOp('model.download.start', { id: r.id });
     toast(T("다운로드를 시작했습니다 — 진행은 상태 막대와 '내 모델'에서 볼 수 있습니다"), 'ok');
     resetSig(); refresh();
   } catch (e) { toast(e.message, 'err'); }
 }
 async function discardDownload(c) {
   if (!(await confirmBox(T('받다 만 파일 지우기'), h('p', { class: 'muted m0' }, T`${c.name} ${c.quant} — 지금까지 받은 ${fmtBytes((c.download && c.download.received) || 0)}를 지웁니다.${c.check === 'hf' ? T(' Hugging Face에서 더한 항목이라 목록에서도 뺍니다.') : ''}`), T('지우기'), 'danger'))) return;
-  try { await api('/api/models/discard', { id: c.id }); resetSig(); refresh(); }
+  try { await callOp('model.download.discard', { id: c.id }); resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
 
@@ -5352,7 +5405,7 @@ function renderBench(part) {
       j ? jobCard(j) : null,
       cards.length ? h('div', { class: 'section bench-grid' }, pick, cards.map(b => benchCard(b, runnables, hasR1, busyAny, r1c))) : null,
       P.results ? h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('최근 결과')), h('span', { class: 'grow' }),
-        h('button', { class: 'icon-btn needs-conn', 'data-tip': T('결과 폴더 열기'), 'data-tip-pos': 'left', 'aria-label': T('결과 폴더 열기'), onclick: () => api('/api/open', { what: 'results' }).catch(e => toast(e.message, 'err')) }, I('folder'))),
+        h('button', { class: 'icon-btn needs-conn', 'data-tip': T('결과 폴더 열기'), 'data-tip-pos': 'left', 'aria-label': T('결과 폴더 열기'), onclick: () => callOp('system.open', { what: 'results' }).catch(e => toast(e.message, 'err')) }, I('folder'))),
         h('div', { id: 'results' }, S.results ? resultsTable(S.results) : h('div', { class: 'muted' }, T('불러오는 중…')))) : null);
     S.log = { job: j ? j.id : 0, from: 0 };
   }
@@ -5392,14 +5445,14 @@ function jobCard(j) {
     h('div', { class: 'head' },
       h('div', { class: 't' }, h('div', { class: 'ink h3' }, jobTitle(j)), h('div', { class: 'small muted', id: 'job-step' }, j.state === 'running' ? TM(j.step || '') : '')),
       h('span', { class: 'tag ' + tone, id: 'job-time' }, ''),
-      j.state === 'running' ? h('button', { class: 'btn sm needs-conn', 'data-fk': 'job-stop', onclick: () => api('/api/job/cancel', {}).then(refresh).catch(e => toast(e.message, 'err')) }, I('stop', 's'), T('중지'))
+      j.state === 'running' ? h('button', { class: 'btn sm needs-conn', 'data-fk': 'job-stop', onclick: () => callOp('job.cancel', {}).then(refresh).catch(e => toast(e.message, 'err')) }, I('stop', 's'), T('중지'))
         : h('button', { class: 'icon-btn', 'data-tip': T('카드 닫기'), 'data-tip-pos': 'left', 'aria-label': T('끝난 작업 카드 닫기'), onclick: () => { S.jobHide = jobKey(j); store('geulpu.jobHide', S.jobHide); resetSig(); renderBench(benchPartOf(S.view)); } }, I('x', 's'))),
     h('div', { class: 'bar' + (j.state === 'done' ? ' done' : j.state === 'failed' ? ' fail' : '') }, h('i', { id: 'job-bar', style: `width:${j.state === 'done' ? 100 : j.progress / 10}%` })),
     k ? kpis(k, true) : j.summary && j.state === 'done' ? h('div', { class: 'verdict' }, (quick ? T('빠른 확인 — ') : '') + TM(pathLabel(headText(j.summary)))) : null,
     fail,
     j.state === 'done' && j.result ? h('div', { class: 'row' },
       h('button', { class: 'btn sm primary', onclick: () => openResult(j.result) }, T('결과 보기')),
-      h('a', { class: 'btn sm', href: '/api/results/zip?name=' + encodeURIComponent(j.result) }, I('download', 's'), T('zip 내보내기'))) : null,
+      h('a', { class: 'btn sm', href: opUrl('bench.results.zip', { name: j.result }) }, I('download', 's'), T('zip 내보내기'))) : null,
     h('details', { class: 'fold' }, h('summary', null, I('chevR', 's'), T('실행 기록')), h('pre', { class: 'log', id: 'joblog' })),
     h('details', { class: 'fold', hidden: true }, h('summary', null, I('chevR', 's'), T('도구 출력')), h('pre', { class: 'log', id: 'job-tail' })));
 }
@@ -5429,7 +5482,7 @@ function pairFiles() {
 function llamaLoad() {
   const L = S.llama;
   L.at = Date.now();
-  Promise.all([api('/api/llama/recorder'), api('/api/llama/receipts'), L.vk ? null : api('/api/device').catch(() => null)]).then(([rec, rs, dev]) => {
+  Promise.all([callOp('replay.recorder.get'), callOp('replay.receipts'), L.vk ? null : callOp('system.devices').catch(() => null)]).then(([rec, rs, dev]) => {
     L.rec = rec;
     L.list = (rs.receipts || []).slice().sort((a, b) => String(b.recorded || '').localeCompare(String(a.recorded || '')) || String(b.name).localeCompare(String(a.name)));
     if (dev) L.vk = ((dev.vulkan || {})['장치들'] || []).map(v => v['이름']);
@@ -5450,7 +5503,7 @@ function llamaCard(b, busy) {
     h('option', { value: 'probes', selected: rec.mode === 'probes' ? true : null }, T('개입 — 요청에 확률 · 토큰 칸을 더하고 /slots 등을 물음(토큰 있는 영수증)')));
   const save = async () => {
     try {
-      const r = await api('/api/llama/recorder', { port: parseInt(port.value || '0', 10) || 0, args: args.value.trim(), exe: exe.value.trim(), mode: mode.value });
+      const r = await callOp('replay.recorder.set', { port: parseInt(port.value || '0', 10) || 0, args: args.value.trim(), exe: exe.value.trim(), mode: mode.value });
       toast(T('기록기 설정을 저장했습니다'), 'ok');
       for (const w of (r && r.warnings) || []) toast(TM(w), 'err');
       llamaLoad();
@@ -5463,7 +5516,7 @@ function llamaCard(b, busy) {
     const path = logPath.value.trim();
     if (!path) return;
     try {
-      const r = await api('/api/llama/import', { path });
+      const r = await callOp('replay.import', { path });
       toast(T`영수증 ${fmtNum((r.receipts || []).length)}개를 만들었습니다`, 'ok');
       for (const w of (r && r.warnings) || []) toast(TM(w), 'err');
       llamaLoad();
@@ -5497,7 +5550,7 @@ function llamaCard(b, busy) {
       class: 'btn run needs-conn', 'data-fk': 'llama-run', disabled: busy || !L.sel ? true : null, onclick: async () => {
         if (S.streaming) { toast(T('채팅의 답이 끝난 뒤 실행할 수 있습니다')); return; }
         if (S.st.server.state === 'ready' && !(await confirmBox(T('채팅 모델을 내립니다'), h('p', { class: 'muted m0' }, T('측정하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?')), T('계속')))) return;
-        try { await api('/api/llama/verify', { receipt: L.sel, layer: L.layer, device: L.layer === 'vulkan' ? L.dev : '' }); resetSig(); refresh(); }
+        try { await callOp('replay.verify', { receipt: L.sel, layer: L.layer, device: L.layer === 'vulkan' ? L.dev : '' }); resetSig(); refresh(); }
         catch (e) { toast(e.message, 'err'); }
       },
     }, I('play', 's'), busy ? T('다른 작업 실행 중') : T('검증'))));
@@ -5529,7 +5582,7 @@ function benchCard(b, runnables, hasR1, busy, r1c) {
         }
         if (S.streaming) { toast(T('채팅의 답이 끝난 뒤 실행할 수 있습니다')); return; }
         if (S.st.server.state === 'ready' && !(await confirmBox(T('채팅 모델을 내립니다'), h('p', { class: 'muted m0' }, T('측정하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?')), T('계속')))) return;
-        try { await api('/api/bench/' + b.kind, body); resetSig(); refresh(); }
+        try { await callOp(BENCH_OP[b.kind], body); resetSig(); refresh(); }
         catch (e) { toast(e.message, 'err'); }
       },
     }, I('play', 's'), busy ? T('다른 작업 실행 중') : T('실행'))));
@@ -5541,7 +5594,7 @@ async function pollLog() {
   if (!pre) return;
   if (S.log.job !== j.id) S.log = { job: j.id, from: 0 };
   try {
-    const r = await api('/api/job/log?from=' + S.log.from);
+    const r = await callOp('job.log', { from: S.log.from });
     if (r.id !== j.id) return;
     if (r.text) {
       const near = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 40;
@@ -5555,7 +5608,7 @@ async function pollLog() {
 async function loadResults(force) {
   S.resultsAt = Date.now();
   let r;
-  try { r = await api('/api/results'); } catch (_) { return; }
+  try { r = await callOp('bench.results'); } catch (_) { return; }
   if (!changed('results', r) && !force) return;
   S.results = r.results;
   const box = document.getElementById('results');
@@ -5603,13 +5656,13 @@ function resultsTable(rs) {
         h('td', { class: 'small c-res' }, h('span', { class: 'row nowrap g8' }, vt, h('span', { class: 'ell', 'data-tip': sum, 'data-tip-pos': 'top' }, sum))),
         h('td', { class: 'r nw' },
           h('button', { class: 'icon-btn', 'data-tip': T('결과 보기'), 'data-tip-pos': 'left', 'aria-label': T('결과 보기'), onclick: () => openResult(x.name) }, I('chevR')),
-          h('a', { class: 'icon-btn', 'data-tip': T('zip 내보내기'), 'data-tip-pos': 'left', 'aria-label': T('zip 내보내기'), href: '/api/results/zip?name=' + encodeURIComponent(x.name) }, I('download'))));
+          h('a', { class: 'icon-btn', 'data-tip': T('zip 내보내기'), 'data-tip-pos': 'left', 'aria-label': T('zip 내보내기'), href: opUrl('bench.results.zip', { name: x.name }) }, I('download'))));
     }))));
 }
 async function getFile(name, file) {
-  const r = await fetch('/api/results/file?name=' + encodeURIComponent(name) + '&file=' + encodeURIComponent(file));
+  const r = await (await opsReady).call('bench.results.file', { name, file });
   if (!r.ok) return null;
-  return file.endsWith('.json') ? r.json() : r.text();
+  return file.endsWith('.json') ? r.json : r.text;
 }
 // 진단 도구의 칸 이름(연구 기록의 말)을 화면의 말로
 function diagLabel(k) {
@@ -5737,8 +5790,8 @@ async function openResult(name) {
   }
   if (txt && txt.split('\n').filter(Boolean).length > 1) parts.push(h('details', { class: 'fold mt16' }, h('summary', null, I('chevR', 's'), T('결과.txt 원문')), h('pre', { class: 'log' }, txt)));
   modal(h('div', null, parts), [
-    h('button', { class: 'btn ghost needs-conn', onclick: () => api('/api/open', { what: 'result', name }).catch(e => toast(e.message, 'err')) }, I('folder', 's'), T('폴더 열기')),
-    h('a', { class: 'btn', href: '/api/results/zip?name=' + encodeURIComponent(name) }, I('download', 's'), T('zip 내보내기')),
+    h('button', { class: 'btn ghost needs-conn', onclick: () => callOp('system.open', { what: 'result', name }).catch(e => toast(e.message, 'err')) }, I('folder', 's'), T('폴더 열기')),
+    h('a', { class: 'btn', href: opUrl('bench.results.zip', { name }) }, I('download', 's'), T('zip 내보내기')),
     h('button', { class: 'btn', onclick: () => closeModal() }, T('닫기'))], true, '.foot .btn:last-child');
 }
 
@@ -5751,7 +5804,7 @@ async function renderDevice() {
   const vk = d.layer === 'vulkan';
   put(page,
     pageHead(d.layer ? `${LAYER[d.layer]} · ${fmtBytes(d.memory)}` : null, T('장치', '화면'), null,
-      [h('button', { class: 'btn needs-conn', onclick: () => api('/api/device/check', {}).then(() => { resetSig(); refresh(); }).catch(e => toast(e.message, 'err')) }, I('refresh', 's'), T('다시 확인'))]),
+      [h('button', { class: 'btn needs-conn', onclick: () => callOp('system.device_check', {}).then(() => { resetSig(); refresh(); }).catch(e => toast(e.message, 'err')) }, I('refresh', 's'), T('다시 확인'))]),
     !d.checked ? h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('확인하는 중…')))
       : !d.layer ? h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('쓸 수 있는 GPU를 찾지 못했습니다')), h('div', null, T('NVIDIA RTX 30 시리즈 이상(CUDA) 또는 Vulkan 1.3을 지원하는 GPU가 필요합니다.')),
         d.reason ? h('details', { class: 'fold mt16 tl' }, h('summary', null, I('chevR', 's'), T('확인한 내용')), h('pre', { class: 'log sans' }, TM(d.reason))) : null)
@@ -5765,7 +5818,7 @@ async function renderDevice() {
     h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('Vulkan 장치'))), h('div', { id: 'dev-vk', class: 'col' })),
     h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('CUDA 장치'))), h('div', { id: 'dev-cu', class: 'col' })));
   try {
-    const raw = await api('/api/device');
+    const raw = await callOp('system.devices');
     const vl = raw.vulkan && raw.vulkan['장치들'] ? raw.vulkan['장치들'] : [];
     S.vk = vl.map(v => v['이름']);
     put($('#dev-vk'), vl.length ? h('div', { class: 'list' }, vl.map(v => {
@@ -5798,7 +5851,7 @@ const AG_NOTE = {
 async function loadAgents(force) {
   if (!force && S.agAt && Date.now() - S.agAt < 3000) return;
   S.agAt = Date.now();
-  try { S.ag = await api('/api/agents'); if (S.view === 'agents') renderAgents(); } catch (_) { }
+  try { S.ag = await callOp('agents.list'); if (S.view === 'agents') renderAgents(); } catch (_) { }
 }
 // 직접 실행할 때의 명령 — 윈도는 PowerShell, 리눅스는 bash
 function agShell(a, ag, dir) {
@@ -5813,14 +5866,14 @@ async function agLaunch(a) {
   const dir = (S.agDir || '').trim();
   if (!dir) { toast(T('작업 폴더를 먼저 고르세요'), 'err'); return; }
   try {
-    await api('/api/agents/launch', { agent: a.id, folder: dir });
+    await callOp('agents.launch', { agent: a.id, folder: dir });
     toast(T`${a.name}를 새 터미널 창에서 띄웠습니다`);
   } catch (e) { toast(TM(e.message), 'err'); }
 }
 async function agReload(id) {
   try {
-    await api('/api/settings', { slots: 1, context: 131072 });
-    await api('/api/server/start', { model: id });
+    await callOp('settings.set', { slots: 1, context: 131072 });
+    await callOp('model.load', { model: id });
     toast(T('동시 처리 1 · 문맥 131072로 다시 불러옵니다 — 그래픽 메모리에 맞지 않으면 엔진이 줄입니다'));
     refresh();
   } catch (e) { toast(TM(e.message), 'err'); }
@@ -5839,7 +5892,7 @@ function renderAgents() {
     const ms = (st.models || []).filter(x => x.ok !== false);
     const sel = h('select', { class: 'input', id: 'ag-model', 'aria-label': T('모델') }, ms.map(x => h('option', { value: x.id }, x.name || x.id)));
     modelBox = h('div', { class: 'col' }, h('div', { class: 'sub bad' }, T('불러온 모델이 없습니다 — 에이전트는 불러 둔 모델로 답합니다.')),
-      ms.length ? h('div', { class: 'row' }, sel, h('button', { class: 'btn needs-conn', onclick: () => api('/api/server/start', { model: sel.value }).then(() => refresh()).catch(e => toast(TM(e.message), 'err')) }, T('불러오기')))
+      ms.length ? h('div', { class: 'row' }, sel, h('button', { class: 'btn needs-conn', onclick: () => callOp('model.load', { model: sel.value }).then(() => refresh()).catch(e => toast(TM(e.message), 'err')) }, T('불러오기')))
         : h('div', { class: 'muted' }, T('모델 화면에서 모델을 먼저 추가하세요')));
   } else {
     const warn = [];
@@ -5896,17 +5949,17 @@ function renderAgents() {
 async function loadStore(force) {
   if (!force && S.storeAt && Date.now() - S.storeAt < 3000) return;
   S.storeAt = Date.now();
-  try { S.store = await api('/api/store'); resetSig(); if (S.view === 'settings' || S.view === 'cache') renderSettings(); } catch (_) { }
+  try { S.store = await callOp('store.status'); resetSig(); if (S.view === 'settings' || S.view === 'cache') renderSettings(); } catch (_) { }
 }
 async function clearStore() {
   const cs = S.store || {};
   if (!(await confirmBox(T('프롬프트 캐시 지우기'), h('p', { class: 'muted m0' }, T`프롬프트 캐시의 청크 ${fmtNum(cs.files || 0)}개(${fmtBytes(cs.bytes || 0)})를 지웁니다. 채팅 기록은 그대로이고, 다음 요청부터 다시 계산합니다.`), T('지우기'), 'danger'))) return;
-  try { await api('/api/store/clear', {}); toast(T('프롬프트 캐시를 지웠습니다'), 'ok'); } catch (e) { toast(e.message, 'err'); }
+  try { await callOp('store.clear', {}); toast(T('프롬프트 캐시를 지웠습니다'), 'ok'); } catch (e) { toast(e.message, 'err'); }
   loadStore(true);
 }
 async function loadVk() {
   if (S.vk) return;
-  try { const raw = await api('/api/device'); S.vk = (raw.vulkan && raw.vulkan['장치들'] ? raw.vulkan['장치들'] : []).map(v => v['이름']); resetSig(); renderSettings(); } catch (_) { }
+  try { const raw = await callOp('system.devices'); S.vk = (raw.vulkan && raw.vulkan['장치들'] ? raw.vulkan['장치들'] : []).map(v => v['이름']); resetSig(); renderSettings(); } catch (_) { }
 }
 let setTimer = null;
 // 저장되면 그 줄에 잠깐 '저장됨'(알림 창을 쌓지 않는다). 화면 읽기 프로그램에는 무엇이 언제 적용되는지까지 알린다
@@ -5959,10 +6012,10 @@ function saveSettings(note, recheck, delay, withDir, row) {
     if (page.querySelector('#set-ctx')) page.querySelector('#set-ctx').value = body.context;
     const errEl = page.querySelector(withDir === 'store' ? '#set-sdir-err' : '#set-mdir-err');
     try {
-      await api('/api/settings', body);
+      await callOp('settings.set', body);
       if (withDir && errEl) errEl.hidden = true;
       markSaved(row || '', note);
-      if (recheck) await api('/api/device/check', {}).catch(e => toast(e.message, 'err'));
+      if (recheck) await callOp('system.device_check', {}).catch(e => toast(e.message, 'err'));
     } catch (e) {
       if (withDir && errEl) { put(errEl, I('alert', 's'), h('span', null, TM(e.message))); errEl.hidden = false; }
       else toast(e.message, 'err');
@@ -6091,7 +6144,7 @@ function renderSettings(force) {
       h('div', { class: 'sec mt16' }, T('저장 위치')),
       h('div', { class: 'set-group' },
         row(T('모델 폴더'), T`다음 실행부터 적용됩니다. 기본: ${defDir}`, h('div', { class: 'row nowrap w100' }, mdir, pickDir), h('div', { class: 'set-err', id: 'set-mdir-err', hidden: true }), 'set-mdir'),
-        row(T('데이터 폴더'), h('span', { class: 'break' }, a.data_dir), h('button', { class: 'btn sm needs-conn', onclick: () => api('/api/open', { what: 'data' }).catch(e => toast(e.message, 'err')) }, I('folder', 's'), T('열기')))),
+        row(T('데이터 폴더'), h('span', { class: 'break' }, a.data_dir), h('button', { class: 'btn sm needs-conn', onclick: () => callOp('system.open', { what: 'data' }).catch(e => toast(e.message, 'err')) }, I('folder', 's'), T('열기')))),
       h('div', { class: 'sec mt16' }, T('정보', 'about')),
       h('div', { class: 'set-group' },
         row(EN ? 'Language · 언어' : '언어 · Language', T('화면에 쓰는 말입니다. 바꾸면 화면을 다시 불러옵니다.'), langSel),
@@ -6210,12 +6263,10 @@ function labAnswers(room) {
   walk(room.messages, 0, '', false);
   return out.sort((a, b) => a.n - b.n || a.at - b.at);
 }
-async function labApi(path, body) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: typeof body === 'string' ? body : JSON.stringify(body) });
-  let j = null;
-  try { j = await r.json(); } catch (_) { }
-  if (!r.ok) throw new Error((j && j.error && j.error.message) || ('HTTP ' + r.status));
-  return j;
+// 토큰의 글 · 프롬프트 다시 짓기처럼 화면을 그리려는 호출은 내부용 전달 경로(proxy.tokenize · proxy.detokenize — 이벤트 없음)로,
+// 사용자가 하는 계산(점수 · 렌즈 · 다시 생성 · 점수 탭의 토큰화)은 run.* 로
+async function labApi(id, body) {
+  return typeof body === 'string' ? callOp(id, {}, { body, method: 'POST' }) : callOp(id, body, { method: 'POST' });
 }
 // 셈은 그 답의 모델로 — 다른 모델이 올라 있으면 바꿔 불러온다(답이 흐르는 동안 · 벤치마크 중에는 하지 않는다)
 async function labEnsureModel(id) {
@@ -6239,7 +6290,7 @@ async function labPrompt(tid) {
   const { body } = replyBody(f.room, f.idx, { tpl: tr.tpl, max: tr.req.max, temp: tr.req.temp, system: tr.req.system, think: tr.req.think, sum: tr.req.sum || null });
   if (tr.bodyHash && (await sha256Hex(JSON.stringify(body))) !== tr.bodyHash) throw new Error(T('이 답을 만든 요청을 똑같이 다시 지을 수 없습니다 — 앞 대화가 바뀌었습니다'));
   const tk = tr.tpl === 'deepseek-r1' ? { prompt: body.prompt } : { messages: body.messages, chat_template_kwargs: body.chat_template_kwargs };
-  tr.promptIds = (await labApi('/tokenize', tk)).tokens;
+  tr.promptIds = (await labApi('proxy.tokenize', tk)).tokens;
   saveTraces();
   return tr.promptIds;
 }
@@ -6267,7 +6318,7 @@ function tokTexts(text, offs, strs) {
 async function labScore(modelId, prompt, tokens, k) {
   await labEnsureModel(modelId);
   const P = prompt.length;
-  const j = await labApi('/v1/completions', {
+  const j = await labApi('run.score', {
     prompt: prompt.concat(tokens), echo: true, max_tokens: 0, logprobs: k, temperature: 0, geulpu: { echo_from: P, logit_hash: true },
   });
   const c = j.choices[0], lp = c.logprobs, g = j.geulpu;
@@ -6333,7 +6384,7 @@ function labSummary(an, toks) {
 // 토큰 번호의 글(대안 토큰 — 한 번 물어 둔다)
 async function labTexts(ids) {
   const need = [...new Set(ids)].filter(id => id >= 0 && LAB.texts[id] === undefined);
-  await Promise.all(need.map(id => labApi('/detokenize', { tokens: [id] }).then(j => { LAB.texts[id] = j.prompt; }).catch(() => { LAB.texts[id] = '?'; })));
+  await Promise.all(need.map(id => labApi('proxy.detokenize', { tokens: [id] }).then(j => { LAB.texts[id] = j.prompt; }).catch(() => { LAB.texts[id] = '?'; })));
 }
 const labKpi = (v, l, tip) => h('div', { class: 'kpi', 'data-tip': tip || null, 'data-tip-pos': 'top' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l));
 const labSec = t => h('div', { class: 'sec lab-sec' }, t);
@@ -6525,7 +6576,7 @@ async function labLens(model, prompt, toks, i) {
   await labEnsureModel(model);
   const P = prompt.length;
   const jac = !!(S.st && S.st.server.jlens_sha256);
-  const j = await labApi('/v1/completions', {
+  const j = await labApi('run.lens', {
     prompt: prompt.concat(toks.slice(0, i + 1)), echo: true, max_tokens: 0, logprobs: LAB_K, temperature: 0,
     geulpu: { echo_from: P + i, logit_hash: true, layer_lens: jac ? { jacobian: true } : true },
   });
@@ -6731,7 +6782,7 @@ async function labBranch(i, alt) {
   let preText = '';
   try {
     await labEnsureModel(tr.model);
-    preText = (await labApi('/detokenize', { tokens: pre })).prompt;
+    preText = (await labApi('proxy.detokenize', { tokens: pre })).prompt;
   } catch (e) { LAB.err = e.message; LAB.busy = ''; labRender(); return; }
   LAB.busy = '';
   LAB.err = '';
@@ -6748,7 +6799,7 @@ async function labBranch(i, alt) {
   try {
     const body = { prompt: an.prompt.concat(pre), max_tokens: max, temperature: tr.req.temp, stream: true, geulpu: { step_offset: pre.length } };
     if (tr.tpl === 'qwen3') body.geulpu.special = true;
-    const rr = await streamReply(asst, room, '/v1/completions', body, { text: true, bodyStr: seedBody(body, tr.req.temp > 0 ? tr.seed : '') });
+    const rr = await streamReply(asst, room, 'run.branch', body, { text: true, bodyStr: seedBody(body, tr.req.temp > 0 ? tr.seed : '') });
     asst.stats = rr.stats;
     if (rr.gp && Array.isArray(rr.gp.tokens)) {
       const nt = newTid();
@@ -6923,7 +6974,7 @@ function labScoreView() {
         const text = LAB.scoreText;
         if (!text.trim()) throw new Error(T('점수 매길 글을 넣으세요'));
         await labEnsureModel(model);
-        const ids = (await labApi('/tokenize', { prompt: text })).tokens;
+        const ids = (await labApi('run.tokenize', { prompt: text })).tokens;
         const pre = useAns ? an.prompt : ids.slice(0, 1), rest = useAns ? ids : ids.slice(1);
         if (!rest.length) throw new Error(T('토큰이 둘 이상인 글을 넣으세요(맥락 없이는 첫 토큰의 확률이 없습니다)'));
         LAB.busy = T`토큰 ${fmtNum(rest.length)}개를 계산하는 중`;
@@ -6983,7 +7034,7 @@ function labRepro() {
   if (LAB.capsule) out.push(h('div', { class: 'note-line' + (LAB.capsule.ok ? '' : ' err') }, I(LAB.capsule.ok ? 'check' : 'alert', 's'), h('span', null, LAB.capsule.text)));
   // 출처 · 기준 PC · 하드웨어
   out.push(labSec(T('출처')));
-  if (!LAB.prov) out.push(h('div', null, h('button', { class: 'btn sm needs-conn', disabled: LAB.busy ? true : null, onclick: () => labRun(async () => { LAB.busy = T('해시를 계산하는 중'); labRender(); LAB.prov = await api('/api/provenance'); }) }, I('hash', 's'), T('엔진 · 커널 해시 보기'))));
+  if (!LAB.prov) out.push(h('div', null, h('button', { class: 'btn sm needs-conn', disabled: LAB.busy ? true : null, onclick: () => labRun(async () => { LAB.busy = T('해시를 계산하는 중'); labRender(); LAB.prov = await callOp('system.provenance'); }) }, I('hash', 's'), T('엔진 · 커널 해시 보기'))));
   else out.push(labProvView(LAB.prov));
   out.push(labRefView(tr));
   return labCol(out);
@@ -6996,7 +7047,7 @@ async function labReplay(tid) {
   labRender();
   const body = { prompt: cp.prompt, max_tokens: labMax(tr), temperature: tr.req.temp, cache_prompt: false, geulpu: { logit_hash: true } };
   if (cp.off) body.geulpu.step_offset = cp.off;
-  const j = await labApi('/v1/completions', seedBody(body, tr.req.temp > 0 ? tr.seed : ''));
+  const j = await labApi(cp.off ? 'run.branch' : 'run.complete', seedBody(body, tr.req.temp > 0 ? tr.seed : ''));
   const toks = j.geulpu.tokens || [], hs = j.geulpu.logit_hashes || [], want = cp.tokens, wh = an.hashes.slice(cp.off);
   let d = 0, hd = 0;
   while (d < toks.length && d < want.length && toks[d] === want[d]) d++;
@@ -7086,7 +7137,7 @@ async function labCapsuleCheck(file) {
   const body = { prompt: rq.prompt_tokens, max_tokens: rq.max_tokens, temperature: rq.temperature, cache_prompt: false, geulpu: { logit_hash: true } };
   if (rq.temperature > 0) Object.assign(body, { top_k: rq.top_k, top_p: rq.top_p, min_p: rq.min_p });
   if (rq.step_offset) body.geulpu.step_offset = rq.step_offset;
-  const j = await labApi('/v1/completions', seedBody(body, rq.temperature > 0 && sm ? sm[1] : ''));
+  const j = await labApi(rq.step_offset ? 'run.branch' : 'run.complete', seedBody(body, rq.temperature > 0 && sm ? sm[1] : ''));
   const genOk = eqA(j.geulpu.tokens || [], rs.tokens) && eqA(j.geulpu.logit_hashes || [], rs.logit_hashes);
   let fpOk = true;
   if (cap.fingerprint) {
@@ -7301,27 +7352,29 @@ function dbgParse(text, name) {
   };
 }
 async function dbgFetchRun(name) {
-  const r = await fetch('/api/debug/run?name=' + encodeURIComponent(name));
-  const text = await r.text();
-  if (!r.ok) { let m = 'HTTP ' + r.status; try { m = JSON.parse(text).error.message; } catch (_) { } throw new Error(m); }
-  return dbgParse(text, name);
+  const r = await (await opsReady).call('debug.run.get', { name });
+  if (!r.ok) { let m = 'HTTP ' + r.status; try { m = JSON.parse(r.text).error.message; } catch (_) { } throw new Error(m); }
+  return dbgParse(r.text, name);
 }
-async function dbgSend(path, body) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bigStringify(body) });
-  const text = await r.text();
+// id 는 기능 id — 실행 로그에 남은 경로는 dbgOpOf 로 찾는다(앱리디자인 E6)
+async function dbgSend(id, body) {
+  if (!id) throw new Error(T('기능 목록에 없는 경로입니다'));
+  const r = await (await opsReady).call(id, {}, { body: bigStringify(body) });
   let j = null;
-  try { j = bigParse(text); } catch (_) { }
+  try { j = bigParse(r.text); } catch (_) { }
   return { status: r.status, j };
 }
-async function dbgPost(path, body) {
-  const r = await dbgSend(path, body);
+const dbgOpOf = path => (OPS ? OPS.opOfPath('POST', path) : null);
+const dbgPathOf = id => (OPS ? OPS.pathOf(id) : null);
+async function dbgPost(id, body) {
+  const r = await dbgSend(id, body);
   if (r.status !== 200) throw new Error((r.j && r.j.error && r.j.error.message) || ('HTTP ' + r.status));
   return r.j;
 }
 // 분석 줄을 실행 로그 끝에(조각으로)
 async function dbgAppend(name, rows) {
   let part = [], size = 0;
-  const flush = async () => { if (part.length) await api('/api/debug/run/append', { name, lines: part.join('\n') + '\n' }); part = []; size = 0; };
+  const flush = async () => { if (part.length) await callOp('debug.run.append', { name, lines: part.join('\n') + '\n' }); part = []; size = 0; };
   for (const x of rows) {
     const t = bigStringify(x);
     if (part.length && size + t.length > DBG_CHUNK) await flush();
@@ -7334,7 +7387,7 @@ async function dbgLoadList() {
   if (DBG.listing) return;
   DBG.listing = true;
   try {
-    const d = await api('/api/debug');
+    const d = await callOp('debug.status');
     DBG.list = (d.runs || []).slice().sort((a, b) => (b.modified_ms || 0) - (a.modified_ms || 0) || String(a.name).localeCompare(String(b.name)));
     DBG.rec = { recording: !!d.recording, name: d.name || '', count: d.count || 0, error: d.error || '' };
     DBG.listErr = '';
@@ -7401,7 +7454,7 @@ async function dbgWaitJob(id, what) {
   const t0 = Date.now();
   for (;;) {
     await new Promise(r => setTimeout(r, 1000));
-    const st = await api('/api/state');
+    const st = await callOp('system.state');
     S.st = st;
     const j = st.job || {};
     if (j.id === id && j.state !== 'running') return j;
@@ -7443,11 +7496,11 @@ async function dbgMatch(sv) {
   if (!!set.kv8_cache !== !!sv.kv8) body.kv8_cache = !!sv.kv8;   // GeulPUv2 ③b-2
   if (!!set.fast_attention !== !!sv.fast_attention) body.fast_attention = !!sv.fast_attention;   // GeulPUv2 빠른 어텐션(계약 F2)
   if (sv.precision === 'fast' && sv.layer && S.st.device.layer !== sv.layer) body.gpu_layer = sv.layer;
-  if (Object.keys(body).length) await api('/api/settings', body);
+  if (Object.keys(body).length) await callOp('settings.set', body);
   if (body.gpu_layer) {
     DBG.busy = T('하드웨어 확인 중');
     renderDebug(true);
-    const j = await api('/api/device/check', {});
+    const j = await callOp('system.device_check', {});
     await dbgWaitJob(j.job, T('하드웨어 확인'));
     if (S.st.device.layer !== sv.layer) throw new Error(T`하드웨어 확인 뒤에도 백엔드가 ${LAYER[S.st.device.layer] || S.st.device.layer}입니다`);
   }
@@ -7455,8 +7508,8 @@ async function dbgMatch(sv) {
   if (sv0.state === 'ready' && sv0.model === m.id && (sv0.precision !== sv.precision || !!sv0.kv8 !== !!sv.kv8 || !!sv0.fast_attention !== !!sv.fast_attention || (sv.precision === 'fast' && sv0.layer !== sv.layer))) {
     DBG.busy = T('서버를 멈추는 중');
     renderDebug(true);
-    await api('/api/server/stop', {});
-    for (let k = 0; k < 120; k++) { await new Promise(r => setTimeout(r, 500)); S.st = await api('/api/state'); if (S.st.server.state !== 'ready') break; }
+    await callOp('model.unload', {});
+    for (let k = 0; k < 120; k++) { await new Promise(r => setTimeout(r, 500)); S.st = await callOp('system.state'); if (S.st.server.state !== 'ready') break; }
   }
   DBG.busy = T`${labelById(m.id)} 불러오는 중`;
   renderDebug(true);
@@ -7465,21 +7518,21 @@ async function dbgMatch(sv) {
   if (left.length) throw new Error(T`불러온 서버가 이 실행과 다릅니다 — ${left.join(', ')}`);
 }
 async function dbgNotRecording() {
-  const d = await api('/api/debug');
+  const d = await callOp('debug.status');
   if (d.recording) throw new Error(T`앱이 기록 중입니다(${d.name}) — 이 화면이 보내는 요청도 그 실행 로그에 들어갑니다. 먼저 기록을 멈추세요.`);
 }
 
 // ---- 재생 ----
 async function dbgReplayOne(x) {
   const resp = x.response || {}, g = resp.geulpu || {};
-  if (!['/v1/chat/completions', '/v1/completions'].includes(x.path) || !x.request || typeof x.request !== 'object') return { result: 'skipped', reason: T('생성 요청이 아니거나 요청이 JSON이 아닙니다') };
+  if (![dbgPathOf('run.chat'), dbgPathOf('run.complete')].includes(x.path) || !x.request || typeof x.request !== 'object') return { result: 'skipped', reason: T('생성 요청이 아니거나 요청이 JSON이 아닙니다') };
   const body = structuredClone(x.request);
   body.stream = false;
   delete body.stream_options;
   const t0 = performance.now();
   if ((x.status || 200) !== 200) {
     if (!resp.error || typeof resp.error !== 'object') return { result: 'skipped', reason: T`상태 ${x.status} — 오류 응답이 없습니다` };
-    const r = await dbgSend(x.path, body);
+    const r = await dbgSend(dbgOpOf(x.path), body);
     const c1 = resp.error.code, c2 = ((r.j || {}).error || {}).code;
     const d = r.status === x.status && c1 === c2 ? [] : [`error ${x.status} ${c1} → ${r.status} ${c2}`];
     return { result: d.length ? 'different' : 'same', differences: d, seconds: (performance.now() - t0) / 1000, error: x.status };
@@ -7487,7 +7540,7 @@ async function dbgReplayOne(x) {
   if (!Array.isArray(g.tokens)) return { result: 'skipped', reason: T('응답에 토큰이 없습니다(끊긴 스트리밍 · geulpu 없음)') };
   if (g.seed !== undefined) body.seed = g.seed;
   body.geulpu = Object.assign({}, body.geulpu && typeof body.geulpu === 'object' ? body.geulpu : {}, { logit_hash: true, prompt_tokens: true });
-  const r = await dbgSend(x.path, body);
+  const r = await dbgSend(dbgOpOf(x.path), body);
   const secs = (performance.now() - t0) / 1000;
   if (r.status !== 200) return { result: 'different', differences: [`HTTP ${r.status} ${((r.j || {}).error || {}).message || ''}`], seconds: secs };
   const g2 = (r.j && r.j.geulpu) || {}, d = [];
@@ -7530,7 +7583,7 @@ async function dbgReplay(run) {
 // ---- 점수(echo 스코어링 — 생성 없이 답의 토큰마다 로그확률 · 상위 k · 엔트로피 · 로짓 해시) ----
 async function dbgEcho(prompt, tokens, k) {
   const P = prompt.length;
-  const j = await dbgPost('/v1/completions', {
+  const j = await dbgPost('run.score', {
     prompt: prompt.concat(tokens), echo: true, max_tokens: 0, logprobs: k, temperature: 0, stream: false, geulpu: { echo_from: P, logit_hash: true, special: true },
   });
   const c = j.choices[0], lp = c.logprobs || {}, g = j.geulpu || {}, n = tokens.length;
@@ -7627,7 +7680,7 @@ function dbgTokenBranchBody(x, k, alt) {
   if (max !== undefined && max !== null) body.max_tokens = Math.max(0, max - (k + 1));
   return body;
 }
-async function dbgBranchRun(run, x, kind, body, path, extra) {
+async function dbgBranchRun(run, x, kind, body, id, extra) {
   await dbgNotRecording();
   await dbgEnsure(dbgServerOf(run, x));
   const now = dbgNowServer(), m = modelOf(now.model) || {};
@@ -7636,7 +7689,7 @@ async function dbgBranchRun(run, x, kind, body, path, extra) {
     DBG.busy = T`분기 생성 중(${q + 1}/2 — 두 번 돌려 같은 비트인지 봅니다)`;
     renderDebug(true);
     const t0 = performance.now();
-    const r = await dbgSend(path, body);
+    const r = await dbgSend(id, body);
     secs.push((performance.now() - t0) / 1000);
     if (r.status !== 200) throw new Error(T`분기 요청이 실패했습니다 — HTTP ${r.status} ${((r.j || {}).error || {}).message || ''}`);
     rs.push(r.j);
@@ -7656,7 +7709,7 @@ async function dbgBranchRun(run, x, kind, body, path, extra) {
     checks.first_divergence = dbgFirstDiff(g.tokens || [], g2.tokens || []);
   }
   const line = Object.assign({ type: 'branch', b: run.branches.length, of: x.i, at: dbgStamp(), model: { id: m.id || now.model, file: String(m.path || '').split(/[\\/]/).pop(), sha256: now.sha256 },
-    server: dbgSvPlain(now), kind }, extra, { ms: Math.round(secs[0] * 1000), path, request: body, response: rs[0], checks });
+    server: dbgSvPlain(now), kind }, extra, { ms: Math.round(secs[0] * 1000), path: dbgPathOf(id), request: body, response: rs[0], checks });
   await dbgAppend(run.name, [line]);
   await dbgReload();
   DBG.bi = line.b;
@@ -7665,7 +7718,7 @@ async function dbgBranchRun(run, x, kind, body, path, extra) {
 }
 function dbgBranchToken(run, x, k, alt) {
   if (!('seed' in dbgG(x))) { DBG.err = T('이 요청의 응답에 시드가 없어 분기할 수 없습니다'); renderDebug(true); return; }
-  dbgRun(() => dbgBranchRun(run, x, 'token', dbgTokenBranchBody(x, k, alt), '/v1/completions', { step: k, token: alt, original_token: dbgG(x).tokens[k] }));
+  dbgRun(() => dbgBranchRun(run, x, 'token', dbgTokenBranchBody(x, k, alt), 'run.branch', { step: k, token: alt, original_token: dbgG(x).tokens[k] }));
 }
 function dbgBranchEdit(run, x, text) {
   dbgRun(async () => {
@@ -7677,7 +7730,7 @@ function dbgBranchEdit(run, x, text) {
     delete body.stream_options;
     if (body.seed === undefined && g.seed !== undefined) body.seed = g.seed;
     body.geulpu = Object.assign({}, body.geulpu && typeof body.geulpu === 'object' ? body.geulpu : {}, { logit_hash: true, prompt_tokens: true });
-    await dbgBranchRun(run, x, 'request', body, x.path, { edit: 'json' });
+    await dbgBranchRun(run, x, 'request', body, dbgOpOf(x.path), { edit: 'json' });
   });
 }
 
@@ -7738,7 +7791,7 @@ function dbgText(key, toks, sv) {
   if (!toks.length) return '';
   if (!dbgVocabOk(sv)) return null;
   DBG.texts[key] = '…';
-  labApi('/detokenize', { tokens: toks }).then(j => { DBG.texts[key] = j.prompt; }).catch(() => { DBG.texts[key] = undefined; }).finally(() => { DBG.tick++; renderDebug(); });
+  labApi('proxy.detokenize', { tokens: toks }).then(j => { DBG.texts[key] = j.prompt; }).catch(() => { DBG.texts[key] = undefined; }).finally(() => { DBG.tick++; renderDebug(); });
   return '…';
 }
 
@@ -7747,7 +7800,7 @@ const dbgStat = (icon, text, tip) => h('span', { class: 'st', 'data-tip': tip ||
 function dbgHead() {
   const rec = DBG.rec || {};
   const recBtn = rec.recording
-    ? h('button', { class: 'btn needs-conn', 'data-fk': 'dbg:recstop', onclick: () => dbgRun(async () => { await api('/api/debug/record/stop', {}); await dbgLoadList(); }) }, I('stop', 's'), T('기록 멈춤'))
+    ? h('button', { class: 'btn needs-conn', 'data-fk': 'dbg:recstop', onclick: () => dbgRun(async () => { await callOp('debug.record.stop', {}); await dbgLoadList(); }) }, I('stop', 's'), T('기록 멈춤'))
     : h('button', { class: 'btn needs-conn', 'data-fk': 'dbg:recstart', onclick: dbgRecordStart }, I('play', 's'), T('기록 시작'));
   return pageHead(T('디버거 v1'), T('디버거'),
     T('앱의 /v1을 지나는 생성 요청을 실행 로그로 기록하고, 같은 비트로 다시 돌리고(재생), 토큰마다 들여다보고(관찰 · 중단점), 다른 토큰이나 고친 요청으로 갈라 보고(분기), 두 실행을 비교합니다.'),
@@ -7755,7 +7808,7 @@ function dbgHead() {
 }
 function dbgRecordStart() {
   const inp = h('input', { type: 'text', class: 'w100', placeholder: T('비우면 시각으로'), 'aria-label': T('실행 이름'), spellcheck: 'false' });
-  const go = () => { const name = inp.value.trim(); closeModal(); dbgRun(async () => { const d = await api('/api/debug/record/start', { name }); await dbgLoadList(); dbgSelect(d.name); }); };
+  const go = () => { const name = inp.value.trim(); closeModal(); dbgRun(async () => { const d = await callOp('debug.record.start', { name }); await dbgLoadList(); dbgSelect(d.name); }); };
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
   modal(h('div', { class: 'col g12' }, h('h2', null, T('기록 시작')),
     h('p', { class: 'm0 muted' }, T('지금부터 앱의 /v1을 지나는 생성 요청(에이전트 · 스크립트 · 이 앱의 채팅)이 이 실행 로그에 한 줄씩 남습니다. 대화 내용이 담기니 필요한 동안만 켜 두세요.')),
@@ -7787,10 +7840,10 @@ async function dbgImport(file) {
     for (let p = 0; p < parts.length; p++) {
       DBG.busy = T`불러오는 중 ${p + 1}/${parts.length}`;
       renderDebug(true);
-      await api('/api/debug/run/import', { name, text: parts[p].join('\n') + '\n', part: p, last: p === parts.length - 1 });
+      await callOp('debug.run.import', { name, text: parts[p].join('\n') + '\n', part: p, last: p === parts.length - 1 });
     }
   } catch (e) {
-    try { await api('/api/debug/run/delete', { name }); } catch (_) { }
+    try { await callOp('debug.run.delete', { name }); } catch (_) { }
     throw e;
   }
   await dbgLoadList();
@@ -7873,14 +7926,14 @@ function dbgRunHead(run) {
         onclick: () => dbgRun(() => dbgReplay(run)) }, I('refresh', 's'), T('재생')),
       h('button', { class: 'btn sm needs-conn', disabled: busy || !run.reqs.length || llama ? true : null, 'data-tip': llama ? llamaTip : T('요청마다 답을 지금 모델로 echo 스코어링해 점수 줄을 덧붙입니다(중단점 · 비교에 씀)'), 'data-tip-pos': 'top',
         onclick: () => dbgRun(() => dbgScoreRun(run, now.ready ? now : sv)) }, I('gauge', 's'), T('점수 매기기')),
-      h('a', { class: 'btn sm', href: '/api/debug/run?name=' + encodeURIComponent(run.name), download: run.name + '.jsonl', 'data-tip': T('실행 로그 파일(JSONL)을 받습니다 — 다른 GeulPU에서 불러오기로 엽니다'), 'data-tip-pos': 'top' }, I('download', 's'), T('내보내기')),
+      h('a', { class: 'btn sm', href: opUrl('debug.run.get', { name: run.name }), download: run.name + '.jsonl', 'data-tip': T('실행 로그 파일(JSONL)을 받습니다 — 다른 GeulPU에서 불러오기로 엽니다'), 'data-tip-pos': 'top' }, I('download', 's'), T('내보내기')),
       h('button', { class: 'icon-btn sm needs-conn', 'aria-label': T('실행 로그 지우기'), 'data-tip': T('지우기'), 'data-tip-pos': 'top', disabled: busy || ((DBG.rec || {}).recording && DBG.rec.name === run.name) ? true : null,
         onclick: () => dbgDelete(run.name) }, I('trash', 's'))));
 }
 async function dbgDelete(name) {
   const ok = await confirmBox(T('실행 로그를 지울까요?'), h('p', { class: 'm0' }, T`${name} — 기록 · 점수 · 분기가 모두 지워집니다. 되돌릴 수 없습니다.`), T('지우기'), 'danger');
   if (!ok) return;
-  dbgRun(async () => { await api('/api/debug/run/delete', { name }); if (DBG.sel === name) { DBG.sel = ''; DBG.run = null; store('geulpu.dbg.sel', ''); } await dbgLoadList(); });
+  dbgRun(async () => { await callOp('debug.run.delete', { name }); if (DBG.sel === name) { DBG.sel = ''; DBG.run = null; store('geulpu.dbg.sel', ''); } await dbgLoadList(); });
 }
 // 요청 표 — 차례 · 길 · 상태 · 프롬프트 · 스텝 · 끝 · 중단점(그 요청을 생성한 모델의 점수에서) · 분기 · 재생
 function dbgReqsView(run) {
@@ -7898,7 +7951,7 @@ function dbgReqsView(run) {
     const err = x.status !== 200 ? (((x.response || {}).error || {}).code || '') : '';
     return h('tr', { class: 'clk', onclick: open },
       h('td', { class: 'num' }, h('button', { class: 'dbg-link', 'data-fk': 'dbg:req:' + x.i, onclick: ev => { ev.stopPropagation(); open(); } }, String(x.i))),
-      h('td', { class: 'nw' }, x.path === '/v1/completions' ? T('완성') : x.path === '/v1/chat/completions' ? T('채팅') : x.path),
+      h('td', { class: 'nw' }, x.path === dbgPathOf('run.complete') ? T('완성') : x.path === dbgPathOf('run.chat') ? T('채팅') : x.path),
       h('td', { class: 'nw' }, x.status === 200 ? '200' : h('span', { class: 'tag err' }, I('alert'), `${x.status}${err ? ' ' + err : ''}`)),
       h('td', { class: 'r num' }, Array.isArray(g.prompt_tokens) ? fmtNum(g.prompt_tokens.length) : '-'),
       h('td', { class: 'r num' }, Array.isArray(g.tokens) ? fmtNum(g.tokens.length) : '-'),
@@ -8028,7 +8081,7 @@ function dbgBranchCard(run, x, b) {
     if ((o === undefined || a === undefined) && dbgVocabOk(sv)) {
       DBG.texts[tk(b.original_token)] = DBG.texts[tk(b.original_token)] || '…';
       DBG.texts[tk(b.token)] = DBG.texts[tk(b.token)] || '…';
-      Promise.all([b.original_token, b.token].map(id => labApi('/detokenize', { tokens: [id] }).then(j => { DBG.texts[tk(id)] = j.prompt; })))
+      Promise.all([b.original_token, b.token].map(id => labApi('proxy.detokenize', { tokens: [id] }).then(j => { DBG.texts[tk(id)] = j.prompt; })))
         .catch(() => { DBG.texts[tk(b.original_token)] = undefined; DBG.texts[tk(b.token)] = undefined; }).finally(() => { DBG.tick++; renderDebug(); });
     }
     title = T`스텝 ${k + 1}: ${o === undefined ? '#' + b.original_token : JSON.stringify(tokShow(o))} → ${a === undefined ? '#' + b.token : JSON.stringify(tokShow(a))}` + (b.token === b.original_token ? T(' (원래 토큰 — 자기 확인)') : '');
