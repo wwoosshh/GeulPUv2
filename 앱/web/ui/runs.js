@@ -1,8 +1,10 @@
 // 앱리디자인 E3(문서/화면구현.md §3 · 화면설계.md §3 · §9) — 실행: 실험의 실행 탭(목록 · 새 실행) · 실행 화면(토큰별 출력 · 고른 스텝 · 분기 ·
 // 재실행) · 비교 탭. 값은 앱이 실험 폴더에 남긴 기록 파일(records/runs/<id>.json — 받은 요청과 응답)에서 읽는다. 앱은 기능 목록
 // 클라이언트(ops.js)로만 부르고, 실행은 X-GeulPU-Experiment 를 붙여 그 실험에 남긴다(앱이 응답을 받아 실행으로 남긴다 — 실험.gl).
+// E4(문서/화면구현.md §4) — 스텝 · 층 화면(ui/steps.js)이 기록 읽기 · 실행 부르기 · 분기를 함께 쓴다. 점수 · 로짓 렌즈 실행의 실행 화면과 설명은 steps.js 가.
 import { T, TM, el, fmtMs, samePath, sourceLabel } from './dom.js';
 import { call, registry, send } from './ops.js';
+import { MEASURE_OPS, measureLabel, measureView } from './steps.js';
 
 const BAR_KEY = 'geulpu.runBar';
 const BARS = ['margin', 'prob', 'entropy'];
@@ -34,18 +36,18 @@ function setBar(v, ctx) {
   ctx.rerender();
 }
 
-const appError = r => TM((r && r.json && r.json.error && r.json.error.message) || (r ? 'HTTP ' + r.status : T('앱에 닿지 못했습니다')));
-const isIds = a => Array.isArray(a) && a.every(Number.isInteger);
-const quoteTok = s => JSON.stringify(String(s));
-const fx = (x, n) => (typeof x === 'number' && Number.isFinite(x) ? x.toFixed(n) : '–');
-const pct = p => (typeof p === 'number' ? (p >= 0.1 ? (p * 100).toFixed(1) : (p * 100).toFixed(2)) + '%' : '–');
+export const appError = r => TM((r && r.json && r.json.error && r.json.error.message) || (r ? 'HTTP ' + r.status : T('앱에 닿지 못했습니다')));
+export const isIds = a => Array.isArray(a) && a.every(Number.isInteger);
+export const quoteTok = s => JSON.stringify(String(s));
+export const fx = (x, n) => (typeof x === 'number' && Number.isFinite(x) ? x.toFixed(n) : '–');
+export const pct = p => (typeof p === 'number' ? (p >= 0.1 ? (p * 100).toFixed(1) : (p * 100).toFixed(2)) + '%' : '–');
 
 // ---- 기록 파일 ----
 
 const recordFile = run => run.record || `records/runs/${run.id}.json`;
 
 /** 실행의 기록 파일 — 한 번 읽어 둔다. 읽는 동안은 {loading: true}, 다 읽으면 ctx.rerender() */
-function recordOf(ctx, run) {
+export function recordOf(ctx, run) {
   const k = ctx.path + '|' + recordFile(run);
   const c = records.get(k);
   if (c) return c;
@@ -66,15 +68,15 @@ export function forgetErrors(path) {
   for (const [k, v] of records) if (v.error && k.startsWith(path + '|')) records.delete(k);
 }
 
-function runsOf(ctx) {
+export function runsOf(ctx) {
   const e = ctx.exp.experiment || {};
   return Array.isArray(e.runs) ? e.runs.filter(r => r && typeof r.id === 'string') : [];
 }
-function entryOf(ctx, id) {
+export function entryOf(ctx, id) {
   return runsOf(ctx).find(r => r.id === id) || null;
 }
 /** 실행의 값(기록 파일을 읽었으면) — 아니면 null */
-function dataById(ctx, id) {
+export function dataById(ctx, id) {
   const entry = entryOf(ctx, id);
   if (!entry) return null;
   const c = recordOf(ctx, entry);
@@ -82,7 +84,7 @@ function dataById(ctx, id) {
 }
 
 /** 기록 파일 → 화면이 쓰는 값. 스텝 k 의 값은 응답의 확장 필드 geulpu(토큰 · 상위 후보 · 엔트로피 · 로짓 해시), 글은 OpenAI 형식의 logprobs 에서 */
-function dataOf(entry, rec, text) {
+export function dataOf(entry, rec, text) {
   const req = rec.request && typeof rec.request === 'object' ? rec.request : {};
   const res = rec.response && typeof rec.response === 'object' ? rec.response : null;
   const g = (res && res.geulpu) || {};
@@ -184,7 +186,7 @@ function mergeBytes(parts) {
 }
 
 /** 스텝 k 의 마진 · 샘플링된 토큰의 로그확률 · 확률 · 엔트로피 · 순위 · 로짓 해시 */
-function stepVals(d, k) {
+export function stepVals(d, k) {
   const top = d.topLp ? d.topLp[k] || [] : [];
   const tids = d.topIds ? d.topIds[k] || [] : [];
   const i = tids.indexOf(d.ids[k]);
@@ -214,7 +216,7 @@ function lowestMargin(d) {
 }
 
 /** 스텝 k 의 j 번째 후보의 글 — 샘플링된 토큰이면 그 글, 아니면 OpenAI 형식의 후보(같은 로그확률), 없으면 /detokenize 로 읽어 둔 것 */
-function candText(d, k, j) {
+export function candText(d, k, j) {
   const id = d.topIds[k][j];
   if (id === d.ids[k] && d.raw) return d.raw[k];
   const v = d.topLp[k][j];
@@ -222,10 +224,13 @@ function candText(d, k, j) {
     const hit = d.alts[k].find(a => a[1] === v);
     if (hit) return hit[0];
   }
-  return pieces.get(id) === undefined ? null : pieces.get(id);
+  return pieceText(id);
 }
 
-function fetchPieces(ids, ctx) {
+/** /detokenize 로 읽어 둔 토큰 하나의 글 — 아직 없으면 null(fetchPieces 로 읽는다) */
+export const pieceText = id => (pieces.get(id) === undefined ? null : pieces.get(id));
+
+export function fetchPieces(ids, ctx) {
   const need = [...new Set(ids)].filter(id => !pieces.has(id));
   if (!need.length) return;
   for (const id of need) pieces.set(id, null);
@@ -268,7 +273,7 @@ function compareData(a, b) {
 
 // ---- 설명 ----
 
-function kindLabel(entry) {
+export function kindLabel(entry) {
   const k = entry.kind;
   if (k === 'branch') return T('분기', '종류');
   if (k === 'check') return T('재실행');
@@ -283,7 +288,7 @@ function kindLabel(entry) {
 function describe(ctx, entry, d) {
   const s = entry.settings || {};
   const parts = [];
-  const sampling = entry.kind !== 'score' && entry.kind !== 'lens';
+  const sampling = entry.kind !== 'score' && entry.kind !== 'lens' && !MEASURE_OPS.has(entry.operation);
   if (entry.kind === 'branch' && entry.base && entry.intervention) {
     const last = d && d.ptexts && d.ptexts.length ? d.ptexts[d.ptexts.length - 1] : null;
     const txt = last !== null ? quoteTok(last) : '#' + entry.intervention.value;
@@ -292,13 +297,16 @@ function describe(ctx, entry, d) {
     const base = dataById(ctx, entry.base);
     const c = d && base ? compareData(base, d) : null;
     parts.push(c && c.pos.length ? T`${entry.base} 재실행 — 로짓 해시 ${c.eq} / ${c.pos.length} 같음` : T`${entry.base} 재실행`);
+  } else if (MEASURE_OPS.has(entry.operation)) {
+    const lab = measureLabel(ctx, entry);              // E4 — 'r1 의 스텝 3 · 28 층' · 'r1 의 스텝 3 에 " The" · 로그확률 −2.31'
+    if (lab) return lab;
   }
   if (sampling) {
     const seed = d && d.seedText ? d.seedText : entry.seed;
     if (seed !== undefined && seed !== null) parts.push(T`시드 ${seed}`);
     if (typeof s.temperature === 'number') parts.push(T`온도 ${s.temperature}`);
     if (d) parts.push(T`${d.n} 토큰`);
-  } else {
+  } else if (entry.kind !== 'check') {
     const n = d && d.ptoks ? d.ptoks.length : null;
     if (n !== null) parts.push(entry.base ? T`${entry.base} 의 토큰 ${n} 개` : T`토큰 ${n} 개`);
     else if (entry.base) parts.push(T`${entry.base} 의 토큰`);
@@ -313,7 +321,7 @@ function modeLabel(p) {
 }
 
 /** 실행 정보 줄 — 기록 파일의 server(모델 SHA-256 · 계산 방식) · app(GeulPU 버전) · 시드 · 출처 */
-function runInfo(ctx, d) {
+export function runInfo(ctx, d) {
   const s = d.rec.server || {};
   const models = Array.isArray((ctx.exp.experiment || {}).models) ? ctx.exp.experiment.models : [];
   const m = models.find(x => x && typeof x === 'object' && x.sha256 && x.sha256 === s.sha256);
@@ -323,7 +331,7 @@ function runInfo(ctx, d) {
     el('span', null, T('모델', '하나'), ' ', el('b', null, name), s.sha256 ? el('code', null, ' ' + String(s.sha256).slice(0, 8)) : null),
     el('span', null, T('계산 방식'), ' ', el('b', null, modeLabel(s.precision))),
     d.rec.app ? el('span', null, 'GeulPU ', el('b', null, d.rec.app)) : null,
-    d.seedText && d.entry.kind !== 'score' && d.entry.kind !== 'lens' ? el('span', null, T('시드'), ' ', el('b', null, d.seedText)) : null,
+    d.seedText && d.entry.kind !== 'score' && d.entry.kind !== 'lens' && !MEASURE_OPS.has(d.entry.operation) ? el('span', null, T('시드'), ' ', el('b', null, d.seedText)) : null,
     el('span', null, T('출처'), ' ', el('b', null, src)),
     typeof d.rec.ms === 'number' ? el('span', null, fmtMs(d.rec.ms)) : null);
 }
@@ -439,7 +447,7 @@ function branchBody(d, k, tok) {
   return bodyWithSeed(o, d.seedText);
 }
 
-async function doBranch(ctx, d, k, tok) {
+export async function doBranch(ctx, d, k, tok) {
   if (ui.busy) return;
   ui.busy = T`${d.entry.id} 의 스텝 ${d.off + k} 에서 분기하는 중`;
   ui.error = null;
@@ -454,6 +462,33 @@ async function doBranch(ctx, d, k, tok) {
     ui.error = { path: ctx.path, run: d.entry.id, text: e.message };
     ctx.rerender();
   }
+}
+
+/** E4 — 스텝 · 층 화면의 계산(점수 · 로짓 렌즈) 하나를 실험의 실행으로. 진행 중 표시 · 실패는 분기와 같은 줄에. 남긴 실행 id(실패면 null) */
+export async function measure(ctx, op, body, label, runId) {
+  if (ui.busy) return null;
+  ui.busy = label;
+  ui.error = null;
+  ctx.rerender();
+  try {
+    const { id } = await runCall(ctx, op, body);
+    ui.busy = null;
+    ctx.rerender();
+    return id;
+  } catch (e) {
+    ui.busy = null;
+    ui.error = { path: ctx.path, run: runId, text: e.message };
+    ctx.rerender();
+    return null;
+  }
+}
+
+/** 진행 중인 실행이 있는가(스텝 · 층 화면의 버튼) */
+export const isBusy = () => !!ui.busy;
+
+/** 실행 화면에서 고른 스텝(스텝 · 층 화면에서 돌아갈 때 그 스텝으로) */
+export function selectStep(ctx, id, k) {
+  ui.sel.set(ctx.path + '|' + id, k);
 }
 
 async function doRerun(ctx, d, text) {
@@ -706,6 +741,9 @@ function stripView(ctx, d, sel, low, onSel) {
     } else if (ev.key === 'Home' || ev.key === 'End') {
       ev.preventDefault();
       onSel(ev.key === 'Home' ? 0 : d.n - 1, true);
+    } else if (ev.key === 'Enter' && ev.target.closest('.run-tok')) {      // E4 — 스텝 · 층 화면
+      ev.preventDefault();
+      ctx.openStep(d.entry.id, sel);
     } else if (ev.key === 'b' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
       const alt = bestAlt(d, sel);
       if (alt !== null && d.ptoks) {
@@ -756,12 +794,13 @@ function stepPanel(ctx, d, k, text) {
     el('dt', null, T('엔트로피')), el('dd', null, v.ent === null ? '–' : fx(v.ent, 3) + ' nat'),
     el('dt', null, T('로짓 해시')), el('dd', null, v.hash ? el('code', { class: 'hash', title: v.hash }, String(v.hash).slice(0, 8)) : '–')));
   kids.push(el('div', { class: 'xp-actions' },
+    el('button', { type: 'button', class: 'btn primary', onclick: () => ctx.openStep(d.entry.id, k) }, T('스텝 · 층 화면')),
     el('button', { type: 'button', class: 'btn', disabled: ui.busy || !rawRequest(text) ? true : null, onclick: () => doRerun(ctx, d, text) }, T('재실행')),
     el('button', { type: 'button', class: 'btn ghost', onclick: () => newRun(ctx, d) }, T('이 설정으로 새 실행'))));
   return el('aside', { class: 'run-step', 'aria-live': 'polite', 'aria-label': T('고른 스텝') }, kids);
 }
 
-function busyLine(ctx, id) {
+export function busyLine(ctx, id) {
   const out = [];
   if (ui.busy) out.push(el('p', { class: 'xp-check' }, el('span', { class: 'tag acc' }, T('실행 중')), ui.busy));
   if (ui.error && ui.error.path === ctx.path && (!id || ui.error.run === id)) {
@@ -792,10 +831,12 @@ export function runView(ctx, id) {
     out.push(el('p', { class: 'muted' }, T`응답이 커서 기록 파일에 담지 않았습니다(${d.rec.response_bytes || '?'} 바이트).`));
     return out;
   }
-  if ((entry.kind === 'score' || entry.kind === 'lens') || !d.n) {
-    out.push(el('p', { class: 'muted' }, entry.kind === 'score' || entry.kind === 'lens'
-      ? T('점수 · 로짓 렌즈 실행은 요청과 응답을 그대로 보입니다(로짓 렌즈 표는 지금 연구 패널에 있습니다).')
-      : T('생성한 토큰이 없습니다.')));
+  if (MEASURE_OPS.has(entry.operation)) {             // E4 — 점수 · 로짓 렌즈 실행은 그 표(steps.js)
+    out.push(...measureView(ctx, entry, c));
+    return out;
+  }
+  if (!d.n) {
+    out.push(el('p', { class: 'muted' }, T('생성한 토큰이 없습니다.')));
     out.push(el('h2', null, T('요청', '하나')), el('pre', { class: 'xp-pre' }, JSON.stringify(d.req, null, 2)));
     out.push(el('details', { class: 'run-raw' }, el('summary', null, T('응답(JSON)')), el('pre', { class: 'xp-pre' }, JSON.stringify(d.res, null, 2))));
     return out;
@@ -819,7 +860,7 @@ export function runView(ctx, id) {
       el('div', { class: 'run-legend' },
         el('span', null, el('i', { 'aria-hidden': 'true' }), legend()),
         el('span', null, T('흐린 텍스트 = 프롬프트')),
-        el('span', null, T('← → 이전 · 다음 스텝 · b 가장 높은 다른 후보로 분기')))),
+        el('span', null, T('← → 이전 · 다음 스텝 · Enter 스텝 · 층 화면 · b 가장 높은 다른 후보로 분기')))),
     stepPanel(ctx, d, sel, c.text)));
   if (!d.texts) out.push(el('p', { class: 'muted' }, T('이 실행의 응답에는 토큰마다의 텍스트가 없어 토큰 번호로 보입니다(logprobs 를 넣으면 텍스트가 남습니다).')));
   return out;
@@ -832,8 +873,10 @@ export function setCompare(ctx, a, b) {
 }
 
 function defaultPair(ctx) {
-  const runs = runsOf(ctx);
-  if (runs.length < 2) return [null, null];
+  // E4 — 점수 · 로짓 렌즈 실행(스텝 · 층 화면의 계산)은 빼고 생성한 실행끼리
+  const all = runsOf(ctx);
+  const runs = all.filter(r => !MEASURE_OPS.has(r.operation));
+  if (runs.length < 2) return all.length >= 2 ? [all[all.length - 2].id, all[all.length - 1].id] : [null, null];
   const last = runs[runs.length - 1];
   const base = last.base && runs.find(r => r.id === last.base) ? last.base : runs[runs.length - 2].id;
   return [base, last.id];

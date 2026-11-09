@@ -32,7 +32,7 @@ Only `experiment.json` and `plan.md` are required, and `results.md` once the sta
 | `geulpu` | `version` (required) · `commit` · `mode` (`exact` · `fast`) · `provenance` (what the Python API's `info(provenance=True)` returns) |
 | `devices` · `engines` | GPUs and drivers; other engines, for example a llama.cpp build, when the experiment compares or replays |
 | `models` | for each model: name, SHA-256 and source (`{"hf_repo", "revision", "file"}`, or how it was made) |
-| `runs` | for each run: `id`, `kind`, the GeulPU `operation`, the `record` file, `settings`, `seed`, and for a branch the `base` run and the `intervention` (`type` · `step` · `value`) |
+| `runs` | for each run: `id`, `kind`, the GeulPU `operation`, the `record` file, `settings`, `seed`; a branch has the `base` run and the `intervention` (`type` · `step` · `value`), a score or lens its `base` run (and the `intervention` when it puts other tokens from a step on) |
 | `criteria` | at least one: `id`, `text` (written before any run), `result` (`pending` · `pass` · `fail`) |
 | `files` | every file in the folder except `experiment.json` · `plan.md` · `results.md`: `path`, `sha256`, `bytes` |
 | `reproduce` · `links` | the commands that re-run the experiment; related experiments, documents and papers |
@@ -64,7 +64,7 @@ With the GeulPU app running, the CLI (and the app's experiment screen) does step
 criteria (only before the first run), then the verdicts, `results.md` and status; `--experiment <folder>` on any command writes that
 call to `records/commands.jsonl`, and a run that answers 200 to `records/runs/<id>.json` with an entry in `runs` (kind, base,
 intervention), its model in `models`, and the `files` entries of what the app wrote; `GeulPU experiment check --path <folder> --wait`
-runs this checker ([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md) §3). Files you add yourself still go
+runs this checker ([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md) §3 · §4). Files you add yourself still go
 through step 4.
 
 ## Check

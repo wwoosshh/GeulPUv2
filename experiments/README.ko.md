@@ -31,7 +31,7 @@ experiments/<YYYY-MM-DD>-<이름>/
 | `geulpu` | `version`(필수) · `commit` · `mode`(`exact` · `fast`) · `provenance`(파이썬 API `info(provenance=True)` 가 돌려주는 것) |
 | `devices` · `engines` | GPU 와 드라이버; 비교하거나 재현하는 실험이면 다른 엔진(예: llama.cpp 빌드) |
 | `models` | 모델마다 이름 · SHA-256 · 출처(`{"hf_repo", "revision", "file"}` 또는 만든 방법) |
-| `runs` | 실행마다 `id` · `kind` · GeulPU 의 기능(`operation`) · 기록 파일(`record`) · `settings` · `seed`, 분기면 바탕 실행(`base`)과 개입(`intervention` — `type` · `step` · `value`) |
+| `runs` | 실행마다 `id` · `kind` · GeulPU 의 기능(`operation`) · 기록 파일(`record`) · `settings` · `seed`. 분기면 원래 실행(`base`)과 개입(`intervention` — `type` · `step` · `value`), 점수 · 렌즈면 원래 실행(스텝부터 다른 토큰을 넣었으면 개입도) |
 | `criteria` | 하나 이상: `id` · `text`(실행 전에 적음) · `result`(`pending` · `pass` · `fail`) |
 | `files` | 폴더 안의 파일 중 `experiment.json` · `plan.md` · `results.md` 를 뺀 모두: `path` · `sha256` · `bytes` |
 | `reproduce` · `links` | 실험을 다시 실행하는 명령; 관련 실험 · 문서 · 논문 |
@@ -62,7 +62,7 @@ GeulPU 앱이 떠 있으면 CLI(와 앱의 실험 화면)가 1 ~ 3 단계와 5 �
 상태를 쓴다. 어느 명령에든 `--experiment <폴더>` 를 붙이면 그 호출이 `records/commands.jsonl` 에 남고, 200 으로 끝난 실행은
 `records/runs/<id>.json` 과 `runs` 의 항목(종류 · 원래 실행 · 개입), `models` 의 모델, 앱이 쓴 파일의 `files` 항목으로 남는다.
 `GeulPU experiment check --path <폴더> --wait` 가 이 점검 도구를 돌린다([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md)
-§3). 직접 더한 파일은 4 단계를 거친다.
+§3 · §4). 직접 더한 파일은 4 단계를 거친다.
 
 ## 점검
 
