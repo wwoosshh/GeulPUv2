@@ -13,7 +13,7 @@
    }
   },
   "branch": {
-   "gui_view": "연구 패널(분기)",
+   "gui_view": "실행 화면(비교) · 연구 패널(분기)",
    "description": {
     "ko": "분기 결과",
     "en": "branch"
@@ -146,7 +146,7 @@
    }
   },
   "generation": {
-   "gui_view": "채팅 · 연구 패널",
+   "gui_view": "실행 화면 · 채팅 · 연구 패널",
    "description": {
     "ko": "생성 결과",
     "en": "generation"
@@ -2174,8 +2174,8 @@
     "en": "Read an experiment file"
    },
    "description": {
-    "ko": "실험 폴더 안의 텍스트 파일(plan.md · results.md · records/commands.jsonl 등)을 읽는다 — 2 MB 까지, 실험 폴더 밖은 읽지 않는다.",
-    "en": "Read a text file inside an experiment folder (plan.md, results.md, records/commands.jsonl …) — up to 2 MB, nothing outside the folder."
+    "ko": "실험 폴더 안의 텍스트 파일(plan.md · results.md · records/commands.jsonl 등)을 읽는다 — 32 MB 까지, 실험 폴더 밖은 읽지 않는다.",
+    "en": "Read a text file inside an experiment folder (plan.md, results.md, records/commands.jsonl …) — up to 32 MB, nothing outside the folder."
    },
    "status": "exists",
    "http": {
@@ -2220,6 +2220,106 @@
    },
    "gui": {
     "view": "실험(계획 · 결과 · 기록 탭)"
+   }
+  },
+  {
+   "id": "experiment.update",
+   "title": {
+    "ko": "실험 수정(계획 · 판정 기준 · 결과)",
+    "en": "Update an experiment (plan, criteria, results)"
+   },
+   "description": {
+    "ko": "실험의 제목 · 연구 질문 · plan.md · 판정 기준 · results.md · 상태를 바꾼다(준 것만). 제목 · 연구 질문 · plan.md · 판정 기준의 id · text 는 실행이 없을 때만 바꾸고(실행 전에 적고 고정), 판정(result · note) · results.md · 상태는 언제든.",
+    "en": "Change an experiment's title, question, plan.md, criteria, results.md or status (only what is given). The title, question, plan.md and the criteria's id and text change only while the experiment has no runs (written before any run, then fixed); verdicts (result, note), results.md and status change at any time."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/experiments/update"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id",
+      "en": "experiment folder, or an experiment id inside the root"
+     }
+    },
+    {
+     "name": "title",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "제목(실행이 없을 때만)",
+      "en": "title (only while there are no runs)"
+     }
+    },
+    {
+     "name": "question",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "연구 질문(실행이 없을 때만)",
+      "en": "research question (only while there are no runs)"
+     }
+    },
+    {
+     "name": "plan",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "plan.md 의 글(실행이 없을 때만)",
+      "en": "text of plan.md (only while there are no runs)"
+     }
+    },
+    {
+     "name": "criteria",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "판정 기준 전체 — [{id, text, result, note}](id · text 는 실행이 없을 때만 바꾼다)",
+      "en": "the whole list of criteria — [{id, text, result, note}] (id and text change only while there are no runs)"
+     }
+    },
+    {
+     "name": "results",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "results.md 의 글",
+      "en": "text of results.md"
+     }
+    },
+    {
+     "name": "status",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "상태 — planned · running · done",
+      "en": "status — planned, running or done"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "experiment",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 수정",
+    "en": "experiment update"
+   },
+   "gui": {
+    "view": "실험(계획 · 결과 탭 — 편집)"
    }
   },
   {
@@ -3367,7 +3467,7 @@
     "en": "run branch"
    },
    "gui": {
-    "view": "연구 패널 · 디버거"
+    "view": "실행 화면(분기) · 연구 패널 · 디버거"
    }
   },
   {
@@ -3629,7 +3729,7 @@
     "en": "run chat"
    },
    "gui": {
-    "view": "채팅 · 연구 패널"
+    "view": "실험(새 실행) · 채팅 · 연구 패널"
    }
   },
   {
@@ -3864,7 +3964,7 @@
     "en": "run complete"
    },
    "gui": {
-    "view": "연구 패널 · 디버거"
+    "view": "실험(새 실행) · 연구 패널 · 디버거"
    }
   },
   {
@@ -4744,8 +4844,8 @@
     "en": "Operation-call events (start, end, source)"
    },
    "description": {
-    "ko": "기능 호출 이벤트 — 계산하거나 기록을 바꾸는 기능(POST)마다 시작 · 끝 · 출처. after 뒤의 것을 바로, 없으면 wait 동안 기다려 돌려준다(긴 폴링, 문서/기능목록.md §7).",
-    "en": "Operation-call events: start, end and source of every operation that computes or changes records (POST). Returns the events after `after` at once, or waits up to `wait` for one (long polling; 문서/기능목록.md §7)."
+    "ko": "기능 호출 이벤트 — 계산하거나 기록을 바꾸는 기능(POST)마다 시작 · 끝 · 출처. after 뒤의 것을 바로, 없으면 wait 동안 기다려 돌려준다(긴 폴링, 문서/기능목록.md §7). 실험에 실행을 남긴 호출의 끝에는 run(실행 id).",
+    "en": "Operation-call events: start, end and source of every operation that computes or changes records (POST). Returns the events after `after` at once, or waits up to `wait` for one (long polling; 문서/기능목록.md §7). The end of a call that recorded a run in an experiment carries run (the run id)."
    },
    "status": "exists",
    "http": {

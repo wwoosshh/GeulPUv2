@@ -309,8 +309,11 @@
     (상태 == 503 그리고 문자열_찾기(말 에서, "불러온 모델") != 없음)이면 {
         반환 "load a model first: GeulPU model load --model <id> --wait (models: GeulPU system state)".
     }
-    상태 == 409이면 { 반환 "another job is running: wait for it (GeulPU system state) or cancel it (GeulPU job cancel)". }
-    (상태 == 400 또는 상태 == 404)이면 { 반환 잇기("check the parameters: GeulPU help ", 명령이름). }
+    (상태 == 409 그리고 문자열_찾기(말 에서, "다른 작업") != 없음)이면 {
+        반환 "another job is running: wait for it (GeulPU system state) or cancel it (GeulPU job cancel)".
+    }
+    (* 앱리디자인 E3 — 다른 409(이미 있는 실험 · 첫 실행 뒤의 계획 고치기)는 작업과 상관없다 — 까닭(message)을 읽고 명령의 도움말로 *)
+    (상태 == 400 또는 상태 == 404 또는 상태 == 409)이면 { 반환 잇기("check the parameters: GeulPU help ", 명령이름). }
     반환 잇기("GeulPU help ", 명령이름).
 }
 

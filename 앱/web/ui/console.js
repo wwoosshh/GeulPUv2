@@ -1,7 +1,7 @@
 // 앱리디자인 E1(문서/화면구현.md §1 · 화면설계.md §5) — 명령 창. 모든 화면의 오른쪽에서 기능 호출을 한 줄씩 보이고(어느 출처든 — GUI · 사용자
 // CLI · AI 세션 · 파이썬), 입력 줄에 친 GeulPU 명령을 CLI 와 같은 요청으로 보낸다. 이벤트는 롱 폴링(GET /api/events)으로 받고, 보이는 명령은
 // 이벤트의 요청 본문(params)을 CLI 형식으로 다시 쓴 것이다. 앱은 기능 목록 클라이언트(ops.js)로만 부른다.
-import { callable, commandName, parse, toCommand } from './command.js';
+import { callable, commandName, parse, quote, toCommand } from './command.js';
 import { CHEVRON, EN, T, TM, baseName, clock, copyButton, el, fmtBytes, fmtMs, icon, sourceLabel as labelOf } from './dom.js';
 import { call, registry, send } from './ops.js';
 
@@ -20,9 +20,9 @@ const handle = document.getElementById('c-handle');
 function loadState() {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}');
-    return { w: Math.min(MAX_W, Math.max(MIN_W, Number(v.w) || 380)), folded: !!v.folded };
+    return { w: Math.min(MAX_W, Math.max(MIN_W, Number(v.w) || 380)), folded: !!v.folded, follow: !!v.follow };
   } catch (_) {
-    return { w: 380, folded: false };
+    return { w: 380, folded: false, follow: false };
   }
 }
 const ui = loadState();
@@ -53,9 +53,29 @@ const input = el('input', {
   placeholder: T('GeulPU 명령 (예: run complete --prompt …)'),
 });
 const form = el('form', { class: 'c-input' }, el('span', { 'aria-hidden': 'true' }, '›'), input);
+// E3(문서/화면구현.md §3) — AI 실행 자동 열기(기본 꺼짐): 켜면 AI 세션의 호출이 실험에 실행을 남길 때 왼쪽이 그 실행으로 간다
+const followBtn = el('button', {
+  type: 'button', class: 'c-switch', role: 'switch', 'aria-checked': String(ui.follow), 'aria-label': T('AI 실행 자동 열기'),
+  title: T('켜면 AI 세션의 실행이 끝날 때 왼쪽이 그 실행으로 갑니다'),
+  onclick: () => {
+    ui.follow = !ui.follow;
+    followBtn.setAttribute('aria-checked', String(ui.follow));
+    saveState();
+  },
+}, el('span', { class: 'knob', 'aria-hidden': 'true' }), T('AI 실행 자동 열기'));
+// E3 — 실험 화면을 보는 동안 입력 줄에 붙는 실험(화면설계.md §5) — ui/experiments.js 가 geulpu:context 로 알린다
+let ctxExp = null;
+const ctxEl = el('div', { class: 'c-ctx', hidden: true });
+document.addEventListener('geulpu:context', ev => {
+  const d = ev.detail || {};
+  ctxExp = d.experiment || null;
+  ctxEl.hidden = !ctxExp;
+  ctxEl.replaceChildren(...(ctxExp ? [T('입력한 명령은 이 실험에 남습니다:'), ' ', el('code', { title: ctxExp }, d.id || baseName(ctxExp))] : []));
+});
 box.replaceChildren(
-  el('header', { class: 'c-head' }, el('span', { class: 'c-title' }, T('명령 창')), countEl, foldBtn),
+  el('header', { class: 'c-head' }, el('span', { class: 'c-title' }, T('명령 창')), countEl, followBtn, foldBtn),
   list,
+  ctxEl,
   form,
 );
 let unseen = 0;
@@ -147,7 +167,15 @@ function render(rec) {
       onclick: () => document.dispatchEvent(new CustomEvent('geulpu:open-experiment', { detail: { path } })),
     }, T`실험 ${baseName(path)}`));
   }
-  if (rec.op && reg && reg.byId.has(rec.op) && !rec.local) res.push(copyButton(() => (rec.typed ? rec.text : commandText(rec, false))));
+  // E3 — 실험에 실행을 남긴 줄은 그 실행 화면으로
+  if (rec.run && rec.experiment) {
+    const detail = { experiment: rec.experiment, run: rec.run };
+    res.push(el('button', {
+      type: 'button', class: 'linkish exp',
+      onclick: () => document.dispatchEvent(new CustomEvent('geulpu:open-run', { detail })),
+    }, T('실행', '경로') + ' ' + rec.run));
+  }
+  if (rec.op && reg && reg.byId.has(rec.op) && !rec.local) res.push(copyButton(() => (rec.typed ? rec.text + (rec.autoExp ? ' --experiment ' + quote(rec.autoExp) : '') : commandText(rec, false))));
   if (rec.result !== undefined) {
     res.push(el('button', { type: 'button', class: 'linkish', 'aria-expanded': String(!!rec.showOut), onclick: () => { rec.showOut = !rec.showOut; render(rec); } },
       rec.showOut ? T('응답 접기') : T('응답 보기')));
@@ -225,9 +253,14 @@ function onEvent(e) {
     rec.status = e.status;
     rec.ms = e.ms;
     rec.closed = !!e.client_closed;
+    if (e.run) rec.run = e.run;
     if (rec.state === 'run' || !rec.typed || rec.state === 'sent') rec.state = e.status >= 200 && e.status < 400 && !e.client_closed ? 'done' : 'fail';
     render(rec);
     stick(false);
+    // E3 — AI 실행 자동 열기: AI 세션(세션 이름이 있는 CLI)의 실행이 실험에 남았으면 왼쪽을 그 실행으로
+    if (ui.follow && e.run && rec.experiment && rec.source === 'cli' && rec.session) {
+      document.dispatchEvent(new CustomEvent('geulpu:open-run', { detail: { experiment: rec.experiment, run: e.run, auto: true } }));
+    }
   }
 }
 
@@ -363,6 +396,11 @@ async function runLine(text) {
     }
     experiment = ex.json.path;
     rec.experiment = experiment;
+  } else if (ctxExp && r.method === 'POST') {
+    // E3 — 실험 화면을 보는 동안 친 명령은 그 실험에 남는다(화면설계.md §5). 명령 복사에는 --experiment 를 붙인다
+    experiment = ctxExp;
+    rec.experiment = experiment;
+    rec.autoExp = experiment;
   }
   rec.state = 'sent';
   add(rec);
