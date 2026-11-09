@@ -83,10 +83,55 @@ export function dataById(ctx, id) {
   return c.rec ? dataOf(entry, c.rec, c.text) : null;
 }
 
+/** E5 — 스트리밍 실행의 기록(events — 받은 SSE 이벤트 모두)에서 스트리밍하지 않은 응답과 같은 형식을 짓는다: 채팅은 message.content 와
+   logprobs.content, 텍스트 생성은 text 와 logprobs(tokens · token_logprobs · top_logprobs · text_offset). 확장 필드 geulpu 는 마지막 이벤트의 것 */
+function fromStream(rec) {
+  const last = rec.response && typeof rec.response === 'object' ? rec.response : null;
+  if (!last || !Array.isArray(rec.events)) return last;
+  let content = '';
+  let text = '';
+  let chat = false;
+  let comp = false;
+  let finish = null;
+  const lc = [];
+  const lt = { tokens: [], token_logprobs: [], top_logprobs: [], text_offset: [] };
+  let hasLc = false;
+  let hasLt = false;
+  for (const e of rec.events) {
+    const c = e && Array.isArray(e.choices) ? e.choices[0] : null;
+    if (!c) continue;
+    if (c.delta) {
+      chat = true;
+      if (typeof c.delta.content === 'string') content += c.delta.content;
+    }
+    if (typeof c.text === 'string') {
+      comp = true;
+      text += c.text;
+    }
+    if (c.finish_reason) finish = c.finish_reason;
+    const lp = c.logprobs;
+    if (lp && Array.isArray(lp.content)) {
+      hasLc = true;
+      lc.push(...lp.content);
+    }
+    if (lp && Array.isArray(lp.tokens)) {
+      hasLt = true;
+      lt.tokens.push(...lp.tokens);
+      lt.token_logprobs.push(...(lp.token_logprobs || []));
+      lt.top_logprobs.push(...(lp.top_logprobs || []));
+      lt.text_offset.push(...(lp.text_offset || []));
+    }
+  }
+  const out = Object.assign({}, last);
+  if (chat) out.choices = [{ index: 0, message: { role: 'assistant', content }, logprobs: hasLc ? { content: lc } : null, finish_reason: finish }];
+  else if (comp) out.choices = [{ index: 0, text, logprobs: hasLt ? lt : null, finish_reason: finish }];
+  return out;
+}
+
 /** 기록 파일 → 화면이 쓰는 값. 스텝 k 의 값은 응답의 확장 필드 geulpu(토큰 · 상위 후보 · 엔트로피 · 로짓 해시), 글은 OpenAI 형식의 logprobs 에서 */
 export function dataOf(entry, rec, text) {
   const req = rec.request && typeof rec.request === 'object' ? rec.request : {};
-  const res = rec.response && typeof rec.response === 'object' ? rec.response : null;
+  const res = rec.stream && Array.isArray(rec.events) ? fromStream(rec) : rec.response && typeof rec.response === 'object' ? rec.response : null;
   const g = (res && res.geulpu) || {};
   const ch = res && Array.isArray(res.choices) ? res.choices[0] : null;
   const ids = isIds(g.tokens) ? g.tokens : [];
@@ -97,9 +142,10 @@ export function dataOf(entry, rec, text) {
     ptoks: isIds(g.prompt_tokens) ? g.prompt_tokens : isIds(req.prompt) ? req.prompt : null,
     off: Number.isInteger(gq.step_offset) ? gq.step_offset : 0,
     echoFrom: req.echo === true && Number.isInteger(gq.echo_from) ? gq.echo_from : null,
-    topIds: Array.isArray(g.top_ids) && g.top_ids.length >= n && n > 0 ? g.top_ids : null,
-    topLp: Array.isArray(g.top_logprobs) && g.top_logprobs.length >= n && n > 0 ? g.top_logprobs : null,
-    ent: Array.isArray(g.entropy) && g.entropy.length >= n && n > 0 ? g.entropy : null,
+    // 끝 토큰(EOS)으로 멈춘 답은 그 스텝의 값이 없다(채팅의 logprobs.content 도 그렇다 — 앱리디자인 E5 의 채팅 실행에서 찾음)
+    topIds: Array.isArray(g.top_ids) && g.top_ids.length >= n - 1 && n > 0 ? g.top_ids : null,
+    topLp: Array.isArray(g.top_logprobs) && g.top_logprobs.length >= n - 1 && n > 0 ? g.top_logprobs : null,
+    ent: Array.isArray(g.entropy) && g.entropy.length >= n - 1 && n > 0 ? g.entropy : null,
     hashes: Array.isArray(g.logit_hashes) ? g.logit_hashes : null,
     echoHashes: Array.isArray(g.prompt_logit_hashes) ? g.prompt_logit_hashes : null,
     texts: null, lps: null, alts: null, ptexts: null, seedText: null,
@@ -338,8 +384,9 @@ export function runInfo(ctx, d) {
 
 // ---- 실행 부르기(실험 헤더 — 앱이 실행으로 남긴다) ----
 
-/** 이 호출의 end 이벤트가 오면 남긴 실행 id 로 — 명령 창이 넘겨 주는 이벤트(geulpu:event)에서 start 의 본문으로 이 호출을 찾는다 */
-function awaitRun(op, exp, body) {
+/** 이 호출의 end 이벤트가 오면 남긴 실행 id 로 — 명령 창이 넘겨 주는 이벤트(geulpu:event)에서 start 의 본문으로 이 호출을 찾는다.
+   E5 — op 가 null 이면 기능은 묻지 않는다(채팅의 답 — 앱이 본문으로 기능을 가른다) */
+export function awaitRun(op, exp, body) {
   let callNo = null;
   let done;
   let timer = 0;
@@ -355,7 +402,7 @@ function awaitRun(op, exp, body) {
   const on = ev => {
     const e = ev.detail;
     if (!e) return;
-    if (e.type === 'start' && callNo === null && e.source === 'gui' && e.op === op && samePath(e.experiment, exp)) {
+    if (e.type === 'start' && callNo === null && e.source === 'gui' && (op === null || e.op === op) && samePath(e.experiment, exp)) {
       const mine = e.params !== undefined ? JSON.stringify(e.params) === canon : e.params_bytes === bytes;
       if (mine) callNo = e.call;
     } else if (e.type === 'end' && callNo !== null && e.call === callNo) finish(e.run || null);

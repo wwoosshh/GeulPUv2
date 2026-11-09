@@ -1241,7 +1241,7 @@ table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
 .run-tok { position: relative; border-radius: 3px; cursor: pointer; }
 .run-tok:hover { background: var(--hover); }
 .run-tok .bar { position: absolute; left: 0; bottom: -7px; height: 3px; border-radius: 2px; background: var(--line-pill); pointer-events: none; }
-.run-tok.cont { display: inline-block; min-width: 6px; height: 18px; vertical-align: -2px; }
+.run-tok.cont { display: inline-block; width: 4px; margin: 0 -2px; height: 18px; vertical-align: -2px; }   /* E5 — 한 글자의 이어지는 바이트: 글자 사이에 틈을 내지 않는다(앞뒤 여백을 빼서 폭 0) */
 .run-tok.sel { outline: 1px solid var(--ink); outline-offset: 1px; }
 .run-tok:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
 .run-tok.low::after { content: attr(data-note); position: absolute; left: 0; top: -20px; font-size: 11px; line-height: 14px; color: var(--ink); white-space: nowrap; border-bottom: 1px solid var(--ink); pointer-events: none; }
@@ -1374,4 +1374,44 @@ table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
 }
 @media (max-width: 640px) {
   .run-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* ---------- 그룹의 탭 · 경로 · 작업 화면(앱리디자인 E5 — 문서/화면구현.md §5) ----------
+   왼쪽 맨 위의 막대: 그룹 이름과 탭(실험 화면의 탭과 같다), 사이드바에 없는 화면은 경로. 막대는 스크롤하지 않고 그 아래 화면만 스크롤한다.
+   작업 화면은 지금 작업의 카드(작업 카드와 같다)와 지난 작업의 줄. 사이드바의 '작업'은 실행 중인 작업이 있으면 강조색 점 */
+.grp { flex: none; display: flex; align-items: flex-end; gap: 16px; padding: 10px 40px 0; border-bottom: 1px solid var(--hairline); background: var(--canvas); }
+.grp[hidden] { display: none; }
+.grp-name { padding-bottom: 10px; font-size: 13px; line-height: 20px; color: var(--mute); }
+.grp-tabs { display: flex; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.grp-tab { flex: none; border: 0; background: none; color: var(--mute); padding: 6px 12px 10px; border-bottom: 2px solid transparent; margin-bottom: -1px; font: inherit; font-size: 14px; cursor: pointer; }
+.grp-tab:hover { color: var(--ink); }
+.grp-tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+.grp-tab:focus-visible, .grp-path button:focus-visible { outline: 2px solid var(--accent-line); outline-offset: -2px; }
+.grp-path { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 10px; font-size: 13px; line-height: 20px; color: var(--mute); }
+.grp-path button { border: 0; background: none; padding: 2px 4px; border-radius: 4px; color: var(--mute); font: inherit; cursor: pointer; }
+.grp-path button:hover { color: var(--ink); background: var(--hover); }
+.grp-path .here { color: var(--ink); }
+.grp-path .sep { color: var(--faint); }
+.rail-btn.busy::after { content: ""; position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.jobs h1 { margin: 0 0 6px; }
+.jobs .lead { margin: 0; max-width: 72ch; font-size: 15px; line-height: 24px; }
+.jobs h2 { margin: 28px 0 10px; font-size: 17px; line-height: 24px; }
+.jobs h2 .muted { font-size: 13px; }
+.jobs-now .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.jobs-now .head .t { flex: 1; min-width: 200px; }
+.jobs-sum { margin: 10px 0 0; font-size: 13px; line-height: 20px; color: var(--body); overflow-wrap: anywhere; }
+.jobs-sum.bad, .jobs-row .bad { color: var(--err); }
+.jobs-log { max-height: 320px; overflow: auto; margin-top: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.jobs-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hairline); }
+.jobs-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 4px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--hairline); font-size: 14px; line-height: 20px; }
+.jobs-row .id { font: 12px/20px var(--font-mono); color: var(--mute); }
+.jobs-row .t { color: var(--ink); overflow-wrap: anywhere; }
+.c-line .res .job { color: var(--body); }
+.msg-run { font-size: 12px; }
+@container (max-width: 520px) {
+  .jobs-row { grid-template-columns: 32px minmax(0, 1fr); }
+  .jobs-row .tag, .jobs-row .small { grid-column: 2; justify-self: start; }
+}
+@media (max-width: 767px) {
+  .grp { padding: 8px 16px 0; gap: 10px; }
+  .rail-btn.busy::after { top: 6px; right: calc(50% - 16px); }
 }

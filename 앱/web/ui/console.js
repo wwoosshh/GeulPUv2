@@ -72,8 +72,14 @@ document.addEventListener('geulpu:context', ev => {
   ctxEl.hidden = !ctxExp;
   ctxEl.replaceChildren(...(ctxExp ? [T('입력한 명령은 이 실험에 남습니다:'), ' ', el('code', { title: ctxExp }, d.id || baseName(ctxExp))] : []));
 });
+// E5(문서/화면구현.md §5) — 명령 창 › AI 세션: 에이전트 화면(코딩 에이전트 시작 · 모델 · 작업 폴더)을 왼쪽에 연다
+const TERM = '<path d="m5 17 5-5-5-5"/><path d="M12 18h7"/>';
+const aiBtn = el('button', {
+  type: 'button', class: 'icon-btn c-ai', title: T('AI 세션 — 코딩 에이전트 시작'), 'aria-label': T('AI 세션'),
+  onclick: () => { if (typeof globalThis.show === 'function') globalThis.show('agents'); },
+}, icon(TERM));
 box.replaceChildren(
-  el('header', { class: 'c-head' }, el('span', { class: 'c-title' }, T('명령 창')), countEl, followBtn, foldBtn),
+  el('header', { class: 'c-head' }, el('span', { class: 'c-title' }, T('명령 창')), countEl, followBtn, aiBtn, foldBtn),
   list,
   ctxEl,
   form,
@@ -144,6 +150,44 @@ function stateText(rec) {
   return '';
 }
 
+// E5 — 작업 줄의 글: 실행 중이면 단계 · 진행, 끝나면 상태 · 걸린 시간(실패면 까닭)
+const secs = s => (typeof s === 'number' ? fmtMs(Math.round(s * 1000)) : '');
+function jobText(rec) {
+  const j = rec.jobInfo;
+  if (!j) return T`작업 ${rec.job}`;
+  if (j.state === 'running') return T`작업 ${rec.job} · ${Math.round((j.progress || 0) / 10)}%` + (j.step ? ' · ' + TM(j.step) : '');
+  if (j.state === 'done') return T`작업 ${rec.job} 끝 · ${secs(j.seconds)}`;
+  if (j.state === 'failed') return T`작업 ${rec.job} 실패` + (j.reason ? ' — ' + TM(j.reason) : '');
+  if (j.state === 'cancelled') return T`작업 ${rec.job} 중지됨`;
+  return T`작업 ${rec.job}`;
+}
+const jobLines = new Set();    // 끝나지 않은 작업의 줄
+// 끝난 것을 못 본 작업(새로 고침 뒤 · 더 새 작업이 시작됨)은 작업 화면이 이 브라우저에 남긴 지난 작업에서(ui/jobs.js — 같은 번호의 가장 새 것)
+function jobFromHistory(id) {
+  try {
+    const h = JSON.parse(localStorage.getItem('geulpu.jobs') || '[]');
+    const x = Array.isArray(h) ? h.find(r => r && r.id === id) : null;
+    return x ? { state: x.state, seconds: x.seconds, reason: x.reason } : null;
+  } catch (_) {
+    return null;
+  }
+}
+// app.js 가 1 초마다 읽는 상태(geulpu:state) — 그 작업이 지금 작업이면 값을 옮기고, 더 새 작업이 시작됐으면 그 줄은 끝(작업 화면에 남는다)
+document.addEventListener('geulpu:state', ev => {
+  const j = ev.detail && ev.detail.job;
+  for (const rec of jobLines) {
+    if (j && j.id === rec.job) {
+      const v = { state: j.state, progress: j.progress, step: j.step, seconds: j.seconds, reason: j.reason };
+      if (JSON.stringify(v) !== JSON.stringify(rec.jobInfo)) { rec.jobInfo = v; render(rec); }
+      if (j.state !== 'running') jobLines.delete(rec);
+    } else if (j && j.id > rec.job) {
+      jobLines.delete(rec);
+      const h = jobFromHistory(rec.job);
+      if (h && h.state !== 'running') { rec.jobInfo = h; render(rec); }
+    }
+  }
+});
+
 function render(rec) {
   const li = rec.li || (rec.li = el('li', { class: 'c-line' }));
   li.className = 'c-line ' + (rec.state || '') + (rec.typed ? ' typed' : '');
@@ -167,6 +211,8 @@ function render(rec) {
       onclick: () => document.dispatchEvent(new CustomEvent('geulpu:open-experiment', { detail: { path } })),
     }, T`실험 ${baseName(path)}`));
   }
+  // E5 — 작업을 시작한 줄은 그 작업이 끝날 때까지 단계 · 진행을, 끝나면 끝난 상태를(누르면 작업 화면)
+  if (rec.job) res.push(el('button', { type: 'button', class: 'linkish job', onclick: () => globalThis.show && globalThis.show('jobs') }, jobText(rec)));
   // E3 — 실험에 실행을 남긴 줄은 그 실행 화면으로
   if (rec.run && rec.experiment) {
     const detail = { experiment: rec.experiment, run: rec.run };
@@ -254,6 +300,7 @@ function onEvent(e) {
     rec.ms = e.ms;
     rec.closed = !!e.client_closed;
     if (e.run) rec.run = e.run;
+    if (e.job) { rec.job = e.job; jobLines.add(rec); }        // E5 — 작업을 시작한 호출
     if (rec.state === 'run' || !rec.typed || rec.state === 'sent') rec.state = e.status >= 200 && e.status < 400 && !e.client_closed ? 'done' : 'fail';
     render(rec);
     stick(false);

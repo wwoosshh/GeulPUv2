@@ -1251,7 +1251,7 @@ const DICT = {
   "실행 이름은 1 ~ 64 바이트, / \\ : * ? \" < > | 와 앞의 점 없이": "Run names are 1–64 bytes, without / \\ : * ? \" < > | or a leading dot",
   // llama.cpp 재현 검증(문서/라마재현.md 4단계) — 화면
   "이 실행 로그에 점수 줄이 없습니다": "This run log has no score lines",
-  "llama.cpp의 실행은 벤치마크 화면의 llama.cpp 재현 검증으로 다시 계산합니다": "llama.cpp runs are recomputed with the llama.cpp replay check on the Benchmark page",
+  "llama.cpp의 실행은 재현 › llama.cpp의 재현 검증으로 다시 계산합니다": "llama.cpp runs are recomputed with the replay check in Reproduce › llama.cpp",
   "영수증 {} — {}에서 다시 계산: ": "Receipt {} — recomputed on {}: ",
   "llama-server의 응답과 비트까지 같음(값 {}개)": "bit-identical to the llama-server response ({0} {0|value|values})",
   "llama-server의 응답과 다름(다른 값 {}개 · 스텝 {}부터)": "differs from the llama-server response ({0} {0|value differs|values differ}, from step {1})",
@@ -1606,6 +1606,42 @@ const DICT = {
   "샘플링된 토큰과 이 스텝의 분포, 층마다의 예측. 이 화면에서 계산한 것은 이 실험의 실행으로 남습니다.": "The sampled token, this step's distribution and the prediction at every layer. What this screen computes is recorded as runs of this experiment.",
   "← → 이전 · 다음 스텝": "← → previous · next step",
   "이 실험의 점수 · 로짓 렌즈 실행을 읽는 중…": "Reading this experiment's score and logit lens runs…",
+  "재현 › 검사로": "To Reproduce › Checks",
+  "작업 보기": "Show the job",
+  // 앱리디자인 E5 — 사이드바의 그룹 · 탭(ui/nav.js), 작업 화면(ui/jobs.js), 명령 창의 AI 세션 · 작업 줄, 기본 실험 "대화", 나눠 그린 옛 화면
+  "작업": "Jobs",
+  "화면 탭": "Screen tabs",
+  "평가|탭": "Evaluation",
+  "앱|탭": "App",
+  "성능": "Performance",
+  "검사 결과": "Check results",
+  "속도 측정 — 프롬프트 처리와 답 생성 속도. 실행하는 동안 불러온 채팅 모델은 GPU에서 내립니다. 결과는 재현 › 검사 결과에 남습니다.": "Speed measurement — prompt processing and generation speed. The loaded chat model leaves the GPU while it runs. Results go to Reproduce › Check results.",
+  "기준 PC의 출력과 비트 단위로 비교합니다. 한 번에 하나씩 실행되고, 결과는 검사 결과 탭에 남습니다.": "Compares bit for bit with the reference PC's output. One check runs at a time; results go to the Check results tab.",
+  "고치지 않은 llama-server의 요청을 기록해, 이 PC의 GPU에서 비트까지 같은지 다시 계산합니다.": "Records requests to an unmodified llama-server and recomputes them on this PC's GPU to see whether they are bit-identical.",
+  "측정 · 검사 · 재현 검증의 결과입니다. 결과는 zip으로 내보낼 수 있습니다.": "Results of measurements, checks and replay verification. Results can be exported as zip.",
+  "AI 세션 — 코딩 에이전트 시작": "AI sessions — start a coding agent",
+  "AI 세션": "AI sessions",
+  "작업 {} · {}%": "Job {} · {}%",
+  "작업 {} 끝 · {}": "Job {} done · {}",
+  "작업 {} 실패": "Job {} failed",
+  "작업 {} 중지됨": "Job {} stopped",
+  "작업 {} · {}": "Job {} · {}",
+  "이 답의 실행 — 실험 › 대화": "This answer's run — Experiments › Conversations",
+  "가벼운 대화 — 채팅의 답마다 실행으로 남습니다": "Casual chat — every chat answer is recorded as a run",
+  "채팅의 답마다 실행으로 남습니다": "Every chat answer is recorded as a run",
+  "채팅 화면으로 — 처음 보내면 이 실험이 만들어지고 답마다 실행으로 남습니다": "To the chat screen — the first message creates this experiment, and every answer is recorded as a run",
+  "디버거의 실행 로그": "Debugger run logs",
+  "디버거 열기": "Open the debugger",
+  "실험 밖에서 기록한 서버의 실행 로그(디버거 v1 — 기록 켜기 · 가져오기 · 비교)는 디버거 화면에서 봅니다.": "Server run logs recorded outside experiments (debugger v1 — recording, import, comparison) are on the debugger screen.",
+  "채팅 화면": "Chat screen",
+  "기본 실험 — 채팅의 답마다 실행으로 남습니다. 실행 탭에서 답마다 토큰별 출력 · 분기 · 스텝 · 층 화면을 봅니다.": "The default experiment — every chat answer is recorded as a run. The Runs tab shows each answer's token-by-token output, branching and the step and layer screen.",
+  "아직 로그가 없습니다": "No log yet",
+  "지금 작업이 없습니다": "No job is running",
+  "이 브라우저가 본 지난 작업이 없습니다.": "This browser has seen no earlier jobs.",
+  "오래 걸리는 일(모델 불러오기 · 확인 · 속도 측정 · 검사 · 평가 …)은 앱에서 한 번에 하나씩 실행됩니다. 대기열은 없습니다 — 작업이 실행 중이면 새 작업을 받지 않으니, 그 작업이 끝난 뒤에 다시 시작하세요.": "Long tasks (loading or checking a model, speed measurement, checks, evaluation …) run one at a time in the app. There is no queue — while a job runs the app takes no new one, so start it again after that job ends.",
+  "지금 작업": "Current job",
+  "지난 작업": "Earlier jobs",
+  "이 브라우저가 본 것 — 최근 30 개": "seen by this browser — the latest 30",
 };
 function T(s, ...v) {
   if (typeof s === 'string') {
@@ -1856,7 +1892,7 @@ const TMX = [
   [/\[([^\]]+)\] 기준 파일\(([^)]+)\)의 답 (\d+)개를 이 파일로 점수 매깁니다\(echo\)\./g, "[$1] Scoring the $3 answers of the reference file ($2) with this file (echo)."],
   [/\[([^\]]+)\] 기준 파일\(([^)]+)\)과 견줌 — /g, '[$1] Compared with the reference file ($2) — '],
   [/\[정보\] 기준 데이터\(expected\.json\)가 없어 견주지 않고 기록만 합니다\./g, '[info] No reference data (expected.json) — recording without comparing.'],
-  [/파일이 없습니다 — 벤치마크 화면에서 받은 뒤 다시 실행하세요/g, 'The file is missing — download it on the Benchmark screen, then run again'],
+  [/파일이 없습니다 — 재현 › 검사에서 받은 뒤 다시 실행하세요/g, 'The file is missing — download it in Reproduce › Checks, then run again'],
   [/그래픽 메모리가 모자랍니다\(파일 ([\d.]+) GB — 그래픽 메모리 ([\d.]+) GB 이상\)/g, 'Not enough graphics memory (file $1 GB — needs $2 GB or more of graphics memory)'],
   [/파일 쌍 검증 데이터\(data\\crosscheck\\pair\)를 읽지 못했습니다/g, 'Could not read the file-pair data (data\\crosscheck\\pair)'],
   [/재현성 검증 기준 데이터\(data\\crosscheck\)를 읽지 못했습니다/g, 'Could not read the reproducibility reference data (data\\crosscheck)'],
@@ -2341,6 +2377,7 @@ async function refresh() {
     failCount = 0;
     if (!S.conn) { S.conn = true; setOffline(false); }
     renderAll();
+    document.dispatchEvent(new CustomEvent('geulpu:state', { detail: st }));   // 앱리디자인 E5 — 작업 화면 · 명령 창의 작업 줄(ui/jobs.js · console.js)
     await pollLog();
   } catch (_) {
     failCount++;
@@ -2364,11 +2401,11 @@ function renderAll() {
   renderStatus();
   if (S.view === 'chat') { renderChatTop(); if (!curRoom() || !curRoom().messages.length) renderMsgsIfChanged(); labSync(); }
   else if (S.view === 'models') renderModels();
-  else if (S.view === 'bench') renderBench();
+  else if (BENCH_VIEW[S.view]) renderBench(BENCH_VIEW[S.view]);   // 앱리디자인 E5 — 벤치마크의 카드를 탭마다(모델 › 성능 · 재현 › 검사 · llama.cpp · 검사 결과)
   else if (S.view === 'debug') renderDebug();
-  else if (S.view === 'device') renderDevice();
+  else if (S.view === 'device') { renderDevice(); renderBench('diag'); }   // 설정 › 장치 — 하드웨어와 하드웨어 진단
   else if (S.view === 'agents') renderAgents();
-  else if (S.view === 'settings') renderSettings();
+  else if (S.view === 'settings' || S.view === 'cache') renderSettings();   // 설정 › 앱 · 프롬프트 캐시
   else if (S.view === 'eval' && typeof renderEval === 'function') renderEval();   // 모델 평가 1-3 — eval.js(app.js 다음에 읽힌다)
   if (POP && POP.dataset.kind === 'dl') refreshDlPop();
   if (POPANCHOR && !POPANCHOR.isConnected) closePop();   // 다시 그려 기준 단추가 사라졌으면 판도 닫는다
@@ -2506,27 +2543,43 @@ function fitTag(f) {
 }
 
 // ---------- 레일 · 상태 막대 ----------
-const RAIL_ICON = { exp: 'notes', chat: 'chat', models: 'box', eval: 'flask', agents: 'term', debug: 'bug', bench: 'gauge', device: 'cpu', settings: 'gear' };
+// 앱리디자인 E5(문서/화면구현.md §5) — 사이드바는 그룹 다섯(실험 · 모델 · 재현 · 작업 · 설정). 화면(view)마다 그룹이 있고, 사이드바의 단추는 그
+// 그룹에서 마지막으로 연 화면으로 간다(이 브라우저에 기억). 채팅 · 디버거는 실험 그룹, 에이전트는 명령 창(그룹 없음). 그룹의 탭 · 경로는 ui/nav.js
+const VIEW_GROUP = {
+  exp: 'exp', chat: 'exp', debug: 'exp', models: 'model', eval: 'model', perf: 'model', llama: 'repro', checks: 'repro', results: 'repro',
+  jobs: 'jobs', settings: 'settings', device: 'settings', cache: 'settings', agents: '',
+};
+const VIEW_ALIAS = { bench: 'checks' };               // 옛 화면 이름(세션에 남은 값 · 옛 링크)
+const GROUP_VIEW = { exp: 'exp', model: 'models', repro: 'checks', jobs: 'jobs', settings: 'settings' };
+const BENCH_VIEW = { perf: 'perf', checks: 'checks', llama: 'llama', results: 'results' };   // 벤치마크의 카드를 나눠 그리는 화면 → 부분
+const JOB_VIEW = { speed: 'perf', diag: 'device', crosscheck: 'checks', pair: 'checks', 'llama-verify': 'llama' };   // 상태 막대의 작업 → 그 작업을 시작하는 탭
+function viewGroup(v) { return VIEW_GROUP[VIEW_ALIAS[v] || v] || ''; }
+function groupView(g) { const m = load('geulpu.groupView', {}) || {}; return m[g] && VIEW_GROUP[m[g]] === g ? m[g] : GROUP_VIEW[g]; }
+const RAIL_ICON = { exp: 'notes', model: 'box', repro: 'shield', jobs: 'clock', settings: 'gear' };
 document.querySelectorAll('.rail-btn').forEach(b => {
-  b.innerHTML = svg(RAIL_ICON[b.dataset.view], 'l') + `<span class="lbl" aria-hidden="true">${esc(b.getAttribute('aria-label'))}</span>`;
-  b.addEventListener('click', () => show(b.dataset.view));
+  b.innerHTML = svg(RAIL_ICON[b.dataset.group], 'l') + `<span class="lbl" aria-hidden="true">${esc(b.getAttribute('aria-label'))}</span>`;
+  b.addEventListener('click', () => show(groupView(b.dataset.group)));
 });
 function show(view) {
+  view = VIEW_ALIAS[view] || view;
+  if (!VIEW_GROUP.hasOwnProperty(view)) view = 'exp';
   closePop();
   const same = S.view === view;
   S.view = view;
+  const grp = viewGroup(view);
   document.querySelectorAll('.rail-btn').forEach(b => {
-    const on = b.dataset.view === view;
+    const on = b.dataset.group === grp;
     b.classList.toggle('active', on);
     if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
+  if (grp) { const m = load('geulpu.groupView', {}) || {}; if (m[grp] !== view) { m[grp] = view; store('geulpu.groupView', m); } }
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
   resetSig();
   if (view === 'eval' && typeof evShow === 'function') evShow();
   renderAll();
-  if (view === 'bench') loadResults(true);
+  if (BENCH_VIEW[view] || view === 'device') loadResults(true);
   if (view === 'debug') DBG.listAt = 0;
-  if (view === 'settings') { loadVk(); loadStore(true); }
+  if (view === 'settings' || view === 'cache') { loadVk(); loadStore(true); }
   if (view === 'agents') loadAgents(true);
   if (view === 'chat') { if (!same) renderMsgs(); setTimeout(() => { if (!$('#input').disabled) $('#input').focus(); }, 0); }
   try { sessionStorage.setItem('geulpu.view', view); } catch (_) { }
@@ -2547,7 +2600,7 @@ function renderStatus() {
     const svTxt = sv.state === 'ready' ? T`${labelById(sv.model)} · 동시 ${sv.slots}개 · 문맥 ${fmtCtx(sv.context)}`
       : sv.state === 'starting' ? T`모델 불러오는 중 · ${fmtClock(sv.seconds)}` : sv.state === 'failed' ? T('모델 불러오기 실패') : T('불러온 모델 없음');
     segs.push({ key: 'srv', tip: TM(sv.reason || ''), dot: svDot, text: svTxt });
-    if (j && j.state === 'running' && j.kind !== 'server' && j.kind !== 'device') segs.push({ key: 'job', btn: () => show(['eval', 'fix', 'check', 'tools', 'make', 'orig', 'improve'].includes(j.kind) ? 'eval' : 'bench'), tip: ['eval', 'fix', 'check', 'tools', 'make', 'orig', 'improve'].includes(j.kind) ? T('모델 평가 보기') : T('벤치마크 보기'), mini: j.progress / 10, text: `${jobName(j)} ${Math.round(j.progress / 10)}%` });
+    if (j && j.state === 'running' && j.kind !== 'server' && j.kind !== 'device') segs.push({ key: 'job', btn: () => show(['eval', 'fix', 'check', 'tools', 'make', 'orig', 'improve'].includes(j.kind) ? 'eval' : JOB_VIEW[j.kind] || 'jobs'), tip: ['eval', 'fix', 'check', 'tools', 'make', 'orig', 'improve'].includes(j.kind) ? T('모델 평가 보기') : T('작업 보기'), mini: j.progress / 10, text: `${jobName(j)} ${Math.round(j.progress / 10)}%` });
     // 다운로드 — 받는 중이면 진행, 멈춤 · 실패만 남았으면 그 수. 누르면 다운로드 목록
     const all = dlList(), act = all.filter(c => c.download.state === 'downloading' || c.download.state === 'verifying');
     const openDl = ev => openDownloads(ev.currentTarget);
@@ -3375,6 +3428,11 @@ function fillMsg(e, m, room, done) {
     done && e._last && !S.streaming ? h('button', { class: 'icon-btn needs-conn', 'data-tip': T('다시 생성 — 지금 답은 버전으로 남습니다'), 'data-tip-pos': 'top', 'aria-label': T('다시 생성'), onclick: () => retryLast() }, I('refresh', 's')) : null,
     done && m.tid && TRACES[m.tid] ? h('button', { class: 'icon-btn', 'data-tip': T('연구 패널에서 보기 — 토큰마다 확률 · 개입 · 비교 · 재현'), 'data-tip-pos': 'top', 'aria-label': T('이 답을 연구 패널에서 보기'), onclick: () => labOpen(m.tid) }, I('flask', 's')) : null,
     m.stats ? h('span', { class: 'stats' }, statsText(m.stats)) : null,
+    // 앱리디자인 E5 — 이 답이 기본 실험 "대화"에 남긴 실행(누르면 실행 화면 — 토큰마다의 값 · 분기 · 스텝 · 층)
+    done && m.run && m.exp ? h('button', {
+      class: 'linkish msg-run', 'data-tip': T('이 답의 실행 — 실험 › 대화'), 'data-tip-pos': 'top',
+      onclick: () => document.dispatchEvent(new CustomEvent('geulpu:open-run', { detail: { experiment: m.exp, run: m.run } })),
+    }, `${T('실행', '경로')} ${m.run}`) : null,
     done && m.np > 0 && m.L > 0 ? h('span', { class: 'stats', 'data-tip': T('이 답까지 쓴 문맥 — 차면 앞의 대화를 요약해 이어 갑니다'), 'data-tip-pos': 'top' },
       T`문맥 ${fmtNum(m.np + (m.nc || 0))} / ${fmtNum(m.L)}`) : null,
     mo ? h('span', { class: 'tag mtag ' + (mo.p === 'fast' ? 'dim' : 'ok'), 'data-tip': modeTip(mo.p), 'data-tip-pos': 'top' },
@@ -3994,7 +4052,18 @@ async function streamReply(asst, room, url, body, opt) {
   const t0 = performance.now();
   let tFirst = 0, usage = null, gp = null, finish = null, seed = '';
   const bodyStr = opt.bodyStr || JSON.stringify(body);
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bodyStr, signal: ctrl.signal });
+  // 앱리디자인 E5(문서/화면구현.md §5) — 채팅의 답은 기본 실험 "대화"의 실행으로 남는다: 실험 헤더를 붙이면 앱이 응답을 실행으로 남기고(실험.gl),
+  // 그 호출의 end 이벤트에서 실행 id 를 받아 답에 링크로 둔다. 실험을 찾거나 만들지 못하면 지금처럼 보낸다
+  const exp = typeof globalThis.geulpuChatExperiment === 'function' ? await globalThis.geulpuChatExperiment().catch(() => null) : null;
+  const headers = { 'Content-Type': 'application/json' };
+  if (exp) headers['X-GeulPU-Experiment'] = exp;
+  const runWait = exp && typeof globalThis.geulpuAwaitRun === 'function' ? globalThis.geulpuAwaitRun(exp, bodyStr) : null;
+  let res;
+  try { res = await fetch(url, { method: 'POST', headers, body: bodyStr, signal: ctrl.signal }); } catch (e) { if (runWait) runWait.giveUp(0); throw e; }
+  if (runWait) {
+    runWait.giveUp(res.ok ? 600000 : 0);
+    runWait.promise.then(id => { if (id) { asst.run = id; asst.exp = exp; saveRooms(); if (S.view === 'chat' && !S.streaming) renderMsgs(); } });
+  }
   if (!res.ok) {
     let msg = 'HTTP ' + res.status;
     try { const j = await res.json(); msg = (j.error && j.error.message) || msg; } catch (_) { }
@@ -4081,12 +4150,14 @@ async function send(textOverride) {
 // 답 하나의 요청 몸 — 보낼 때와 연구 패널이 다시 지을 때 같은 함수다(같은 글 → 같은 해시). upto = 이 답 앞까지의 메시지 수, p.sum = 쓴 요약.
 // geulpu.prompt_tokens — 서버가 채팅 틀을 씌운 프롬프트 토큰을 돌려준다(연구 기록에 남겨, 숨은 버전 · 고친 대화의 답도 셈할 수 있게)
 function replyBody(room, upto, p) { return reqOf(convView(room, upto, p.sum || null), p); }
+// 앱리디자인 E5 — 답은 기본 실험 "대화"의 실행으로 남으므로 상위 후보 2 개 · 로짓 해시를 함께 묻는다(실행 화면의 막대 · 스텝 · 층 화면이 그 답에도).
+// 생성되는 토큰은 같다 — 로그확률은 샘플링과 따로 계산한다(계약 5.2)
 function reqOf(view, p) {
-  if (p.tpl === 'deepseek-r1') return { url: '/v1/completions', body: { prompt: r1Prompt(view, p.system), max_tokens: p.max, temperature: p.temp, stream: true, geulpu: { prompt_tokens: true } } };
+  if (p.tpl === 'deepseek-r1') return { url: '/v1/completions', body: { prompt: r1Prompt(view, p.system), max_tokens: p.max, temperature: p.temp, stream: true, logprobs: 2, geulpu: { prompt_tokens: true, top_logprobs: 2, logit_hash: true } } };
   const msgs = [];
   if (p.system) msgs.push({ role: 'system', content: p.system });
   for (const v of view) msgs.push({ role: v.role, content: v.content });
-  const body = { messages: msgs, max_tokens: p.max, temperature: p.temp, stream: true, stream_options: { include_usage: true }, geulpu: { prompt_tokens: true } };
+  const body = { messages: msgs, max_tokens: p.max, temperature: p.temp, stream: true, stream_options: { include_usage: true }, logprobs: true, top_logprobs: 2, geulpu: { prompt_tokens: true, top_logprobs: 2, logit_hash: true } };
   if (p.tpl === 'qwen3') {                 // 서버의 Qwen3 틀 — 앞 답의 생각은 서버가 뗀다, <think> 는 글로 받아 접는다
     body.geulpu.special = true;
     body.chat_template_kwargs = { enable_thinking: p.think !== false };
@@ -5230,44 +5301,68 @@ function kpiFromText(kind, t) {
   return null;
 }
 const kpis = (items, small) => h('div', { class: 'kpis' + (small ? ' sm' : '') }, items.filter(Boolean).map(([v, l]) => h('div', { class: 'kpi' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l))));
-function renderBench() {
+// 앱리디자인 E5(문서/화면구현.md §5) — 벤치마크의 카드를 탭마다 그린다: 모델 › 성능(속도 측정) · 재현 › 검사(재현성 검증 · 파일 쌍 재현성) · 재현 ›
+// llama.cpp · 재현 › 검사 결과(결과 목록) · 설정 › 장치(하드웨어 진단 — 장치 화면 아래). 그 탭의 작업만 작업 카드로(모든 작업은 작업 화면에).
+// 한 번에 한 부분만 그리고 다른 부분은 비운다 — 작업 카드의 id(job-step · joblog …)가 둘 생기지 않게
+const BENCH_PARTS = {
+  perf: { kinds: ['speed'], pick: true, host: () => $('#page-perf'), title: () => T('성능'), lede: () => T('속도 측정 — 프롬프트 처리와 답 생성 속도. 실행하는 동안 불러온 채팅 모델은 GPU에서 내립니다. 결과는 재현 › 검사 결과에 남습니다.') },
+  checks: { kinds: ['crosscheck', 'pair'], host: () => $('#page-checks'), title: () => T('검사'), lede: () => T('기준 PC의 출력과 비트 단위로 비교합니다. 한 번에 하나씩 실행되고, 결과는 검사 결과 탭에 남습니다.') },
+  llama: { kinds: ['llama-verify'], host: () => $('#page-llama'), title: () => 'llama.cpp', lede: () => T('고치지 않은 llama-server의 요청을 기록해, 이 PC의 GPU에서 비트까지 같은지 다시 계산합니다.') },
+  results: { kinds: [], results: true, host: () => $('#page-results'), title: () => T('검사 결과'), lede: () => T('측정 · 검사 · 재현 검증의 결과입니다. 결과는 zip으로 내보낼 수 있습니다.') },
+  diag: { kinds: ['diag'], pick: true, host: () => devHosts()[1], title: null, lede: null },
+};
+// 설정 › 장치 — 위는 하드웨어(renderDevice), 아래는 하드웨어 진단(renderBench('diag'))
+function devHosts() {
+  const page = $('#page-device');
+  if (!page.querySelector('#dev-main')) page.replaceChildren(h('div', { id: 'dev-main' }), h('div', { id: 'dev-diag' }));
+  return [$('#dev-main'), $('#dev-diag')];
+}
+const benchPartOf = v => (v === 'device' ? 'diag' : BENCH_VIEW[v] || null);
+function renderBench(part) {
+  if (!BENCH_PARTS[part]) part = 'checks';
+  const P = BENCH_PARTS[part];
   const st = S.st;
-  const page = $('#page-bench');
+  const page = P.host();
+  for (const [k, o] of Object.entries(BENCH_PARTS)) {
+    if (k === part) continue;
+    const e = k === 'diag' ? $('#dev-diag') : o.host();
+    if (e && e.childElementCount) { e.replaceChildren(); delete SIG['bench:' + k]; }
+  }
   const j0 = st.job;
-  const j = j0 && (j0.state === 'running' || (['diag', 'speed', 'crosscheck', 'pair', 'llama-verify'].includes(j0.kind) && jobKey(j0) !== S.jobHide)) ? j0 : null;
+  const j = j0 && P.kinds.includes(j0.kind) && (j0.state === 'running' || jobKey(j0) !== S.jobHide) ? j0 : null;
   const runnables = sortedModels().filter(runnable);
   const hasR1 = st.models.some(m => m.catalog === R1_REF && runnable(m));
   const sel = benchModel(runnables);
   const pairs = (st.pair_catalog || []).map(c => [c.id, c.installed, dlStateOf(c), c.download && c.download.state, c.download && c.download.total ? Math.floor(20 * c.download.received / c.download.total) : 0]);
-  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], runnables.map(m => m.id), hasR1, sel, S.results && S.results.length, pairs, S.llama ? S.llama.v : 0];
-  if (changed('bench', struct)) {
-    const busy = !!(j && j.state === 'running');
+  const busyAny = !!(j0 && j0.state === 'running');           // 작업은 한 번에 하나 — 다른 탭의 작업이 돌면 단추를 막는다
+  const struct = [j && [j.id, j.state, j.kind, j.result, !!j.summary, j.reason], busyAny, runnables.map(m => m.id), hasR1, sel, S.results && S.results.length, pairs, S.llama ? S.llama.v : 0];
+  if (changed('bench:' + part, struct)) {
     const r1c = st.catalog.find(c => c.id === R1_REF);
+    const pick = P.pick ? h('div', { class: 'card pick-card' },
+      h('div', { class: 'pc-t' }, h('span', { class: 'lab' }, T('측정할 모델')), h('span', { class: 'small muted' }, T('하드웨어 진단 · 속도 측정에 씁니다'))),
+      h('div', { class: 'pc-c' },
+        h('select', {
+          class: 'input', 'data-fk': 'bench-model', 'aria-label': T('하드웨어 진단 · 속도 측정에 쓸 모델'), disabled: runnables.length ? null : true,
+          onchange: ev => { S.benchModel = ev.target.value; store('geulpu.benchModel', S.benchModel); },
+        }, runnables.length ? runnables.map(m => h('option', { value: m.id, selected: m.id === sel ? true : null }, `${displayName(m)} · ${quantOf(m)}`)) : h('option', { value: '' }, T('실행할 수 있는 모델이 없습니다'))),
+        !runnables.length ? h('button', { class: 'btn sm', onclick: () => show('models') }, I('box', 's'), T('모델 화면')) : null)) : null;
+    const cards = BENCH.filter(b => P.kinds.includes(b.kind));
     rebuild(page,
-      pageHead(S.results ? T`결과 ${S.results.length}개` : null, T('벤치마크'), T('한 번에 하나씩 실행됩니다. 실행하는 동안 불러온 채팅 모델은 GPU에서 내립니다. 결과는 zip으로 내보낼 수 있습니다.')),
+      P.title ? pageHead(P.results && S.results ? T`결과 ${S.results.length}개` : null, P.title(), P.lede()) : h('div', { class: 'section-head mt24' }, h('span', { class: 'sec' }, T('하드웨어 진단'))),
       j ? jobCard(j) : null,
-      h('div', { class: 'section bench-grid' },
-        h('div', { class: 'card pick-card' },
-          h('div', { class: 'pc-t' }, h('span', { class: 'lab' }, T('측정할 모델')), h('span', { class: 'small muted' }, T('하드웨어 진단 · 속도 측정에 씁니다'))),
-          h('div', { class: 'pc-c' },
-            h('select', {
-              class: 'input', 'data-fk': 'bench-model', 'aria-label': T('하드웨어 진단 · 속도 측정에 쓸 모델'), disabled: runnables.length ? null : true,
-              onchange: ev => { S.benchModel = ev.target.value; store('geulpu.benchModel', S.benchModel); },
-            }, runnables.length ? runnables.map(m => h('option', { value: m.id, selected: m.id === sel ? true : null }, `${displayName(m)} · ${quantOf(m)}`)) : h('option', { value: '' }, T('실행할 수 있는 모델이 없습니다'))),
-            !runnables.length ? h('button', { class: 'btn sm', onclick: () => show('models') }, I('box', 's'), T('모델 화면')) : null)),
-        BENCH.map(b => benchCard(b, runnables, hasR1, busy, r1c))),
-      h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('최근 결과')), h('span', { class: 'grow' }),
+      cards.length ? h('div', { class: 'section bench-grid' }, pick, cards.map(b => benchCard(b, runnables, hasR1, busyAny, r1c))) : null,
+      P.results ? h('div', { class: 'section' }, h('div', { class: 'section-head' }, h('span', { class: 'sec' }, T('최근 결과')), h('span', { class: 'grow' }),
         h('button', { class: 'icon-btn needs-conn', 'data-tip': T('결과 폴더 열기'), 'data-tip-pos': 'left', 'aria-label': T('결과 폴더 열기'), onclick: () => api('/api/open', { what: 'results' }).catch(e => toast(e.message, 'err')) }, I('folder'))),
-        h('div', { id: 'results' }, S.results ? resultsTable(S.results) : h('div', { class: 'muted' }, T('불러오는 중…')))));
+        h('div', { id: 'results' }, S.results ? resultsTable(S.results) : h('div', { class: 'muted' }, T('불러오는 중…')))) : null);
     S.log = { job: j ? j.id : 0, from: 0 };
   }
   if (j) {
-    const set = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+    const set = (id, v) => { const e = page.querySelector('#' + id); if (e && e.textContent !== v) e.textContent = v; };
     set('job-step', j.state === 'running' ? TM(j.step || '') : { done: T('끝났습니다'), failed: T('실패했습니다'), cancelled: T('중지했습니다') }[j.state] || '');
     set('job-time', `${{ running: T('실행 중'), done: T('완료'), failed: T('실패'), cancelled: T('중지됨') }[j.state] || j.state} · ${fmtClock(j.seconds)}`);
-    const bar = document.getElementById('job-bar');
+    const bar = page.querySelector('#job-bar');
     if (bar) bar.style.width = (j.state === 'done' ? 100 : j.progress / 10) + '%';
-    const tail = document.getElementById('job-tail');
+    const tail = page.querySelector('#job-tail');
     if (tail) { tail.textContent = TM(st.job_tail || ''); tail.closest('details').hidden = !st.job_tail; }
   }
   if (Date.now() - S.resultsAt > 5000) loadResults(false);
@@ -5277,8 +5372,8 @@ const jobKey = j => `${j.id}:${j.kind}:${j.result || ''}:${j.state}`;
 const JOBSEEN = new Set();   // 실패를 이미 알린 작업
 function rerun(j) {
   const id = jobModel(j);
-  if ((j.kind === 'diag' || j.kind === 'speed') && id && runnable(modelOf(id))) { S.benchModel = id; store('geulpu.benchModel', id); resetSig(); renderBench(); }
-  const run = document.querySelector(`.bench-card[data-kind=${j.kind}] .run`);
+  if ((j.kind === 'diag' || j.kind === 'speed') && id && runnable(modelOf(id))) { S.benchModel = id; store('geulpu.benchModel', id); resetSig(); renderBench(benchPartOf(S.view)); }
+  const run = document.querySelector(`.view.active .bench-card[data-kind=${j.kind}] .run`);
   if (run) run.click();
 }
 function jobCard(j) {
@@ -5298,7 +5393,7 @@ function jobCard(j) {
       h('div', { class: 't' }, h('div', { class: 'ink h3' }, jobTitle(j)), h('div', { class: 'small muted', id: 'job-step' }, j.state === 'running' ? TM(j.step || '') : '')),
       h('span', { class: 'tag ' + tone, id: 'job-time' }, ''),
       j.state === 'running' ? h('button', { class: 'btn sm needs-conn', 'data-fk': 'job-stop', onclick: () => api('/api/job/cancel', {}).then(refresh).catch(e => toast(e.message, 'err')) }, I('stop', 's'), T('중지'))
-        : h('button', { class: 'icon-btn', 'data-tip': T('카드 닫기'), 'data-tip-pos': 'left', 'aria-label': T('끝난 작업 카드 닫기'), onclick: () => { S.jobHide = jobKey(j); store('geulpu.jobHide', S.jobHide); resetSig(); renderBench(); } }, I('x', 's'))),
+        : h('button', { class: 'icon-btn', 'data-tip': T('카드 닫기'), 'data-tip-pos': 'left', 'aria-label': T('끝난 작업 카드 닫기'), onclick: () => { S.jobHide = jobKey(j); store('geulpu.jobHide', S.jobHide); resetSig(); renderBench(benchPartOf(S.view)); } }, I('x', 's'))),
     h('div', { class: 'bar' + (j.state === 'done' ? ' done' : j.state === 'failed' ? ' fail' : '') }, h('i', { id: 'job-bar', style: `width:${j.state === 'done' ? 100 : j.progress / 10}%` })),
     k ? kpis(k, true) : j.summary && j.state === 'done' ? h('div', { class: 'verdict' }, (quick ? T('빠른 확인 — ') : '') + TM(pathLabel(headText(j.summary)))) : null,
     fail,
@@ -5339,7 +5434,7 @@ function llamaLoad() {
     L.list = (rs.receipts || []).slice().sort((a, b) => String(b.recorded || '').localeCompare(String(a.recorded || '')) || String(b.name).localeCompare(String(a.name)));
     if (dev) L.vk = ((dev.vulkan || {})['장치들'] || []).map(v => v['이름']);
     L.v++;
-    if (S.view === 'bench') renderBench();
+    if (S.view === 'llama') renderBench('llama');
   }).catch(() => { });
 }
 function llamaCard(b, busy) {
@@ -5378,7 +5473,7 @@ function llamaCard(b, busy) {
   const sel = h('select', { class: 'input', 'aria-label': T('검증할 영수증'), 'data-fk': 'llama-receipt', disabled: list.length ? null : true, onchange: ev => { L.sel = ev.target.value; } },
     list.length ? list.map(r => h('option', { value: r.name, selected: r.name === L.sel ? true : null }, `${r.name} · ${r.model} · ` + T`프롬프트 ${fmtNum(r.prompt_tokens)} · 생성 ${fmtNum(r.tokens)} 토큰` + (r.tokenless ? ' · ' + T('토큰 없음') : '')))
       : h('option', { value: '' }, T('영수증 없음')));
-  const lay = h('select', { class: 'input', 'aria-label': T('다시 계산할 백엔드'), 'data-fk': 'llama-layer', onchange: ev => { L.layer = ev.target.value; L.v++; renderBench(); } },
+  const lay = h('select', { class: 'input', 'aria-label': T('다시 계산할 백엔드'), 'data-fk': 'llama-layer', onchange: ev => { L.layer = ev.target.value; L.v++; renderBench('llama'); } },
     h('option', { value: 'cuda', selected: L.layer === 'cuda' ? true : null }, 'CUDA'), h('option', { value: 'vulkan', selected: L.layer === 'vulkan' ? true : null }, 'Vulkan'));
   const dev = L.layer === 'vulkan' ? h('select', { class: 'input', 'aria-label': T('다시 계산할 Vulkan 장치'), 'data-fk': 'llama-dev', onchange: ev => { L.dev = ev.target.value; } },
     h('option', { value: '' }, T('첫 장치')), (L.vk || []).map(n => h('option', { value: n, selected: n === L.dev ? true : null }, n))) : null;
@@ -5441,8 +5536,8 @@ function benchCard(b, runnables, hasR1, busy, r1c) {
 }
 async function pollLog() {
   const j = S.st && S.st.job;
-  if (!j || (S.view !== 'bench' && S.view !== 'eval')) return;
-  const pre = document.getElementById(S.view === 'eval' ? 'ev-joblog' : 'joblog');   // 모델 평가 1-3 — 평가 화면의 작업 카드
+  if (!j || (!benchPartOf(S.view) && S.view !== 'eval')) return;
+  const pre = S.view === 'eval' ? document.getElementById('ev-joblog') : document.querySelector('.view.active #joblog');   // 모델 평가 1-3 — 평가 화면의 작업 카드 · E5 — 그 탭의 작업 카드
   if (!pre) return;
   if (S.log.job !== j.id) S.log = { job: j.id, from: 0 };
   try {
@@ -5463,8 +5558,9 @@ async function loadResults(force) {
   try { r = await api('/api/results'); } catch (_) { return; }
   if (!changed('results', r) && !force) return;
   S.results = r.results;
-  put(document.getElementById('results'), resultsTable(r.results));
-  if (S.view === 'bench') renderBench();
+  const box = document.getElementById('results');
+  if (box) put(box, resultsTable(r.results));
+  if (benchPartOf(S.view)) renderBench(benchPartOf(S.view));
 }
 function stampText(s) { return String(s || '').replace(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/, '$1-$2-$3 $4:$5'); }
 function headText(t) { return String(t || '').split('\n')[0].replace(/^결과(\([^)]*\))?: /, ''); }
@@ -5650,11 +5746,11 @@ async function openResult(name) {
 async function renderDevice() {
   const d = S.st.device;
   if (!changed('device', d)) return;
-  const page = $('#page-device');
+  const page = devHosts()[0];                          // 앱리디자인 E5 — 설정 › 장치의 위(아래는 하드웨어 진단)
   const cell = (k, v, s) => h('div', { class: 'cell' }, h('div', { class: 'eyebrow' }, k), h('div', { class: 'v' }, v), s ? h('div', { class: 's' }, s) : null);
   const vk = d.layer === 'vulkan';
   put(page,
-    pageHead(d.layer ? `${LAYER[d.layer]} · ${fmtBytes(d.memory)}` : null, T('하드웨어'), null,
+    pageHead(d.layer ? `${LAYER[d.layer]} · ${fmtBytes(d.memory)}` : null, T('장치', '화면'), null,
       [h('button', { class: 'btn needs-conn', onclick: () => api('/api/device/check', {}).then(() => { resetSig(); refresh(); }).catch(e => toast(e.message, 'err')) }, I('refresh', 's'), T('다시 확인'))]),
     !d.checked ? h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('확인하는 중…')))
       : !d.layer ? h('div', { class: 'empty-box' }, h('div', { class: 'big' }, T('쓸 수 있는 GPU를 찾지 못했습니다')), h('div', null, T('NVIDIA RTX 30 시리즈 이상(CUDA) 또는 Vulkan 1.3을 지원하는 GPU가 필요합니다.')),
@@ -5800,7 +5896,7 @@ function renderAgents() {
 async function loadStore(force) {
   if (!force && S.storeAt && Date.now() - S.storeAt < 3000) return;
   S.storeAt = Date.now();
-  try { S.store = await api('/api/store'); resetSig(); if (S.view === 'settings') renderSettings(); } catch (_) { }
+  try { S.store = await api('/api/store'); resetSig(); if (S.view === 'settings' || S.view === 'cache') renderSettings(); } catch (_) { }
 }
 async function clearStore() {
   const cs = S.store || {};
@@ -5817,22 +5913,26 @@ let setTimer = null;
 const SAVED = { row: '', t: 0 };
 function markSaved(row, note) {
   SAVED.row = row; SAVED.t = Date.now();
-  for (const e of document.querySelectorAll('#page-settings [data-saved]')) e.hidden = e.dataset.saved !== row;
+  for (const e of document.querySelectorAll('#page-settings [data-saved], #page-cache [data-saved]')) e.hidden = e.dataset.saved !== row;
   announce(note);
-  setTimeout(() => { if (Date.now() - SAVED.t >= 2400) for (const e of document.querySelectorAll('#page-settings [data-saved]')) e.hidden = true; }, 2500);
+  setTimeout(() => { if (Date.now() - SAVED.t >= 2400) for (const e of document.querySelectorAll('#page-settings [data-saved], #page-cache [data-saved]')) e.hidden = true; }, 2500);
 }
 // withDir: 모델 폴더 칸이 바뀐 때만 그 값을 보낸다(다른 칸을 바꿀 때 덜 쓴 경로가 따라가지 않게) · row: 저장됨을 보일 줄
 function saveSettings(note, recheck, delay, withDir, row) {
   S.setDirty = true;
   clearTimeout(setTimer);
   setTimer = setTimeout(async () => {
-    const page = $('#page-settings');
-    const on = page.querySelector('.seg-ctl button.on');
-    const num = (id, lo, hi, dflt) => { const v = parseInt(page.querySelector(id).value, 10); return isNaN(v) ? dflt : Math.min(hi, Math.max(lo, v)); };
+    // 앱리디자인 E5 — 설정은 탭 둘(앱 · 프롬프트 캐시)에 나뉜다. 화면에 있는 입력 필드만 읽고, 없는 필드는 지금 설정값
+    const pages = [$('#page-settings'), $('#page-cache')];
+    const page = { querySelector: sel => pages.map(x => x.querySelector(sel)).find(Boolean) || null, contains: el => pages.some(x => x.contains(el)) };
+    const cur = S.st.settings;
+    const on = $('#page-settings').querySelector('.seg-ctl button.on');
+    const num = (id, lo, hi, dflt) => { const e = page.querySelector(id); const v = e ? parseInt(e.value, 10) : NaN; return isNaN(v) ? dflt : Math.min(hi, Math.max(lo, v)); };
     const vkSel = page.querySelector('#set-vk');
+    const updEl = page.querySelector('#set-upd');
     const body = {
-      gpu_layer: on ? on.dataset.v : 'auto', vulkan_device: vkSel ? vkSel.value : S.st.settings.vulkan_device || '', slots: num('#set-slots', 1, 8, 2), context: num('#set-ctx', 1024, 131072, 8192),
-      update_check: page.querySelector('#set-upd').checked,
+      gpu_layer: on ? on.dataset.v : cur.gpu_layer || 'auto', vulkan_device: vkSel ? vkSel.value : cur.vulkan_device || '', slots: num('#set-slots', 1, 8, cur.slots || 2), context: num('#set-ctx', 1024, 131072, cur.context || 8192),
+      update_check: updEl ? updEl.checked : !!cur.update_check,
       precision: (page.querySelector('#set-prec') || {}).value || S.st.settings.precision || 'fast',   // GeulPUv2 2단계 — 계산 방식
       precision_unquantized: (page.querySelector('#set-prec16') || {}).value || S.st.settings.precision_unquantized || 'exact',   // 0.12.0 — F16 · BF16 · F32 파일
       kv8_cache: ((page.querySelector('#set-kv8') || {}).value || (S.st.settings.kv8_cache ? 'on' : 'off')) === 'on',   // GeulPUv2 ③b-2 — KV 캐시 8비트
@@ -5848,11 +5948,15 @@ function saveSettings(note, recheck, delay, withDir, row) {
       body.context_store_gb = num('#set-sgb', 1, 100000, 20);
       body.context_store_write = (page.querySelector('#set-swrite') || {}).value || 'all';
       page.querySelector('#set-sgb').value = body.context_store_gb;
+    } else {                                   // 앱리디자인 E5 — 프롬프트 캐시 탭이 화면에 없으면 지금 설정값(옛 설정 화면과 같은 본문)
+      body.context_store = cur.context_store || 'auto';
+      body.context_store_gb = cur.context_store_gb || 20;
+      body.context_store_write = cur.context_store_write || 'all';
     }
     if (withDir === 'store') body.context_store_dir = page.querySelector('#set-sdir').value.trim();
     // 범위에 맞춘 값을 칸에도 다시 적는다(1~8 · 1024~131072)
-    page.querySelector('#set-slots').value = body.slots;
-    page.querySelector('#set-ctx').value = body.context;
+    if (page.querySelector('#set-slots')) page.querySelector('#set-slots').value = body.slots;
+    if (page.querySelector('#set-ctx')) page.querySelector('#set-ctx').value = body.context;
     const errEl = page.querySelector(withDir === 'store' ? '#set-sdir-err' : '#set-mdir-err');
     try {
       await api('/api/settings', body);
@@ -5872,9 +5976,14 @@ function saveSettings(note, recheck, delay, withDir, row) {
 }
 function renderSettings(force) {
   const st = S.st;
-  const page = $('#page-settings');
-  if (!force && (S.setDirty || (page.contains(document.activeElement) && S.view === 'settings'))) return;   // 고치는 중에는 다시 그리지 않는다
-  if (!changed('settings', [st.settings, st.app.version, st.app.commit, st.app.built, st.app.data_dir, st.app.models_dir, st.app.port, S.update && S.update.tag, S.vk, st.device.layer, S.store]) && !force) return;
+  // 앱리디자인 E5 — 설정 › 앱(#page-settings)과 설정 › 프롬프트 캐시(#page-cache)를 탭마다. 다른 탭의 화면은 비운다 — 저장할 때 화면에 있는 입력
+  // 필드만 읽고 없는 필드는 지금 설정값을 쓴다(saveSettings)
+  const part = S.view === 'cache' ? 'cache' : 'app';
+  const page = part === 'cache' ? $('#page-cache') : $('#page-settings');
+  const other = part === 'cache' ? $('#page-settings') : $('#page-cache');
+  if (other.childElementCount) { other.replaceChildren(); delete SIG.settings; }
+  if (!force && (S.setDirty || (page.contains(document.activeElement) && (S.view === 'settings' || S.view === 'cache')))) return;   // 고치는 중에는 다시 그리지 않는다
+  if (!changed('settings', [part, st.settings, st.app.version, st.app.commit, st.app.built, st.app.data_dir, st.app.models_dir, st.app.port, S.update && S.update.tag, S.vk, st.device.layer, S.store]) && !force) return;
   const focusV = force && document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.v : null;
   const s = st.settings, a = st.app;
   const NEXT = T('저장했습니다 · 다음에 모델을 불러올 때 적용됩니다');
@@ -5952,6 +6061,18 @@ function renderSettings(force) {
   const langSel = h('select', { class: 'input', id: 'set-lang', 'aria-label': EN ? 'Language' : '언어', onchange: ev => { store('geulpu.lang', ev.target.value); location.reload(); } },
     [['auto', T('자동 — 브라우저 언어')], ['ko', '한국어'], ['en', 'English']].map(([v, t]) => h('option', { value: v, selected: v === LANGPREF ? true : null }, t)));
   const upTxt = S.update && S.update.tag ? (newer(S.update.tag, a.version) ? T` · 새 버전 ${S.update.tag} 있음` : T(' · 최신 버전')) : '';
+  const cacheRows = [
+    row(T('프롬프트 캐시'), T('긴 프롬프트의 KV 캐시를 SSD에 남겨, 같은 앞부분으로 시작하는 요청에서 다시 계산하지 않고 복원합니다 — 앱을 다시 켜거나 모델을 바꿨다 돌아와도. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다. 다음에 모델을 불러올 때 적용') + storeNow, storeSel, null, 'set-store'),
+    row(T('위치'), T`기본: ${cs ? cs.default_dir : (a.data_dir || '') + '문맥저장소'} — SSD를 권합니다(HDD에서는 복원이 다시 계산보다 느릴 수 있습니다)`, h('div', { class: 'row nowrap w100' }, sdir, pickSdir), h('div', { class: 'set-err', id: 'set-sdir-err', hidden: true }), 'set-sdir'),
+    row(T('크기 한도'), T('GB · 넘으면 가장 오래 쓰지 않은 것부터 지웁니다'), sgb, null, 'set-sgb'),
+    row(T('쓰기 방식'), T('모두는 답이 끝날 때마다 뒤에서 씁니다. 비울 때만은 SSD에 쓰는 양을 줄입니다.'), swrite, null, 'set-swrite'),
+    row(T('쓰는 양'), usage, clearBtn)];
+  if (part === 'cache') {
+    put(page,
+      pageHead(null, T('프롬프트 캐시'), T('바꾼 값은 바로 저장됩니다(숫자 · 글 칸은 다 쓰고 칸을 떠날 때).')),
+      h('div', { class: 'settings' }, h('div', { class: 'set-group' }, cacheRows)));
+    return;
+  }
   put(page,
     pageHead(null, T('설정'), T('바꾼 값은 바로 저장됩니다(숫자 · 글 칸은 다 쓰고 칸을 떠날 때).')),
     h('div', { class: 'settings' },
@@ -5967,13 +6088,6 @@ function renderSettings(force) {
         row(T('빠른 어텐션'), T('KV 캐시 8비트를 켰을 때만 씁니다 — 그 밖에는 끔과 같습니다. Qwen3 계열 모델은 q 의 지수를 블록마다 두는 판(F2B)으로 씁니다. 긴 프롬프트(수만 토큰)의 어텐션이 빨라집니다. 답의 비트는 끔과 다르지만, 같은 설정이면 늘 같습니다(재현 · 연구 패널 그대로). 다음에 모델을 불러올 때 적용'), f2Sel, null, 'set-f2'),
         row(T('추측 디코딩'), T('프롬프트와 앞의 답에서 이어질 토큰을 찾아 한 스텝에 여럿을 검증합니다. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다(코드 고치기 · 문서 다시 쓰기 같은 일이 빨라집니다). 다음에 모델을 불러올 때 적용'), specSel, null, 'set-spec'),
         row(T('도구 오류의 꼴'), T('코딩 에이전트가 받은 실패한 도구 결과를 오류 전달 연구에서 잰 꼴로 바꿔 모델에 보입니다(연구용). 끄면 찾아서 서버 기록과 답의 머리 칸에 적기만 하고, 답은 비트까지 그대로입니다. 다음에 모델을 불러올 때 적용'), terrSel, null, 'set-terr')),
-      h('div', { class: 'sec mt16' }, T('프롬프트 캐시')),
-      h('div', { class: 'set-group' },
-        row(T('프롬프트 캐시'), T('긴 프롬프트의 KV 캐시를 SSD에 남겨, 같은 앞부분으로 시작하는 요청에서 다시 계산하지 않고 복원합니다 — 앱을 다시 켜거나 모델을 바꿨다 돌아와도. 답 · 로그확률 · 연구 패널의 값은 끈 것과 비트까지 같습니다. 다음에 모델을 불러올 때 적용') + storeNow, storeSel, null, 'set-store'),
-        row(T('위치'), T`기본: ${cs ? cs.default_dir : (a.data_dir || '') + '문맥저장소'} — SSD를 권합니다(HDD에서는 복원이 다시 계산보다 느릴 수 있습니다)`, h('div', { class: 'row nowrap w100' }, sdir, pickSdir), h('div', { class: 'set-err', id: 'set-sdir-err', hidden: true }), 'set-sdir'),
-        row(T('크기 한도'), T('GB · 넘으면 가장 오래 쓰지 않은 것부터 지웁니다'), sgb, null, 'set-sgb'),
-        row(T('쓰기 방식'), T('모두는 답이 끝날 때마다 뒤에서 씁니다. 비울 때만은 SSD에 쓰는 양을 줄입니다.'), swrite, null, 'set-swrite'),
-        row(T('쓰는 양'), usage, clearBtn)),
       h('div', { class: 'sec mt16' }, T('저장 위치')),
       h('div', { class: 'set-group' },
         row(T('모델 폴더'), T`다음 실행부터 적용됩니다. 기본: ${defDir}`, h('div', { class: 'row nowrap w100' }, mdir, pickDir), h('div', { class: 'set-err', id: 'set-mdir-err', hidden: true }), 'set-mdir'),
@@ -7023,7 +7137,7 @@ function labRefView(tr) {
   } else out.push(h('div', { class: 'note-line' }, I('shield', 's'), h('span', null, T('재현성 검증을 아직 하지 않았습니다 — 이 PC의 출력이 기준 PC와 비트까지 같은지 벤치마크에서 확인합니다.'))));
   if (dg) out.push(h('div', { class: 'note-line' }, I('pulse', 's'), h('span', null, T`하드웨어 진단 ${stampText(dg.stamp)}: ${resultSummary(dg)}`)));
   else if (tr) out.push(h('div', { class: 'note-line' }, I('pulse', 's'), h('span', null, T('이 모델의 하드웨어 진단이 없습니다 — 생성이 하드웨어 한계에 얼마나 가까운지 벤치마크에서 잽니다.'))));
-  out.push(h('div', null, h('button', { class: 'btn sm ghost', onclick: () => show('bench') }, I('gauge', 's'), T('벤치마크로'))));
+  out.push(h('div', null, h('button', { class: 'btn sm ghost', onclick: () => show('checks') }, I('shield', 's'), T('재현 › 검사로'))));
   return h('div', { class: 'col g8' }, out);
 }
 
@@ -7732,7 +7846,7 @@ function dbgRunHead(run) {
   const now = dbgNowServer(), diff = dbgDiff(sv, now);
   const busy = !!(DBG.busy || DBG.prog);
   const llama = dbgLlama(run), rp = hd.replay || {};
-  const llamaTip = T('llama.cpp의 실행은 벤치마크 화면의 llama.cpp 재현 검증으로 다시 계산합니다');
+  const llamaTip = T('llama.cpp의 실행은 재현 › llama.cpp의 재현 검증으로 다시 계산합니다');
   const tabs = h('div', { class: 'seg-ctl', role: 'tablist', 'aria-label': T('실행 보기') }, [['reqs', T('요청')], ['cmp', T('비교')]].map(([k, t]) => h('button', {
     role: 'tab', class: (DBG.view === k || (k === 'reqs' && DBG.view === 'req')) ? 'on' : '', 'aria-selected': DBG.view === k ? 'true' : 'false', 'data-fk': 'dbg:tab:' + k,
     onclick: () => { DBG.view = k; DBG.err = ''; renderDebug(true); },
