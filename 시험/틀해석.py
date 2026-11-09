@@ -155,6 +155,14 @@ def 견주기(이름, 참조, 글, 보기):
      "{{ ms|rejectattr('role', 'equalto', 'user')|map(attribute='content')|join(',') }}{{ ms|map(attribute='role')|list }}"
      "{{ ['a', 'b']|map('upper')|list }}{{ ms|selectattr('extra')|list|length }}",
      [dict(사람, ms=[{"role": "user", "content": "q"}, {"role": "assistant", "content": "a", "extra": 1}, {"role": "user", "content": "q2"}])]),
+    # 0.24.0 — 거짓인 값의 select · reject · selectattr · rejectattr · map 은 빈 목록(jinja2 의 if value), 참인데 반복할 수 없으면 오류.
+    # 카카오 Kanana 1.5 의 템플릿 앞부분(도구가 없을 때 tools = none)
+    ("거르개-거짓값", "{{ none|selectattr('type', 'equalto', 'x')|list|length }}{{ none|rejectattr('type')|list }}{{ none|select|list }}"
+     "{{ false|reject|list }}{{ 0|map('upper')|list }}{{ none|map(attribute='a')|list }}{{ nope|selectattr('a')|list }}{{ ''|select|list }}"
+     "{{ []|reject('odd')|list }}|{%- if not tools is defined -%}{%- set tools = none -%}{%- endif -%}"
+     "{%- set has = tools | selectattr('type', 'equalto', 'code_interpreter') | list | length > 0 -%}{{ has }}{% if tools %}t{% endif %}", [사람]),
+    ("오류-거르개수", "{{ 5|select|list }}", [사람]),
+    ("오류-거르개참", "{{ true|map('upper')|list }}", [사람]),
     ("tojson", "{{ d|tojson }}|{{ tags|tojson(indent=2) }}|{{ {'한': '글', 'q': '\"'}|tojson }}|{{ {'한': 1}|tojson(ensure_ascii=true) }}|{{ score|tojson }}"
      "|{{ none|tojson }}{{ ok|tojson }}|{{ d|tojson(separators=(',', ':')) }}|{{ 1.0|tojson }}{{ 1e20|tojson }}{{ 0.1|tojson }}", [사람]),
     ("시험", "{{ x is defined }}{{ name is defined }}{{ none is none }}{{ name is string }}{{ age is number }}{{ age is integer }}{{ score is float }}"
