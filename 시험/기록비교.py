@@ -254,7 +254,11 @@ def answer_core(rec):
     """F2 — 두 세션이 같은 과제에 낸 실행의 답만: 글 · 토큰 id · 로짓 해시 · 토큰마다의 로그확률 · 끝난 이유(상위 후보 수 같은 보기용 인자는 빼고)"""
     a = answer(rec)
     g = a.get("geulpu") or {}
+    L = g.get("layer_lens") if isinstance(g.get("layer_lens"), dict) else None
+    lens = None if L is None else {"row": L.get("row"), "token": L.get("token"), "token_logprobs": L.get("token_logprobs"),
+                                   "top1": [ids[0] if ids else None for ids in L.get("top_ids") or []]}
     return {"text": a.get("text"), "tokens": g.get("tokens"), "logit_hashes": g.get("logit_hashes"),
+            "prompt_logit_hashes": g.get("prompt_logit_hashes"), "layer_lens": lens,
             "logprobs": [x.get("logprob") for x in a.get("logprobs") or [] if isinstance(x, dict)], "finish_reason": a.get("finish_reason")}
 
 

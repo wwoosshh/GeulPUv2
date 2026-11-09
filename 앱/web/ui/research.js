@@ -637,8 +637,10 @@ function posInfo(d, pos) {
       prob = Math.exp(lps[r]);
     }
   }
-  const lp0 = d.ch && d.ch.logprobs;
-  if (prob === null && lp0 && Array.isArray(lp0.token_logprobs) && typeof lp0.token_logprobs[pos] === 'number') prob = Math.exp(lp0.token_logprobs[pos]);
+  // echo 기록만 token_logprobs 가 프롬프트 위치를 담는다(프롬프트 + 답). 생성 기록은 답의 스텝만이라 위치 번호로 읽으면 다른 스텝의 값이 된다(F2)
+  const lp0 = d.req && d.req.echo === true && d.ch && d.ch.logprobs;
+  if (prob === null && lp0 && Array.isArray(lp0.token_logprobs) && lp0.token_logprobs.length === P + d.n
+    && typeof lp0.token_logprobs[pos] === 'number') prob = Math.exp(lp0.token_logprobs[pos]);
   const text = d.ptexts && typeof d.ptexts[pos] === 'string' ? d.ptexts[pos] : pieceText(id);
   return { id, text, prob, rank };
 }
@@ -652,15 +654,32 @@ export function compareExtras(ctx, da, db, c) {
     const ia = posInfo(da, c.L);
     const ib = posInfo(db, c.L);
     const ka = c.L - da.ptoks.length;
-    if (ia && ib) {
-      const side = x => el('span', null, el('b', null, x.text === null ? '#' + x.id : quoteTok(x.text)), ' ',
-        T`확률 ${pct(x.prob)}`, x.rank ? T` · ${x.rank} 위` : '');
-      const miss = [ia, ib].filter(x => x.text === null).map(x => x.id);
+    // 확률 · 순위는 기록에 있을 때만(프롬프트 위치는 echo 기록일 때만 있다)
+    const side = x => {
+      const kids = [el('b', null, x.text === null ? '#' + x.id : quoteTok(x.text))];
+      if (x.prob !== null || x.rank) kids.push(' ', T`확률 ${pct(x.prob)}`, x.rank ? T` · ${x.rank} 위` : '');
+      return el('span', null, ...kids);
+    };
+    const line = (label, a, b, k) => {
+      const miss = [a, b].filter(x => x.text === null).map(x => x.id);
       if (miss.length) fetchPieces(miss, ctx);
-      out.push(el('div', { class: 'xp-actions rs-div' },
-        el('span', null, ka >= 0 ? T`처음 다른 스텝 ${da.off + ka}: ` : T`처음 다른 위치 ${c.L}: `, el('code', null, da.entry.id), ' ', side(ia), ' · ',
-          el('code', null, db.entry.id), ' ', side(ib)),
-        ka >= 0 && ka < da.n ? el('button', { type: 'button', class: 'btn sm', onclick: () => ctx.openStep(da.entry.id, ka) }, T`${da.entry.id} 의 이 스텝 보기`) : null));
+      return el('div', { class: 'xp-actions rs-div' },
+        el('span', null, label, el('code', null, da.entry.id), ' ', side(a), ' · ', el('code', null, db.entry.id), ' ', side(b)),
+        k >= 0 && k < da.n ? el('button', { type: 'button', class: 'btn sm', onclick: () => ctx.openStep(da.entry.id, k) }, T`${da.entry.id} 의 이 스텝 보기`) : null);
+    };
+    if (ia && ib) out.push(line(ka >= 0 ? T`처음 다른 스텝 ${da.off + ka}: ` : T`프롬프트가 처음 다른 위치 ${c.L}: `, ia, ib, ka));
+    // 프롬프트가 다르면 답끼리도 — 답이 처음 다른 스텝과 그 스텝의 두 토큰(각 실행의 기록에서 확률 · 순위, F2)
+    if (ka < 0 && da.n && db.n) {
+      const lo = Math.max(da.off, db.off);
+      const hi = Math.min(da.off + da.n, db.off + db.n);
+      let s = lo;
+      while (s < hi && da.ids[s - da.off] === db.ids[s - db.off]) s++;
+      if (s >= hi) out.push(el('p', { class: 'muted' }, T`답의 토큰이 스텝 ${lo} ~ ${hi - 1} 에서 모두 같습니다.`));
+      else {
+        const xa = posInfo(da, da.ptoks.length + s - da.off);
+        const xb = posInfo(db, db.ptoks.length + s - db.off);
+        if (xa && xb) out.push(line(T`답이 처음 다른 스텝 ${s}: `, xa, xb, s - da.off));
+      }
     }
   }
   // 수치 표

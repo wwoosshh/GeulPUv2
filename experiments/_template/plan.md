@@ -15,7 +15,7 @@ What you expect, and why.
 ## Method (방법)
 
 Models (file, SHA-256, source), GeulPU version and computation mode, the runs and their settings, and the GeulPU operations they use
-(for example `run.chat`, `run.branch`, `run.lens` — see `앱/data/operations.json`).
+(for example `run.chat`, `run.branch`, `run.lens` — `GeulPU ops` lists them all).
 
 ## Criteria (판정 기준)
 
