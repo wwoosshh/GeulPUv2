@@ -2,10 +2,12 @@
 // 비교 · 결과 · 기록). 앱은 기능 목록 클라이언트(ops.js)로만 부르고, 실험 화면에서 부른 기능은 X-GeulPU-Experiment 를 붙여 그 실험의 명령 기록에
 // 남긴다. 다른 곳(CLI · AI 세션)에서 이 실험으로 부른 호출이 끝나면 명령 창이 넘겨 준 이벤트(geulpu:event)로 다시 읽는다.
 // E3(문서/화면구현.md §3) — 실행 · 비교 탭과 실행 화면(ui/runs.js), 계획 · 결과 탭의 편집(experiment.update).
+// E4(문서/화면구현.md §4) — 스텝 · 층 화면(ui/steps.js — 경로: 실험 › id › 실행 › 스텝 k).
 import { toCommand } from './command.js';
 import { EN, T, TM, baseName, clock, copyButton, el, fmtMs, samePath, sourceLabel } from './dom.js';
 import { call, registry } from './ops.js';
-import { compareTab, forgetErrors, runTitle, runView, runsTab, setCompare } from './runs.js';
+import { compareTab, forgetErrors, runTitle, runView, runsTab, selectStep, setCompare } from './runs.js';
+import { stepTitle, stepView } from './steps.js';
 
 const page = document.getElementById('page-exp');
 const view = document.getElementById('view-exp');
@@ -24,6 +26,7 @@ const st = {
   commands: null,       // 명령 기록의 줄(객체)
   check: null,          // 점검 작업
   run: null,            // E3 — 연 실행의 id(실행 화면)
+  step: null,           // E4 — 연 스텝(실행 안의 위치 — 스텝 · 층 화면), 실행 화면이면 null
   edit: null,           // E3 — 편집 중인 탭('plan' · 'results')과 그 값
   saving: false,
   editError: null,
@@ -48,9 +51,11 @@ function ctx() {
     rerender: render,
     reload: () => loadExp(),
     openRun: id => openRun(id),
+    openStep: (id, k) => openStep(id, k),
     openCompare: (a, b) => {
       setCompare(ctx(), a, b);
       st.run = null;
+      st.step = null;
       st.tab = 'compare';
       render();
       view.scrollTop = 0;
@@ -163,6 +168,7 @@ function openExp(path) {
   st.commands = null;
   st.check = null;
   st.run = null;
+  st.step = null;
   st.edit = null;
   st.editError = null;
   render();
@@ -172,6 +178,7 @@ function openExp(path) {
 function backToList() {
   st.cur = null;
   st.run = null;
+  st.step = null;
   st.edit = null;
   announce();
   render();
@@ -180,18 +187,38 @@ function backToList() {
 function setTab(k) {
   st.tab = k;
   st.run = null;
+  st.step = null;
   render();
 }
 function openRun(id) {
   st.run = id;
+  st.step = null;
   st.edit = null;
   render();
   view.scrollTop = 0;
 }
 function closeRun() {
   st.run = null;
+  st.step = null;
   st.tab = 'runs';
   render();
+}
+// E4 — 스텝 · 층 화면. 화면을 바꾸면 그 화면에 초점(← → 로 바로 옮기게)
+function openStep(id, k) {
+  const moved = st.run !== id || st.step === null;
+  st.run = id;
+  st.step = k;
+  st.edit = null;
+  render();
+  const r = page.querySelector('.st-view');
+  if (r) r.focus({ preventScroll: true });
+  if (moved) view.scrollTop = 0;
+}
+function closeStep() {
+  if (st.exp && st.run !== null && st.step !== null) selectStep(ctx(), st.run, st.step);
+  st.step = null;
+  render();
+  view.scrollTop = 0;
 }
 
 // ---- 실험 안의 호출 — 점검(experiment.check, 작업). X-GeulPU-Experiment 로 그 실험의 명령 기록에 남는다 ----
@@ -580,9 +607,11 @@ function renderExp() {
     el('span', { class: 'sep', 'aria-hidden': 'true' }, '›'),
     st.run ? el('button', { type: 'button', class: 'id', onclick: closeRun }, expId) : el('span', { class: 'here' }, expId),
     st.run ? el('span', { class: 'sep', 'aria-hidden': 'true' }, '›') : null,
-    st.run && st.exp ? el('span', { class: 'here' }, runTitle(ctx(), st.run)) : null);
+    st.run && st.exp && st.step !== null ? el('button', { type: 'button', class: 'id', onclick: closeStep }, runTitle(ctx(), st.run)) : null,
+    st.run && st.exp && st.step !== null ? el('span', { class: 'sep', 'aria-hidden': 'true' }, '›') : null,
+    st.run && st.exp ? el('span', { class: 'here' }, st.step !== null ? stepTitle(ctx(), st.run, st.step) : runTitle(ctx(), st.run)) : null);
   if (st.run && st.exp && !st.expError) {
-    page.replaceChildren(el('div', { class: 'xp' }, crumbs, runView(ctx(), st.run)));
+    page.replaceChildren(el('div', { class: 'xp' }, crumbs, st.step !== null ? stepView(ctx(), st.run, st.step) : runView(ctx(), st.run)));
     return;
   }
   if (st.expError) {
@@ -643,10 +672,11 @@ document.addEventListener('geulpu:open-experiment', ev => {
 document.addEventListener('geulpu:open-run', ev => {
   const d = ev.detail || {};
   if (!d.experiment || !d.run) return;
-  if (d.auto && st.edit) return;
+  if (d.auto && (st.edit || /^st-/.test((document.activeElement && document.activeElement.id) || ''))) return;   // E4 — 스텝 화면의 입력 중에도
   if (typeof globalThis.show === 'function') globalThis.show('exp');
   if (st.cur && st.exp && samePath(st.exp.path, d.experiment)) {
     st.run = d.run;
+    st.step = null;
     st.edit = null;
     render();
     loadExp();

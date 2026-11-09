@@ -188,10 +188,10 @@
    }
   },
   "lens": {
-   "gui_view": "연구 패널(층 렌즈)",
+   "gui_view": "스텝 · 층 화면 · 연구 패널(로짓 렌즈)",
    "description": {
-    "ko": "층 렌즈",
-    "en": "lens"
+    "ko": "로짓 렌즈",
+    "en": "logit lens"
    }
   },
   "models": {
@@ -258,7 +258,7 @@
    }
   },
   "score": {
-   "gui_view": "연구 패널(점수)",
+   "gui_view": "스텝 · 층 화면 · 연구 패널(점수)",
    "description": {
     "ko": "점수",
     "en": "score"
@@ -286,7 +286,7 @@
    }
   },
   "tokens": {
-   "gui_view": "연구 패널(토큰)",
+   "gui_view": "스텝 · 층 화면(점수) · 연구 패널(토큰)",
    "description": {
     "ko": "토큰",
     "en": "tokens"
@@ -646,11 +646,11 @@
   {
    "id": "check.repro",
    "title": {
-    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 층 렌즈 — 도구/repro_check.py)",
+    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 로짓 렌즈 — 도구/repro_check.py)",
     "en": "GPU-free reproduction check (tool repro_check.py)"
    },
    "description": {
-    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 층 렌즈 — 도구/repro_check.py).",
+    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 로짓 렌즈 — 도구/repro_check.py).",
     "en": "GPU-free reproduction check (tool repro_check.py)."
    },
    "status": "planned",
@@ -4032,12 +4032,12 @@
   {
    "id": "run.lens",
    "title": {
-    "ko": "층 렌즈 · Jacobian lens",
-    "en": "Layer lens and Jacobian lens"
+    "ko": "로짓 렌즈 · Jacobian lens",
+    "en": "Logit lens and Jacobian lens"
    },
    "description": {
-    "ko": "층 렌즈 · Jacobian lens.",
-    "en": "Layer lens and Jacobian lens."
+    "ko": "로짓 렌즈 · Jacobian lens.",
+    "en": "Logit lens and Jacobian lens."
    },
    "status": "exists",
    "http": {
@@ -4077,8 +4077,8 @@
      "type": "object",
      "required": false,
      "description": {
-      "ko": "층 렌즈 — 층마다 끝 로짓 계산으로 읽기",
-      "en": "layer lens — read every layer with the final logit computation"
+      "ko": "로짓 렌즈 — 층마다 끝 로짓 계산으로 읽기",
+      "en": "logit lens — read every layer with the final logit computation"
      }
     },
     {
@@ -4135,7 +4135,7 @@
     "en": "run lens"
    },
    "gui": {
-    "view": "연구 패널"
+    "view": "스텝 · 층 화면 · 연구 패널"
    }
   },
   {
@@ -4454,7 +4454,7 @@
     "en": "run score"
    },
    "gui": {
-    "view": "연구 패널 · 디버거"
+    "view": "스텝 · 층 화면 · 연구 패널 · 디버거"
    }
   },
   {
@@ -4527,7 +4527,7 @@
     "en": "run tokenize"
    },
    "gui": {
-    "view": "연구 패널"
+    "view": "스텝 · 층 화면(점수) · 연구 패널"
    }
   },
   {

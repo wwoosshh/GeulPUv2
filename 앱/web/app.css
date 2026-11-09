@@ -1308,11 +1308,62 @@ table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
 .c-ctx:not([hidden]) + .c-input { border-top: 0; }
 .c-folded #console .c-switch, .c-folded #console .c-ctx { display: none; }
 @media (prefers-reduced-motion: reduce) { .c-switch .knob::after { transition: none; } }
+/* ---------- 스텝 · 층 화면(앱리디자인 E4 — 문서/화면구현.md §4 · 화면설계.md §9 의 로짓 렌즈 표) ----------
+   헤더 아래 상자에 스텝 앞뒤의 텍스트(그 토큰은 흰 테두리)와 값. 후보는 한 줄에 순위 · 토큰 · 로그확률 · 확률 막대. 로짓 렌즈 표는 층마다 한 줄 —
+   마지막 층의 1 위가 끝까지 1 위로 남는 첫 층부터 아래 줄의 왼쪽에 흰 선, 순위는 숫자로(색 표시 없이), 표만 가로로 스크롤한다. */
+.st-view:focus { outline: none; }
+.st-top { display: grid; gap: 12px; margin-top: 16px; padding: 16px 18px; background: var(--canvas-raise); border: 1px solid var(--hairline); border-radius: var(--r-sm); }
+.st-ctx { margin: 0; font-size: 16px; line-height: 28px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.st-ctx .st-tok { padding: 0 1px; background: none; color: var(--ink); outline: 1px solid var(--ink); outline-offset: 1px; border-radius: 3px; }
+.st-kv { margin: 0; }
+.st-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 12px; }
+.st-sec { margin-top: 8px; }
+.st-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: 13px; line-height: 20px; color: var(--mute); }
+.st-meta b { font-weight: 400; font-family: var(--font-mono); color: var(--ink); white-space: pre-wrap; }
+.st-note { margin: 10px 0 0; max-width: 80ch; font-size: 13px; line-height: 20px; color: var(--body); }
+.st-form { margin: 12px 0 8px; }
+.st-form .input { width: auto; }
+#st-top-n { width: 88px; }
+#st-score-in { flex: 1 1 220px; min-width: 0; font-family: var(--font-mono); }
+.st-inline { font-size: 13px; color: var(--ink); }
+.st-back { margin: 12px 0 0; }
+.st-seg { margin: 4px 0 8px; }
+.st-seg button { height: 26px; padding: 0 12px; font-size: 12px; }
+.st-cands { border-top: 1px solid var(--hairline); }
+.st-cand { display: grid; grid-template-columns: 28px minmax(0, 1fr) 64px 96px 56px 72px; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--hairline); font-size: 13px; line-height: 20px; }
+.st-cand .btn { justify-self: end; }
+.st-cand .r { font: 12px/20px var(--font-mono); color: var(--mute); text-align: right; }
+.st-cand .w { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font: 14px/20px var(--font-mono); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.st-cand .lp, .st-cand .p { font: 12px/20px var(--font-mono); text-align: right; }
+.st-cand .lp { color: var(--body); }
+.st-cand .p { color: var(--mute); }
+.st-cand .pb { height: 3px; border-radius: 2px; background: var(--hairline-strong); }
+.st-cand .pb span { display: block; height: 100%; border-radius: 2px; background: var(--body); }
+.st-lens-wrap { overflow-x: auto; margin-top: 8px; border-top: 1px solid var(--hairline-strong); }
+.st-lens, .st-score { min-width: 100%; border-collapse: collapse; font-size: 13px; }
+.st-lens th, .st-score th { padding: 6px 10px; border-bottom: 1px solid var(--hairline-strong); background: var(--canvas); text-align: left; font-weight: 400; color: var(--mute); white-space: nowrap; }
+.st-lens td, .st-score td { padding: 4px 10px; border-bottom: 1px solid var(--hairline); font-family: var(--font-mono); color: var(--body); white-space: pre; }
+.st-lens .num, .st-score .num { text-align: right; }
+.st-lens td.top1, .st-score td.w { color: var(--ink); }
+.st-lens .lp, .st-score .lp { color: var(--mute); }
+.st-lens tr.fin > td:first-child { box-shadow: inset 2px 0 0 var(--ink); }
+.st-lens .st-l { min-width: 28px; padding: 0 4px; border: 0; border-radius: 3px; background: none; color: var(--mute); font: inherit; text-align: left; cursor: pointer; }
+.st-lens .st-l:hover, .st-lens .st-l[aria-expanded="true"] { color: var(--ink); background: var(--hover); }
+.st-lens .st-l:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.st-lens tr.st-more > td { padding: 6px 10px 10px; white-space: normal; }
+.st-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 2px 8px; border-radius: 4px; background: var(--fill); color: var(--body); white-space: pre; }
+.st-chip .r { color: var(--mute); }
+.st-chip.tok { outline: 1px solid var(--ink); }
+.st-score tfoot td { border-bottom: 0; color: var(--ink); }
+.st-scored { margin-top: 16px; }
 @container (max-width: 760px) {
   .run-split { grid-template-columns: minmax(0, 1fr); }
   .run-step { position: static; }
 }
 @container (max-width: 520px) {
+  .st-cand { grid-template-columns: 24px minmax(0, 1fr) 56px 72px; }
+  .st-cand .pb, .st-cand .p { display: none; }
   .run-item { grid-template-columns: 48px minmax(0, 1fr); }
   .run-item .meta { grid-column: 2; justify-content: flex-start; }
   .run-cmp-row { grid-template-columns: 40px minmax(0, 1fr); }

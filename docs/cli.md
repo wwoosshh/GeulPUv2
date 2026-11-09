@@ -83,11 +83,13 @@ run's random numbers, and the same sampling settings and seed (`body.json`):
 `GeulPU run branch --json @body.json` — `geulpu.tokens` holds the tokens generated after the new one; with `echo` the text starts
 with the prompt.
 
-## Scoring and the layer lens
+## Scoring and the logit lens
 
 - Score given tokens without generating: `run score` with `{"prompt": [ids], "echo": true, "max_tokens": 0, "logprobs": 1,
-  "geulpu": {"echo_from": n}}` — `choices[0].logprobs.token_logprobs` from position n on.
-- Layer lens — what every layer predicts for the token at position n of `prompt` (prediction row n − 1):
+  "geulpu": {"echo_from": n}}` — `choices[0].logprobs.token_logprobs` from position n on. With `"geulpu": {"top_logprobs": N}`
+  (≤ 128) also `geulpu.prompt_top_ids` · `prompt_top_logprobs` — indexed by prompt position like `token_logprobs` (null before n);
+  `prompt_logit_hashes` start at n. The top N at position n are the model's distribution at that step whatever comes after n.
+- Logit lens (`geulpu.layer_lens`) — what every layer predicts for the token at position n of `prompt` (prediction row n − 1):
 
 ```
 {"prompt": [ids], "echo": true, "max_tokens": 0, "logprobs": 1, "geulpu": {"echo_from": n, "layer_lens": {"top_k": 3}}}
@@ -95,9 +97,11 @@ with the prompt.
 
 `GeulPU run lens --json @lens.json` → `geulpu.layer_lens`: `token` (the token at n), `layers` (count), and per layer (index 0 … layers
 − 1, the last one is the model's output): `top_ids`, `top_logprobs`, `ranks` (the rank of `token`, 1 = first), `token_logprobs`,
-`entropy`, `logit_hashes`. `ranks` follows `token`; to follow another token, look for it in each layer's `top_ids` (`top_k` up to
-20 — outside them its rank is unknown). The last layer's logit hash equals the generation's hash at that step. The answer carries a
-`seed` it does not use. The model must support the lens (`layer_lens_ok` in its `system state` entry).
+`entropy`, `logit_hashes`. `ranks` follows `token`; to follow another token, put it at position n instead (the rows are the same,
+so are the top lists) or look for it in each layer's `top_ids` (`top_k` up to 20). The last layer's logit hash equals the
+generation's hash at that step. With a J file loaded (`server.jlens_sha256` in `system state`), `"layer_lens": {"jacobian": true}`
+adds `geulpu.jacobian_lens` in the same shape. The answer carries a `seed` it does not use. The model must support the lens
+(`layer_lens_ok` in its `system state` entry).
 
 ## Experiments — record what you did
 
@@ -116,7 +120,11 @@ default place). The app appends each POST call made with `--experiment` to `reco
 (`run complete` · `chat` · `messages` · `responses` · `branch` · `score` · `lens`) that answers 200 is also recorded: the request and
 the answer in `records/runs/<id>.json`, and an entry in `runs` — `kind` generate · branch · score · lens, or `check` with `base` when
 the request equals an earlier run's (a repeat that tests reproducibility). A branch gets `base` and `intervention` from its prompt
-tokens, a score or lens `base`; the model goes into `models`. Keep `geulpu.prompt_tokens` on so this works. The app keeps `files`
+tokens. A score or lens gets `base` when its prompt is the start of a run's prompt + answer, and also `intervention` when its prompt
+holds that run's prompt tokens and then differs from the answer at step k (a text scored from step k, the lens of another candidate);
+`intervention.step` is the step number the screens show (a branch's steps continue its base's, `geulpu.step_offset`). The model goes
+into `models`. Keep `geulpu.prompt_tokens` on so this works. The app's step and layer screen sends these same score and lens requests,
+so its computations and yours show up in both places. The app keeps `files`
 current for what it writes; list any other file you add (`python <GeulPU folder>/data/experiment_check.py --files <path>` prints the
 list) or the check fails. Prefer `experiment update` to editing experiment.json; if you edit it yourself (runs of other kinds:
 compare · replay · evaluate), read it again just before writing — the app rewrites it with each recorded call. Title, question, plan
