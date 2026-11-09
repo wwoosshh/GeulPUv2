@@ -1262,6 +1262,10 @@
     }
     (문자열_같은가(이름, "map") 또는 문자열_같은가(이름, "select") 또는 문자열_같은가(이름, "reject")
      또는 문자열_같은가(이름, "selectattr") 또는 문자열_같은가(이름, "rejectattr"))이면 {
+        (* 0.24.0 — jinja2 는 이 다섯 필터에서 거짓인 값(None · Undefined · false · 0 · 빈 글 · 빈 목록)을 반복하지 않고 빈 목록으로
+           돌려준다(jinja2 filters.py 의 select_or_reject · sync_do_map 이 if value 로 막는다). 카카오 Kanana 1.5 의 템플릿이 도구가 없을 때
+           tools 를 none 으로 두고 tools | selectattr(…) 를 부른다. 참인 값은 그대로 — 반복할 수 없으면 jinja2 처럼 오류 *)
+        아닌 진참인가(v)이면 { 반환 진목록(). }
         제이슨 참조 목6 = 진반복목록(v).
         진틀렸음이면 { 반환 없음. }
         제이슨 참조 l2 = 진목록().
