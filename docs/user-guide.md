@@ -1,6 +1,6 @@
 # GeulPU user guide
 
-**[한국어](../사용안내.md)** · [README](../README.md) · [debugger guide](debugger-guide.md) · [research panel guide](research-guide.md) ·
+**[한국어](../사용안내.md)** · [README](../README.md) · [debugger guide](debugger-guide.md) · [research guide](research-guide.md) ·
 [model evaluation guide](model-evaluation-guide.md) · [development](development.md) · [glossary](glossary.md)
 
 Everything about installing and using GeulPU — the app, its settings, the OpenAI-compatible API and the supported models — and what
@@ -84,22 +84,26 @@ cd GeulPU-<version> && ./GeulPU
 - The app does not open a browser; it prints its address, `http://127.0.0.1:44544`. On a remote machine, forward the port first
   (`ssh -L 44544:127.0.0.1:44544 <host>`) and open the address on your own computer.
 - Downloads inside the app (and `geulpu --hf`) use the system's `curl` — install it if your distribution lacks it. GGUF files you
-  already have can be added with **Models → Add a GGUF file**.
+  already have can be added with **Models › Files → Add a GGUF file**.
 - From 0.22.0 the Linux package also carries the Vulkan path (server-vulkan, device-vulkan, `libvulkan.so.1`) — the way to GPUs other
   than NVIDIA (AMD, Intel …). It has only been exercised with a software Vulkan driver; a run on a real Linux GPU is still open.
 - Models, settings and results live in `~/GeulPU` (or in the folder named by `GEULPU_HOME`).
 
 ## First steps
 
-The app speaks English unless your browser prefers Korean — switch any time in **Settings → Language** (Auto · 한국어 · English).
-The icons in the left bar are, from the top, **Chat · Models · Debugger · Benchmark · Hardware**, with **Settings** at the bottom.
+The app speaks English unless your browser prefers Korean — switch any time in **Settings › App → Language** (Auto · 한국어 · English).
+The sidebar on the left has, from the top, **Experiments · Models · Reproduce · Jobs · Settings**. Models, Reproduce and Settings have
+tabs at the top: **Models** (Files · Evaluation · Performance), **Reproduce** (llama.cpp · Checks · Check results), **Settings** (App ·
+Device · Prompt cache). **Jobs** shows the job that is running (a download, a measurement, a check …) with its progress, log and a stop
+button. On the right is the **command console**: every operation you trigger on a screen appears there as the GeulPU command that does the same
+thing, and you can type commands in its input line ([6. Console, CLI and Python](#6-console-cli-and-python--the-screens-operations-as-commands)).
 
-With no model installed, the app first shows this screen. **Download the recommended model** fetches a model chosen for your graphics
-memory right away; **Browse models** opens Find models, described below.
+The app opens on the experiment list. With no model installed, opening **Experiments › Conversations** shows this screen. **Download the
+recommended model** fetches a model chosen for your graphics memory right away; **Browse models** opens Find models, described below.
 
 ![First screen — first, you need a model](img/first-run-en.png)
 
-### 1. Get a model — Models → Find models
+### 1. Get a model — Models › Files
 
 - Hugging Face's GGUF models are listed by **Trending**. Switch to Popular, Likes or Recently updated, or type part of a name (for
   example `qwen3`, `coder`, `14b`) into the box at the top to narrow the list.
@@ -120,10 +124,15 @@ memory right away; **Browse models** opens Find models, described below.
   files are verified with SHA-256. Downloads in progress appear under **My models** and in the status bar at the bottom, where you can
   pause or resume them.
 - GGUF files you already have can be added with **Add a GGUF file** at the top; they stay where they are.
+- **Load this model** under **My models** loads a model into graphics memory (sending a chat message loads it too).
 
-### 2. Chat
+### 2. Chat — Experiments › Conversations
 
-- Pick a model with the model button at the top and send a message (**Enter** sends, **Shift+Enter** adds a line).
+- Open **Conversations** in the experiment list (**Experiments** in the sidebar). Pick a model with the model button at the top and send a message (**Enter** sends,
+  **Shift+Enter** adds a line).
+- Every answer is recorded as a run of the default experiment "Conversations" (created when you first send). **Run rN** under an answer opens that
+  answer's run screen — per-token probabilities, branching, the step and layer screen
+  ([4. Run screen](#4-run-screen-and-step-and-layer-screen--per-token-probabilities-branching-logit-lens)).
 - **The first time**, GeulPU builds the kernels for your GPU and model (about 10 seconds on a fast CPU, 1–3 minutes on a slow one) and
   loads the model into graphics memory (about 20 seconds for 7B). Later only the loading happens.
 - **Reasoning models** (Qwen3, DeepSeek-R1) think before answering. The thinking is collapsed as "Thought for N s"; click it to expand.
@@ -143,23 +152,115 @@ memory right away; **Browse models** opens Find models, described below.
   stay word for word) and the chat goes on without an error. The summary stays in the chat as a card you can expand, and the
   summarized messages stay, dimmed. "context N / L" under an answer shows how much is used. Turn it off with **Auto-summarize long
   chats** in Generation settings.
-- Conversations are stored only in this browser.
+- The chat list stays in this browser; each answer's request and response are kept in the "Conversations" experiment's folder.
 
-### 3. Benchmark (optional)
+### 3. Experiments — question, plan, runs and results in one folder
 
-- **Hardware diagnosis**: measures memory bandwidth and tensor-core throughput and shows how close each kernel comes to the hardware's
-  limit.
-- **Speed test**: prompt processing (512 and 2048 tokens) and generation speed in tokens per second.
-- **Reproducibility check**: solves 32 math problems with DeepSeek-R1-Distill-Qwen-7B Q8_0 and compares the output with the reference
-  PC bit for bit (the quick check uses 2 problems and 64 tokens).
-- **File-pair reproducibility** (0.11.1): runs GGUF files that quantize the same model in different ways — the files of Liu and Tsai's
-  paper on GGUF supply chains (arXiv:2610.19498) — in exact mode. It checks that every step of 32 problems gives the same logit hash
-  as the reference PC, and measures how the files differ (the first step where the greedy answers diverge, the log-probability
-  difference per token). The card downloads the files and checks their SHA-256. Details and reference results:
+One study is one **experiment**. An experiment is a folder (`<date>-<name>` in the `experiments` folder) that keeps the question, the
+criteria, the plan (plan.md), the run records and the results (results.md). Hand the folder to someone else and they can run the same
+runs again and check them.
+
+- **Experiment list** (**Experiments** in the sidebar): each experiment's status, models, number of runs, verdicts and commands. **New
+  experiment** creates one with a name, a question and authors; the experiments folder can be changed here too.
+- **Plan** tab: the criteria and plan.md. They can be edited only before the first run, so the record shows that the criteria came
+  before the results.
+- **Runs** tab: the experiment's runs and **New run** (text completion · chat · Anthropic Messages · OpenAI Responses — prompt, maximum
+  tokens, temperature, seed, top-p, top-k, min-p, number of top candidates). Left empty, top-p, top-k and min-p sample with the engine's
+  defaults (0.95 · 40 · 0.05 — shown in the dialog), and the values actually used go into the run record. Sending a request equal to an
+  earlier run's records a **re-run (check)** of that run, to see whether the bits are the same.
+- **Compare** tab: the first step where two runs differ, with that step's probabilities and ranks and the logit hashes.
+- **Results** tab: the verdict for each criterion, results.md and the experiment's status.
+- **Records** tab: the command log (every operation recorded for this experiment — from the screens, the CLI, AI sessions and Python),
+  the file list (SHA-256), the reproduce command and **Check** (format, hashes, missing files). Run logs that the debugger recorded
+  outside experiments open from here too.
+
+Each run's record keeps the device that computed it (name and driver) and the sampling values actually used, and the app keeps the
+experiment's model and device lists. The folder format and the checker are described in [experiments/README.md](../experiments/README.md).
+
+### 4. Run screen and step and layer screen — per-token probabilities, branching, logit lens
+
+GeulPU's arithmetic is fixed by a written contract, so scoring the same text again gives **bit-identical** probabilities to those at
+generation time — whatever the number of concurrent requests, the cache, the GPU or the backend (CUDA · Vulkan), within one
+computation mode (Vulkan always computes Exact, so set the computation mode to Exact to compare with CUDA). The difference between two
+runs therefore comes only from what you changed. Click a run of an experiment (or a chat answer) to open its **run screen**.
+
+**New to it? Start with the [research guide](research-guide.md)** — eight experiments (where the model hesitated, branching,
+comparing two answers, the effect of quantization, the effect of one word, scoring text, reproduction files, the logit lens) with
+screenshots, how to read the numbers, and API examples.
+
+- **Run screen** — the run's details (model, computation mode, GeulPU version, device, seed, sampling values, source), summary values
+  (mean log-probability, perplexity, mean entropy, smallest margin, steps with margin < δ, steps that did not sample the top token) and
+  the output token by token. Bars under the tokens show the margin (the gap between the top two log-probabilities), the probability or
+  the entropy; pick a step to see its top candidates and **Branch with this token** (← → previous and next step, Enter step and layer
+  screen, b branch with the best other candidate). A branch continues with the same settings, the same seed and the same step's random
+  numbers, so the only change is the chosen token; it opens in the Compare tab next to the original run.
+- The same screen has **Re-run** (a new run with changed settings), **top candidates at every step**, **re-run without the cache**,
+  **score with another model** (another installed model with the same vocabulary and chat template — another quantization of the same
+  model, say), where the prompt was reused from (this slot, another slot, the prompt cache, and where the cache broke) and **Export**
+  (token table as JSON or CSV, reproduction file, Python code that gets the same values).
+- **Step and layer screen** — one step in detail: top candidates (1–128, each with a branch button), the **logit lens** table (the top
+  three per layer and the sampled token's rank — at which layer the answer appears; with a J file `<name>.jlens.safetensors` next to the
+  model, the Jacobian lens too) and the score of a continuation from that step (without context, or against alternatives).
+- Every computation on these screens (branch, score, lens) is recorded as a run of the experiment, so it is still there when you open
+  the screen again, and the console shows the same CLI command.
+
+Probabilities are the model's distribution (temperature 1), not the distribution filtered by the sampling temperature, top-k or top-p.
+
+![Run screen — run details and summary values, margin bars under the tokens, the chosen step's top candidates and branch buttons](img/run-screen-en.png)
+
+![Step and layer screen — the logit lens table: the top three per layer and the sampled token's rank](img/step-screen-en.png)
+
+### 5. Reproduction files — get a run checked bit for bit on another PC
+
+**Export › Reproduction file (JSON)** on the run screen writes one file with which another PC can check the run — the prompt and answer
+tokens, every step's log-probability, entropy, top candidates and logit hash, the model's SHA-256, the device it was made on, the
+sampling settings actually used and the seed (and any logit lens computed). The per-step values come from a whole-answer score run, so
+without one the screen scores the whole answer first (that run stays in the experiment).
+
+Whoever receives the file loads its model and drops the file into **Reproduce › Check › Check a reproduction file** — scoring,
+regeneration and the fingerprint are compared bit for bit, and a difference shows the first differing step and the settings that differ.
+From the CLI: `GeulPU experiment repro --path <experiment> --run r1 --out repro.json` and `GeulPU check repro --json @repro.json`.
+
+A reproduction file can be checked without a GPU, too — clone the repository, install numpy in a virtual environment
+(`python -m venv .venv`, then `.venv/Scripts/pip install numpy` — `python -I` ignores packages installed with `pip install --user`) and run
+`.venv/Scripts/python -I 도구/repro_check.py <repro.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
+and log-probabilities (a few minutes for 7B). A reproduction file records its computation mode and is checked in that mode.
+
+### 6. Console, CLI and Python — the screens' operations as commands
+
+Every screen operation is also a `GeulPU <command>` — people use it from a terminal, AI agents from a shell, with the same operations
+and the same arguments. Screens, CLI and console are built from one operation registry, so they give the same results and record into
+the same experiments.
+
+- **Command console** (right side of every screen): operations triggered from a screen, the CLI, an AI session or Python appear one per line as
+  the command that does the same thing, with its status. Each line has **Copy command**; type a command in the input line (for example
+  `run complete --prompt "Why is the sky blue?" --max_tokens 64`) and it is sent as the CLI would send it. `]` collapses it, the width
+  is adjustable, and on narrow screens it sits at the bottom.
+- **CLI**: `GeulPU ops` (every command), `GeulPU help <command>`, `GeulPU guide` (a one-page guide for AI agents —
+  [cli.md](cli.md)). `--experiment <experiment>` (or the `GEULPU_EXPERIMENT` environment variable) records into that experiment, and
+  `--select` returns only some fields. Branching, logit lens and scoring from a recorded run take one command each, such as
+  `GeulPU experiment branch --run r1 --step 3 --token 785`.
+- **AI session** (button above the console): starts a coding agent with the app's model — see "Starting an agent from the app" in
+  [Use it from other programs](#use-it-from-other-programs-openai-compatible-api).
+- **Python**: `import geulpu` — `geulpu.start()` (a windowless app), `geulpu.connect()`, `load`, `complete`, `chat`, `rerun`, `score`,
+  `branch`, `compare` ([python-api.md](python-api.md)).
+
+### 7. Speed, device and reproducibility checks (optional)
+
+- **Models › Performance — speed test**: prompt processing (512 and 2048 tokens) and generation speed in tokens per second.
+- **Settings › Device — hardware diagnosis**: measures memory bandwidth and tensor-core throughput and shows how close each kernel comes
+  to the hardware's limit.
+- **Reproduce › Check — reproducibility check**: solves 32 math problems with DeepSeek-R1-Distill-Qwen-7B Q8_0 and compares the output
+  with the reference PC bit for bit (the quick check uses 2 problems and 64 tokens).
+- **Reproduce › Check — file-pair reproducibility** (0.11.1): runs GGUF files that quantize the same model in different ways — the
+  files of Liu and Tsai's paper on GGUF supply chains (arXiv:2610.19498) — in exact mode. It checks that every step of 32 problems gives
+  the same logit hash as the reference PC, and measures how the files differ (the first step where the greedy answers diverge, the
+  log-probability difference per token). The card downloads the files and checks their SHA-256. Details and reference results:
   [file-pair.md](file-pair.md).
-- Results can be exported as a zip (user paths are removed). The raw tool output and the result files themselves stay in Korean.
+- Results are listed in **Reproduce › Check results** and can be exported as a zip (user paths are removed). The raw tool output and the
+  result files themselves stay in Korean.
 
-### 4. Settings
+### 8. Settings — Settings › App
 
 GPU backend (Auto · CUDA · Vulkan), Vulkan device, concurrent chats (how many chats can answer at once, 1–8) and context length per
 chat, **computation mode** (one for quantized files, one for F16 · BF16 · F32 files), **8-bit KV cache**, **fast attention**, **speculative decoding**, **prompt cache**, model folder, language,
@@ -207,7 +308,7 @@ for bit, and the debugger and reproduction files record this setting and warn wh
 
 **Speculative decoding** — **On** (default) or Off. Looks up likely next tokens in the prompt and the answer so far (no draft model)
 and verifies several in one step. Because this engine gives the same bits whatever the number of rows in a step, **answers,
-log-probabilities and research-panel values are bit-identical to Off**, while answers that repeat pieces of the prompt — editing
+log-probabilities and run-screen values are bit-identical to Off**, while answers that repeat pieces of the prompt — editing
 code, rewriting a document, quoting summaries — generate 3.5–4× faster (ordinary chat 1.0–1.5× — [문서/3단계.md](../문서/3단계.md), Korean).
 Applies the next time a model is loaded.
 
@@ -217,62 +318,16 @@ even after restarting the app, switching models and back, or another chat taking
 prompts and conversations, the first token drops sharply — after restarting the app, a new task's first request (15k tokens) goes from
 3.2 s to 0.3 s, and reopening a 31k-token conversation from 10.0 s to 0.74 s (0.52 s and 1.1 s when the chunks are not in the OS file
 cache, as after a reboot — Qwen2.5-7B, RTX 4070 Ti). Because this engine produces
-the same KV bytes whichever way it is filled, **answers, log-probabilities and research-panel values are bit-identical to Off.** Chunks
+the same KV bytes whichever way it is filled, **answers, log-probabilities and run-screen values are bit-identical to Off.** Chunks
 are told apart by the model file's SHA-256; when the file at a path is replaced (its size or modification time changes), the app counts
 the SHA-256 again at the next load. The
 location (default: data folder\문맥저장소), size limit (default 20 GB — the longest-unused chunks go first), writing (all · only when
 evicted · read only) and **Clear the store** are here too. The chunks are derived from your chats, so turn it off or clear it on a shared
 PC. Applies the next time a model is loaded ([문서/문맥저장소.md](../문서/문맥저장소.md), Korean).
 
-### 5. Research panel — per-token probabilities · intervene · compare · reproduce
+### 9. Debugger — record · replay · branch · compare
 
-GeulPU's arithmetic is fixed by a written contract, so scoring the same text again gives **bit-identical** probabilities to those at
-generation time — whatever the number of concurrent requests, the cache, the GPU or the backend (CUDA · Vulkan), within one
-computation mode (Vulkan always computes Exact, so set the computation mode to Exact to compare with CUDA). The difference between two
-runs therefore comes only from what you changed. Open the panel with the flask button at the top of the chat, or the
-flask under an answer (answers received in this version onward — research records stay in this browser).
-
-**New to it? Start with the [research panel guide](research-guide.md)** — eight experiments (where the model hesitated, branching,
-comparing two answers, the effect of quantization, the effect of one word, scoring text, reproduction files, the layer lens) with
-screenshots, how to read the numbers, and API examples.
-
-- **Observe** — the answer as tokens: each token's probability, rank, top-10 alternatives, entropy and the gap between the top two
-  (margin). Low-margin steps (margin < δ — places where a slightly different computation or setting could pick another token) and steps
-  where sampling picked a token that wasn't ranked first are marked. The answer header shows where the prompt was reused from (this
-  slot · another slot · the prompt cache) and the **cache break** (which token, the text before it, before → now token) — when an agent
-  puts something that changes every time (a clock, a working-folder path) near the start of its prompt, you can see the cache break there
-  ([guide — where did the prompt cache break](research-guide.md#where-did-the-prompt-cache-break)). The step detail's **layer lens**
-  (from 0.13.0 — Qwen2.5, Qwen3, Llama and Gemma 4 architectures) reads the computation at the position that chose the token at every layer with
-  the final output, showing at which layer the answer appears (the logit lens). With a J file (`<name>.jlens.safetensors`) next to the
-  model file it also reads the Jacobian lens (Qwen2.5, Qwen3 and Llama)
-  ([guide — experiment 8](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-layer-lens)).
-- **Intervene** — pick an alternative token at any step and **branch here**: generation continues with the same settings, the same
-  seed and the same per-step random numbers, so the chosen token is the only change. You can also regenerate with only the
-  temperature, seed or max length changed. New answers stay as versions.
-- **Compare** — the first diverging step of two answers (versions or branches). For an edited question, score the same answer tokens
-  under the other prompt and see the per-token difference; score the same text with another model (e.g. Q8_0 ↔ Q4_K_M of the same
-  model) to see the effect of the quantization alone.
-- **Score** — paste text and get each token's log-probability and the perplexity.
-- **Reproduce** — fingerprints (SHA-256 — the recipe is in [contract](../계약/contract.md) §5.2), re-run without the cache and check, export a **reproduction file** (request, result,
-  log-probabilities and logit hashes in one JSON file — with any layer lens computed) and load one to check it, hashes of the engine
-  binaries and kernels.
-- **Export** — every value shown as JSON or CSV, and Python code that fetches the same values.
-
-Probabilities are the model's distribution (temperature 1), not the distribution filtered by the sampling temperature, top-k or
-top-p. The panel computes only when you look, so chat speed is unchanged.
-
-![Research panel — Observe: pick a step in the token strip to see its top-10 alternatives and numbers](img/research-observe-en.png)
-
-![Research panel — Compare: the same answer scored again with the same model's Q4_K_M file — the effect of the quantization alone, token by token](img/research-compare-en.png)
-
-A reproduction file can be checked without a GPU, too — clone the repository, install numpy in a virtual environment
-(`python -m venv .venv`, then `.venv/Scripts/pip install numpy` — `python -I` ignores packages installed with `pip install --user`) and run
-`.venv/Scripts/python -I 도구/repro_check.py <repro.json> <model.gguf>`. The contract's CPU reference implementation recomputes the tokens, logit hashes
-and log-probabilities (a few minutes for 7B). A reproduction file records its computation mode and is checked in that mode.
-
-### 6. Debugger — record · replay · branch · compare
-
-Where the research panel looks into one answer, the **debugger** (the bug button on the left rail) works on **runs** — many requests,
+Where the run screen looks into one answer, the **debugger** (Records tab of an experiment › the debugger's run logs) works on **runs** — many requests,
 such as an agent session or a test set. It is for people who build or use local models: run a session or a test set again bit for bit
 and find where and why it changed (since GeulPU 0.7.0).
 
@@ -296,9 +351,9 @@ costs.
 
 ![The debugger — run list, run header, request table (after a replay all 50 requests and 2 branches are the same)](img/debugger/01-runs-en.png)
 
-### 7. Model evaluation — make · check · compare · improve GGUF files
+### 10. Model evaluation — make · check · compare · improve GGUF files
 
-**Model evaluation** (the flask button on the left rail, since GeulPU 0.17.0) is a test bench for GGUF files. A **workspace** holds one
+**Model evaluation** (Models › Evaluation, since GeulPU 0.17.0) is a test bench for GGUF files. A **workspace** holds one
 model's work: a reference model (best a BF16 or F16 file) and the GGUF files to compare with it (**versions**).
 
 - **Make GGUF** — from a Hugging Face folder (config.json and .safetensors): convert to BF16 · F16 · Q8_0 and quantize (Q8_0 · Q6_K ·
@@ -325,9 +380,9 @@ model's work: a reference model (best a BF16 or F16 file) and the GGUF files to 
 New to it? Start with the [model evaluation guide](model-evaluation-guide.md) — it follows one fine-tuned model through a full round.
 The plan and the measurements behind these screens are in [문서/모델평가.md](../문서/모델평가.md) (Korean).
 
-### 8. llama.cpp replay check — recompute a llama-server run bit for bit
+### 11. llama.cpp replay check — recompute a llama-server run bit for bit
 
-The **llama.cpp replay check** (a card on the Benchmark screen, from 0.22.0) takes a run that an **unmodified llama-server** produced and
+The **llama.cpp replay check** (Reproduce › llama.cpp, from 0.22.0) takes a run that an **unmodified llama-server** produced and
 recomputes it with GeulPU's own GPU kernels. Those kernels follow llama.cpp's CUDA arithmetic instruction by instruction, so the check
 compares the generated tokens — and, when the client asked for them, the top-20 log-probabilities of every step — **bit for bit**. The
 recomputation runs on CUDA or on Vulkan: a run made by llama.cpp on an RTX 4070 Ti was recomputed bit-identically on the Intel integrated
@@ -337,7 +392,11 @@ are not accepted yet.
 - **Supported** — llama.cpp b11963 (the build Ollama v0.40.14 launches), b12008 and b12138 (CUDA, Windows); Qwen3.5 (0.8B · 4B · 9B),
   Qwen3, Qwen2.5 (incl. Coder 14B), Llama 3.1 · 3.2, Mistral 7B and DeepSeek-R1-Distill-Qwen in Q4_K · Q5_K · Q6_K · Q8_0; `/completion`,
   the chat API, streaming, temperature 0 and seeded temperature > 0; the default server (4 slots, prompt cache, RAM cache), `-np N`, and
-  overlapping requests when the server wrote a batch log.
+  overlapping requests when the server wrote a batch log. From 0.23.0 also token-less records of streamed responses and of seeded
+  temperature > 0, answers ended by a stop string, repetition penalties and logit_bias, and imported branched conversations and
+  request/response logs; server arguments and request fields that change the computation are checked against a fixed list and refused
+  with a reason when they are not on it. A kit for recomputing on other GPUs (AMD and others, through Vulkan) is in
+  [repro-kit/llama-replay](../repro-kit/llama-replay/).
 - **Three ways to record** — ① **Import a conversation log**: a JSON file with the conversation the client sent directly to
   llama-server (messages with answers, and the sampling values) becomes one receipt per assistant message; nothing touches the run
   (temperature 0 only). ② **The transparent recorder** (default): point the client at `http://127.0.0.1:44544/llama/completion` or
@@ -397,7 +456,7 @@ commands) through an OpenAI-compatible API can connect. From 0.14.0, agents that
 Claude Code) or the OpenAI Responses API (`/v1/responses` — Codex CLI) connect too. All three APIs run through the same chat template
 and engine, so the same request gives the same tokens (the two new APIs do not return thinking).
 
-**Starting an agent from the app (from 0.14.2)** — on the **Agents** page (left rail), pick an agent and a working folder and press
+**Starting an agent from the app (from 0.14.2)** — on the **AI session** page (button above the console), pick an agent and a working folder and press
 **Start**: the app opens a new terminal window with that agent attached to the loaded model (Claude Code, Codex CLI, Qwen Code, OpenCode,
 Aider). The settings are passed to that run only, so the agent's configuration files and your environment variables stay as they are,
 and the agent itself asks before it edits files or runs commands. For an agent that is not installed the page shows its install
@@ -406,7 +465,7 @@ values to enter in the extension's settings. With a context below 32k or more th
 (one concurrent chat, context 131072 — the engine shrinks it to fit the graphics memory). On Linux the app shows the commands but does
 not open a window yet. The connection examples below are for setting an agent up by hand.
 
-![Agents page — the model, the working folder and, for each agent, whether it is installed and a Start button](img/agents-en.png)
+![AI session page — the model, the working folder and, for each agent, whether it is installed and a Start button](img/agents-en.png)
 
 - The address is `http://127.0.0.1:44544/v1`; any API key and any model name work (the model loaded in the app answers — load a model
   in the app before using the agent).
@@ -470,7 +529,7 @@ not open a window yet. The connection examples below are for setting an agent up
   show the failed result the agent just received in one of the forms measured in the error-delivery study (C1, C2, C3 —
   [문서/에이전트.md](../문서/에이전트.md), Korean), choose **Tool-error form** in Settings (off, C1, C2, C3 — from 0.14.2, applied the
   next time a model is loaded) or add `"geulpu_tool_errors": "c3"` to the request (`"off"`, `"c1"`, `"c2"`, `"c3"` — the request's value
-  wins; off by default). When off, replies are bit-identical. The Agents page lists recently detected tool errors. From 0.15.0, tool
+  wins; off by default). When off, replies are bit-identical. The AI session page lists recently detected tool errors. From 0.15.0, tool
   results from clients outside the known agents (custom agents, LangChain, the OpenAI Agents SDK, MCP clients) are detected too when they
   start with a standard error text or carry `is_error` / MCP `isError`.
 - **Unbroken tool calls (from 0.15.0).** While the model writes a Qwen-style tool call (`<tool_call>` … `</tool_call>`), a special token
@@ -478,7 +537,7 @@ not open a window yet. The connection examples below are for setting an agent up
   grammar — contract section 5). Only such requests reply differently from 0.14; every other reply is bit-identical. Each skip writes one
   server log line.
 
-**Log-probabilities · scoring · tokenization (for research)** — every value in the research panel is also available from the API.
+**Log-probabilities · scoring · tokenization (for research)** — every value on the run, step and layer screens is also available from the API.
 Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are bit-identical on any PC or GPU.
 
 - `/v1/chat/completions`: `"logprobs": true, "top_logprobs": 5` (0–20), in the OpenAI shape (`token` · `logprob` · `bytes` ·
@@ -494,7 +553,7 @@ Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are
   logit computation; `geulpu.layer_lens` holds each layer's log-probability, entropy, top k, logit hash and rank (the logit lens — Qwen2.5,
   Qwen3 and Llama architectures). With a J file (`<name>.jlens.safetensors`) next to the model file, `"layer_lens": {"jacobian": true}`
   also returns the same row's Jacobian lens as `geulpu.jacobian_lens` — see
-  [experiment 8 of the research guide](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-layer-lens).
+  [experiment 8 of the research guide](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-logit-lens).
 - `/tokenize` · `/detokenize` · `/tokenizer_info` — in the same shape as vLLM.
 - In `geulpu`, `tokens` and `logit_hashes` include the step that sampled the stop token (EOS), while the log-probability arrays
   (`logprobs`, `entropy`, `top_ids`, `top_logprobs`) cover only the answer's tokens, as in OpenAI — one shorter when the answer ends with
@@ -611,7 +670,7 @@ manager: kernel32, ws2_32, shell32, winhttp, bcrypt, advapi32) and the graphics 
 |---|---|
 | `모델\` (models) | Downloaded models (GGUF) |
 | `모듈\<version>\` (modules) | Kernels built for this GPU |
-| `결과\` (results) | Benchmark results |
+| `결과\` (results) | Reproducibility check and speed test results |
 | `기록\` (logs) | Server and job logs — look here when something goes wrong |
 | `설정.json` · `모델목록.json` · `허깅목록.json` | Settings · your model list · files picked on Hugging Face |
 

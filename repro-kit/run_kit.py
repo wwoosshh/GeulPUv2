@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GeulPU reproducibility kit — does this machine give the same bits as the reference PC?
 
-Connects to a running GeulPU 0.21.0 app (start it with `geulpu`; default address http://127.0.0.1:44544), loads each kit model
+Connects to a running GeulPU 0.23.0 app (start it with `geulpu`; default address http://127.0.0.1:44544), loads each kit model
 under each settings set of requests.json, sends the 12 fixed chat requests one at a time and then all at once, and compares the
 prompt tokens, the generated tokens and every step's logit hash with expected.json (made on the reference PC). Standard library
 only (Python 3.8+).
@@ -168,7 +168,7 @@ def chat(base, rq):
     g = r.get("geulpu") or {}
     tokens, hashes, prompt = g.get("tokens"), g.get("logit_hashes"), g.get("prompt_tokens")
     if tokens is None or hashes is None or prompt is None:
-        raise KitError(f"{rq['id']}: the response has no geulpu.tokens / logit_hashes / prompt_tokens — is this GeulPU 0.21.0?")
+        raise KitError(f"{rq['id']}: the response has no geulpu.tokens / logit_hashes / prompt_tokens — is this GeulPU 0.23.0?")
     ch = (r.get("choices") or [{}])[0]
     msg = ch.get("message") or {}
     text = (msg.get("reasoning_content") or "") + "\x1f" + (msg.get("content") or "") + "\x1f" + json.dumps(
@@ -206,7 +206,7 @@ def strip(res):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="GeulPU reproducibility kit (GeulPU 0.21.0)")
+    ap = argparse.ArgumentParser(description="GeulPU reproducibility kit (GeulPU 0.23.0)")
     ap.add_argument("--url", default="http://127.0.0.1:44544", help="address of the running GeulPU app")
     ap.add_argument("--models-dir", action="append", default=[], help="folder that holds the model files (repeatable)")
     ap.add_argument("--model", action="append", help="only this model key (repeatable)")

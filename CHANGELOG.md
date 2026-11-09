@@ -6,6 +6,181 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## 0.23.0 — Research platform: experiments · CLI for AI agents · run, step and layer screens · reproduction files (2026-11-09)
+
+GeulPU becomes a research platform — experiment records, a CLI for people and AI agents, run, step and layer screens, and reproduction files that another PC checks bit for bit. The inference server is byte-identical to 0.22.0 (and, on CUDA, to 0.21.0), so every output bit is unchanged.
+
+### Added
+
+- **CLI (subcommands).** `GeulPU <command> [--param value …]` (or `geulpu <command> …`) calls any operation of the running GeulPU app.
+  Commands come from the operation registry and accept the English name (`run branch`), the Korean name (`실행 분기`) or the id
+  (`run.branch`); results and errors are JSON; exit codes are 0 ok · 1 operation failed · 2 usage error · 3 app not reachable.
+  `GeulPU ops` lists every command with its parameters, `GeulPU help <command>` explains one, `--wait` waits for a job, and
+  `--session <name>` puts the name on the app's events ([명령줄.md](문서/명령줄.md)).
+- **A one-page CLI guide for agents.** `GeulPU guide` prints a one-page English guide ([docs/cli.md](docs/cli.md)): command shape
+  and discovery, results, errors and jobs, loading models, the research fields of a generation, branching, scoring, the layer lens and
+  experiment records. A fresh AI session that read only this guide completed a hesitation · branch · layer-lens study through the CLI.
+  Also: `ops` · `help` · `guide` follow `--out`, usage lines show `--experiment`, and `experiment create` records the app's computation
+  mode ([명령줄.md](문서/명령줄.md) §3b).
+- **Run summary and run comparison operations, and `--select` in the CLI.** The run screen's summary values (mean log-probability,
+  perplexity, the step with the smallest margin, steps with margin < δ …), the compare tab's first differing position and step, and
+  the logit lens summary are now operations the app computes — `experiment summary` and `experiment compare` (read from the records,
+  no model needed). The screens show these operations' values, so the CLI and agents get the same numbers. The CLI and the command
+  console take `--select <path>[,<path>…]` to print only the values needed from an answer. `GEULPU_EXPERIMENT` in a shell no longer
+  applies to the command that creates an experiment or to an experiment command that names another experiment
+  ([사용성시험.md](문서/사용성시험.md) §3).
+- **Command console.** Every screen now has a command console on the right. Each operation call — clicked in the app, or made from the
+  CLI in a terminal, an AI session or the Python API — appears as one line with the CLI command that does the same thing and its status, and
+  each line's command can be copied. Typing a GeulPU command (e.g. `run complete --prompt …`) in its input line sends the same request as
+  the CLI. It folds (`]`) and resizes, and becomes a bottom panel on narrow screens ([화면구현.md](문서/화면구현.md) §1).
+- **Branch, logit-lens and score a recorded run with one command.** `experiment branch --run r1 --step 3 --token 785`,
+  `experiment lens --run r1 --step 3` and `experiment score --run r1 [--step 3]` build the request from the run's record (prompt
+  tokens, answer, sampling settings, seed), send it to the engine and record the result as a run of the experiment, so request
+  bodies no longer have to be built by hand. The run record still holds the full request sent and the command log holds the short
+  command, which makes the same run again when sent again. The branch, logit lens, top candidates and whole-answer scoring on the
+  run screen and the step and layer screen use the same operations, so the console shows the short command. The app keeps
+  answering other requests while a long branch is generated ([사용성시험.md](문서/사용성시험.md) §5).
+- **Experiment records from the CLI.** `GeulPU experiment create --name <name>` makes an experiment folder from the template (in
+  `experiments` of the data folder, or `--root`); `experiment list` · `show` find and show experiments; `experiment check --wait` checks the
+  format and hashes with the experiment checker (Python 3.10 or later). With `--experiment <folder>` on any command, the app records that
+  call (operation, request body, source, status) in the experiment's `records/commands.jsonl` ([명령줄.md](문서/명령줄.md) §3).
+- **Experiment records: format and checker.** One experiment is kept as one folder (`experiments/<date>-<name>/`) in the format
+  `geulpu-experiment/1` — the research question, criteria written before any run, models by SHA-256 and source, runs, and the SHA-256 of
+  every included file. The checker `도구/experiment_check.py` verifies format, hashes and size (at most 5 MB compressed) without a GPU
+  ([experiments/README.md](experiments/README.md)).
+- **Experiment screens.** The app now opens on the experiment list ("Experiments" in the sidebar). Each experiment shows its status,
+  models, number of runs, criteria and number of recorded commands; new experiments can be created on screen and the experiments folder
+  can be changed. An experiment opens with Plan (criteria, plan.md), Results (results.md) and Records (commands log, files, commands to
+  reproduce, check) tabs; a check run on the screen and CLI calls with `--experiment` appear in the commands log at once. The CLI gains
+  `experiment read`, which reads a text file inside an experiment folder ([화면구현.md](문서/화면구현.md) §2).
+- **llama.cpp replay check — streamed token-less records.** Streamed responses written by the transparent recorder (the default),
+  the usual form for chat UIs and agents, are now verified. The recorder additionally stores only what it gathers from the chunks the
+  server sent (the text, whether reasoning or tool-call chunks appeared, finish_reason, usage, log-probabilities the client asked
+  for); verification brings the record to the non-streamed form and compares the regenerated tokens' text byte for byte. Token-less
+  receipts now compare the response text with the tokens' text even when the tokens are known (temperature 0 only,
+  [문서/라마재현.md](문서/라마재현.md), stage 33).
+- **llama.cpp replay check — sampled (temperature > 0) token-less records.** When the request carried a seed, token-less records at
+  temperature > 0 (the usual setting of chat UIs and agents) — from the transparent recorder, streamed or not, and from client
+  conversation logs — are now verified: the replay runs the server's sampler chain (top_k, top_p, min_p, temperature, seed) in the
+  order it computes the logits, picks the server's tokens again and compares their text with the response byte for byte. Requests
+  without a seed are refused with the reason ([문서/라마재현.md](문서/라마재현.md), stage 34).
+- **llama.cpp replay check — responses ended by a stop string.** Responses to requests with stop strings are now verified: the
+  server's stop-string handling (earliest match, holding back a partial match, trimming the log-probability entries) is emulated on
+  the generated tokens' text, and the stop step and the cut text must match the response. Chats and client conversation logs with stop
+  strings are accepted too ([문서/라마재현.md](문서/라마재현.md), stage 35).
+- **llama.cpp replay check — repetition penalties and logit_bias.** Requests with repetition penalties (repeat, frequency and
+  presence penalty, repeat_last_n), logit_bias given by token id, and ignore_eos are now verified: the emulated sampler chain accepts
+  the prompt tokens and the chosen tokens like the server and applies the penalties. DRY, mirostat and the other samplers, and
+  logit_bias given as text, are refused with the reason ([문서/라마재현.md](문서/라마재현.md), stage 36).
+- **llama.cpp replay check — branching conversations, request/response logs.** Conversation-log import accepts two more forms:
+  `requests` (the messages sent and the answer received, in order) and `exchanges` (the request body and the response as sent and
+  received, a JSON array or JSONL). Branched conversations (edited messages) and interleaved conversations are emulated in the order
+  the server received them; when the responses carry usage or timings, the generated-token count and the cache state are compared
+  with the server's too ([문서/라마재현.md](문서/라마재현.md), stage 37).
+- **llama.cpp replay kit for other GPUs.** `repro-kit/llama-replay/` holds six receipts recorded from llama.cpp b12008 (Qwen3.5-9B
+  and Qwen3-8B), the reference value counts, and a script (Python standard library only) that starts a private GeulPU, verifies every
+  receipt on Vulkan (or CUDA) and writes a result file — for checking the replay on GPUs we do not have, such as AMD
+  ([문서/라마재현.md](문서/라마재현.md), stage 38).
+- **Operation-call events (`/api/events`).** The app records a start and an end event for every call that computes or changes records
+  (the registry's POST operations — generation, branch, lens, score, model load, evaluation …). Read them with
+  `GET /api/events?after=<seq>&wait=<ms>`, which waits up to `wait` ms when there is no new event. Each event carries the operation id,
+  the source (app screen, Python API, other), the HTTP status and the duration; existing API answers are unchanged
+  ([기능목록.md](문서/기능목록.md) §7).
+- **Every operation on a screen.** Every operation in the registry is now reachable from a screen — "Server info" in the model menu
+  on Models › Files (model name, context length and tokenizer as the server reports them), Anthropic Messages and OpenAI Responses in
+  the new-run form (with token counting — these two formats take no seed, so only the answer text is recorded), and token ids as score
+  input on the step and layer screen (scores for special tokens that cannot be typed as text). The screens call the app only by
+  operation id, and CI checks that screen code holds no paths and that every operation is reachable ([화면구현.md](문서/화면구현.md) §6).
+- **Make and check reproduction files from the CLI too.** `experiment repro` makes a run's reproduction file (from the experiment's
+  whole-answer score run — no model needed) and `check repro --json @<file>` checks one (scoring, regeneration and fingerprint bit for bit
+  on this PC with the file's model loaded; when they differ, the first differing step and the settings that differ). The run screen's
+  reproduction file export and Reproduce › Checks use the same two operations, so an exported file no longer misses its logit lens
+  runs or stops right after scoring, and it records the model's quantization (`model.quant`) ([사용성시험.md](문서/사용성시험.md) §3).
+- **Run records and reproduction files carry the device and the sampling settings actually used.** A recorded run now has `device`
+  (the name and driver of the device that computed it) and `sampling` (the temperature, top_k, top_p, min_p and seed the engine used —
+  the defaults 0.8 · 40 · 0.95 · 0.05 when the request leaves them out), and the experiment's `devices` gets the device. Reproduction
+  files record the device they were made on and the sampling settings actually used. The new-run dialog shows the default top-p, top-k
+  and min-p as numbers, the run and experiment screens show the device and the sampling values, and `system state`
+  (`server.sampling_defaults`) and `help` list the defaults ([사용성시험.md](문서/사용성시험.md) §5).
+- **Run screens.** The experiment screen gains Runs and Compare tabs. A run operation called with `--experiment` (or from the
+  experiment screen) is recorded by the app: the request and the answer in the experiment's `records/runs/<id>.json`, and `runs` (kind,
+  base run, intervention), `models` and `files` in `experiment.json`. The run screen shows the token-by-token output (bars under the
+  tokens — margin, probability or entropy) and the top candidates of the selected step, and branches, re-runs or starts a new run from
+  there. The Compare tab shows where two runs first differ in tokens and in logit hashes. The plan, the criteria (before the first run),
+  verdicts, results.md and status are written on the screen and with `experiment update` in the CLI. The command console gains "Open AI
+  runs" ([화면구현.md](문서/화면구현.md) §3).
+- **Step and layer screen.** Pick a step on the run screen and press Enter (or "Step and layer screen") to look at that one step: the
+  top candidates (1 to 128, each can be branched), the logit lens table (top three per layer and the sampled token's rank, with the
+  first layer from which the last layer's top token stays first marked — switch to the Jacobian lens when a J file sits next to the
+  model), and the score of a text from that step on. Every computation on the screen is recorded as a run of the experiment, so it is
+  there again when the screen opens, and score and logit-lens runs show their tables on the run screen. When a score or lens puts other
+  tokens on from a step, the app records the base run and the intervention; intervention steps use the screens' numbering (a branch
+  continues its base run's numbers). The registry's "layer lens" wording is now "logit lens" ([화면구현.md](문서/화면구현.md) §4).
+
+### Changed
+
+- **Five sidebar groups.** The sidebar is now Experiments, Models, Reproduce, Jobs and Settings, each group with tabs — Models (files,
+  evaluation, performance), Reproduce (llama.cpp, checks, check results), Settings (app, devices, prompt cache). The benchmark cards
+  moved to their tabs (speed measurement to Models › Performance, hardware diagnosis to Settings › Devices, the reproducibility and
+  file-pair checks to Reproduce › Checks), model evaluation to Models › Evaluation. The new Jobs screen shows the current job's
+  progress, log and stop button and the earlier jobs this browser saw; a console line follows the job its call started until it ends.
+- **Chat lives in the default experiment "Conversations" (대화).** Open the chat screen from "Conversations" in the experiment list.
+  Every answer is recorded as a run of that experiment (the first message creates it), and an answer's "Run rN" opens its
+  token-by-token output, branching and the step and layer screen. The debugger opens from the experiment's Records tab, the agents
+  screen from "AI sessions" in the console ([화면구현.md](문서/화면구현.md) §5).
+- **The research panel moved to the run screen.** The research panel beside the chat is gone and its features are on the new screens:
+  the run screen has summary numbers (mean log-probability, perplexity, steps with margin < δ) with previous and next by δ, matching
+  this run's model and computation mode, fingerprints, top candidates for every step, a cache-free re-run, scoring with another model
+  and exports (token table, reproduction file, Python code). The compare tab shows the first differing step's probabilities and ranks
+  and scores one answer under the other prompt, the step and layer screen scores without context and lists alternatives, and
+  Reproduce › Checks checks reproduction files and shows engine and kernel hashes. Older answers without a run link become runs of
+  "Conversations" through "Record in the experiment" ([화면구현.md](문서/화면구현.md) §6).
+- **Experiment template language, authors and check warnings.** Experiments created in the Korean UI start from a Korean template
+  (plan.md, results.md, question, criteria), and the new-experiment dialog takes the authors (CLI: `experiment create --lang ko
+  --authors`). `experiment update` takes authors, devices, reproduce commands and files you added (`add_files` — the app writes their
+  SHA-256 and size), and refuses fields it does not know. The experiment check warns about a plan, question, criteria or authors left
+  as the template has them (it still passes) and writes what it checked into the job log. Score and lens runs no longer record a seed
+  they do not use ([사용성시험.md](문서/사용성시험.md) §3).
+- **Guide and screen text — what the re-check sessions found.** The agent guide now says where lens support is shown, how to see what
+  the experiment check looked at (`job log`), the verdict values, what `check_seed` means and where the score request is in the
+  reproduction file's 409. The new-experiment dialog says where to write the criteria and the plan, and the run screen's export says
+  that the score run stays in the experiment and where to check a reproduction file you received. The Korean plan template no longer
+  assumes git or the CLI ([사용성시험.md](문서/사용성시험.md) §3).
+
+### Fixed
+
+- **llama.cpp replay check — settings that change the computation are checked against a closed list.** Verification now checks
+  the server's command line and the request fields against llama-server's b12008 option table. Only settings the replay emulates or
+  that do not change the computation are accepted; settings that change it without emulation (KV cache types, speculative decoding,
+  LoRA, layers or KV on the CPU, RoPE overrides, post-sampling probabilities, several completions, image input and others) and options
+  not in the table are refused with the reason. Before, such settings were passed over, so a token-less record could be called "same"
+  under different arithmetic. Stop strings now follow the server: empty entries are skipped, and every -r is read and unescaped
+  ([문서/라마재현.md](문서/라마재현.md), stage 39).
+- **Reproduction files of runs whose request had no temperature.** The file wrote such a run as temperature 0, so the check
+  regenerated with greedy decoding an answer the engine had sampled at temperature 0.8 and reported a difference. The file now writes
+  the temperature, top_k, top_p, min_p and seed actually used — also for runs recorded earlier ([사용성시험.md](문서/사용성시험.md) §5).
+- **Clearer branches, run list, navigation and model adding.** A branch run's description shows the kept and the new tokens and where
+  the original random numbers continue ("4 kept + 28 new = 32 tokens · original random numbers from step 4"). Generation runs in the
+  run list show the start of their prompt, and the Results tab can check the experiment too. The sidebar's Experiments always opens the
+  experiment list. Adding a GGUF file takes a .gguf file path directly and shows My models afterwards. The compare tab pairs the newest
+  generation run with its base (or the first generation run), and the reproduction-file button reads "Reproduction file (JSON)"
+  ([사용성시험.md](문서/사용성시험.md) §3).
+- **Model and computation-mode changes in an experiment's command record.** Loading this run's model, scoring with another model and
+  using this run's computation mode on the run and step screens now go into that experiment's command record, so replaying the record
+  gives the same scores with the other model. The console's copied command writes text with line breaks (plans, results) as `--json`, so
+  it fits on one line in the console and in a shell, and `experiment create` typed in the console no longer lands in the record of the
+  experiment on screen ([사용성시험.md](문서/사용성시험.md) §1).
+- **Load a model from the models screen; the compare tab's first differing answer step.** Models › Files › My models has "Load this
+  model" — before, a model loaded only when a chat message was sent. Comparing two runs with different prompts no longer shows another
+  step's probabilities at the prompt position, and shows the first step where the answers differ with both tokens' probabilities and
+  ranks. In the CLI, `--wait` waits for the job also with `--out` and writes the finished job to that file, and a `--json` body with a
+  syntax error is reported as "--json is not valid JSON" ([사용성시험.md](문서/사용성시험.md) §2).
+- **Run screen — token texts of text-generation runs that ended with the end token.** When a text-generation run made with echo —
+  every branch made from a chat run — stopped at the end token, the run screen showed each answer token with the text of the token
+  before it, so the branch description named a line break instead of the token put in. The end token now shows as its own text
+  (`<|im_end|>` …) at the end of the token-by-token output and in Δ lists, and the other-model list and the Δ title name the
+  quantization (`Qwen2.5 7B Instruct · Q4_K_M`). Found while retaking the research guide's pictures.
+
 ## 0.22.0 — llama.cpp replay check · Python API · Linux Vulkan · reproducibility kit (2026-11-06)
 
 ### Added

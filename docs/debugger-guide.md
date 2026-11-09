@@ -1,6 +1,6 @@
 # GeulPU debugger — a guide
 
-**[한국어](../디버거안내.md)** · [README](../README.md) · [user guide](user-guide.md) · [research panel guide](research-guide.md) · [plan and verdicts — 문서/디버거.md](../문서/디버거.md) (Korean)
+**[한국어](../디버거안내.md)** · [README](../README.md) · [user guide](user-guide.md) · [research guide](research-guide.md) · [plan and verdicts — 문서/디버거.md](../문서/디버거.md) (Korean)
 
 GeulPU's **debugger** works on **runs** — many requests, such as an agent session or a test set — rather than on a single answer. It
 records the generation requests that pass through the app as a **run log**, runs them again bit for bit (**replay**), looks at every
@@ -28,7 +28,7 @@ Qwen2.5-7B-Instruct. With the same model file and the same computation mode, **y
 
 ## 1. Setup
 
-1. Use **GeulPU 0.7.0 or later** ([install](user-guide.md#install)). The bug button on the left rail opens the debugger.
+1. Use **GeulPU 0.7.0 or later** ([install](user-guide.md#install)). The debugger opens from an experiment's **Records** tab, under **the debugger's run logs** (from 0.23.0; before, the bug button on the left rail).
 2. **Model**: this guide uses **Qwen2.5-7B-Instruct Q4_K_M**, and the comparison in section 6 also uses **Q8_0** of the same model (get
    them from Models → Find models). Any other model works the same way; only the numbers change.
 3. The **computation mode** is the default (fast mode — NVIDIA). In exact mode CUDA ↔ Vulkan (AMD included) also give the same bits, and
@@ -85,8 +85,8 @@ low-margin steps · 0 non-top tokens.
    - **Low-margin step**: the gap between the top-1 and top-2 log-probabilities (the margin) is below δ (default 0.05 nat).
    - **Low-probability sample**: the chosen token's probability is below p (default 0.05).
    - **Tool-call start**: a step that chose `<tool_call>` or `<|python_tag|>`.
-3. **Token strip** — darker = less likely, underline = low margin, outline = a sampled token that was not top-1 (as in the research
-   panel).
+3. **Token strip** — darker = less likely, underline = low margin, outline = a sampled token that was not top-1 (as on the run
+   screen).
 4. **The step-18 card** — the model nearly tossed a coin between ` reset` (49.5 %) and ` revert` (49.4 %) (margin 1.35 × 10⁻³ nat). The
    arrow on each alternative branches with that token.
 
@@ -254,5 +254,5 @@ Recording adds 0.35 % to request time. Checking without a GPU computes the 7B mo
 - **Seeds** are 64-bit integers. Re-saving a run log with a program that reads JSON numbers as floating point can change the seeds, so
   move the file as is (GeulPU's screen and tools read and write them exactly).
 - **Load with this run's settings** changes the app's settings (computation mode · backend). Chat uses them too.
-- **Deep analysis of a single answer** (scores · reproduction files · export) is in the [research panel guide](research-guide.md). The
+- **Deep analysis of a single answer** (scores · reproduction files · export) is in the [research guide](research-guide.md). The
   debugger extends it to whole runs.

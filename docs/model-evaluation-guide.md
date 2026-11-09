@@ -2,7 +2,7 @@
 
 **[한국어](../모델평가안내.md)** · [README](../README.md) · [User guide](user-guide.md) · [Debugger guide](debugger-guide.md) · [Research guide](research-guide.md) · [Plan and measurements (Korean)](../문서/모델평가.md)
 
-**Model evaluation** (the flask button on the left rail) is a test bench for GGUF files. Make a GGUF from a fine-tuned model (a Hugging
+**Model evaluation** (**Models › Evaluation** in the sidebar — from 0.23.0; before, the flask button on the left rail) is a test bench for GGUF files. Make a GGUF from a fine-tuned model (a Hugging
 Face folder), check that the conversion is right, measure what each quantization changes, count what the fine-tune learned and forgot
 against the model before fine-tuning, and remake a file that loses less quality — then compare before and after. With the same files,
 data and settings a rerun gives bit-identical results, so a before/after comparison shows only what you changed.

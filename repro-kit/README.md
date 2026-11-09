@@ -1,6 +1,6 @@
-# GeulPU reproducibility kit (GeulPU 0.21.0)
+# GeulPU reproducibility kit (GeulPU 0.23.0)
 
-This kit checks whether your machine gives **the same bits** as our reference PC when it runs GeulPU 0.21.0. It loads three
+This kit checks whether your machine gives **the same bits** as our reference PC when it runs GeulPU 0.23.0. It loads three
 models under two settings, sends 12 fixed chat requests one at a time and then all at once, and compares three things with the
 reference values in `expected.json`: the prompt tokens, the generated tokens and a hash of every step's logits (the full logit
 row). Any difference, even in the last bit of one logit, shows up as a different hash at that step.
@@ -9,7 +9,7 @@ row). Any difference, even in the last bit of one logit, shows up as a different
 
 | | |
 |---|---|
-| Reference | RTX 4070 Ti (Ada, sm_89), Windows 11, GeulPU 0.21.0 installed from PyPI |
+| Reference | RTX 4070 Ti (Ada, sm_89), Windows 11, GeulPU 0.23.0 (the release build). Every token and logit hash equals the 0.21.0 reference — the inference server is byte-identical |
 | Models | Qwen3-8B Q4_K_M, Qwen3-8B Q8_0 and Qwen3.5-9B Q4_K_M (19.4 GB together) |
 | Settings | `default` (the app's default settings — with Qwen3-8B Q4_K_M on CUDA this means fast computation, the 8-bit KV cache and fast attention; the other two models use neither, so they run fast computation with a 16-bit KV cache) and `exact` (exact computation). The two give different logits, so each is checked against its own reference |
 | Requests | math (one with thinking on), logic, code, two tool calls, Korean, Spanish (sampled), a 6k-token log, a multi-turn chat (sampled) |
@@ -19,23 +19,23 @@ The app's own **reproducibility check** (Benchmark page — DeepSeek-R1-Distill-
 step: it has already matched on RTX 3080 Ti, 4070 Ti and 5070 cards, an H100 MIG slice, a Radeon RX 9060 XT and Intel integrated
 graphics. The kit can run it too (`--builtin-check`).
 
-**Independent results.** In November 2026 the GING group of the Universidad Politécnica de Madrid ran this kit and test suites of
-its own on an RTX 6000 Ada, an H100 MIG slice and an A100 MIG slice: 144/144 on each card, and every check of their suites passed
+**Independent results.** In November 2026 the GING group of the Universidad Politécnica de Madrid ran this kit (GeulPU 0.21.0 — the same
+reference values as 0.23.0) and test suites of its own on an RTX 6000 Ada, an H100 MIG slice and an A100 MIG slice: 144/144 on each card, and every check of their suites passed
 (eight concurrent chats, speculation on and off, cache eviction, Llama 3.1). Their report and reproduction bundle are in
 [independent/upm-ging-2026-11](independent/upm-ging-2026-11/README.md).
 
-## 1. Install GeulPU 0.21.0
+## 1. Install GeulPU 0.23.0
 
 ```bash
-pip install geulpu==0.21.0        # or: pipx install geulpu==0.21.0
+pip install geulpu==0.23.0        # or: pipx install geulpu==0.23.0
 ```
 
-Or download `GeulPU-0.21.0-linux-x64.tar.gz` (or the Windows zip) from the
-[release page](https://github.com/wwoosshh/GeulPUv2/releases/tag/v0.21.0).
+Or download `GeulPU-0.23.0-linux-x64.tar.gz` (or the Windows zip) from the
+[release page](https://github.com/wwoosshh/GeulPUv2/releases/tag/v0.23.0).
 
 - Linux x86-64 needs an NVIDIA GPU of the RTX 30 series or newer (compute capability 8.0 or higher — A100, A6000, H100, Ada cards)
   with its driver, and glibc 2.34 or later (Ubuntu 22.04 or newer).
-- Windows 10 or 11 (64-bit) also runs on AMD and Intel GPUs through Vulkan, but Qwen3.5 runs only on NVIDIA (CUDA) in 0.21.0.
+- Windows 10 or 11 (64-bit) also runs on AMD and Intel GPUs through Vulkan, but Qwen3.5 runs only on NVIDIA (CUDA) in 0.23.0.
 - A card with 12 GB of graphics memory is enough (the reference card has 12 GB).
 
 ## 2. Get the models
@@ -118,6 +118,6 @@ GeulPU's precision contract rules out. Please report either kind with the result
 - `expected.json` comes from `run_kit.py --record expected.json` on the reference PC with a fresh data folder. Recording stops if
   the batch pass differs from the one-at-a-time pass, and the reference is accepted only after a second run from another fresh data
   folder matches it (on the reference PC: 144/144 when recording, 144/144 on the second run).
-- The kit uses the app's HTTP API of 0.21.0 (`/api/state`, `/api/models/add`, `/api/settings`, `/api/server/start`,
+- The kit uses the app's HTTP API of 0.23.0 (`/api/state`, `/api/models/add`, `/api/settings`, `/api/server/start`,
   `/api/bench/crosscheck`) and `/v1/chat/completions` with `"geulpu": {"logit_hash": true, "prompt_tokens": true}`. A new GeulPU
   version needs a new kit version and a new reference.

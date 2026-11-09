@@ -50,15 +50,18 @@ a token, a tool result, the quantization — and see the effect of that one chan
   count what a fine-tune learned and forgot against the model before fine-tuning, and measure which matrix groups to keep at a higher
   precision — every result reproducible bit for bit (from 0.17.0; the [model evaluation guide](docs/model-evaluation-guide.md) walks
   through one round).
-- **Research panel.** For any answer in the chat: each token's probability, rank, top-10 alternatives, entropy and margin; branch,
-  compare, score text, export, and check reproduction files. From 0.13.0 it also shows at which layer an answer appears — the logit lens
-  at every layer, and the Jacobian lens with a J file fitted on the original (PyTorch) model.
+- **Research as experiments.** A study's question, criteria, plan, run records and results live in one experiment folder. For every
+  run: each token's probability, rank, top candidates, entropy and margin, and the logit lens at every layer (the Jacobian lens with a J
+  file fitted on the original model); branch from any step, compare two runs, and hand a run to another PC as one reproduction file that
+  it checks bit for bit. Every screen feature is also a `GeulPU <command>`, so people and AI agents work on the same experiments with
+  the same operations (from 0.23.0 — [user guide §3–6](docs/user-guide.md#3-experiments--question-plan-runs-and-results-in-one-folder),
+  [CLI guide for agents](docs/cli.md)).
 - **Fast where it matters.** With the default settings, prompts and generation are faster than llama.cpp at every length measured
   (0.76–0.97× its time on Qwen2.5-7B, down to 0.48× deep into a Llama-3.1-8B session); speculative decoding that is 3.5–4× faster on
   editing tasks *and* bit-identical; a prompt cache on the SSD that restores a coding agent's 15k-token prompt in
   0.3 s after a restart.
 - **Works with your tools.** OpenAI-compatible, Anthropic Messages and OpenAI Responses APIs with tool calling for coding agents
-  (tested with Qwen Code, OpenCode, Cline, Claude Code and Codex — the app's Agents page starts them with the loaded model),
+  (tested with Qwen Code, OpenCode, Cline, Claude Code and Codex — the console's AI session starts them with the loaded model),
   log-probabilities, echo scoring and tokenization endpoints, and lm-evaluation-harness support.
 - **Small and self-contained.** A download of about 1.5 MB that runs on the graphics driver alone — no CUDA toolkit, Python or
   PyTorch. The engine, GPU kernels, server and app are written in [글(geul)](https://github.com/wwoosshh/geul-lang), a programming
@@ -234,7 +237,7 @@ directly. Activations are block integers, sums are exact on integer tensor cores
 |---|---|---|
 | User guide — install, models, chat, settings, API, troubleshooting | [docs/user-guide.md](docs/user-guide.md) | [사용안내.md](사용안내.md) |
 | Debugger guide | [docs/debugger-guide.md](docs/debugger-guide.md) | [디버거안내.md](디버거안내.md) |
-| Research panel guide | [docs/research-guide.md](docs/research-guide.md) | [연구자안내.md](연구자안내.md) |
+| Research guide | [docs/research-guide.md](docs/research-guide.md) | [연구자안내.md](연구자안내.md) |
 | Model evaluation guide — make, check and improve GGUF files | [docs/model-evaluation-guide.md](docs/model-evaluation-guide.md) | [모델평가안내.md](모델평가안내.md) |
 | llama.cpp replay check — record formats, what is verified | [docs/llama-replay.md](docs/llama-replay.md) | [라마재현.md](문서/라마재현.md) |
 | Precision contract | [계약/contract.md](계약/contract.md) | [계약/계약.md](계약/계약.md) |

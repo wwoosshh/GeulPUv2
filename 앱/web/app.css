@@ -1210,6 +1210,7 @@ table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
 .run-tok .bar { position: absolute; left: 0; bottom: -7px; height: 3px; border-radius: 2px; background: var(--line-pill); pointer-events: none; }
 .run-tok.cont { display: inline-block; width: 4px; margin: 0 -2px; height: 18px; vertical-align: -2px; }   /* E5 — 한 글자의 이어지는 바이트: 글자 사이에 틈을 내지 않는다(앞뒤 여백을 빼서 폭 0) */
 .run-tok.sel { outline: 1px solid var(--ink); outline-offset: 1px; }
+.run-tok.eos { opacity: .55; }   /* 끝 토큰(EOS) — 응답에 글이 없어 그 토큰의 글을 흐리게 */
 .run-tok:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
 .run-tok.low::after { content: attr(data-note); position: absolute; left: 0; top: -20px; font-size: 11px; line-height: 14px; color: var(--ink); white-space: nowrap; border-bottom: 1px solid var(--ink); pointer-events: none; }
 .run-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 12px; line-height: 16px; color: var(--mute); }

@@ -1,12 +1,12 @@
 {
  "kit": "1",
- "geulpu": "0.21.0",
+ "geulpu": "0.23.0",
  "reference": {
   "kit": "1",
-  "time_utc": "2026-11-04T16:42:20Z",
-  "geulpu_version": "0.21.0",
-  "geulpu_commit": "0efe2a5824ea202f5c02f98afb0620647966e884",
-  "geulpu_installer": "pip",
+  "time_utc": "2026-11-09T11:20:43Z",
+  "geulpu_version": "0.23.0",
+  "geulpu_commit": "5ccb92910f64d0ca1e3b80a6f8a0a125013778d6",
+  "geulpu_installer": "zip",
   "device": "NVIDIA GeForce RTX 4070 Ti",
   "device_layer": "cuda",
   "os": "Windows-11-10.0.26300-SP0",
@@ -1672,7 +1672,7 @@
      "36d7e93904cb17c3",
      "468c8b29496972cd"
     ],
-    "text_sha256": "4a5c1badc2284e8c08b49ea044939feb517735b52ca392adc5ffa99090281bc0"
+    "text_sha256": "2ee90406c6560a314444ffa796dae1dbdacd152c1bd003d82ca7a5403d6531aa"
    },
    {
     "id": "tool-2",
@@ -1710,7 +1710,7 @@
      "680acb55f74bcf29",
      "9a9798aaaac3330d"
     ],
-    "text_sha256": "12c2e4631a4096c66513ea1d796432e89e58c73a6e27dbb8c988d617794a8c96"
+    "text_sha256": "016f0d3b1a8947bd0328e1868ff3b0721a2757157c2775e524056833360f9f73"
    },
    {
     "id": "korean-1",
@@ -3834,7 +3834,7 @@
      "111efa4fe260cd16",
      "1289772d96ac6c39"
     ],
-    "text_sha256": "1bad6c4478aa17d65399d0b0db3c3164179e23a4120ceb66d87e2db5775a3ce2"
+    "text_sha256": "555edccbbeac80d9803dcdd6e54fcbe1737d7d212a4d77edfdc4e9da6ae3df79"
    },
    {
     "id": "tool-2",
@@ -3872,7 +3872,7 @@
      "5105b23d697c4e8a",
      "41bae4f0576ba711"
     ],
-    "text_sha256": "42b42c37347feef0b30e233d119fa5e5b1cebbb9f11e2f52b5113d3443106a65"
+    "text_sha256": "285bac7e4b8313974c949a9392fc5f38e5dec4dc42a7afeae66f5be73c6e08b4"
    },
    {
     "id": "korean-1",
@@ -5976,7 +5976,7 @@
      "639c26a36932aae4",
      "2e5acb0b6864bd02"
     ],
-    "text_sha256": "e1ea62fe6b9e476502bb862a8bf25b2a724f999bc977cfaef45534f493128021"
+    "text_sha256": "99371b3f58cceb4083cb1cd7bf96c468a1f4b89966c6d55dd3c8ab7bcb40ba51"
    },
    {
     "id": "tool-2",
@@ -6014,7 +6014,7 @@
      "2a06336082ea9e49",
      "5beb3cbe1073b398"
     ],
-    "text_sha256": "f29945030fcb9a6d7abe56bbc86b661d51d449aac7a8a3ed647ff4f336e4c6b1"
+    "text_sha256": "c2e284b034c5b5c0083e63b98898714181681978e724e9f3c26f08a99728a1e4"
    },
    {
     "id": "korean-1",
@@ -8140,7 +8140,7 @@
      "e08555b127adb875",
      "2222decc6bb0a91f"
     ],
-    "text_sha256": "86f0c4c4cc5ec8f3a03edb43e520be6c62d64eeb1ecd67431e4367f097258652"
+    "text_sha256": "252ef700e21458343c543a3480c2bbd368893dfc587af404e8a592075e10b713"
    },
    {
     "id": "tool-2",
@@ -8178,7 +8178,7 @@
      "ebcf0b2f40c0e22b",
      "6bd02cc86ab402fd"
     ],
-    "text_sha256": "a75f0541c4ca23d8202096eb4e6acc27c699ddf441e621c19c8f290a5c6b3242"
+    "text_sha256": "71715d7f3c8b0d4cdd580e60b3204b001170f5632023d46e9337fee9621a1a69"
    },
    {
     "id": "korean-1",
@@ -10338,7 +10338,7 @@
      "79082c1a9258cb4f",
      "88503274225a5ff3"
     ],
-    "text_sha256": "ce3af419964caa183e91d587f80884bbf8951673e29689e6d5c7fc763f48d449"
+    "text_sha256": "6abee66f103dc9a9af23fb861ad81356bcd81280e990a9a8f6784ee396acf471"
    },
    {
     "id": "tool-2",
@@ -10392,7 +10392,7 @@
      "927d4575ba92b2e7",
      "9c9035f4104dd278"
     ],
-    "text_sha256": "766f697adba115261140ab2bc90bf1779a6278250064cce5f2697beab23da933"
+    "text_sha256": "02aa04b2d228cfc66dacae51f5fa65e60d416ba85cf7a478e52998511b2219b5"
    },
    {
     "id": "korean-1",
@@ -12578,7 +12578,7 @@
      "677cab31793a20af",
      "7f768b7685c28e81"
     ],
-    "text_sha256": "e7e7786d7c0178116ff5c00731f77806986dddf3d46263c052d0696b029e7a2a"
+    "text_sha256": "0848d142cdf6dc1700ea9fe6177f804fc6cc4b68a2bc44b06ca4cd28c61040c0"
    },
    {
     "id": "tool-2",
@@ -12632,7 +12632,7 @@
      "798fd926ed6b6f96",
      "03813b4692664e2c"
     ],
-    "text_sha256": "c38bff0dc5b83ed70e0d9f4420cfc727c04fa06a97f774f851b1a5105e3d1642"
+    "text_sha256": "624821160225cdcd37c023e925ba6eca74487a06b6fc56fcb78c4ab2ff85fa54"
    },
    {
     "id": "korean-1",
