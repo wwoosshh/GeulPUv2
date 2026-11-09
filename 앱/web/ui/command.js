@@ -290,7 +290,8 @@ export function requestFor(reg, opId, params) {
 // ---- 명령 쓰기(명령 창의 줄 · 명령 복사) ----
 
 function fits(type, v) {
-  if (type === 'string') return typeof v === 'string';
+  // 줄바꿈이 든 글은 --json 으로 적는다(JSON 이 \n 으로 적어 한 줄이 된다) — 명령 창의 입력 줄은 한 줄 입력이라 줄바꿈을 지운다(F1)
+  if (type === 'string') return typeof v === 'string' && !/[\r\n]/.test(v);
   if (type === 'boolean') return typeof v === 'boolean';
   if (type === 'integer') return Number.isInteger(v);
   if (type === 'number') return typeof v === 'number' && Number.isFinite(v);
