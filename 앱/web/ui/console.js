@@ -389,6 +389,23 @@ async function waitJob(rec, job) {
   }
 }
 
+/**
+ * F1(문서/사용성시험.md) — 보는 실험을 붙이는 것은 그 실험의 일일 때만. 새 실험을 만드는 명령과, path 로 다른 실험을 가리키는 실험 명령은
+ * 보는 실험의 명령 기록에 남기지 않는다(CLI 도 --experiment 를 주지 않으면 남기지 않는다)
+ */
+function namesOtherExperiment(r, exp) {
+  const id = typeof r.op === 'string' ? r.op : (r.op && r.op.id) || '';
+  if (id === 'experiment.create') return true;
+  if (!id.startsWith('experiment.')) return false;
+  let b = null;
+  try { b = r.body ? JSON.parse(r.body) : null; } catch (_) { b = null; }
+  const p = b && typeof b.path === 'string' ? b.path.trim() : '';
+  if (!p) return false;
+  const norm = s => s.replace(/[\\/]+/g, '/').replace(/\/$/, '').toLowerCase();
+  const e = norm(exp);
+  return /[\\/]/.test(p) ? norm(p) !== e : p.toLowerCase() !== e.split('/').pop();
+}
+
 async function runLine(text) {
   if (!reg) {
     try { reg = await registry(); } catch (_) {
@@ -443,7 +460,7 @@ async function runLine(text) {
     }
     experiment = ex.json.path;
     rec.experiment = experiment;
-  } else if (ctxExp && r.method === 'POST') {
+  } else if (ctxExp && r.method === 'POST' && !namesOtherExperiment(r, ctxExp)) {
     // E3 — 실험 화면을 보는 동안 친 명령은 그 실험에 남는다(화면설계.md §5). 명령 복사에는 --experiment 를 붙인다
     experiment = ctxExp;
     rec.experiment = experiment;

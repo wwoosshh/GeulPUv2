@@ -63,9 +63,12 @@ const screenBodies = [
   ['settings.set', { slots: 4, kv8_cache: false, precision: 'fast' }],
   ['run.lens', { prompt: [1, 2], geulpu: { layer_lens: { top_k: 3 } }, echo: true, max_tokens: 0, logprobs: 1 }],
   ['store.clear', {}],
+  // F1(문서/사용성시험.md) — 줄바꿈이 든 글 인자(계획 · 결과)도 한 줄 명령으로(명령 창의 입력 줄은 한 줄이라 줄바꿈을 지운다)
+  ['experiment.update', { path: 'E:\\x\\2026-11-09-a', plan: '# Plan\n\nline 2\r\n', results: 'one\ntwo' }],
 ];
 for (const [op, body] of screenBodies) {
   const line = C.toCommand(reg, op, body);
+  if (/[\r\n]/.test(line)) bad.push(`화면 본문 ${op}: 명령 쓰기가 여러 줄 — ${JSON.stringify(line).slice(0, 200)}`);
   const back = C.parse(reg, line);
   const want = { ...body };
   if (want.stream === true) { delete want.stream; delete want.stream_options; }

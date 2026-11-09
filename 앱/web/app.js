@@ -2986,19 +2986,21 @@ function modeBlock() {
   if (S.st.server.state === 'starting') return T('모델을 불러오는 중에는 바꿀 수 없습니다');
   return '';
 }
-// ex — KV 캐시 8비트 · 빠른 어텐션까지 맞출 때(연구 패널: 답을 만든 방식 그대로). 성공하면 참
+// ex — KV 캐시 8비트 · 빠른 어텐션까지 맞출 때(연구 패널: 답을 만든 방식 그대로). ex.experiment 가 있으면 설정 저장 · 모델 내리기 · 다시
+// 불러오기를 그 실험의 명령 기록에 남긴다(앱리디자인 F1 — 실행 화면의 '이 실행의 계산 방식으로'). 성공하면 참
 async function setMode(p, ex) {
   closePop();
   if (!S.st || MODEBUSY || modeBlock()) return false;
   MODEBUSY = T('바꾸는 중');
   renderModeChip();
   let ok = false;
+  const xo = { experiment: (ex && ex.experiment) || '' };
   try {
     const set = S.st.settings || {}, body = {}, mm = modeModel();
     if (precSet(mm, set) !== p) body[precKey(mm)] = p;
     if (ex && !!set.kv8_cache !== !!ex.kv8) body.kv8_cache = !!ex.kv8;
     if (ex && !!set.fast_attention !== !!ex.f2) body.fast_attention = !!ex.f2;
-    if (Object.keys(body).length) await callOp('settings.set', body);
+    if (Object.keys(body).length) await callOp('settings.set', body, xo);
     await refresh();
     const sv = S.st.server, now = modeNow();
     const off = now && (ex ? modeLabel(now) !== modeLabel({ p, kv8: !!ex.kv8, f2: !!ex.f2 }) : now.p !== p);
@@ -3006,9 +3008,9 @@ async function setMode(p, ex) {
       const id = sv.model;
       MODEBUSY = T('다시 불러오는 중');
       renderModeChip();
-      await callOp('model.unload', {});
+      await callOp('model.unload', {}, xo);
       for (let k = 0; k < 120; k++) { await new Promise(r => setTimeout(r, 500)); await refresh(); if (S.st.server.state !== 'ready') break; }
-      await ensureServer(id, null);
+      await ensureServer(id, null, xo);
     }
     ok = true;
     announce(T`계산 방식: ${modeName(p)}`);
@@ -4022,12 +4024,12 @@ async function summarize(room, rp, plan, L, B) {
   if (S.roomId === room.id) renderMsgs();
   announce(T('앞의 대화를 요약했습니다'));
 }
-async function ensureServer(modelId, notice) {
+async function ensureServer(modelId, notice, opt) {          // opt — callOp 의 선택(실험의 명령 기록에 남길 때 { experiment })
   const st = S.st;
   if (st.server.state === 'ready' && st.server.model === modelId) return;
   if (S.streaming) S.streaming.loading = true;
   if (!(st.server.state === 'starting' && st.server.model === modelId)) {
-    try { await callOp('model.load', { model: modelId }); }
+    try { await callOp('model.load', { model: modelId }, opt); }
     catch (e) { throw new Error('모델을 불러오지 못했습니다 — ' + e.message); }
   }
   for (;;) {

@@ -2,6 +2,7 @@
 // 실행 정보에 더한 값(끝난 까닭 · 토큰/초 · 추측 디코딩 · 지문), 프롬프트 캐시의 재사용, 모든 스텝의 상위 후보, 캐시 없이 재실행, 다른 모델로 점수,
 // 내보내기(토큰 표 geulpu-tokens/1 · 재현 파일 geulpu-capsule/1 · 파이썬), 비교의 처음 다른 스텝 · 수치 · 다른 프롬프트로 점수.
 // 계산은 모두 기능 목록의 기능(run.score · model.load · settings.set)으로 하고, 점수는 이 실험의 실행으로 남는다(measure).
+// F1(문서/사용성시험.md §1) — 여기서 부른 모델 불러오기 · 계산 방식 바꾸기도 이 실험의 명령 기록에 남긴다(실험 헤더 — CLI 의 --experiment 와 같다).
 import { T, el } from './dom.js';
 import { call } from './ops.js';
 import {
@@ -95,9 +96,12 @@ export function matchLine(ctx, d) {
     el('div', { class: 'col g8' }, lines.map(t => el('span', null, t)), btns.length ? el('div', { class: 'row g8' }, btns) : null));
 }
 
-/** 모델 하나를 불러오고(작업) 준비될 때까지 기다린다. 성공하면 참 */
-async function waitLoaded(id) {
-  const r = await call('model.load', { model: id });
+/** 이 화면의 실험 폴더 — 모델 · 계산 방식을 바꾼 호출도 그 실험의 명령 기록에 남도록 */
+const expPath = ctx => (ctx && ctx.exp && ctx.exp.path) || '';
+
+/** 모델 하나를 불러오고(작업) 준비될 때까지 기다린다. exp 가 있으면 그 실험의 명령 기록에 남긴다. 성공하면 참 */
+async function waitLoaded(id, exp) {
+  const r = await call('model.load', { model: id }, { experiment: exp || '' });
   if (!r.ok) throw new Error(appError(r));
   for (let i = 0; i < 480; i++) {
     await sleep(500);
@@ -114,7 +118,7 @@ async function loadModel(ctx, id) {
   rs.busy = T('모델을 불러오는 중…');
   rs.err = null;
   ctx.rerender();
-  try { await waitLoaded(id); } catch (e) { rs.err = e.message; }
+  try { await waitLoaded(id, expPath(ctx)); } catch (e) { rs.err = e.message; }
   rs.busy = null;
   ctx.rerender();
 }
@@ -124,7 +128,7 @@ async function matchMode(ctx, want) {
   rs.err = null;
   ctx.rerender();
   try {
-    const ok = await globalThis.geulpuSetMode(want.precision || 'exact', { kv8: !!want.kv8, f2: !!want.fast_attention });
+    const ok = await globalThis.geulpuSetMode(want.precision || 'exact', { kv8: !!want.kv8, f2: !!want.fast_attention, experiment: expPath(ctx) });
     if (!ok) rs.err = T('계산 방식을 바꾸지 못했습니다 — 답이 생성되는 중이거나 작업이 실행 중이면 끝난 뒤에 다시 누르세요.');
   } catch (e) {
     rs.err = e.message;
@@ -332,7 +336,7 @@ async function scoreWithModel(ctx, d, id) {
   rs.err = null;
   ctx.rerender();
   try {
-    await waitLoaded(id);
+    await waitLoaded(id, expPath(ctx));
   } catch (e) {
     rs.err = e.message;
     rs.busy = null;
