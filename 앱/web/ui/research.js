@@ -600,13 +600,13 @@ export function toolsView(ctx, d, text, busy) {
   out.push(el('section', { class: 'rs-sec', 'aria-label': T('내보내기') }, el('h2', null, T('내보내기')),
     el('div', { class: 'xp-actions' },
       el('span', null, T('토큰 표')),
-      el('button', { type: 'button', class: 'btn sm', onclick: () => exportTokens(ctx, d, 'json') }, 'JSON'),
-      el('button', { type: 'button', class: 'btn sm', onclick: () => exportTokens(ctx, d, 'csv') }, 'CSV'),
-      el('span', null, T('재현 파일')),
+      el('button', { type: 'button', class: 'btn sm', 'aria-label': T('토큰 표 JSON'), onclick: () => exportTokens(ctx, d, 'json') }, 'JSON'),
+      el('button', { type: 'button', class: 'btn sm', 'aria-label': T('토큰 표 CSV'), onclick: () => exportTokens(ctx, d, 'csv') }, 'CSV'),
+      // F3-1 — 재현 파일 단추는 이름에 '재현 파일'을(토큰 표의 'JSON' 과 가려지게)
       el('button', {
         type: 'button', class: 'btn sm', disabled: busy || !d.ptoks || !(d.rec.server || {}).sha256 ? true : null,
         title: T('요청 · 결과 · 만든 곳 — 재현 › 검사의 재현 파일 확인 · 도구/repro_check.py 가 읽는 파일'), onclick: () => exportCapsule(ctx, d),
-      }, 'JSON')),
+      }, T('재현 파일(JSON)'))),
     el('p', { class: 'muted' }, full ? T`토큰 표 · 재현 파일의 스텝마다의 값은 점수 실행 ${full.entry.id} 에서(끝 토큰의 스텝까지).`
       : T('재현 파일은 끝 토큰의 스텝까지 값이 있어야 해서, 없으면 먼저 답 전체를 점수 매깁니다(상위 후보 10).')),
     pythonCode(ctx, d)));

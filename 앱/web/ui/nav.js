@@ -10,10 +10,12 @@ const GROUPS = {
 };
 const GROUP_NAME = { model: () => T('모델'), repro: () => T('재현'), settings: () => T('설정') };
 const go = v => { if (typeof globalThis.show === 'function') globalThis.show(v); };
+// F3-1 — 경로의 '실험'은 실험 목록으로(마지막에 연 실험이 아니라)
+const goList = () => { document.dispatchEvent(new CustomEvent('geulpu:exp-list')); go('exp'); };
 // 사이드바에 없는 화면 — 경로의 앞 항목은 누르면 그 화면으로
 const PATHS = {
-  chat: () => [[T('실험'), () => go('exp')], [T('대화'), () => document.dispatchEvent(new CustomEvent('geulpu:open-chat-experiment'))]],
-  debug: () => [[T('실험'), () => go('exp')], [T('디버거')]],
+  chat: () => [[T('실험'), goList], [T('대화'), () => document.dispatchEvent(new CustomEvent('geulpu:open-chat-experiment'))]],
+  debug: () => [[T('실험'), goList], [T('디버거')]],
   agents: () => [[T('명령 창')], [T('AI 세션')]],
 };
 const bar = document.getElementById('grp');

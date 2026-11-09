@@ -261,7 +261,8 @@ async function runCheck() {
 // ---- 새 실험 ----
 
 function newExperiment() {
-  const name = el('input', { type: 'text', id: 'xp-name', autocomplete: 'off', spellcheck: 'false', placeholder: 'margin-branch', 'aria-describedby': 'xp-name-hint' });
+  // F3-1 — 접근성 이름을 라벨 글로(placeholder 'margin-branch' 가 이름으로 잡혔다)
+  const name = el('input', { type: 'text', id: 'xp-name', autocomplete: 'off', spellcheck: 'false', placeholder: 'margin-branch', 'aria-label': T('이름'), 'aria-describedby': 'xp-name-hint' });
   const title = el('input', { type: 'text', id: 'xp-title', autocomplete: 'off' });
   const question = el('textarea', { id: 'xp-q', rows: '3' });
   const err = el('p', { class: 'xp-err', role: 'alert' });
@@ -622,7 +623,10 @@ function resultsTab(e) {
   if (st.edit && st.edit.tab === 'results') return resultsEdit();
   return [
     el('div', { class: 'xp-actions' }, el('button', { class: 'btn', type: 'button', onclick: () => startEdit('results') }, T('편집')),
+      // F3-1 — 판정과 결과를 적은 이 탭에서도 점검(기록 탭과 같은 기능 · 같은 결과)
+      el('button', { class: 'btn', type: 'button', disabled: st.check && st.check.running ? true : null, onclick: runCheck }, T('점검')),
       el('span', { class: 'muted' }, T('판정 · 메모 · results.md · 상태를 적습니다.'))),
+    st.check ? checkBox() : null,
     el('h2', null, T('판정')), criteriaList(e), el('h2', null, 'results.md'), docBlock('results.md'),
   ];
 }
@@ -726,6 +730,11 @@ document.addEventListener('geulpu:view', ev => {
     else loadList();
   }
   announce();
+});
+
+// F3-1 — 사이드바의 '실험'과 채팅 · 디버거 화면의 경로 '실험'은 늘 실험 목록으로(마지막에 연 실험 · 실행이 아니라)
+document.addEventListener('geulpu:exp-list', () => {
+  if (st.cur || st.run) backToList();
 });
 
 document.addEventListener('geulpu:open-experiment', ev => {

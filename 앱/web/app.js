@@ -375,6 +375,13 @@ const DICT = {
   "이 폴더에는 .gguf 파일이나 하위 폴더가 없습니다": "No .gguf files or subfolders here",
   "폴더 경로(예: D:\\models)": "Folder path (e.g. D:\\models)",
   "폴더 경로": "Folder path",
+  "폴더 또는 .gguf 파일 경로(예: D:\\models)": "Folder or .gguf file path (e.g. D:\\models)",
+  "폴더 또는 .gguf 파일 경로": "Folder or .gguf file path",
+  "앞 {} 토큰 + 새 {} 토큰 = {} 토큰": "{} kept + {} new = {} tokens",
+  "스텝 {} 부터 원래 난수로 이음": "original random numbers from step {}",
+  "재현 파일(JSON)": "Reproduction file (JSON)",
+  "토큰 표 JSON": "Token table JSON",
+  "토큰 표 CSV": "Token table CSV",
   "모델 폴더 고르기": "Choose the model folder",
   "받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.": "Choose where downloaded models go. Applies from the next start.",
   "GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the architectures the engine accepts (qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B and others). Support is checked as soon as you add a file.",
@@ -2676,7 +2683,11 @@ function groupView(g) { const m = load('geulpu.groupView', {}) || {}; return m[g
 const RAIL_ICON = { exp: 'notes', model: 'box', repro: 'shield', jobs: 'clock', settings: 'gear' };
 document.querySelectorAll('.rail-btn').forEach(b => {
   b.innerHTML = svg(RAIL_ICON[b.dataset.group], 'l') + `<span class="lbl" aria-hidden="true">${esc(b.getAttribute('aria-label'))}</span>`;
-  b.addEventListener('click', () => show(groupView(b.dataset.group)));
+  // F3-1 — '실험'은 늘 실험 목록으로(채팅 · 디버거 · 연 실험이 아니라). 다른 항목은 마지막에 본 탭
+  b.addEventListener('click', () => {
+    if (b.dataset.group === 'exp') { document.dispatchEvent(new CustomEvent('geulpu:exp-list')); show('exp'); }
+    else show(groupView(b.dataset.group));
+  });
 });
 function show(view) {
   view = VIEW_ALIAS[view] || view;
@@ -4775,6 +4786,17 @@ async function startDownload(c) {
   try { await callOp('model.download.start', { id: c.id }); resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
+// 모델 파일 하나를 더한다 — 더한 뒤 모델 › 파일의 '내 모델'로(더한 모델과 그 줄의 '이 모델 불러오기'가 보이게 — F3-1)
+async function addModelFile(path, name) {
+  try {
+    await callOp('model.add', { path });
+    toast(T`추가했습니다: ${name}`, 'ok');
+    resetSig();
+    await refresh();
+    show('models');
+    setModelsTab('mine');
+  } catch (err) { toast(err.message, 'err'); }
+}
 // 파일 고르기 — pick 이 있으면 폴더 고르기(설정의 모델 폴더): 파일은 감추고 '이 폴더 선택'
 // text — 폴더를 고를 때(pick) 창의 제목 · 설명을 바꾼다({title, lead} — 앱리디자인 E2 의 실험 폴더 위치). 없으면 모델 폴더
 async function browse(path, pick, text) {
@@ -4789,14 +4811,21 @@ async function browse(path, pick, text) {
       class: 'fs-item', onclick: async () => {
         if (e.dir) { browse(e.path, pick, text); return; }
         closeModal();
-        try { await callOp('model.add', { path: e.path }); toast(T`추가했습니다: ${e.name}`, 'ok'); resetSig(); refresh(); }
-        catch (err) { toast(err.message, 'err'); }
+        await addModelFile(e.path, e.name);
       },
     }, I(e.dir ? 'folder' : 'file', 's'), h('span', { class: 'n' }, e.name), e.dir ? I('chevR', 's') : h('span', { class: 'num muted small' }, fmtBytes(e.size))));
   }
   if (!entries.length) list.append(h('div', { class: 'fs-item muted' }, pick ? T('하위 폴더가 없습니다') : T('이 폴더에는 .gguf 파일이나 하위 폴더가 없습니다')));
-  const inp = h('input', { type: 'text', value: j.path || '', placeholder: T('폴더 경로(예: D:\\models)'), 'aria-label': T('폴더 경로') });
-  const go = () => browse(inp.value.trim(), pick, text);
+  const inp = h('input', {
+    type: 'text', value: j.path || '', placeholder: pick ? T('폴더 경로(예: D:\\models)') : T('폴더 또는 .gguf 파일 경로(예: D:\\models)'),
+    'aria-label': pick ? T('폴더 경로') : T('폴더 또는 .gguf 파일 경로'),
+  });
+  const go = () => {
+    const v = inp.value.trim();
+    // F3-1 — .gguf 파일 경로를 넣으면 그 파일을 바로 더한다(폴더 경로는 지금처럼 그 폴더를 연다)
+    if (!pick && /\.gguf$/i.test(v)) { closeModal(); addModelFile(v, v.split(/[\\/]/).pop()); return; }
+    browse(v, pick, text);
+  };
   inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
   modal(h('div', null, h('h2', null, pick ? ((text && text.title) || T('모델 폴더 고르기')) : T('GGUF 파일 추가')),
     h('p', { class: 'small muted m0 mb12' }, pick ? ((text && text.lead) || T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.')) : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
