@@ -832,36 +832,12 @@ details.fold > :not(summary) { margin-top: 12px; }
 }
 
 /* ---------- 연구 패널(38단계) — 채팅 오른쪽 칸. 1100px 아래에서는 채팅 위에 덮는 판, 휴대폰 폭에서는 화면 전체 ---------- */
-#lab { width: 460px; flex: none; border-left: 1px solid var(--hairline); display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--canvas); }
-.lab-head { flex: none; display: flex; flex-direction: column; gap: 12px; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--hairline); }
-.lab-head > .row { min-height: 32px; }
-.lab-title { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-size: 15px; }
-.seg-ctl.lab-tabs { display: flex; margin-right: 8px; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
-.lab-tabs::-webkit-scrollbar { display: none; }
-.seg-ctl.lab-tabs button { flex: 1 0 auto; height: 28px; padding: 0 8px; font-size: 13px; }
-.lab-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 32px; overscroll-behavior: contain; }
-.lab-busy { display: flex; align-items: center; gap: 8px; color: var(--body); font-size: 13px; line-height: 19px; margin-bottom: 12px; }
-.lab-err { margin-bottom: 12px; }
-.lab-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 32px 12px; }
-.lab-empty svg { color: var(--faint); }
-.lab-ans { display: flex; flex-direction: column; gap: 4px; }
 /* 이 답을 셈한 계산 방식 — 정밀은 조용히, 빠름은 연구 수치의 기준이 아님을 알린다 */
-.lab-mode { margin-top: 8px; padding: 8px 12px; border-radius: 4px; background: var(--fill); }
-.lab-mode.exact svg { color: var(--ok); }
-.lab-mode.fast { background: var(--accent-wash); }
-.lab-mode.fast svg { color: var(--accent); }
 .sec.lab-sec { font-size: 15px; line-height: 22px; margin-top: 12px; }
 .kpis.lab-kpis { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
 .kpis.lab-kpis .kpi { padding: 10px 12px; }
 .kpis.lab-kpis .kpi .v { font-size: 17px; line-height: 24px; }
 .kpis.lab-kpis .kpi .l { overflow-wrap: anywhere; }
-#lab input.lab-num { width: 96px; }
-#lab input.lab-seed { width: 100%; font-family: var(--font-mono); font-size: 13px; }
-#lab textarea.lab-ta { resize: vertical; min-height: 96px; font-size: 14px; line-height: 21px; }
-.lab-form { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 12px; align-items: center; }
-.lab-form label { display: contents; }
-.lab-form label > span { color: var(--mute); font-size: 13px; }
-.lab-form input.lab-num { justify-self: start; }
 .lab-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .lab-legend > span { display: inline-flex; align-items: center; gap: 6px; }
 .lab-legend .lg { display: inline-block; width: 18px; height: 12px; border-radius: 3px; }
@@ -920,17 +896,8 @@ details.fold > :not(summary) { margin-top: 12px; }
 .lens-alts { margin: 2px 0 6px 46px; }
 .lens-err { color: var(--err); }
 .icon-btn.sm { width: 28px; height: 28px; }
-.lab-vs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 table.data.lab-table th, table.data.lab-table td { padding: 8px 12px; font-size: 13px; }
-.lab-out { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-card); }
-pre.log.lab-code { max-height: 220px; white-space: pre; word-break: normal; overflow: auto; font-size: 12px; line-height: 18px; }
-@media (max-width: 1100px) {
-  #lab { position: absolute; z-index: 28; right: 0; top: 0; bottom: 0; width: min(460px, 100%); box-shadow: -16px 0 48px rgba(0, 0, 0, 0.5); }
-}
 @media (max-width: 640px) {
-  #lab { width: 100%; border-left: 0; }
-  .lab-head { padding: 8px 8px 12px 16px; }
-  .lab-body { padding: 12px 16px 24px; }
   .alt { grid-template-columns: minmax(0, 1fr) 56px 52px 28px; }
   .lens-row { grid-template-columns: 24px minmax(0, 1fr) 48px 52px 56px 44px; gap: 4px; }
 }
@@ -1415,3 +1382,28 @@ table.data.ev-table tbody tr.ev-pickrow td { background: var(--accent-wash); }
   .grp { padding: 8px 16px 0; gap: 10px; }
   .rail-btn.busy::after { top: 6px; right: calc(50% - 16px); }
 }
+
+/* 앱리디자인 E6-2(문서/화면구현.md §6) — 연구 패널에서 옮긴 것: 실행 화면의 요약 · δ · 모델 · 계산 방식 줄 · 도구, Δ 막대, 재현 › 검사의 카드 */
+.rs-match { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--canvas-card); }
+.rs-sum { margin: 16px 0 4px; display: flex; flex-direction: column; gap: 8px; }
+.run-kv.rs-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, max-content)); gap: 2px 20px; margin: 0; }
+.rs-delta { margin: 0; align-items: center; }
+.input.rs-delta-in, .input.rs-k { width: 88px; }
+.run-tok.dlt { text-decoration: underline dashed var(--body); text-underline-offset: 4px; }
+.rs-sec { margin-top: 28px; }
+.rs-sec h2 { margin: 0 0 8px; }
+.rs-sec .xp-actions { margin: 8px 0 0; align-items: center; flex-wrap: wrap; }
+.rs-delta-box { margin-top: 20px; }
+.rs-delta-box h3 { margin: 0 0 4px; font: 400 15px/22px var(--font-sans); color: var(--ink); }
+.run-strip.rs-dstrip { max-height: 240px; overflow: auto; }
+.run-tok.rs-d { cursor: default; }
+.run-tok.rs-d.neg { background: rgba(255, 99, 99, calc(var(--a, 0) * 0.45)); }
+.run-tok.rs-d.pos { background: rgba(80, 200, 140, calc(var(--a, 0) * 0.45)); }
+.rs-code { margin-top: 8px; }
+.rs-code pre { max-height: 220px; white-space: pre; overflow: auto; font-size: 12px; line-height: 18px; }
+.rs-div { margin: 12px 0 0; align-items: center; flex-wrap: wrap; }
+.run-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--body); }
+.st-score td.alt { font: 12px/18px var(--font-mono); color: var(--mute); white-space: nowrap; }
+.rp-cards { margin-top: 24px; }
+.card.rp-card { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.card.rp-card h3 { margin: 0; font: 400 17px/24px var(--font-sans); color: var(--ink); }

@@ -467,7 +467,7 @@ of step 4 — bit-identical to the top-k and score values).
 
 - **Logit hash** (`logit_hashes`, `prompt_logit_hashes`): for each 32-bit value w of a logit row (V float32 values),
   h ← (h ^ w) × 1099511628211 (mod 2⁶⁴), starting from h = 0xcbf29ce484222325 (FNV-1a 64). Written as 16 hex digits.
-- **Fingerprints and reproduction files** (research panel — a record format, not part of the arithmetic contract): token fingerprint
+- **Fingerprints and reproduction files** (run screen and Reproduce › Checks — a record format, not part of the arithmetic contract): token fingerprint
   = SHA-256(`geulpu-fp/1\nmodel <model file SHA-256>\nprompt <ids,…>\ntokens <ids,…>\n`), logit fingerprint = SHA-256(`<token
   fingerprint>\n<per-step logit hashes,…>\n`) — the device and backend are not included. A capsule (`geulpu-capsule/1`) holds the request
   (prompt tokens, temperature, top-k, top-p, min-p, seed as the raw integer, `step_offset`, `max_tokens`), the result (tokens,

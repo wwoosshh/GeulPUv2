@@ -5,6 +5,7 @@
 import { T, TM, el, fmtMs, samePath, sourceLabel } from './dom.js';
 import { call, registry, send } from './ops.js';
 import { MEASURE_OPS, measureLabel, measureView } from './steps.js';
+import { compareExtras, coverTop, deltaNow, infoExtras, matchLine, summaryView, toolsView } from './research.js';
 
 const BAR_KEY = 'geulpu.runBar';
 const BARS = ['margin', 'prob', 'entropy'];
@@ -390,7 +391,8 @@ export function runInfo(ctx, d) {
     d.rec.app ? el('span', null, 'GeulPU ', el('b', null, d.rec.app)) : null,
     d.seedText && d.entry.kind !== 'score' && d.entry.kind !== 'lens' && !MEASURE_OPS.has(d.entry.operation) ? el('span', null, T('시드'), ' ', el('b', null, d.seedText)) : null,
     el('span', null, T('출처'), ' ', el('b', null, src)),
-    typeof d.rec.ms === 'number' ? el('span', null, fmtMs(d.rec.ms)) : null);
+    typeof d.rec.ms === 'number' ? el('span', null, fmtMs(d.rec.ms)) : null,
+    ...infoExtras(ctx, d));
 }
 
 // ---- 실행 부르기(실험 헤더 — 앱이 실행으로 남긴다) ----
@@ -459,7 +461,7 @@ function bodyWithSeed(obj, seedText) {
 }
 
 /** 기록 파일의 글에서 받은 요청을 바이트 그대로(재실행 — 앱이 같은 요청으로 알아보게) */
-function rawRequest(text) {
+export function rawRequest(text) {
   const i = text.indexOf('"request":');
   if (i < 0) return null;
   let k = i + 10;
@@ -502,6 +504,7 @@ function branchBody(d, k, tok) {
   o.echo = true;
   o.logprobs = K;
   o.geulpu = { echo_from: d.ptoks.length, step_offset: d.off + k + 1, logit_hash: true, top_logprobs: K, prompt_tokens: true };
+  if (d.req.geulpu && d.req.geulpu.special === true) o.geulpu.special = true;     // E6-2 — 특수 토큰(생각 토큰)의 글도 받는다
   return bodyWithSeed(o, d.seedText);
 }
 
@@ -591,6 +594,18 @@ export async function newRun(ctx, prefill) {
   const sys0 = typeof req.system === 'string' ? req.system : typeof req.instructions === 'string' ? req.instructions
     : msgs.filter(m => m && m.role === 'system').map(textOf).join('\n');
   const user0 = typeof req.input === 'string' ? req.input : msgs.filter(m => m && m.role === 'user').map(textOf).pop() || '';
+  // E6-2 — 채팅 실행의 앞의 대화(시스템 메시지와 마지막 사용자 메시지 밖)와 생각 설정 · 특수 토큰의 글을 이어받는다(연구 패널의 '설정을 바꿔 다시')
+  const lastUser = msgs.map(m => m && m.role).lastIndexOf('user');
+  const earlier = kind0 === 'chat' && lastUser > 0 ? msgs.slice(0, lastUser).filter(m => m && m.role !== 'system') : [];
+  const ctk = req.chat_template_kwargs && typeof req.chat_template_kwargs === 'object' ? req.chat_template_kwargs : null;
+  const think0 = ctk && typeof ctk.enable_thinking === 'boolean' ? (ctk.enable_thinking ? 'on' : 'off') : 'default';
+  const special0 = !!(req.geulpu && typeof req.geulpu === 'object' && req.geulpu.special === true);
+  const keepEarlier = el('input', { type: 'checkbox', id: 'nr-earlier', checked: earlier.length ? true : null });
+  const earlierRow = earlier.length ? el('label', { class: 'run-check' }, keepEarlier, ' ', T`앞의 대화 ${earlier.length} 메시지를 함께 보냅니다`) : null;
+  const think = el('select', { id: 'nr-think', class: 'input' },
+    el('option', { value: 'default', selected: think0 === 'default' ? true : null }, T('모델 기본')),
+    el('option', { value: 'on', selected: think0 === 'on' ? true : null }, T('켬')),
+    el('option', { value: 'off', selected: think0 === 'off' ? true : null }, T('끔')));
   const kind = el('select', { id: 'nr-kind', class: 'input' },
     el('option', { value: 'complete', selected: kind0 === 'complete' ? true : null }, T('텍스트 생성')),
     el('option', { value: 'chat', selected: kind0 === 'chat' ? true : null }, T('채팅')),
@@ -627,7 +642,8 @@ export async function newRun(ctx, prefill) {
       } catch (_) { countOut.textContent = T('앱에 닿지 못했습니다'); }
     },
   }, T('토큰 수 세기')), countOut);
-  const chatBox = el('div', { class: 'run-form-part' }, field(T('시스템 프롬프트'), system, T('비우면 넣지 않습니다')), field(T('사용자 메시지'), user), countRow);
+  const chatBox = el('div', { class: 'run-form-part' }, field(T('시스템 프롬프트'), system, T('비우면 넣지 않습니다')), earlierRow, field(T('사용자 메시지'), user),
+    field(T('생각(thinking)'), think, T('채팅 템플릿의 생각 켬 · 끔 — 모델 기본이면 보내지 않습니다')), countRow);
   const fSeed = field(T('시드'), seed), fTopK = field('top-k', topK), fMinP = field('min-p', minP), fCands = field(T('상위 후보 수'), cands, T('마진에는 2 가 필요합니다'));
   const noteGeulpu = el('p', { class: 'muted' }, T('요청에는 늘 logprobs · geulpu.top_logprobs · geulpu.logit_hash · geulpu.prompt_tokens 를 넣습니다. 결과는 이 실험의 실행으로 남습니다.'));
   const noteAgent = el('p', { class: 'muted' }, T('이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않습니다 — 결과는 이 실험의 실행으로 남지만 답의 텍스트 · 도구 호출 · 사용량만 있고 토큰별 값은 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.'));
@@ -680,6 +696,10 @@ export async function newRun(ctx, prefill) {
           a.input = user.value;
           a.max_output_tokens = vals.max_tokens;
         }
+        if (think.value === 'off') {
+          if (kind.value === 'messages') a.thinking = { type: 'disabled' };
+          else a.reasoning = { effort: 'none' };
+        }
         a.temperature = vals.temperature;
         if (vals.top_p !== undefined) a.top_p = vals.top_p;
         ok.disabled = true;
@@ -707,7 +727,8 @@ export async function newRun(ctx, prefill) {
           err.textContent = T('사용자 메시지를 적으세요');
           return;
         }
-        o.messages = (system.value.trim() ? [{ role: 'system', content: system.value }] : []).concat([{ role: 'user', content: user.value }]);
+        o.messages = (system.value.trim() ? [{ role: 'system', content: system.value }] : []).concat(keepEarlier.checked ? earlier : [],
+          [{ role: 'user', content: user.value }]);
       } else {
         if (!prompt.value) {
           err.textContent = T('프롬프트를 적으세요');
@@ -721,6 +742,9 @@ export async function newRun(ctx, prefill) {
         o.top_logprobs = K;
       } else o.logprobs = K;
       o.geulpu = { top_logprobs: K, logit_hash: true, prompt_tokens: true };
+      if (chat && special0) o.geulpu.special = true;
+      if (chat && think.value !== 'default') o.chat_template_kwargs = Object.assign({}, ctk || {}, { enable_thinking: think.value === 'on' });
+      else if (chat && ctk) o.chat_template_kwargs = ctk;
       const body = bodyWithSeed(o, sd || null);
       ok.disabled = true;
       err.textContent = '';
@@ -829,6 +853,7 @@ function promptPart(ctx, d) {
 }
 
 function stripView(ctx, d, sel, low, onSel) {
+  const dlt = deltaNow();
   let maxEnt = 0;
   if (d.ent) for (let k = 0; k < d.n; k++) maxEnt = Math.max(maxEnt, d.ent[k] || 0);
   const toks = [];
@@ -839,7 +864,8 @@ function stripView(ctx, d, sel, low, onSel) {
     const raw = d.raw ? d.raw[k] : text;
     const label = T`스텝 ${d.off + k}: ${quoteTok(text === null ? raw : text)}, 마진 ${fx(v.margin, 3)}, 확률 ${pct(v.prob)}`;
     toks.push(el('span', {
-      class: 'run-tok' + (text === null ? ' cont' : '') + (k === sel ? ' sel' : '') + (k === low ? ' low' : '') + (v.rank !== null && v.rank > 1 ? ' notop' : ''),
+      class: 'run-tok' + (text === null ? ' cont' : '') + (k === sel ? ' sel' : '') + (k === low ? ' low' : '') + (v.rank !== null && v.rank > 1 ? ' notop' : '')
+        + (v.margin !== null && v.margin < dlt ? ' dlt' : ''),
       'data-k': String(k), role: 'button', tabindex: k === sel ? '0' : '-1', 'aria-label': label, 'aria-pressed': String(k === sel),
       'data-note': k === low ? T`마진이 가장 작은 스텝 · ${fx(v.margin, 3)}` : null,
     }, text === null ? '' : text, el('span', { class: 'bar', style: `width:${(w * 100).toFixed(1)}%`, 'aria-hidden': 'true' })));
@@ -880,7 +906,25 @@ function bestAlt(d, k) {
 function stepPanel(ctx, d, k, text) {
   const v = stepVals(d, k);
   const kids = [el('h3', null, T`스텝 ${d.off + k}`)];
-  if (d.topIds && d.topLp) {
+  const cov = coverTop(ctx, d, k);
+  if (cov && (!d.topIds || !Array.isArray(d.topIds[k]) || cov.ids.length > d.topIds[k].length)) {
+    const missing = [];
+    const rows = cov.ids.map((id, j) => {
+      const lp = cov.lps[j];
+      const t = id === d.ids[k] && d.texts ? d.texts[k] : pieceText(id);
+      if (t === null) missing.push(id);
+      const sampled = id === d.ids[k];
+      return el('div', { class: 'run-cand' + (sampled ? ' sampled' : '') },
+        el('span', { class: 'w' }, t === null ? '#' + id : quoteTok(t), sampled ? el('span', { class: 'tag dim' }, T('샘플링됨')) : null),
+        el('span', { class: 'lp' }, fx(lp, 3)),
+        el('div', { class: 'pb', 'aria-hidden': 'true' }, el('span', { style: `width:${Math.max(1, Math.exp(lp) * 100).toFixed(1)}%` })),
+        sampled ? null : el('button', {
+          type: 'button', class: 'btn sm', disabled: ui.busy || !d.ptoks ? true : null, onclick: () => doBranch(ctx, d, k, id),
+        }, T('이 토큰으로 분기')));
+    });
+    if (missing.length) fetchPieces(missing, ctx);
+    kids.push(el('div', { class: 'muted run-sub' }, T`상위 후보 ${cov.ids.length} 개 · 로그확률 — 점수 실행 ${cov.run}`), el('div', { class: 'run-cands' }, rows));
+  } else if (d.topIds && d.topLp) {
     const tids = d.topIds[k] || [];
     const missing = [];
     const rows = tids.map((id, j) => {
@@ -982,6 +1026,8 @@ export function runView(ctx, id) {
   if (c.loading) return [...head, el('p', { class: 'muted' }, T('읽는 중…'))];
   if (c.error) return [...head, el('div', { class: 'empty-box' }, el('div', { class: 'big' }, T('기록 파일을 읽지 못했습니다')), el('div', null, c.error))];
   const out = [...head, runInfo(ctx, d), ...busyLine(ctx, id)];
+  const mline = d && d.n && !AGENT_OPS.has(entry.operation) ? matchLine(ctx, d) : null;
+  if (mline) out.push(mline);
   if (!d.res) {
     out.push(el('p', { class: 'muted' }, T`응답이 커서 기록 파일에 담지 않았습니다(${d.rec.response_bytes || '?'} 바이트).`));
     return out;
@@ -1012,6 +1058,7 @@ export function runView(ctx, id) {
       if (t) t.focus({ preventScroll: false });
     }
   };
+  out.push(summaryView(ctx, d, sel, onSel));
   out.push(el('div', { class: 'run-split' },
     el('div', { class: 'run-main' },
       barSwitch(ctx),
@@ -1022,6 +1069,7 @@ export function runView(ctx, id) {
         el('span', null, T('← → 이전 · 다음 스텝 · Enter 스텝 · 층 화면 · b 가장 높은 다른 후보로 분기')))),
     stepPanel(ctx, d, sel, c.text)));
   if (!d.texts) out.push(el('p', { class: 'muted' }, T('이 실행의 응답에는 토큰마다의 텍스트가 없어 토큰 번호로 보입니다(logprobs 를 넣으면 텍스트가 남습니다).')));
+  out.push(...toolsView(ctx, d, c.text, !!ui.busy));
   return out;
 }
 
@@ -1123,6 +1171,7 @@ export function compareTab(ctx) {
   out.push(el('dl', { class: 'run-kv run-sum' },
     el('dt', null, T('토큰')), el('dd', null, tokLine, both ? T` · 같은 토큰 ${sameTok} / ${both}` : ''),
     el('dt', null, T('로짓 해시')), el('dd', null, hashLine)));
+  out.push(...compareExtras(ctx, da, db, c));
   // 해시 칩 — 처음 다른 스텝 앞뒤
   if (c.pos.length) {
     const at = c.firstDiff < 0 ? 0 : Math.max(0, c.pos.indexOf(c.firstDiff) - 4);

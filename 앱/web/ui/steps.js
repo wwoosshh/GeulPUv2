@@ -4,6 +4,7 @@
 // 실행의 실행 화면(그 표)과 실행 목록의 설명도 여기서 만든다.
 import { EN, T, el } from './dom.js';
 import { call } from './ops.js';
+import { matchLine } from './research.js';
 import {
   appError, busyLine, candText, dataById, dataOf, doBranch, entryOf, fetchPieces, fx, isBusy, isIds, measure, pct, pieceText, quoteTok,
   recordOf, runInfo, runsOf, selectStep, stepVals,
@@ -23,6 +24,7 @@ const st = {
   view: 'logit',                        // 로짓 렌즈 표 — 'logit' · 'jacobian'
   open: new Set(),                      // 펼친 층 '<실험 경로>|<실행 id>|<렌즈>|<층>'
   text: new Map(),                      // '<실험 경로>|<실행 id>|<스텝>' → 점수 입력
+  noCtx: new Map(),                     // 같은 키 → 문맥 없이 점수(E6-2 — 연구 패널의 '맥락 없이')
   inMode: new Map(),                    // 같은 키 → 입력의 종류 'text' · 'ids'(앱리디자인 E6 — 토큰 id 는 run.detokenize 로 글을 보인다)
   idText: new Map(),                    // 같은 키 → 토큰 id 입력의 글
   scoreError: null,                     // {key, text}
@@ -123,7 +125,7 @@ function baseOf(ctx, entry, m) {
    같은 앞부분의 행은 그 뒤 토큰과 상관없이 같은 분포를 내므로 어느 점수 실행이든 이 스텝의 상위 후보를 준다 */
 function measuresAt(ctx, d, k) {
   const at = d.ptoks.length + k;
-  const out = { lens: [], other: [], scores: [], loading: false };
+  const out = { lens: [], other: [], scores: [], cover: [], loading: false };
   const runs = runsOf(ctx);
   for (let i = runs.length - 1; i >= 0; i--) {
     const e = runs[i];
@@ -135,7 +137,16 @@ function measuresAt(ctx, d, k) {
     }
     if (!c.rec) continue;
     const m = measureOf(e, c);
-    if (!m || m.at !== at || !samePrefix(m.q, d, k)) continue;
+    if (!m) continue;
+    if (m.at !== at) {
+      // E6-2 — 이 스텝의 행(at)을 덮는 점수 실행(예: '모든 스텝의 상위 후보') — 상위 후보로만 쓴다
+      if (!m.isLens && m.at < at && at < m.q.length && samePrefix(m.q, d, k)) {
+        m.sameModel = sameModel(m.rec, d.rec);
+        out.cover.push(m);
+      }
+      continue;
+    }
+    if (!samePrefix(m.q, d, k)) continue;
     m.sameModel = sameModel(m.rec, d.rec);
     if (m.isLens) (m.tok === d.ids[k] && m.lens ? out.lens : out.other).push(m);
     else out.scores.push(m);
@@ -148,9 +159,9 @@ function measuresAt(ctx, d, k) {
 
 /** 점수 실행의 첫 위치(스텝)의 상위 후보 — {ids, lps} 또는 null. echo 의 prompt_top_ids · prompt_top_logprobs 는 프롬프트의 위치마다(echo_from
    앞은 null), prompt_logit_hashes 는 echo_from 부터 */
-function firstTop(m) {
-  const ids = Array.isArray(m.g.prompt_top_ids) ? m.g.prompt_top_ids[m.at] : null;
-  const lps = Array.isArray(m.g.prompt_top_logprobs) ? m.g.prompt_top_logprobs[m.at] : null;
+function firstTop(m, pos = m.at) {
+  const ids = Array.isArray(m.g.prompt_top_ids) ? m.g.prompt_top_ids[pos] : null;
+  const lps = Array.isArray(m.g.prompt_top_logprobs) ? m.g.prompt_top_logprobs[pos] : null;
   if (!isIds(ids) || !ids.length || !Array.isArray(lps) || lps.length !== ids.length) return null;
   return { ids, lps };
 }
@@ -159,12 +170,13 @@ function firstTop(m) {
 function bestTop(ms, d, k) {
   let best = null;
   const read = m => m.q.length === m.at + 1 && m.tok === d.ids[k];
-  for (const m of ms.scores) {
-    const t = firstTop(m);
+  const at = d.ptoks.length + k;
+  for (const m of ms.scores.concat(ms.cover || [])) {
+    const t = firstTop(m, at);
     if (!t) continue;
     const better = !best || (m.sameModel && !best.m.sameModel) || (m.sameModel === best.m.sameModel &&
       (t.ids.length > best.ids.length || (t.ids.length === best.ids.length && read(m) && !read(best.m))));
-    if (better) best = { m, ...t };
+    if (better) best = { m, pos: at, ...t };
   }
   return best;
 }
@@ -356,8 +368,12 @@ function scoreTable(ctx, m, stepBase) {
   const tl = lp && Array.isArray(lp.token_logprobs) ? lp.token_logprobs : null;
   if (!tl) return el('p', { class: 'muted' }, T('이 실행의 응답에 토큰마다의 로그확률이 없습니다.'));
   const tops = Array.isArray(m.g.prompt_top_ids) ? m.g.prompt_top_ids : [];
+  const topLps = Array.isArray(m.g.prompt_top_logprobs) ? m.g.prompt_top_logprobs : [];
   const missing = [];
   const rows = [];
+  let nLp = 0;
+  let minP = null;
+  let minAt = null;
   for (let pos = m.at; pos < m.q.length; pos++) {
     const j = pos - m.at;
     const v = tl[pos];
@@ -365,21 +381,40 @@ function scoreTable(ctx, m, stepBase) {
     const r = list ? list.indexOf(m.q[pos]) : -1;
     const t = posText(m, pos);
     if (t === null) missing.push(m.q[pos]);
+    if (typeof v === 'number') {
+      nLp++;
+      if (minP === null || Math.exp(v) < minP) { minP = Math.exp(v); minAt = j; }
+    }
+    // 대안 — 이 위치의 상위 후보 가운데 매긴 토큰이 아닌 것 셋(E6-2 — 연구 패널의 점수 탭)
+    const alts = [];
+    if (list) {
+      for (let q = 0; q < list.length && alts.length < 3; q++) {
+        if (list[q] === m.q[pos]) continue;
+        const at2 = dictText(m, pos, (topLps[pos] || [])[q]) ?? pieceText(list[q]);
+        if (at2 === null) missing.push(list[q]);
+        alts.push(`${at2 === null ? '#' + list[q] : quoteTok(at2)} ${fx((topLps[pos] || [])[q], 2)}`);
+      }
+    }
     rows.push(el('tr', null,
       el('td', { class: 'n' }, stepBase === null ? '–' : String(stepBase + j)),
       el('td', { class: 'w' }, t === null ? '#' + m.q[pos] : quoteTok(t)),
       el('td', { class: 'num lp' }, fx(v, 3)),
       el('td', { class: 'num' }, typeof v === 'number' ? pct(Math.exp(v)) : '–'),
-      el('td', { class: 'num' }, r >= 0 ? String(r + 1) : list ? T`${list.length} 위 밖` : '–')));
+      el('td', { class: 'num' }, r >= 0 ? String(r + 1) : list ? T`${list.length} 위 밖` : '–'),
+      el('td', { class: 'alt' }, alts.join(' · '))));
   }
   if (missing.length) fetchPieces(missing, ctx);
   const s = scoreSum(m);
   return el('div', { class: 'st-lens-wrap' }, el('table', { class: 'st-score' },
     el('thead', null, el('tr', null, el('th', { scope: 'col' }, T('스텝')), el('th', { scope: 'col' }, T('토큰')),
-      el('th', { scope: 'col', class: 'num' }, T('로그확률')), el('th', { scope: 'col', class: 'num' }, T('확률')), el('th', { scope: 'col', class: 'num' }, T('순위')))),
+      el('th', { scope: 'col', class: 'num' }, T('로그확률')), el('th', { scope: 'col', class: 'num' }, T('확률')), el('th', { scope: 'col', class: 'num' }, T('순위')),
+      el('th', { scope: 'col' }, T('대안')))),
     el('tbody', null, rows),
     el('tfoot', null, el('tr', null, el('td', { colspan: '2' }, T('합')), el('td', { class: 'num lp' }, fx(s, 3)),
-      el('td', { class: 'num' }, s === null ? '–' : pct(Math.exp(s))), el('td', null, '')))));
+      el('td', { class: 'num' }, s === null ? '–' : pct(Math.exp(s))), el('td', null, ''), el('td', null, '')),
+    s !== null && nLp ? el('tr', null, el('td', { colspan: '6', class: 'muted' },
+      T`평균 로그확률 ${fx(s / nLp, 4)} · 퍼플렉서티 ${fx(Math.exp(-s / nLp), 3)} · 가장 낮은 확률 ${pct(minP)}`,
+      minAt === null ? '' : T` (스텝 ${stepBase === null ? minAt : stepBase + minAt})`)) : null)));
 }
 
 function rawDetails(rec) {
@@ -487,6 +522,24 @@ async function doScore(ctx, d, k, key) {
     ctx.rerender();
     return;
   }
+  if (st.noCtx.get(key)) {
+    // E6-2 — 문맥 없이: 시작 토큰(BOS)을 붙이는 모델은 그 뒤에, 아니면 첫 토큰을 문맥으로(그 토큰은 점수가 없다)
+    let bos = null;
+    try {
+      const r = await call('run.tokenizer_info');
+      if (r.ok && r.json && r.json.add_bos_token && Number.isInteger(r.json.bos_token_id)) bos = r.json.bos_token_id;
+    } catch (_) { /* 앱에 닿지 못하면 시작 토큰 없이 */ }
+    const q = (bos === null ? [] : [bos]).concat(toks);
+    if (q.length < 2) {
+      st.scoreError = { key, text: T('이 모델은 시작 토큰이 없어 첫 토큰에는 점수가 없습니다 — 토큰이 둘 이상이어야 합니다.') };
+      ctx.rerender();
+      return;
+    }
+    const nb = { prompt: q, echo: true, max_tokens: 0, logprobs: 1, geulpu: { echo_from: 1, top_logprobs: SCORE_TOP, logit_hash: true } };
+    const id = await measure(ctx, 'run.score', JSON.stringify(nb), T('문맥 없이 점수를 계산하는 중'), d.entry.id);
+    if (id) ctx.openRun(id);
+    return;
+  }
   const body = {
     prompt: before(d, k).concat(toks), echo: true, max_tokens: 0, logprobs: 1,
     geulpu: { echo_from: d.ptoks.length + k, top_logprobs: SCORE_TOP, logit_hash: true },
@@ -534,7 +587,7 @@ function candSection(ctx, d, k, ms, can) {
   let rows = [];
   if (top) {
     rows = top.ids.map((id, j) => ({ id, lp: top.lps[j], text: id === d.ids[k] && d.raw ? d.raw[k] : dictText(top.m, at, top.lps[j]) ?? pieceText(id) }));
-    const echoHash = Array.isArray(top.m.g.prompt_logit_hashes) ? top.m.g.prompt_logit_hashes[0] : null;
+    const echoHash = Array.isArray(top.m.g.prompt_logit_hashes) ? top.m.g.prompt_logit_hashes[top.pos - top.m.at] : null;
     const runHash = d.hashes ? d.hashes[k] : null;
     kids.push(el('p', { class: 'st-meta' }, T`상위 후보 ${top.ids.length} 개`, ' · ', runLink(ctx, top.m.entry.id),
       top.m.sameModel ? null : el('span', { class: 'tag err' }, T('다른 모델')),
@@ -608,8 +661,10 @@ function scoreSection(ctx, d, k, ms, can) {
     oninput: ev => { st.text.set(key, ev.target.value); if (mode === 'ids') st.idText.delete(key); },
     onkeydown: ev => { if (ev.key === 'Enter' && can) { ev.preventDefault(); doScore(ctx, d, k, key); } },
   });
+  const noCtx = el('input', { type: 'checkbox', id: 'st-score-noctx', checked: st.noCtx.get(key) ? true : null, onchange: ev => { st.noCtx.set(key, ev.target.checked); } });
   kids.push(el('div', { class: 'xp-actions st-form' }, modeSel, input,
-    el('button', { type: 'button', class: 'btn', disabled: can ? null : true, onclick: () => doScore(ctx, d, k, key) }, T('점수 계산'))));
+    el('button', { type: 'button', class: 'btn', disabled: can ? null : true, onclick: () => doScore(ctx, d, k, key) }, T('점수 계산')),
+    el('label', { class: 'run-check', for: 'st-score-noctx' }, noCtx, ' ', T('문맥 없이'))));
   if (mode === 'ids' && st.idText.has(key)) kids.push(el('p', { class: 'st-meta' }, T('토큰 id 의 글: '), el('b', null, quoteTok(st.idText.get(key)))));
   kids.push(el('p', { class: 'muted st-note' }, mode === 'ids'
     ? T('토큰 id 를 그대로 이 스텝부터 이어 붙이고, 토큰마다의 로그확률을 계산합니다(echo 스코어링) — 텍스트로 적을 수 없는 특수 토큰(예: <|im_end|>)도 됩니다. 글은 run.detokenize 로 보입니다.')
@@ -649,15 +704,12 @@ export function stepView(ctx, id, k0) {
   const notes = [];
   if (!d.ptoks) notes.push(T('이 실행은 프롬프트 토큰을 기록하지 않아 이 스텝을 다시 계산할 수 없습니다(geulpu.prompt_tokens).'));
   if (st.server && (!srv || !srv.ready)) notes.push(T('불러온 모델이 없습니다 — 모델 화면에서 모델을 불러오면 계산할 수 있습니다.'));
-  const runSha = (d.rec.server || {}).sha256;
-  if (srv && srv.sha && runSha && srv.sha !== runSha) {
-    notes.push(T`불러온 모델(${srv.name})이 이 실행의 모델과 다릅니다 — 이 화면에서 계산하면 불러온 모델의 값입니다.`);
-  }
   const can = !!d.ptoks && !isBusy() && !(st.server && (!srv || !srv.ready));
   const root = el('div', { class: 'st-view', tabindex: '-1', 'aria-label': T`스텝 ${d.off + k}` },
     el('h1', null, T`스텝 ${d.off + k}`, ' ', el('span', { class: 'run-kind' }, quoteTok(tok))),
     el('p', { class: 'lead muted' }, T('샘플링된 토큰과 이 스텝의 분포, 층마다의 예측. 이 화면에서 계산한 것은 이 실험의 실행으로 남습니다.')),
     runInfo(ctx, d),
+    matchLine(ctx, d),
     ...busyLine(ctx, id),
     el('div', { class: 'st-top' },
       contextLine(d, k),
