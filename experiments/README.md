@@ -42,8 +42,9 @@ Only `experiment.json` and `plan.md` are required, and `results.md` once the sta
 ## What to store
 
 - **Model files stay out.** Point to them by SHA-256 and source.
-- **Values that can be computed again stay out** — per-step probabilities, top-k, entropy. Store their hashes; a re-run computes them
-  again and compares.
+- **Values that can be computed again stay small** — per-step probabilities, top-k, entropy. The app's run records keep each answer as
+  GeulPU returned it, with as many top candidates as the request asked for (the run screen needs 2, for the margin); ask for more only
+  when the experiment needs them. For anything large, store hashes; a re-run computes the values again and compares.
 - **At most 5 MB per experiment, compressed (zip).** Keep larger raw data outside the repository (a release attachment or another store)
   and point to it by SHA-256. No Git LFS.
 - **Criteria first.** Commit `plan.md` and `criteria` before the first run; the git history then shows that the criteria came before the
@@ -58,9 +59,13 @@ Only `experiment.json` and `plan.md` are required, and `results.md` once the sta
 5. Write `results.md`, set each criterion's `result` and `"status": "done"`, and add a row to [index.md](index.md).
 6. `python 도구/experiment_check.py experiments/<folder>` must pass.
 
-With the GeulPU app running, the CLI does steps 1 and 6 and records the commands of step 3: `GeulPU experiment create --name <name> --root
-experiments` makes the folder from this template and adds it to `index.md`; `--experiment <folder>` on any command writes that call to
-`records/commands.jsonl`; `GeulPU experiment check --path <folder> --wait` runs this checker ([문서/명령줄.md](../문서/명령줄.md)).
+With the GeulPU app running, the CLI (and the app's experiment screen) does steps 1 – 3, 5 and 6: `GeulPU experiment create --name
+<name> --root experiments` makes the folder from this template and adds it to `index.md`; `GeulPU experiment update` writes the plan and
+criteria (only before the first run), then the verdicts, `results.md` and status; `--experiment <folder>` on any command writes that
+call to `records/commands.jsonl`, and a run that answers 200 to `records/runs/<id>.json` with an entry in `runs` (kind, base,
+intervention), its model in `models`, and the `files` entries of what the app wrote; `GeulPU experiment check --path <folder> --wait`
+runs this checker ([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md) §3). Files you add yourself still go
+through step 4.
 
 ## Check
 

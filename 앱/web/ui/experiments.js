@@ -1,14 +1,16 @@
-// 앱리디자인 E2(문서/화면구현.md §2 · 화면설계.md §3) — 실험 화면: 실험 목록(첫 화면) · 새 실험 · 실험 하나(헤더 · 실행 정보 줄 · 탭 계획 · 결과 ·
-// 기록). 앱은 기능 목록 클라이언트(ops.js)로만 부르고, 실험 화면에서 부른 기능은 X-GeulPU-Experiment 를 붙여 그 실험의 명령 기록에 남긴다.
-// 다른 곳(CLI · AI 세션)에서 이 실험으로 부른 호출이 끝나면 명령 창이 넘겨 준 이벤트(geulpu:event)로 다시 읽는다.
+// 앱리디자인 E2(문서/화면구현.md §2 · 화면설계.md §3) — 실험 화면: 실험 목록(첫 화면) · 새 실험 · 실험 하나(헤더 · 실행 정보 줄 · 탭 계획 · 실행 ·
+// 비교 · 결과 · 기록). 앱은 기능 목록 클라이언트(ops.js)로만 부르고, 실험 화면에서 부른 기능은 X-GeulPU-Experiment 를 붙여 그 실험의 명령 기록에
+// 남긴다. 다른 곳(CLI · AI 세션)에서 이 실험으로 부른 호출이 끝나면 명령 창이 넘겨 준 이벤트(geulpu:event)로 다시 읽는다.
+// E3(문서/화면구현.md §3) — 실행 · 비교 탭과 실행 화면(ui/runs.js), 계획 · 결과 탭의 편집(experiment.update).
 import { toCommand } from './command.js';
-import { EN, T, TM, baseName, clock, copyButton, el, fmtMs, sourceLabel } from './dom.js';
+import { EN, T, TM, baseName, clock, copyButton, el, fmtMs, samePath, sourceLabel } from './dom.js';
 import { call, registry } from './ops.js';
+import { compareTab, forgetErrors, runTitle, runView, runsTab, setCompare } from './runs.js';
 
 const page = document.getElementById('page-exp');
 const view = document.getElementById('view-exp');
 const ROOT_KEY = 'geulpu.expRoot';
-const TABS = [['plan', T('계획')], ['results', T('결과', '탭')], ['records', T('기록')]];
+const TABS = [['plan', T('계획')], ['runs', T('실행', '탭')], ['compare', T('비교', '탭')], ['results', T('결과', '탭')], ['records', T('기록')]];
 
 const st = {
   root: loadRoot(),     // 실험 폴더 위치('' 이면 앱의 기본 — 데이터 폴더의 experiments)
@@ -21,14 +23,40 @@ const st = {
   docs: {},             // 파일 → {text} · {missing} · {error}
   commands: null,       // 명령 기록의 줄(객체)
   check: null,          // 점검 작업
+  run: null,            // E3 — 연 실행의 id(실행 화면)
+  edit: null,           // E3 — 편집 중인 탭('plan' · 'results')과 그 값
+  saving: false,
+  editError: null,
 };
 let reg = null;
 registry().then(r => { reg = r; if (st.cur) render(); }).catch(() => { /* 명령 기록은 기능 id 로 보인다 */ });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const samePath = (a, b) => String(a || '').replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase()
-  === String(b || '').replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase();
 const shown = () => view.classList.contains('active');
+
+// E3 — 명령 창이 입력 줄에 이 실험을 붙이게(화면설계.md §5): 실험을 열거나 닫을 때, 다른 화면으로 갈 때 알린다
+function announce() {
+  const path = shown() && st.cur && st.exp ? st.exp.path : null;
+  document.dispatchEvent(new CustomEvent('geulpu:context', { detail: { experiment: path, id: path ? (st.exp.experiment || {}).id || baseName(path) : null } }));
+}
+
+/** runs.js 에 넘기는 연 실험 */
+function ctx() {
+  return {
+    path: st.exp.path,
+    exp: st.exp,
+    rerender: render,
+    reload: () => loadExp(),
+    openRun: id => openRun(id),
+    openCompare: (a, b) => {
+      setCompare(ctx(), a, b);
+      st.run = null;
+      st.tab = 'compare';
+      render();
+      view.scrollTop = 0;
+    },
+  };
+}
 
 function loadRoot() {
   try { return localStorage.getItem(ROOT_KEY) || ''; } catch (_) { return ''; }
@@ -77,11 +105,16 @@ async function loadExp() {
   try {
     const r = await call('experiment.show', { path });
     if (path !== st.cur) return;
-    if (r.ok && r.json) { st.exp = r.json; st.expError = null; } else st.expError = appError(r);
+    if (r.ok && r.json) {
+      st.exp = r.json;
+      st.expError = null;
+      forgetErrors(r.json.path);
+    } else st.expError = appError(r);
   } catch (_) {
     st.expError = T('앱에 닿지 못했습니다');
   }
-  render();
+  announce();
+  if (!st.edit) render();          // 편집하는 동안은 그리지 않는다(입력이 지워지지 않게) — 저장하면 그린다
 }
 
 async function loadDoc(name) {
@@ -129,17 +162,35 @@ function openExp(path) {
   st.docs = {};
   st.commands = null;
   st.check = null;
+  st.run = null;
+  st.edit = null;
+  st.editError = null;
   render();
   loadExp();
   view.scrollTop = 0;
 }
 function backToList() {
   st.cur = null;
+  st.run = null;
+  st.edit = null;
+  announce();
   render();
   loadList();
 }
 function setTab(k) {
   st.tab = k;
+  st.run = null;
+  render();
+}
+function openRun(id) {
+  st.run = id;
+  st.edit = null;
+  render();
+  view.scrollTop = 0;
+}
+function closeRun() {
+  st.run = null;
+  st.tab = 'runs';
   render();
 }
 
@@ -295,7 +346,137 @@ function runInfo(e) {
 function criteriaList(e) {
   const cs = Array.isArray(e.criteria) ? e.criteria : [];
   if (!cs.length) return el('p', { class: 'muted' }, T('판정 기준이 없습니다'));
-  return el('ul', { class: 'xp-criteria' }, cs.map(c => el('li', null, el('code', null, c.id || ''), el('span', null, c.text || ''), resultTag(c.result))));
+  return el('ul', { class: 'xp-criteria' }, cs.map(c => el('li', null, el('code', null, c.id || ''),
+    el('span', null, c.text || '', c.note ? el('span', { class: 'note' }, c.note) : null), resultTag(c.result))));
+}
+
+// ---- E3 — 계획 · 결과의 편집(experiment.update — 이 실험의 명령 기록에 남는다) ----
+
+const runCount = e => (Array.isArray(e.runs) ? e.runs.length : 0);
+
+async function startEdit(tab) {
+  const e = st.exp.experiment || {};
+  const doc = tab === 'plan' ? 'plan.md' : 'results.md';
+  if (!st.docs[doc] || st.docs[doc].loading) await loadDoc(doc);
+  const d = st.docs[doc] || {};
+  const cs = Array.isArray(e.criteria) ? e.criteria : [];
+  st.editError = null;
+  st.edit = {
+    tab,
+    title: e.title || '',
+    question: e.question || '',
+    doc: d.text || '',
+    status: e.status || 'planned',
+    criteria: cs.map(c => ({ id: String(c.id || ''), text: String(c.text || ''), result: c.result || 'pending', note: c.note || '' })),
+  };
+  if (tab === 'plan' && !st.edit.criteria.length) st.edit.criteria.push({ id: 'C1', text: '', result: 'pending', note: '' });
+  render();
+}
+
+function cancelEdit() {
+  st.edit = null;
+  st.editError = null;
+  render();
+}
+
+async function saveEdit() {
+  const ed = st.edit;
+  let body;
+  if (ed.tab === 'plan') {
+    const crit = ed.criteria.map(c => ({ id: c.id.trim(), text: c.text.trim(), result: c.result, note: c.note })).filter(c => c.id || c.text);
+    const ids = crit.map(c => c.id);
+    if (!ed.title.trim() || !ed.question.trim()) st.editError = T('제목과 연구 질문을 적으세요');
+    else if (!crit.length || crit.some(c => !c.id || !c.text)) st.editError = T('판정 기준마다 id 와 내용을 적으세요(하나 이상)');
+    else if (new Set(ids).size !== ids.length) st.editError = T('판정 기준의 id 가 겹칩니다');
+    else st.editError = null;
+    if (st.editError) { render(); return; }
+    body = { path: st.exp.path, title: ed.title.trim(), question: ed.question.trim(), plan: ed.doc, criteria: crit.map(c => (c.note ? c : { id: c.id, text: c.text, result: c.result })) };
+  } else {
+    body = {
+      path: st.exp.path, results: ed.doc, status: ed.status,
+      criteria: ed.criteria.map(c => (c.note.trim() ? { id: c.id, text: c.text, result: c.result, note: c.note.trim() } : { id: c.id, text: c.text, result: c.result })),
+    };
+  }
+  st.saving = true;
+  render();
+  let r;
+  try {
+    r = await call('experiment.update', body, { experiment: st.exp.path });
+  } catch (_) {
+    r = null;
+  }
+  st.saving = false;
+  if (!r || !r.ok || !r.json) {
+    st.editError = appError(r);
+    render();
+    return;
+  }
+  st.exp = r.json;
+  st.edit = null;
+  st.editError = null;
+  st.docs = {};
+  render();
+}
+
+function editButtons() {
+  return el('div', { class: 'xp-actions' },
+    el('button', { class: 'btn primary', type: 'button', disabled: st.saving ? true : null, onclick: saveEdit }, st.saving ? T('저장하는 중…') : T('저장')),
+    el('button', { class: 'btn ghost', type: 'button', disabled: st.saving ? true : null, onclick: cancelEdit }, T('취소')),
+    st.editError ? el('span', { class: 'xp-err', role: 'alert' }, st.editError) : null);
+}
+
+function planEdit() {
+  const ed = st.edit;
+  const rows = ed.criteria.map((c, i) => el('div', { class: 'xe-crit' },
+    el('input', { type: 'text', class: 'xe-id', value: c.id, 'aria-label': T`판정 기준 ${i + 1} 의 id`, oninput: ev => { c.id = ev.target.value; } }),
+    el('input', { type: 'text', class: 'xe-text', value: c.text, 'aria-label': T`판정 기준 ${i + 1} 의 내용`, placeholder: T('답이 예가 되려면 무엇이 맞아야 하는가'), oninput: ev => { c.text = ev.target.value; } }),
+    el('button', { type: 'button', class: 'btn sm ghost', 'aria-label': T`판정 기준 ${i + 1} 빼기`, onclick: () => { ed.criteria.splice(i, 1); render(); } }, T('빼기'))));
+  const addCrit = () => {
+    let n = ed.criteria.length + 1;
+    while (ed.criteria.some(c => c.id === 'C' + n)) n++;
+    ed.criteria.push({ id: 'C' + n, text: '', result: 'pending', note: '' });
+    render();
+    const last = page.querySelector('.xe-crit:last-of-type .xe-text');
+    if (last) last.focus();
+  };
+  const plan = el('textarea', { id: 'xe-plan', rows: '14', spellcheck: 'false', oninput: ev => { ed.doc = ev.target.value; } });
+  plan.value = ed.doc;
+  const question = el('textarea', { id: 'xe-q', rows: '2', oninput: ev => { ed.question = ev.target.value; } });
+  question.value = ed.question;
+  return [
+    el('p', { class: 'muted' }, T('계획과 판정 기준은 첫 실행 전에 적습니다. 첫 실행 뒤에는 바꾸지 않습니다 — 판정과 결과는 결과 탭에서 적습니다.')),
+    el('div', { class: 'xe-form' },
+      el('label', { for: 'xe-title' }, T('제목')),
+      el('input', { type: 'text', id: 'xe-title', value: ed.title, oninput: ev => { ed.title = ev.target.value; } }),
+      el('label', { for: 'xe-q' }, T('연구 질문')), question,
+      el('div', { class: 'xe-label' }, T('판정 기준')),
+      el('div', { class: 'xe-crits' }, rows),
+      el('div', null, el('button', { type: 'button', class: 'btn sm', onclick: addCrit }, T('판정 기준 더하기'))),
+      el('label', { for: 'xe-plan' }, 'plan.md'), plan),
+    editButtons(),
+  ];
+}
+
+function resultsEdit() {
+  const ed = st.edit;
+  const resLabel = { pending: T('아직'), pass: T('통과'), fail: T('실패') };
+  const rows = ed.criteria.map((c, i) => el('div', { class: 'xe-verdict' },
+    el('code', null, c.id), el('span', { class: 'xe-ctext' }, c.text),
+    el('select', { class: 'input', 'aria-label': T`${c.id} 의 판정`, onchange: ev => { c.result = ev.target.value; } },
+      ['pending', 'pass', 'fail'].map(v => el('option', { value: v, selected: c.result === v ? true : null }, resLabel[v]))),
+    el('input', { type: 'text', class: 'xe-note', value: c.note, placeholder: T('메모(근거 · 수치)'), 'aria-label': T`${c.id} 의 메모`, oninput: ev => { c.note = ev.target.value; } })));
+  const doc = el('textarea', { id: 'xe-results', rows: '12', spellcheck: 'false', oninput: ev => { ed.doc = ev.target.value; } });
+  doc.value = ed.doc;
+  return [
+    el('div', { class: 'xe-form' },
+      el('div', { class: 'xe-label' }, T('판정')),
+      el('div', { class: 'xe-verdicts' }, rows.length ? rows : el('p', { class: 'muted' }, T('판정 기준이 없습니다'))),
+      el('label', { for: 'xe-status' }, T('상태')),
+      el('select', { id: 'xe-status', class: 'input', onchange: ev => { ed.status = ev.target.value; } },
+        ['planned', 'running', 'done'].map(v => el('option', { value: v, selected: ed.status === v ? true : null }, statusLabel(v)))),
+      el('label', { for: 'xe-results' }, 'results.md'), doc),
+    editButtons(),
+  ];
 }
 
 function docBlock(name) {
@@ -338,7 +519,12 @@ function checkBox() {
 }
 
 function planTab(e) {
+  if (st.edit && st.edit.tab === 'plan') return planEdit();
+  const locked = runCount(e) > 0;
   return [
+    el('div', { class: 'xp-actions' },
+      locked ? el('span', { class: 'muted' }, T('첫 실행 뒤에는 계획과 판정 기준을 바꾸지 않습니다(실행 전에 적고 고정).'))
+        : el('button', { class: 'btn', type: 'button', onclick: () => startEdit('plan') }, T('편집'))),
     el('h2', null, T('판정 기준'), ' ', el('span', { class: 'muted' }, T('(실행 전에 적음)'))),
     criteriaList(e),
     el('h2', null, 'plan.md'),
@@ -347,7 +533,12 @@ function planTab(e) {
 }
 
 function resultsTab(e) {
-  return [el('h2', null, T('판정')), criteriaList(e), el('h2', null, 'results.md'), docBlock('results.md')];
+  if (st.edit && st.edit.tab === 'results') return resultsEdit();
+  return [
+    el('div', { class: 'xp-actions' }, el('button', { class: 'btn', type: 'button', onclick: () => startEdit('results') }, T('편집')),
+      el('span', { class: 'muted' }, T('판정 · 메모 · results.md · 상태를 적습니다.'))),
+    el('h2', null, T('판정')), criteriaList(e), el('h2', null, 'results.md'), docBlock('results.md'),
+  ];
 }
 
 function recordsTab(e) {
@@ -383,10 +574,17 @@ function recordsTab(e) {
 }
 
 function renderExp() {
+  const expId = st.exp ? st.exp.experiment.id || baseName(st.cur) : baseName(st.cur);
   const crumbs = el('nav', { class: 'xp-crumbs', 'aria-label': T('경로') },
     el('button', { type: 'button', onclick: backToList }, T('실험')),
     el('span', { class: 'sep', 'aria-hidden': 'true' }, '›'),
-    el('span', { class: 'here' }, st.exp ? st.exp.experiment.id || baseName(st.cur) : baseName(st.cur)));
+    st.run ? el('button', { type: 'button', class: 'id', onclick: closeRun }, expId) : el('span', { class: 'here' }, expId),
+    st.run ? el('span', { class: 'sep', 'aria-hidden': 'true' }, '›') : null,
+    st.run && st.exp ? el('span', { class: 'here' }, runTitle(ctx(), st.run)) : null);
+  if (st.run && st.exp && !st.expError) {
+    page.replaceChildren(el('div', { class: 'xp' }, crumbs, runView(ctx(), st.run)));
+    return;
+  }
   if (st.expError) {
     page.replaceChildren(el('div', { class: 'xp' }, crumbs, el('div', { class: 'empty-box' }, el('div', { class: 'big' }, T('실험을 읽지 못했습니다')), el('div', null, st.expError))));
     return;
@@ -411,9 +609,17 @@ function renderExp() {
         type: 'button', role: 'tab', class: 'xp-tab' + (st.tab === k ? ' on' : ''), 'aria-selected': String(st.tab === k),
         onclick: () => setTab(k),
       }, label))),
-    el('section', { class: 'xp-panel', role: 'tabpanel' }, st.tab === 'plan' ? planTab(e) : st.tab === 'results' ? resultsTab(e) : recordsTab(e)),
+    el('section', { class: 'xp-panel', role: 'tabpanel' }, tabPanel(e)),
   ];
   page.replaceChildren(el('div', { class: 'xp' }, kids));
+}
+
+function tabPanel(e) {
+  if (st.tab === 'plan') return planTab(e);
+  if (st.tab === 'runs') return runsTab(ctx());
+  if (st.tab === 'compare') return compareTab(ctx());
+  if (st.tab === 'results') return resultsTab(e);
+  return recordsTab(e);
 }
 
 // ---- 화면 전환 · 이벤트 ----
@@ -423,6 +629,7 @@ document.addEventListener('geulpu:view', ev => {
     if (st.cur) loadExp();
     else loadList();
   }
+  announce();
 });
 
 document.addEventListener('geulpu:open-experiment', ev => {
@@ -430,6 +637,24 @@ document.addEventListener('geulpu:open-experiment', ev => {
   if (!path) return;
   if (typeof globalThis.show === 'function') globalThis.show('exp');
   openExp(path);
+});
+
+// E3 — 명령 창의 '실행 r3' 링크 · AI 실행 자동 열기(auto: 참). 편집하는 동안의 자동 열기는 건너뛴다(입력을 잃지 않게)
+document.addEventListener('geulpu:open-run', ev => {
+  const d = ev.detail || {};
+  if (!d.experiment || !d.run) return;
+  if (d.auto && st.edit) return;
+  if (typeof globalThis.show === 'function') globalThis.show('exp');
+  if (st.cur && st.exp && samePath(st.exp.path, d.experiment)) {
+    st.run = d.run;
+    st.edit = null;
+    render();
+    loadExp();
+  } else {
+    openExp(d.experiment);
+    st.run = d.run;
+  }
+  view.scrollTop = 0;
 });
 
 // 이 실험에 걸린 호출이 끝나면(어느 출처든) 다시 읽는다 — start 의 experiment 를 호출 번호로 기억해 둔다

@@ -103,35 +103,34 @@ with the prompt.
 
 ```
 GeulPU experiment create --name lighthouse --title "Where the keeper hesitated" --question "..."   # → {"id", "path"}
-GeulPU run complete ... --experiment <id or path> --out <path>/records/r1.json   # request → commands.jsonl, answer → r1.json
+GeulPU experiment update --json @plan.json             # {"path", "plan": "<plan.md text>", "criteria": [{"id", "text"}]} — before any run
+GeulPU run complete ... --experiment <id or path>      # the app records the run: records/runs/r1.json and an entry in "runs"
 GeulPU experiment show --path <id>                     # experiment.json, documents, number of recorded commands
-python <GeulPU folder>/data/experiment_check.py --files <path>   # prints the "files" list — put it into experiment.json
+GeulPU experiment update --json @verdicts.json         # {"path", "criteria": [... "result", "note"], "results": "<results.md>", "status": "done"}
 GeulPU experiment check --path <id> --wait             # the experiment checker (Python 3.10+); exit 0 = it passes
 ```
 
-An experiment is a folder (`<date>-<name>`): `experiment.json`, `plan.md` (write the criteria before running), `results.md`,
-`records/`. Default place: `experiments` in the app's data folder; with `--root <folder>` elsewhere — then give `--experiment` the
-folder path (a bare id is looked up in the default place). The app appends each POST call made with `--experiment` to
-`records/commands.jsonl` — the request (op, params, status, ms), not the answer: save answers yourself with `--out` into `records/`.
-Every file other than the three documents must be listed in `files` with its SHA-256 and size — re-list after new records, or the
-check fails. `experiment_check.py` always needs the experiment folder as its argument. A filled `experiment.json` looks like:
+An experiment is a folder (`<date>-<name>`): `experiment.json`, `plan.md`, `results.md`, `records/`. Default place: `experiments` in
+the app's data folder; with `--root <folder>` elsewhere — then give `--experiment` the folder path (a bare id is looked up in the
+default place). The app appends each POST call made with `--experiment` to `records/commands.jsonl` (op, params, status, ms). A run
+(`run complete` · `chat` · `messages` · `responses` · `branch` · `score` · `lens`) that answers 200 is also recorded: the request and
+the answer in `records/runs/<id>.json`, and an entry in `runs` — `kind` generate · branch · score · lens, or `check` with `base` when
+the request equals an earlier run's (a repeat that tests reproducibility). A branch gets `base` and `intervention` from its prompt
+tokens, a score or lens `base`; the model goes into `models`. Keep `geulpu.prompt_tokens` on so this works. The app keeps `files`
+current for what it writes; list any other file you add (`python <GeulPU folder>/data/experiment_check.py --files <path>` prints the
+list) or the check fails. Prefer `experiment update` to editing experiment.json; if you edit it yourself (runs of other kinds:
+compare · replay · evaluate), read it again just before writing — the app rewrites it with each recorded call. Title, question, plan
+and criteria (id, text) change only before the first run; verdicts, notes, results.md and status any time. A recorded entry:
 
 ```
-"status": "done",            # planned · running · done
-"geulpu": {"version": "0.22.0", "mode": "fast"},
-"models": [{"name": "Qwen3-0.6B Q8_0", "file": "Qwen3-0.6B-Q8_0.gguf", "sha256": "<64 hex>", "source": {"local": "<where it came from>"}}],
-"runs": [{"id": "r1", "kind": "generate", "operation": "run.complete", "record": "records/r1.json", "settings": {"temperature": 0.8},
-          "seed": 7},
-         {"id": "r2", "kind": "branch", "operation": "run.branch", "base": "r1", "record": "records/r2.json",
-          "intervention": {"type": "token", "step": 3, "value": 40}}],
-"criteria": [{"id": "C1", "text": "...", "result": "pass", "note": "..."}],   # result: pending · pass · fail
+{"id": "r2", "kind": "branch", "operation": "run.branch", "record": "records/runs/r2.json",
+ "settings": {"max_tokens": 36, "temperature": 0.8, "echo": true, "logprobs": 2, "geulpu.echo_from": 10, "geulpu.step_offset": 4},
+ "seed": 7, "base": "r1", "intervention": {"type": "token", "step": 3, "value": 40}}
 ```
 
-Run kinds: generate · score · branch · lens · compare · replay · evaluate · check (use `check` for a repeat that tests reproducibility,
-with `base` set to the run it repeats). `expected.json` is optional — `{"runs": {"<run id>": {...}}}` with what each run must give
-again (for example its logit hashes); the inside is yours to choose for now. Replace the template's `authors` placeholder. The plan
-asks you to commit `plan.md` before running so the history shows the criteria came first — use git if the folder is in a repository;
-the check does not require it.
+`expected.json` is optional — `{"runs": {"<run id>": {...}}}` with what each run must give again (for example its logit hashes); the
+inside is yours to choose for now. Replace the template's `authors` placeholder. Commit `plan.md` before running if the folder is in a
+git repository, so the history shows the criteria came first; the check does not require it.
 
 What `experiment check` passes: `experiment.json` matches the schema (required fields, allowed values), `id` is the folder name,
 `plan.md` exists (and `results.md` once `status` is `done`), every file is listed with the right SHA-256 and size, every run's `record`

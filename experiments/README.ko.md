@@ -41,7 +41,9 @@ experiments/<YYYY-MM-DD>-<이름>/
 ## 무엇을 저장하나
 
 - 모델 파일은 넣지 않는다. SHA-256 과 출처로 가리킨다.
-- 다시 계산할 수 있는 값(스텝마다 확률 · 상위 k · 엔트로피)은 넣지 않는다. 해시를 넣고, 다시 실행할 때 계산해서 비교한다.
+- 다시 계산할 수 있는 값(스텝마다 확률 · 상위 k · 엔트로피)은 작게 둔다. 앱이 남기는 실행의 기록 파일은 GeulPU 가 준 답을 그대로 담고, 상위
+  후보는 요청한 수만큼이다(실행 화면은 마진에 2 개가 필요하다) — 실험에 필요할 때만 더 묻는다. 큰 값은 해시를 넣고, 다시 실행할 때 계산해서
+  비교한다.
 - 실험 하나는 압축(zip)해서 5 MB 이하. 더 큰 원자료는 저장소 밖(릴리스 첨부나 다른 저장소)에 두고 SHA-256 으로 가리킨다. Git LFS 는
   쓰지 않는다.
 - 판정 기준이 먼저다. `plan.md` 와 `criteria` 를 첫 실행 전에 커밋하면, git 이력이 판정 기준을 결과보다 먼저 적었음을 보여 준다.
@@ -55,9 +57,12 @@ experiments/<YYYY-MM-DD>-<이름>/
 5. `results.md` 를 쓰고, 판정 기준마다 `result` 와 `"status": "done"` 을 적고, [index.md](index.md) 에 한 줄을 더한다.
 6. `python 도구/experiment_check.py experiments/<폴더>` 가 통과해야 한다.
 
-GeulPU 앱이 떠 있으면 CLI 가 1 단계와 6 단계를 하고 3 단계의 명령을 기록한다: `GeulPU experiment create --name <이름> --root experiments` 가
-이 템플릿에서 폴더를 만들고 `index.md` 에 더한다. 어느 명령에든 `--experiment <폴더>` 를 붙이면 그 호출이 `records/commands.jsonl` 에 남는다.
-`GeulPU experiment check --path <폴더> --wait` 가 이 점검 도구를 돌린다([문서/명령줄.md](../문서/명령줄.md)).
+GeulPU 앱이 떠 있으면 CLI(와 앱의 실험 화면)가 1 ~ 3 단계와 5 · 6 단계를 한다: `GeulPU experiment create --name <이름> --root experiments` 가
+이 템플릿에서 폴더를 만들고 `index.md` 에 더한다. `GeulPU experiment update` 가 계획과 판정 기준(첫 실행 전에만), 그 뒤의 판정 · `results.md` ·
+상태를 쓴다. 어느 명령에든 `--experiment <폴더>` 를 붙이면 그 호출이 `records/commands.jsonl` 에 남고, 200 으로 끝난 실행은
+`records/runs/<id>.json` 과 `runs` 의 항목(종류 · 원래 실행 · 개입), `models` 의 모델, 앱이 쓴 파일의 `files` 항목으로 남는다.
+`GeulPU experiment check --path <폴더> --wait` 가 이 점검 도구를 돌린다([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md)
+§3). 직접 더한 파일은 4 단계를 거친다.
 
 ## 점검
 

@@ -44,6 +44,9 @@ export const clock = t => {
   return [d.getHours(), d.getMinutes(), d.getSeconds()].map(x => String(x).padStart(2, '0')).join(':');
 };
 export const baseName = p => String(p).replace(/[\\/]+$/, '').split(/[\\/]/).pop();
+/** 두 경로가 같은 폴더인가(끝의 구분 문자 · / 와 \ · 대소문자를 가리지 않고) */
+const normPath = p => String(p || '').replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase();
+export const samePath = (a, b) => normPath(a) === normPath(b);
 
 /** 누르면 텍스트를 클립보드에 넣는 단추(잠깐 '복사함'). */
 export function copyButton(getText) {
