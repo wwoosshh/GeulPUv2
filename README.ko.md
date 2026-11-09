@@ -43,18 +43,20 @@ GeulPU는 Qwen3.6-35B-A3B(MoE) · Qwen3.5 · Qwen3 · Qwen2.5 · DeepSeek-R1-Dis
   두 실행을 요청마다 비교합니다 — 앱 화면에서도, 스크립트에서도.
 - **llama.cpp 실행의 검증.** 고치지 않은 llama-server 의 실행을 기록하거나 대화 기록만 두면, GeulPU 가 llama.cpp 의 CUDA 셈을 명령 단위로
   따르는 커널로 다시 셈해 토큰과 로그 확률을 비트까지 견줍니다 — CUDA 로도 Vulkan 으로도(지금은 RTX 4070 Ti 에서 돈 실행; 0.22.0 부터 —
-  [docs/llama-replay.md](docs/llama-replay.md) · [사용 안내 8절](사용안내.md#8-llamacpp-재현-검증--llama-server-의-실행을-geulpu-가-비트까지-다시-셈하기)).
+  [docs/llama-replay.md](docs/llama-replay.md) · [사용 안내 11절](사용안내.md#11-llamacpp-재현-검증--llama-server-의-실행을-geulpu-가-비트까지-다시-계산하기)).
 - **GGUF 파일을 위한 모델 평가.** Hugging Face 폴더에서 GGUF 를 만들고, 변환을 원래 파일 · 원래 모델(transformers)과 견주고, 버전을 기준
   모델과 비교하고 답을 채점하고(내장 GSM8K · MMLU-Pro), 미세조정 전 모델 대비 배운 것 · 잊은 것을 세고, 어느 행렬 무리를 높은 정밀도로
   둘지 잽니다 — 모든 결과는 다시 재도 비트까지 같습니다(0.17.0 부터 — [모델 평가 안내서](모델평가안내.md)가 한 바퀴를 따라갑니다).
-- **연구 패널.** 채팅의 답마다 토큰의 확률 · 순위 · 상위 10 대안 · 엔트로피 · 마진을 보고, 분기 · 비교 · 점수 매기기 · 내보내기 ·
-  재현 파일 확인을 합니다. 0.13.0 부터는 답이 몇 번째 층에서 생기는지도 봅니다 — 층마다 읽는 logit lens 와, 원본(PyTorch) 모델에서 맞춘
-  J 파일로 읽는 Jacobian lens.
+- **연구를 실험으로.** 질문 · 판정 기준 · 계획 · 실행 기록 · 결과가 실험 폴더 하나에 남습니다. 실행마다 토큰의 확률 · 순위 · 상위 후보 ·
+  엔트로피 · 마진과 층마다의 logit lens(원본 모델에서 맞춘 J 파일이 있으면 Jacobian lens)를 보고, 어느 스텝에서나 분기하고, 두 실행을
+  비교하고, 재현 파일 하나로 다른 PC 에서 비트까지 확인받습니다. 화면의 기능은 모두 `GeulPU <명령>` 으로도 되어, 사람과 AI 에이전트가 같은
+  실험을 같은 기능으로 다룹니다(0.23.0 부터 — [사용 안내 3 ~ 6절](사용안내.md#3-실험--질문--계획--실행--결과를-한-폴더에) ·
+  [AI 를 위한 CLI 안내](docs/cli.md)).
 - **필요한 곳에서 빠름.** 기본 설정으로 잰 모든 길이에서 프롬프트와 생성이 llama.cpp보다 빠릅니다(Qwen2.5-7B에서 llama.cpp 시간의
   0.76 ~ 0.97배, Llama-3.1-8B의 긴 세션은 0.48배까지). 추측 디코딩은 고쳐 쓰는
   작업에서 3.5 ~ 4배 빠르면서 출력이 비트까지 같고, SSD의 프롬프트 캐시는 앱을 다시 켠 뒤에도 코딩 에이전트의 15k 토큰 프롬프트를
   0.3초에 복원합니다.
-- **쓰던 도구와 함께.** 코딩 에이전트를 위한 도구 호출(Qwen Code · OpenCode · Cline · Claude Code · Codex로 시험 — 앱의 에이전트 화면이
+- **쓰던 도구와 함께.** 코딩 에이전트를 위한 도구 호출(Qwen Code · OpenCode · Cline · Claude Code · Codex로 시험 — 명령 창의 AI 세션이
   불러 둔 모델로 띄웁니다), 로그확률 · echo
   스코어링 · 토큰화 엔드포인트, lm-evaluation-harness를 지원하는 OpenAI 호환 API와 Anthropic Messages · OpenAI Responses API.
 - **작고, 따로 설치할 것이 없음.** 내려받는 크기는 약 1.5 MB이고, CUDA 툴킷 · Python · PyTorch 없이 그래픽 드라이버만으로 돕니다. 엔진 · GPU
@@ -221,7 +223,7 @@ PTX(NVIDIA)나 SPIR-V(Vulkan)로 바꿉니다. 추론 서버는 그 커널을 �
 |---|---|---|
 | 사용 안내 — 설치 · 모델 · 채팅 · 설정 · API · 문제 해결 | [사용안내.md](사용안내.md) | [docs/user-guide.md](docs/user-guide.md) |
 | 디버거 안내서 | [디버거안내.md](디버거안내.md) | [docs/debugger-guide.md](docs/debugger-guide.md) |
-| 연구 패널 안내서 | [연구자안내.md](연구자안내.md) | [docs/research-guide.md](docs/research-guide.md) |
+| 연구자 안내서 | [연구자안내.md](연구자안내.md) | [docs/research-guide.md](docs/research-guide.md) |
 | 모델 평가 안내서 — GGUF 만들기 · 확인 · 고치기 | [모델평가안내.md](모델평가안내.md) | [docs/model-evaluation-guide.md](docs/model-evaluation-guide.md) |
 | 정밀도 계약 | [계약/계약.md](계약/계약.md) | [계약/contract.md](계약/contract.md) |
 | 개발 — 소스에서 빌드 · 구조 · 점검 | [문서/개발.md](문서/개발.md) | [docs/development.md](docs/development.md) |

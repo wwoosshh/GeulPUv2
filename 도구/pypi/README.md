@@ -8,7 +8,10 @@ so the same request gives bit-identical tokens and logits whatever the batch, th
 in exact mode, on NVIDIA (CUDA) and AMD or other GPUs (Vulkan) alike. The debugger records runs (agent sessions, test sets), replays
 them bit for bit, branches from any token or edited request, and compares models and quantizations request by request. From 0.22.0 it
 also checks runs of an unmodified llama-server: it recomputes them with kernels that follow llama.cpp's CUDA arithmetic and compares
-tokens and log-probabilities bit for bit. The engine is written in the 글(geul) programming language.
+tokens and log-probabilities bit for bit. From 0.23.0 a study is an experiment folder (question, criteria, plan, run records,
+results) with run, step and layer screens — per-token probabilities, branching, the logit lens — and reproduction files that another PC
+checks bit for bit; every screen operation is also a `geulpu <command>` for people and AI agents, and `import geulpu` drives it from
+Python. The engine is written in the 글(geul) programming language.
 
 This package ships the app from the GitHub release — Windows x64 and Linux x86-64 — so one install command is enough: no archive to
 download and extract.
@@ -63,7 +66,10 @@ Hugging Face 의 GGUF 하나를 한 줄로: `geulpu --hf Qwen/Qwen3-0.6B-GGUF/Qw
 
 - [README](https://github.com/wwoosshh/GeulPUv2#readme) · [user guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/user-guide.md) ·
   [debugger guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/debugger-guide.md) ·
-  [model evaluation guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/model-evaluation-guide.md)
+  [model evaluation guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/model-evaluation-guide.md) ·
+  [research guide](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/research-guide.md) ·
+  [CLI guide for agents](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/cli.md) ·
+  [Python API](https://github.com/wwoosshh/GeulPUv2/blob/main/docs/python-api.md)
 - [Changelog](https://github.com/wwoosshh/GeulPUv2/blob/main/CHANGELOG.md) · [source](https://github.com/wwoosshh/GeulPUv2) ·
   [issues](https://github.com/wwoosshh/GeulPUv2/issues)
 

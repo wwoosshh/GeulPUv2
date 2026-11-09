@@ -8,6 +8,8 @@ Versions up to 0.5.0 were released from the research repository [GeulPU](https:/
 
 ## 0.23.0 — Research platform: experiments · CLI for AI agents · run, step and layer screens · reproduction files (2026-11-09)
 
+GeulPU becomes a research platform — experiment records, a CLI for people and AI agents, run, step and layer screens, and reproduction files that another PC checks bit for bit. The inference server is byte-identical to 0.22.0 (and, on CUDA, to 0.21.0), so every output bit is unchanged.
+
 ### Added
 
 - **CLI (subcommands).** `GeulPU <command> [--param value …]` (or `geulpu <command> …`) calls any operation of the running GeulPU app.
