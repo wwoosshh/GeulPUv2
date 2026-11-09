@@ -249,8 +249,11 @@ export function parseArgv(reg, argv) {
     if (args.length) return fail('--json gives the whole body — do not add other parameters to it', '--json 은 본문 전체입니다 — 다른 인자와 함께 쓰지 않습니다', 'put every field into the --json body', '모든 필드를 --json 본문에 넣으세요', id);
     if (options.json.startsWith('@')) return { ...fail('the command console does not read --json @file — give the body itself', '명령 창에서는 --json @파일 을 읽지 않습니다 — 본문을 그대로 넣으세요', null, null, id), console: true };
     let bo;
-    try { bo = JSON.parse(options.json); } catch (_) { bo = undefined; }
-    if (bo === undefined || bo === null || typeof bo !== 'object' || Array.isArray(bo)) return fail('--json must be a JSON object', '--json 은 JSON 객체여야 합니다', helpNext(name), null, id);
+    let broken = false;
+    try { bo = JSON.parse(options.json); } catch (_) { broken = true; }
+    // F2 — 문법이 틀린 JSON 을 '객체가 아님'으로 알리지 않는다(CLI 의 명령줄.gl 과 같은 말)
+    if (broken) return fail('--json is not valid JSON', '--json 이 올바른 JSON 이 아닙니다', 'check the JSON: quotes, commas and brackets', 'JSON 의 따옴표 · 쉼표 · 괄호를 확인하세요', id);
+    if (bo === null || typeof bo !== 'object' || Array.isArray(bo)) return fail('--json must be a JSON object', '--json 은 JSON 객체여야 합니다', helpNext(name), null, id);
     if (bo.stream === true) return fail('the CLI prints whole answers — leave stream off', '명령 창은 응답 전체를 받습니다 — stream 은 끄세요', null, null, id);
     body = options.json;
   } else {

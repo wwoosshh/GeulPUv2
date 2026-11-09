@@ -21,7 +21,8 @@ the original random numbers, read what each layer predicted, and record it all a
 - `--json <body>` or `--json @body.json` sends a whole body instead (not together with other parameters). The body goes to the app as
   it is — the registry lists the common fields, `--json` can carry any field the server accepts. Shell quoting of JSON is
   error-prone — write the body to a file and use `@`.
-- `--dry-run` prints the request without sending it. `--out <file>` saves any answer (also `ops`, `help`, `guide`) to a file.
+- `--dry-run` prints the request without sending it. `--out <file>` saves any answer (also `ops`, `help`, `guide`; with `--wait`, the
+  finished job's JSON) to a file.
 
 ## Results, errors, exit codes
 
@@ -82,7 +83,7 @@ run's random numbers, and the same sampling settings and seed (`body.json`):
 ```
 
 `GeulPU run branch --json @body.json` — `geulpu.tokens` holds the tokens generated after the new one; with `echo` the text starts
-with the prompt.
+with the prompt. The whole branched answer is the original `tokens[0..k-1]`, the new token, then `geulpu.tokens`.
 
 ## Scoring and the logit lens
 
@@ -143,6 +144,10 @@ and criteria (id, text) change only before the first run; verdicts, notes, resul
 inside is yours to choose for now. Replace the template's `authors` placeholder. Commit `plan.md` before running if the folder is in a
 git repository, so the history shows the criteria came first; the check does not require it.
 
+**Reproducing a run.** Send the `request` from its record (`records/runs/<id>.json`) again with `--experiment`: an identical request is
+recorded as kind `check` with `base`, and its `geulpu.tokens` and `geulpu.logit_hashes` must equal the original's. The app's run screen
+also exports a reproduction file (`geulpu-capsule/1`) and checks one under Reproduce › Checks; the CLI has no command for that file yet.
+
 What `experiment check` passes: `experiment.json` matches the schema (required fields, allowed values), `id` is the folder name,
 `plan.md` exists (and `results.md` once `status` is `done`), every file is listed with the right SHA-256 and size, every run's `record`
 is listed, the runs in `expected.json` exist, the folder compresses to at most 5 MB, and the root's `index.md` links the folder
@@ -153,4 +158,5 @@ results are right.
 
 - Fix the seed and settings, and keep `geulpu.logit_hash` on: any result can then be re-run and checked bit for bit.
 - Prefer token ids over text when you feed an answer back (`prompt` as an id array), so nothing is re-tokenized differently.
-- Read `GeulPU help <command>` before guessing a parameter; unknown parameters are refused rather than ignored.
+- Read `GeulPU help <command>` before guessing a parameter; unknown `--parameters` are refused rather than ignored. Fields inside a
+  `--json` body go to the app as they are, and the app ignores the ones it does not use (`help` lists what each command takes).

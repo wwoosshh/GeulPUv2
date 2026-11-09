@@ -312,6 +312,8 @@ const DICT = {
   "무결성 확인 중": "Verifying integrity",
   "무결성 확인 안 됨": "Integrity not verified",
   "이 모델로 채팅: {} {}": "Chat with this model: {} {}",
+  "이 모델 불러오기": "Load this model",
+  "이 모델 불러오기: {} {}": "Load this model: {} {}",
   "채팅": "Chat",
   "메뉴: {} {}": "Menu: {} {}",
   "모델 메뉴": "Model menu",
@@ -1739,7 +1741,9 @@ const DICT = {
   "재현 파일은 끝 토큰의 스텝까지 값이 있어야 해서, 없으면 먼저 답 전체를 점수 매깁니다(상위 후보 10).": "The reproduction file needs values up to the end-token step, so when they are missing it first scores the whole answer (top 10 candidates).",
   "확률 {}": "probability {}",
   "처음 다른 스텝 {}: ": "First differing step {}: ",
-  "처음 다른 위치 {}: ": "First differing position {}: ",
+  "프롬프트가 처음 다른 위치 {}: ": "First differing prompt position {}: ",
+  "답이 처음 다른 스텝 {}: ": "First differing answer step {}: ",
+  "답의 토큰이 스텝 {} ~ {} 에서 모두 같습니다.": "The answers' tokens are the same at steps {} to {}.",
   "{} 의 이 스텝 보기": "Show this step of {}",
   "두 실행의 수치": "Numbers of the two runs",
   "{} 의 답을 {} 의 프롬프트로": "{}'s answer under {}'s prompt",
@@ -4566,6 +4570,11 @@ function quantLine(m) {
     tags.length ? h('span', { class: 'qtags' }, tags) : null,
     h('span', { class: 'grow' }),
     h('div', { class: 'acts needs-conn' },
+      // 앱리디자인 F2 — 모델 화면에서 바로 불러오기(전에는 채팅을 보내야만 불러왔고, 새 실행 창의 '모델 화면에서 불러오세요'가 막다른 길이었다)
+      loaded ? null : h('button', {
+        class: 'btn sm', 'data-fk': 'load:' + m.id, 'aria-label': T`이 모델 불러오기: ${name} ${q}`,
+        disabled: ok && !S.streaming && srv.state !== 'starting' ? null : true, onclick: () => loadModelNow(m.id),
+      }, I('play', 's'), T('이 모델 불러오기')),
       h('button', { class: 'btn sm ghost', 'data-fk': 'chat:' + m.id, 'aria-label': T`이 모델로 채팅: ${name} ${q}`, disabled: ok ? null : true, onclick: () => chatWith(m.id) }, I('chat', 's'), T('채팅')),
       h('button', {
         class: 'icon-btn', 'data-fk': 'more:' + m.id, 'aria-label': T`메뉴: ${name} ${q}`, 'aria-haspopup': 'menu', 'aria-expanded': 'false',
@@ -4577,6 +4586,11 @@ function quantLine(m) {
           { icon: 'trash', label: loaded ? T('내리고 목록에서 제거') : T('목록에서 제거'), danger: true, disabled: loaded && !!S.streaming, run: () => removeModel(m, loaded) }], 'right'),
       }, I('dots'))),
     !s.ok && s.reason ? h('div', { class: 'qwhy' }, TM(s.reason)) : null);
+}
+async function loadModelNow(id) {
+  if (S.streaming) return;
+  try { await callOp('model.load', { model: id }); announce(T('모델을 불러오는 중…')); refresh(); }
+  catch (e) { toast(e.message, 'err'); }
 }
 async function unloadModel() {
   if (S.streaming) return;

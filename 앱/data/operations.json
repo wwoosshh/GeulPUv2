@@ -2228,12 +2228,12 @@
   {
    "id": "experiment.check",
    "title": {
-    "ko": "실험 점검 · 다시 내기 확인",
-    "en": "Check an experiment and its re-run"
+    "ko": "실험 점검 — 형식 · 파일 해시 · 크기",
+    "en": "Check an experiment — format, file hashes and sizes"
    },
    "description": {
-    "ko": "실험 점검(작업) — 앱 꾸러미의 data/experiment_check.py(= 도구/experiment_check.py)를 파이썬으로.",
-    "en": "Check an experiment (job) — runs data/experiment_check.py (= 도구/experiment_check.py) with Python."
+    "ko": "실험 점검(작업) — experiment.json 의 형식, 파일 목록의 SHA-256 · 크기, expected.json 이 가리키는 실행을 앱 패키지의 data/experiment_check.py(= 도구/experiment_check.py)로 확인한다. 실행을 다시 계산하지는 않는다 — 같은 비트를 확인하려면 실행 기록의 요청을 다시 보낸다(같은 요청이면 종류 check 로 남는다).",
+    "en": "Check an experiment (job) — the format of experiment.json, the SHA-256 and size of each listed file and the runs that expected.json names, with data/experiment_check.py in the app package (= 도구/experiment_check.py). It does not recompute runs — to check the bits, send a run record's request again (an identical request is recorded as kind check)."
    },
    "status": "exists",
    "http": {
@@ -3354,8 +3354,8 @@
     "en": "Make receipts from conversation or request logs"
    },
    "description": {
-    "ko": "대화 기록 · 요청과 응답 기록에서 영수증 만들기.",
-    "en": "Make receipts from conversation or request logs."
+    "ko": "llama.cpp 재현 — llama-server 로 한 대화 기록 · 요청과 응답 기록에서 영수증 만들기. 먼저 replay.recorder.set 으로 llama-server 의 명령줄 · 실행 파일을 저장한다(영수증에 서버 · 모델을 적는다). GeulPU 의 실행에는 쓰지 않는다 — GeulPU 실행은 실험의 실행 기록에 남는다.",
+    "en": "llama.cpp replay — make receipts from logs of a conversation or of requests and answers run on llama-server. Save llama-server's command line and executable first with replay.recorder.set (receipts name the server and the model). Not for GeulPU runs — those are recorded in the experiment's run records."
    },
    "status": "exists",
    "http": {
@@ -4432,6 +4432,15 @@
      "description": {
       "ko": "스텝마다 로짓 해시를 돌려받기",
       "en": "return a logit hash per step"
+     }
+    },
+    {
+     "name": "geulpu.prompt_tokens",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "프롬프트의 토큰 id 를 돌려받기",
+      "en": "return the prompt's token ids"
      }
     }
    ],

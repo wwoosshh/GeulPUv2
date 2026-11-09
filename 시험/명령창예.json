@@ -1105,6 +1105,22 @@
    }
   },
   {
+   "name": "--json 이 JSON 이 아님",
+   "argv": [
+    "run",
+    "complete",
+    "--json",
+    "{nope"
+   ],
+   "line": "run complete --json '{nope'",
+   "expect": {
+    "error": {
+     "message": "--json is not valid JSON",
+     "next": "check the JSON: quotes, commas and brackets"
+    }
+   }
+  },
+  {
    "name": "GET 에 --json",
    "argv": [
     "experiment",
