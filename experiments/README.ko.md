@@ -60,7 +60,7 @@ experiments/<YYYY-MM-DD>-<이름>/
 GeulPU 앱이 떠 있으면 CLI(와 앱의 실험 화면)가 1 ~ 3 단계와 5 · 6 단계를 한다: `GeulPU experiment create --name <이름> --root experiments` 가
 이 템플릿에서 폴더를 만들고 `index.md` 에 더한다. `GeulPU experiment update` 가 계획과 판정 기준(첫 실행 전에만), 그 뒤의 판정 · `results.md` ·
 상태를 쓴다. 어느 명령에든 `--experiment <폴더>` 를 붙이면 그 호출이 `records/commands.jsonl` 에 남고, 200 으로 끝난 실행은
-`records/runs/<id>.json` 과 `runs` 의 항목(종류 · 원래 실행 · 개입), `models` 의 모델, 앱이 쓴 파일의 `files` 항목으로 남는다.
+`records/runs/<id>.json` 과 `runs` 의 항목(종류 · 원래 실행 · 개입), `models` 의 모델, `devices` 의 장치, 앱이 쓴 파일의 `files` 항목으로 남는다.
 `GeulPU experiment check --path <폴더> --wait` 가 이 점검 도구를 돌린다([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md)
 §3 · §4). 직접 더한 파일은 4 단계를 거친다.
 
