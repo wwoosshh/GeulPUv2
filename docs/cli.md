@@ -153,8 +153,14 @@ plan.md are left as they are. Commit `plan.md` before running if the folder is i
 criteria came first; the check does not require it.
 
 **Reproducing a run.** Send the `request` from its record (`records/runs/<id>.json`) again with `--experiment`: an identical request is
-recorded as kind `check` with `base`, and its `geulpu.tokens` and `geulpu.logit_hashes` must equal the original's. The app's run screen
-also exports a reproduction file (`geulpu-capsule/1`) and checks one under Reproduce › Checks; the CLI has no command for that file yet.
+recorded as kind `check` with `base`, and its `geulpu.tokens` and `geulpu.logit_hashes` must equal the original's. To hand a run to
+someone else, make its reproduction file (`geulpu-capsule/1`: prompt and answer tokens, every step's log-probability, entropy, top
+candidates and logit hash, the model's SHA-256, the seed): `GeulPU experiment repro --path <id> --run r1 --out repro.json`. It needs a
+whole-answer score run in the experiment; without one the 409 gives the `run score` request to send first. `GeulPU check repro --json
+@repro.json` checks a file on this PC with its model loaded: `ok`, `score.first_diff_step` (1 = the answer's first token), whether
+regenerating gives the same tokens and logit hashes, the fingerprint, and the settings that differ from the file (`differences`). The run
+screen's export and Reproduce › Checks use the same two operations. Without GeulPU, `python 도구/repro_check.py repro.json model.gguf`
+(in the repository) checks a file against the precision contract's CPU reference.
 
 What `experiment check` passes: `experiment.json` matches the schema (required fields, allowed values), `id` is the folder name,
 `plan.md` exists (and `results.md` once `status` is `done`), every file is listed with the right SHA-256 and size, every run's `record`
