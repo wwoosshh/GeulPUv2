@@ -82,6 +82,8 @@ cp "$HERE/data/orig_compare.py" "$DIST/data/"                    # 모델 평가
 cp "$HERE/data/operations.json" "$DIST/data/"                     # 앱리디자인 B1 — 기능 목록(앱 · CLI 가 읽는다, 문서/기능목록.md)
 mkdir -p "$DIST/data/experiment-template"                          # 앱리디자인 C2 — 실험 기록의 템플릿 · 스키마 · 점검 도구(문서/명령줄.md §3)
 cp "$ROOT/experiments/_template/"* "$DIST/data/experiment-template/"
+mkdir -p "$DIST/data/experiment-template-ko"                       # 앱리디자인 F3-2 — 한국어 화면의 실험 템플릿(experiment create --lang ko)
+cp "$HERE/data/experiment-template-ko/"* "$DIST/data/experiment-template-ko/"
 cp "$ROOT/experiments/experiment.schema.json" "$ROOT/도구/experiment_check.py" "$DIST/data/"
 cp "$ROOT/docs/cli.md" "$DIST/data/cli-guide.md"                   # 앱리디자인 C3 — GeulPU guide
 cp "$ROOT/교차검증/expected.json" "$ROOT/교차검증/requests.json" "$DIST/data/crosscheck/"
