@@ -193,7 +193,7 @@ def 모델모양(meta, 텐서):
             "너비": 키("embedding_length"), "헤드": 키("attention.head_count"), "KV헤드": 키("attention.head_count_kv"),
             "확장폭": 키("feed_forward_length"), "어휘": 텐서.get("token_embd.weight", (0, [0, 0]))[1][-1],
             "eps": float(키("attention.layer_norm_rms_epsilon", 0.0) or 0.0), "형식글": 형식글 or f"?({q형})", "매개변수": 매개,
-            "헤드크기": 키("attention.key_length", 0), "RoPE": 키("rope.dimension_count", 0),
+            "헤드크기": 키("attention.key_length", 0), "RoPE": 키("rope.dimension_count", 0), "위치": 키("context_length", 0),
             "토큰모델": meta.get("tokenizer.ggml.model") or "", "토큰앞": meta.get("tokenizer.ggml.pre") or "",
             "템플릿": bool(템플릿), "템플릿도구": "tools" in 템플릿, "생각켬끔": "enable_thinking" in 템플릿}
 
@@ -422,9 +422,11 @@ def 단계헤더(gguf, 모, 앱하나, 서버):
 def 단계비트(gguf, 모, bin폴더, 모듈폴더, 출력, 라마):
     """돌려줌: CPU 참조와 비교할 시험_7B 출력 — (이름, 폴더, 참조7B 옵션)"""
     라마토큰 = []
-    if 모["구조"] == "llama":                     # 입력7B.py — 구조 llama 의 토큰은 llama.cpp 의 llama-tokenize 로
+    # 입력7B.py — 구조 llama 의 토큰, 그리고 Qwen 의 바이트 BPE(사전 처리 qwen2)가 아닌 qwen2 · qwen3 의 토큰(0.24.0 24-1 — SKT A.X 4.0 Light:
+    # qwen2 구조 · 사전 처리 gpt-2 · 어휘 102,400)은 llama.cpp 의 llama-tokenize 로. 입력7B.py 의 Qwen 토크나이저는 Qwen 의 어휘만 안다
+    if 모["구조"] == "llama" or (모["구조"] in 표준구조 and 모.get("토큰앞") != "qwen2"):
         if not 라마:
-            판("bits", "입력", None, "구조 llama 는 --tokenizer-llama(llama-tokenize)가 있어야 입력을 만든다")
+            판("bits", "입력", None, f"구조 {모['구조']} · 사전 처리 {모.get('토큰앞')} 는 --tokenizer-llama(llama-tokenize)가 있어야 입력을 만든다")
             return []
         라마토큰 = ["--라마토큰", os.path.join(라마, "llama-tokenize" + EXE)]
     elif 모["구조"] not in 표준구조:              # 2026-10-25 — 입력7B.py 의 토크나이저가 모르는 구조: 정한 무작위 토큰열(--토큰 — 비트 대조에는 충분)
@@ -478,14 +480,18 @@ def 단계비트(gguf, 모, bin폴더, 모듈폴더, 출력, 라마):
     다른 = 변형들(모)[-1] if 기본[0] == "정밀" else 변형들(모)[0]       # 다른 끝 — 기본이 정밀이면 가장 빠른 모듈
     p기본 = 모듈짓기(bin폴더, 모듈폴더, 기본[1], 모["생성기인자"], 기본[2])
     p다른 = 모듈짓기(bin폴더, 모듈폴더, 다른[1], 모["생성기인자"], 다른[2])
-    for 이름, 인자 in ((f"시험_긴문맥 {기본[0]}", [p기본, 긴, "32768", "1000,4100,8190,16384,32760"]),
-                     (f"시험_긴문맥 {기본[0]} --far 0,0", [p기본, 긴, "32768", "4100,16384,32760", "--far", "0,0"]),
-                     (f"시험_긴문맥 {다른[0]}", [p다른, 긴, "32768", "1000,8190,32760"])):
+    # 0.24.0 24-1 — 모델의 위치 수가 32,768 보다 작으면(SKT A.X 4.0 Light 는 16,384) 엔진이 문맥을 그만큼으로 줄인다(엔진.gl 의
+    # 문맥한도). 문맥과 n 을 그 안으로 — 시험_긴문맥 은 n + 8 이 문맥에 들어야 한다. 넘는 n 은 문맥 − 8 로(가장 긴 경우를 남긴다)
+    L = min(32768, 모.get("위치") or 32768) // 64 * 64
+    n목록 = lambda ns: ",".join(str(n) for n in dict.fromkeys(min(n, L - 8) for n in ns))      # noqa: E731
+    for 이름, 인자 in ((f"시험_긴문맥 {기본[0]}", [p기본, 긴, str(L), n목록([1000, 4100, 8190, 16384, 32760])]),
+                     (f"시험_긴문맥 {기본[0]} --far 0,0", [p기본, 긴, str(L), n목록([4100, 16384, 32760]), "--far", "0,0"]),
+                     (f"시험_긴문맥 {다른[0]}", [p다른, 긴, str(L), n목록([1000, 8190, 32760])])):
         if not GPU비었나():
             판("bits", 이름, None, "GPU 메모리를 다른 작업이 쓰고 있다")
             continue
         rc, 끝 = 돌리기([os.path.join(bin폴더, "tlong" + EXE), gguf] + 인자, os.path.join(출력, 이름.replace(" ", "_") + ".txt"))
-        판("bits", f"{이름}(문맥 32,768)", rc == 0 and "다른 경우 0" in 끝 and "오류칸 0" in 끝, 끝)
+        판("bits", f"{이름}(문맥 {L:,})", rc == 0 and "다른 경우 0" in 끝 and "오류칸 0" in 끝, 끝)
     for 이름, p in ((f"시험_추측 {기본[0]}", p기본), (f"시험_추측 {다른[0]}", p다른)):
         if not GPU비었나():
             판("bits", 이름, None, "GPU 메모리를 다른 작업이 쓰고 있다")
@@ -733,6 +739,10 @@ def 단계목록(gguf, 모, 확인, 저장소, 앱봄):
     if 모["형식글"] in ("Q8_0", "Q4_0"):
         ko.append(f"{모['형식글']} 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다.")
         en.append(f"As a {모['형식글']} file it also runs on GPUs with 32 KB of shared memory (AMD and others).")
+    elif 모["형식글"] == "K" and (모["헤드크기"] or 모["너비"] // max(모["헤드"], 1)) == 128:
+        # 0.12.0 12-4 — 공유 메모리 32 KB 장치의 공유32 모듈이 k-양자화 셋(헤드 128)을 받는다 — 모델 목록의 설명과 같은 글(0.24.0 24-1)
+        ko.append("CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함).")
+        en.append("Runs on CUDA and on Vulkan GPUs (including those with 32 KB of shared memory).")
     else:
         ko.append("CUDA나 공유 메모리 48 KB 이상인 Vulkan GPU에서 실행됩니다.")
         en.append("Runs on CUDA or on Vulkan GPUs with 48 KB or more of shared memory.")

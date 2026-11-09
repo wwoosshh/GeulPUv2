@@ -94,6 +94,9 @@ def main():
     if 구조 == "llama":                        # 39단계
         tk = 라마토크나이저(sys.argv[sys.argv.index("--라마토큰") + 1], gguf)
         채팅 = lambda q: tk.나누기(라마틀(g, q))
+    elif "--라마토큰" in sys.argv:             # 0.24.0 24-1 — Qwen 의 어휘가 아닌 qwen2 · qwen3(SKT A.X 4.0 Light — 사전 처리 gpt-2): ChatML 글을
+        tk = 라마토크나이저(sys.argv[sys.argv.index("--라마토큰") + 1], gguf)      # llama-tokenize 로(비트 대조에는 그 어휘의 토큰열이면 된다 —
+        채팅 = lambda q: tk.나누기(틀(구조)([{"role": "user", "content": q}]))   # 템플릿 그 자체는 모델검증 의 template 단계가 jinja2 와 대조한다)
     else:
         tk = TK.Qwen토크나이저(gguf=g)
         채팅 = lambda q: tk.나누기(틀(구조)([{"role": "user", "content": q}]))
