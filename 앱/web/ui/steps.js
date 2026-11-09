@@ -468,20 +468,16 @@ const before = (d, k) => d.ptoks.concat(d.ids.slice(0, k));
 function doTop(ctx, d, k) {
   const N = Math.max(1, Math.min(TOP_MAX, Math.round(Number(st.topN)) || 20));
   st.topN = N;
-  const body = {
-    prompt: before(d, k).concat([d.ids[k]]), echo: true, max_tokens: 0, logprobs: Math.min(N, 20),
-    geulpu: { echo_from: d.ptoks.length + k, top_logprobs: N, logit_hash: true },
-  };
-  measure(ctx, 'run.score', JSON.stringify(body), T`${d.entry.id} 의 스텝 ${d.off + k} 에서 상위 후보 ${N} 개를 계산하는 중`, d.entry.id);
+  // 5-1 — 요청은 앱이 짓는다(experiment.score — 그 스텝까지 echo, echo_from = 프롬프트 길이 + 스텝)
+  const body = { run: d.entry.id, step: d.off + k, top_logprobs: N };
+  measure(ctx, 'experiment.score', JSON.stringify(body), T`${d.entry.id} 의 스텝 ${d.off + k} 에서 상위 후보 ${N} 개를 계산하는 중`, d.entry.id);
 }
 
 function doLens(ctx, d, k, jac) {
   const K = LENS_K.includes(st.lensK) ? st.lensK : 5;
-  const body = {
-    prompt: before(d, k).concat([d.ids[k]]), echo: true, max_tokens: 0, logprobs: 1,
-    geulpu: { echo_from: d.ptoks.length + k, logit_hash: true, layer_lens: jac ? { top_k: K, jacobian: true } : { top_k: K } },
-  };
-  measure(ctx, 'run.lens', JSON.stringify(body), T`${d.entry.id} 의 스텝 ${d.off + k} 에서 로짓 렌즈를 계산하는 중`, d.entry.id);
+  // 5-1 — 요청은 앱이 짓는다(experiment.lens)
+  const body = jac ? { run: d.entry.id, step: d.off + k, top_k: K, jacobian: true } : { run: d.entry.id, step: d.off + k, top_k: K };
+  measure(ctx, 'experiment.lens', JSON.stringify(body), T`${d.entry.id} 의 스텝 ${d.off + k} 에서 로짓 렌즈를 계산하는 중`, d.entry.id);
 }
 
 async function doScore(ctx, d, k, key) {

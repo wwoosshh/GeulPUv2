@@ -265,7 +265,8 @@ function scoreAllBody(d, K) {
   });
 }
 function scoreAll(ctx, d, K) {
-  return measure(ctx, 'run.score', scoreAllBody(d, K), T`${d.entry.id} 의 모든 스텝에서 상위 후보 ${K} 개를 계산하는 중`, d.entry.id);
+  // 5-1 — 답 전체의 점수는 앱이 짓는다(experiment.score — 재현 파일에 드는 것). 다른 모델로 점수는 그대로 run.score
+  return measure(ctx, 'experiment.score', JSON.stringify({ run: d.entry.id, top_logprobs: K }), T`${d.entry.id} 의 모든 스텝에서 상위 후보 ${K} 개를 계산하는 중`, d.entry.id);
 }
 
 // ---- 캐시 없이 재실행 ----

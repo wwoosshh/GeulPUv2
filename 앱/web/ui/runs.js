@@ -510,8 +510,6 @@ export function rawRequest(text) {
   return null;
 }
 
-const SAMPLING = ['temperature', 'top_p', 'top_k', 'min_p', 'presence_penalty', 'frequency_penalty', 'repeat_penalty', 'ignore_eos'];
-
 function topCount(d) {
   const gq = d.req.geulpu && typeof d.req.geulpu === 'object' ? d.req.geulpu : {};
   if (Number.isInteger(gq.top_logprobs) && gq.top_logprobs > 0) return gq.top_logprobs;
@@ -520,27 +518,15 @@ function topCount(d) {
   return 2;
 }
 
-/** 분기 요청 — docs/cli.md 의 분기: 프롬프트 토큰 + 답의 앞 k 토큰 + 고른 후보, step_offset = k + 1(원래 실행의 난수), 같은 시드 · 샘플링 설정,
-   echo 로 앞부분의 로짓 해시도 */
-function branchBody(d, k, tok) {
-  const K = topCount(d);
-  const max = Number.isInteger(d.req.max_tokens) ? d.req.max_tokens : d.n;
-  const o = { prompt: d.ptoks.concat(d.ids.slice(0, k), [tok]), max_tokens: Math.max(1, max - (k + 1)) };
-  for (const f of SAMPLING) if (d.req[f] !== undefined) o[f] = d.req[f];
-  o.echo = true;
-  o.logprobs = K;
-  o.geulpu = { echo_from: d.ptoks.length, step_offset: d.off + k + 1, logit_hash: true, top_logprobs: K, prompt_tokens: true };
-  if (d.req.geulpu && d.req.geulpu.special === true) o.geulpu.special = true;     // E6-2 — 특수 토큰(생각 토큰)의 글도 받는다
-  return bodyWithSeed(o, d.seedText);
-}
-
 export async function doBranch(ctx, d, k, tok) {
   if (ui.busy) return;
   ui.busy = T`${d.entry.id} 의 스텝 ${d.off + k} 에서 분기하는 중`;
   ui.error = null;
   ctx.rerender();
   try {
-    const { id } = await runCall(ctx, 'run.branch', branchBody(d, k, tok));
+    // 5-1 — 요청은 앱이 실행의 기록에서 짓는다(experiment.branch — CLI 와 같은 기능): 프롬프트 토큰 + 답의 앞부분 + 바꾼 토큰, 같은 샘플링 설정 ·
+    // 시드, step_offset = 스텝 + 1, 원래 답과 같은 길이
+    const { id } = await runCall(ctx, 'experiment.branch', JSON.stringify({ run: d.entry.id, step: d.off + k, token: tok }));
     ui.busy = null;
     if (id) ctx.openCompare(d.entry.id, id);
     else ctx.rerender();

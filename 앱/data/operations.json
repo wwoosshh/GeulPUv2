@@ -2791,6 +2791,251 @@
    }
   },
   {
+   "id": "experiment.branch",
+   "title": {
+    "ko": "실험 실행에서 분기",
+    "en": "Branch from a run"
+   },
+   "description": {
+    "ko": "실험의 실행 하나의 스텝 하나를 다른 토큰으로 바꿔 원래의 난수로 잇는다 — 실행 화면의 분기와 같은 요청(프롬프트 토큰 + 답의 앞부분 + 바꾼 토큰, 같은 샘플링 설정 · 시드, step_offset = step + 1, 원래 답과 같은 길이, echo · 상위 후보 · 로짓 해시). 실행의 모델(SHA-256)이 불러와 있어야 한다. 앱은 지은 요청을 엔진에 보내고(답은 엔진의 답 그대로), 명령 기록에는 이 짧은 명령을, 실행 기록에는 지은 요청 전체를 남긴다 — 새 실행 id 는 이벤트의 end · 실험의 runs.",
+    "en": "Replace one step of a run with another token and continue with the original random numbers — the same request as the run screen's branch (prompt tokens + the answer so far + the new token, same sampling settings and seed, step_offset = step + 1, the original answer's length, echo, top candidates, logit hashes). The run's model (SHA-256) must be loaded. The app passes the built request to the engine (the answer is the engine's), records this short command in commands.jsonl and the whole built request in the run's record — the new run id is in the end event and the experiment's runs."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/experiments/branch"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id — 없으면 실험 헤더(--experiment · GEULPU_EXPERIMENT)의 실험",
+      "en": "experiment folder, or an experiment id inside the root — without it, the experiment of the experiment header (--experiment, GEULPU_EXPERIMENT)"
+     }
+    },
+    {
+     "name": "run",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실행 id(예: r1)",
+      "en": "run id (e.g. r1)"
+     }
+    },
+    {
+     "name": "step",
+     "type": "integer",
+     "required": true,
+     "description": {
+      "ko": "스텝 번호(화면의 번호 — 분기 실행은 원래 실행의 번호를 잇는다)",
+      "en": "step number (as the screens show it — a branch's steps continue its base's)"
+     }
+    },
+    {
+     "name": "token",
+     "type": "integer",
+     "required": true,
+     "description": {
+      "ko": "그 스텝에 둘 토큰 번호",
+      "en": "token id to put at that step"
+     }
+    },
+    {
+     "name": "max_tokens",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "새로 생성할 토큰 수(기본: 원래 답과 같은 길이가 되게)",
+      "en": "tokens to generate (default: so the whole answer is as long as the original)"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "branch",
+   "job": false,
+   "records": "branch",
+   "cli": {
+    "ko": "실험 실행 분기",
+    "en": "experiment branch"
+   },
+   "gui": {
+    "screens": [
+     "run",
+     "step"
+    ]
+   }
+  },
+  {
+   "id": "experiment.lens",
+   "title": {
+    "ko": "실험 실행의 로짓 렌즈",
+    "en": "Logit lens of a run's step"
+   },
+   "description": {
+    "ko": "실험의 실행 하나의 스텝 하나에서 로짓 렌즈(층마다 상위 후보와 그 스텝의 토큰의 순위) — 스텝 · 층 화면의 로짓 렌즈 계산과 같은 요청. 실행의 모델(SHA-256)이 불러와 있어야 한다. 앱은 지은 요청을 엔진에 보내고(답은 엔진의 답 그대로), 명령 기록에는 이 짧은 명령을, 실행 기록에는 지은 요청 전체를 남긴다 — 새 실행 id 는 이벤트의 end · 실험의 runs.",
+    "en": "Logit lens at one step of a run (each layer's top candidates and the rank of that step's token) — the same request as the step and layer screen's logit lens. The run's model (SHA-256) must be loaded. The app passes the built request to the engine (the answer is the engine's), records this short command in commands.jsonl and the whole built request in the run's record — the new run id is in the end event and the experiment's runs."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/experiments/lens"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id — 없으면 실험 헤더(--experiment · GEULPU_EXPERIMENT)의 실험",
+      "en": "experiment folder, or an experiment id inside the root — without it, the experiment of the experiment header (--experiment, GEULPU_EXPERIMENT)"
+     }
+    },
+    {
+     "name": "run",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실행 id(예: r1)",
+      "en": "run id (e.g. r1)"
+     }
+    },
+    {
+     "name": "step",
+     "type": "integer",
+     "required": true,
+     "description": {
+      "ko": "스텝 번호(화면의 번호 — 분기 실행은 원래 실행의 번호를 잇는다)",
+      "en": "step number (as the screens show it — a branch's steps continue its base's)"
+     }
+    },
+    {
+     "name": "top_k",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "층마다 상위 후보 수(1 ~ 20, 기본 5)",
+      "en": "top candidates per layer (1–20, default 5)"
+     }
+    },
+    {
+     "name": "jacobian",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "Jacobian lens 도(서버가 J 파일을 열었을 때)",
+      "en": "also the Jacobian lens (when the server opened a J file)"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "lens",
+   "job": false,
+   "records": "lens",
+   "cli": {
+    "ko": "실험 실행 렌즈",
+    "en": "experiment lens"
+   },
+   "gui": {
+    "screens": [
+     "step"
+    ]
+   }
+  },
+  {
+   "id": "experiment.score",
+   "title": {
+    "ko": "실험 실행의 점수",
+    "en": "Score a run"
+   },
+   "description": {
+    "ko": "실험의 실행 하나를 echo 로 점수 매긴다 — step 이 없으면 답 전체(재현 파일에 드는 것, 상위 후보 기본 10), 있으면 그 스텝의 상위 후보(기본 20). 실행 화면 · 스텝 화면의 계산과 같은 요청. 실행의 모델(SHA-256)이 불러와 있어야 한다. 앱은 지은 요청을 엔진에 보내고(답은 엔진의 답 그대로), 명령 기록에는 이 짧은 명령을, 실행 기록에는 지은 요청 전체를 남긴다 — 새 실행 id 는 이벤트의 end · 실험의 runs.",
+    "en": "Score a run with echo — without step the whole answer (what a reproduction file needs, top 10 candidates by default), with step that step's top candidates (20 by default). The same requests as the run and step screens. The run's model (SHA-256) must be loaded. The app passes the built request to the engine (the answer is the engine's), records this short command in commands.jsonl and the whole built request in the run's record — the new run id is in the end event and the experiment's runs."
+   },
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/experiments/score"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id — 없으면 실험 헤더(--experiment · GEULPU_EXPERIMENT)의 실험",
+      "en": "experiment folder, or an experiment id inside the root — without it, the experiment of the experiment header (--experiment, GEULPU_EXPERIMENT)"
+     }
+    },
+    {
+     "name": "run",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실행 id(예: r1)",
+      "en": "run id (e.g. r1)"
+     }
+    },
+    {
+     "name": "step",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "스텝 번호 — 없으면 답 전체",
+      "en": "step number — without it, the whole answer"
+     }
+    },
+    {
+     "name": "top_logprobs",
+     "type": "integer",
+     "required": false,
+     "description": {
+      "ko": "상위 후보 수(1 ~ 128 — 답 전체는 기본 10, 스텝은 20)",
+      "en": "top candidates (1–128 — whole answer 10 by default, a step 20)"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "score",
+   "job": false,
+   "records": "score",
+   "cli": {
+    "ko": "실험 실행 점수",
+    "en": "experiment score"
+   },
+   "gui": {
+    "screens": [
+     "run",
+     "step"
+    ]
+   }
+  },
+  {
    "id": "experiment.update",
    "title": {
     "ko": "실험 수정(계획 · 판정 기준 · 결과)",

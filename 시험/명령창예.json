@@ -1460,6 +1460,107 @@
      "path": "/api/check/repro"
     }
    }
+  },
+  {
+   "name": "실험 실행 분기 — 짧은 명령",
+   "argv": [
+    "experiment",
+    "branch",
+    "--run",
+    "r1",
+    "--step",
+    "3",
+    "--token",
+    "785"
+   ],
+   "line": "experiment branch --run r1 --step 3 --token 785",
+   "expect": {
+    "request": {
+     "op": "experiment.branch",
+     "method": "POST",
+     "path": "/api/experiments/branch",
+     "body": {
+      "run": "r1",
+      "step": 3,
+      "token": 785
+     }
+    }
+   }
+  },
+  {
+   "name": "실험 실행 렌즈 — 한국어 이름 · path",
+   "argv": [
+    "실험",
+    "실행",
+    "렌즈",
+    "--path",
+    "2026-11-09-a",
+    "--run",
+    "r1",
+    "--step",
+    "3",
+    "--top_k",
+    "5",
+    "--jacobian"
+   ],
+   "line": "실험 실행 렌즈 --path 2026-11-09-a --run r1 --step 3 --top_k 5 --jacobian",
+   "expect": {
+    "request": {
+     "op": "experiment.lens",
+     "method": "POST",
+     "path": "/api/experiments/lens",
+     "body": {
+      "path": "2026-11-09-a",
+      "run": "r1",
+      "step": 3,
+      "top_k": 5,
+      "jacobian": true
+     }
+    }
+   }
+  },
+  {
+   "name": "실험 실행 점수 — 답 전체",
+   "argv": [
+    "experiment",
+    "score",
+    "--run",
+    "r2",
+    "--top_logprobs",
+    "10"
+   ],
+   "line": "experiment score --run r2 --top_logprobs 10",
+   "expect": {
+    "request": {
+     "op": "experiment.score",
+     "method": "POST",
+     "path": "/api/experiments/score",
+     "body": {
+      "run": "r2",
+      "top_logprobs": 10
+     }
+    }
+   }
+  },
+  {
+   "name": "실험 실행 분기 — step 이 정수가 아님",
+   "argv": [
+    "experiment",
+    "branch",
+    "--run",
+    "r1",
+    "--step",
+    "three",
+    "--token",
+    "785"
+   ],
+   "line": "experiment branch --run r1 --step three --token 785",
+   "expect": {
+    "error": {
+     "message": "--step needs integer (JSON)",
+     "next": "GeulPU help experiment branch"
+    }
+   }
   }
  ]
 }
