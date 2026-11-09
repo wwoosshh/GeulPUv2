@@ -179,13 +179,23 @@ export function dataOf(entry, rec, text) {
     texts: null, lps: null, alts: null, ptexts: null, seedText: null,
   };
   const lp = ch && ch.logprobs;
-  if (lp && Array.isArray(lp.tokens)) {                    // 텍스트 생성 — echo 면 프롬프트 토큰이 먼저
+  // 텍스트 생성 — echo 면 프롬프트의 위치마다 한 칸씩 먼저 온다. 끝 토큰(EOS)으로 멈춘 답은 그 스텝의 칸이 없으므로(채팅과 같다) 프롬프트와
+  // 답을 프롬프트 토큰 수로 나눈다 — 뒤에서 답의 토큰 수만큼 세면 끝 토큰이 없을 때 글이 한 칸씩 밀린다(채팅에서 만든 분기 실행)
+  let split = -1;
+  if (lp && Array.isArray(lp.tokens)) {
     const m = lp.tokens.length;
-    if (m >= n) {
-      d.texts = lp.tokens.slice(m - n).map(String);
-      d.ptexts = lp.tokens.slice(0, m - n).map(String);
-      if (Array.isArray(lp.token_logprobs)) d.lps = lp.token_logprobs.slice(m - n);
-      if (Array.isArray(lp.top_logprobs)) d.alts = lp.top_logprobs.slice(m - n).map(o => (o && typeof o === 'object' ? Object.entries(o) : []));
+    const p = req.echo === true ? (d.ptoks ? d.ptoks.length : m - n) : 0;
+    if (p >= 0 && n > 0 && (m - p === n || m - p === n - 1)) {
+      split = p;
+      d.texts = lp.tokens.slice(p).map(String);
+      d.ptexts = lp.tokens.slice(0, p).map(String);
+      if (Array.isArray(lp.token_logprobs)) d.lps = lp.token_logprobs.slice(p);
+      if (Array.isArray(lp.top_logprobs)) d.alts = lp.top_logprobs.slice(p).map(o => (o && typeof o === 'object' ? Object.entries(o) : []));
+      if (m - p === n - 1) {
+        d.texts.push('');
+        if (d.lps) d.lps.push(null);
+        if (d.alts) d.alts.push([]);
+      }
     }
   } else if (lp && Array.isArray(lp.content)) {           // 채팅
     const c = lp.content.slice(0, n);
@@ -206,15 +216,16 @@ export function dataOf(entry, rec, text) {
   if (d.texts && lp && Array.isArray(lp.content)) {
     const parts = lp.content.slice(0, n).map(x => (Array.isArray(x.bytes) ? Uint8Array.from(x.bytes) : null));
     if (parts.length && parts.every(Boolean)) mergeBytes(parts).forEach((t, k) => { d.texts[k] = t; });
-  } else if (d.texts && lp && Array.isArray(lp.text_offset) && typeof ch.text === 'string') {
+  } else if (d.texts && split >= 0 && Array.isArray(lp.text_offset) && typeof ch.text === 'string') {
     const enc = new TextEncoder().encode(ch.text);
     const offs = lp.text_offset;
     const m = lp.tokens.length;
     const ok = offs.length === m && offs.every((o, i) => Number.isInteger(o) && o >= 0 && o <= enc.length && (i === 0 || o >= offs[i - 1]));
     if (ok) {
       const merged = mergeBytes(offs.map((o, i) => enc.subarray(o, i + 1 < m ? offs[i + 1] : enc.length)));
-      d.ptexts = merged.slice(0, m - n);
-      d.texts = merged.slice(m - n);
+      d.ptexts = merged.slice(0, split);
+      d.texts = merged.slice(split);
+      if (d.texts.length === n - 1) d.texts.push('');
     }
   }
   // 시드 — JS 의 수는 2^53 을 넘는 시드를 바꾸므로 기록 파일의 글에서 그대로 읽는다
@@ -907,11 +918,18 @@ function stripView(ctx, d, sel, low, onSel) {
   for (let k = 0; k < d.n; k++) {
     const v = stepVals(d, k);
     const w = barWidth(d, v, maxEnt);
-    const text = d.texts ? d.texts[k] : '#' + d.ids[k];
+    let text = d.texts ? d.texts[k] : '#' + d.ids[k];
+    // 끝 토큰(EOS) — 응답에 글이 없는 마지막 스텝은 그 토큰의 글(<|im_end|> 등)을 흐리게 보인다
+    const eos = text === '' && k === d.n - 1;
+    if (eos) {
+      const pt = pieceText(d.ids[k]);
+      if (pt === null) fetchPieces([d.ids[k]], ctx);
+      else text = pt;
+    }
     const raw = d.raw ? d.raw[k] : text;
     const label = T`스텝 ${d.off + k}: ${quoteTok(text === null ? raw : text)}, 마진 ${fx(v.margin, 3)}, 확률 ${pct(v.prob)}`;
     toks.push(el('span', {
-      class: 'run-tok' + (text === null ? ' cont' : '') + (k === sel ? ' sel' : '') + (k === low ? ' low' : '') + (v.rank !== null && v.rank > 1 ? ' notop' : '')
+      class: 'run-tok' + (text === null ? ' cont' : '') + (eos ? ' eos' : '') + (k === sel ? ' sel' : '') + (k === low ? ' low' : '') + (v.rank !== null && v.rank > 1 ? ' notop' : '')
         + (v.margin !== null && v.margin < dlt ? ' dlt' : ''),
       'data-k': String(k), role: 'button', tabindex: k === sel ? '0' : '-1', 'aria-label': label, 'aria-pressed': String(k === sel),
       'data-note': k === low ? T`마진이 가장 작은 스텝 · ${fx(v.margin, 3)}` : null,

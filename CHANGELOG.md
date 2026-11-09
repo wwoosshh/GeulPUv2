@@ -175,6 +175,11 @@ GeulPU becomes a research platform — experiment records, a CLI for people and 
   step's probabilities at the prompt position, and shows the first step where the answers differ with both tokens' probabilities and
   ranks. In the CLI, `--wait` waits for the job also with `--out` and writes the finished job to that file, and a `--json` body with a
   syntax error is reported as "--json is not valid JSON" ([사용성시험.md](문서/사용성시험.md) §2).
+- **Run screen — token texts of text-generation runs that ended with the end token.** When a text-generation run made with echo —
+  every branch made from a chat run — stopped at the end token, the run screen showed each answer token with the text of the token
+  before it, so the branch description named a line break instead of the token put in. The end token now shows as its own text
+  (`<|im_end|>` …) at the end of the token-by-token output and in Δ lists, and the other-model list and the Δ title name the
+  quantization (`Qwen2.5 7B Instruct · Q4_K_M`). Found while retaking the research guide's pictures.
 
 ## 0.22.0 — llama.cpp replay check · Python API · Linux Vulkan · reproducibility kit (2026-11-06)
 

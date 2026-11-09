@@ -281,6 +281,13 @@ async function rerunNoCache(ctx, d, text) {
 
 // ---- 다른 모델로 점수 ----
 
+/** 모델의 양자화 이름 — 앱의 모델 목록(app.js 의 quantOf)과 같은 차례: 모양의 형식 → 파일 형식(general.file_type) → 행렬의 형식 */
+function quantLabel(m) {
+  const s = (m && m.shape) || {};
+  if (!(s.experts > 0) && s.quant && !['K', 'KI', 'W16'].includes(s.quant)) return s.quant;
+  return s.file_type || s.weight_type || s.quant || '';
+}
+
 /** 이 실행의 모델과 어휘 · 채팅 템플릿이 같은, 설치된 다른 모델(연구 패널과 같은 기준) */
 function otherModels(d) {
   const base = modelBySha((d.rec.server || {}).sha256);
@@ -306,7 +313,7 @@ function otherScores(ctx, d) {
     const lp = c.rec.response && Array.isArray(c.rec.response.choices) && c.rec.response.choices[0] && c.rec.response.choices[0].logprobs;
     if (!lp || !Array.isArray(lp.token_logprobs)) continue;
     const m = modelBySha(osha);
-    out.push({ entry: e, sha: osha, name: m ? m.name || m.id : String(osha).slice(0, 12), lp: lp.token_logprobs.slice(d.ptoks.length, d.ptoks.length + d.n) });
+    out.push({ entry: e, sha: osha, name: m ? (m.name || m.id) + (quantLabel(m) ? ' · ' + quantLabel(m) : '') : String(osha).slice(0, 12), lp: lp.token_logprobs.slice(d.ptoks.length, d.ptoks.length + d.n) });
   }
   return out.reverse();
 }
@@ -345,17 +352,22 @@ function deltaView(ctx, d, rows, title, file, otherLabel) {
   const big = [...rows].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 5);
   const maxAbs = Math.max(1e-9, ...rows.map(r => Math.abs(r.delta)));
   const textOf = k => (d.texts ? d.texts[k] ?? '' : '#' + d.ids[k]);
+  // 끝 토큰(EOS) — 응답에 글이 없어 그 토큰의 글(<|im_end|> 등)로. 가장 큰 차이의 이름은 한 글자의 이어지는 바이트도 토큰 번호로 보인다
+  const isEos = k => !!d.texts && d.texts[k] === '' && k === d.n - 1;
+  const shown = k => (isEos(k) ? pieceText(d.ids[k]) ?? '' : textOf(k));
+  const nameOf = k => (isEos(k) ? pieceText(d.ids[k]) ?? '#' + d.ids[k] : d.texts && d.texts[k] === null ? '#' + d.ids[k] : textOf(k));
+  if (rows.some(r => isEos(r.k) && pieceText(d.ids[r.k]) === null)) fetchPieces([d.ids[d.n - 1]], rs.ctx);
   const strip = el('div', { class: 'run-strip rs-dstrip', role: 'img', 'aria-label': title },
     rows.map(r => el('span', {
-      class: 'run-tok rs-d ' + (r.delta < 0 ? 'neg' : 'pos'), title: T`스텝 ${d.off + r.k}: Δ ${fx(r.delta, 4)}`,
+      class: 'run-tok rs-d ' + (r.delta < 0 ? 'neg' : 'pos') + (isEos(r.k) ? ' eos' : ''), title: T`스텝 ${d.off + r.k}: Δ ${fx(r.delta, 4)}`,
       style: `--a:${(Math.abs(r.delta) / maxAbs).toFixed(3)}`,
-    }, textOf(r.k))));
+    }, shown(r.k))));
   const csv = () => ['step,id,text,logprob,' + otherLabel + ',delta']
     .concat(rows.map(r => [r.k + 1, d.ids[r.k], JSON.stringify(textOf(r.k)), r.own, r.other, r.delta].join(','))).join('\n') + '\n';
   return el('div', { class: 'rs-delta-box' },
     el('h3', null, title),
     el('p', { class: 'st-meta' }, T`Δ 의 합 ${fx(sum, 4)} · 평균 ${fx(sum / rows.length, 5)} · 스텝 ${rows.length} 개`,
-      ' · ', T('가장 큰 차이: '), big.map((r, i) => [i ? ', ' : '', T`스텝 ${d.off + r.k} ${quoteTok(textOf(r.k))} ${fx(r.delta, 3)}`])),
+      ' · ', T('가장 큰 차이: '), big.map((r, i) => [i ? ', ' : '', T`스텝 ${d.off + r.k} ${quoteTok(nameOf(r.k))} ${fx(r.delta, 3)}`])),
     strip,
     el('div', { class: 'xp-actions' }, el('button', { type: 'button', class: 'btn sm', onclick: () => download(file, csv(), 'text/csv') }, 'CSV')));
 }
@@ -497,14 +509,14 @@ export function toolsView(ctx, d, text, busy) {
   if (rs.otherModel && !others.some(m => m.id === rs.otherModel)) rs.otherModel = '';
   const pickOther = el('select', { class: 'input', 'aria-label': T('점수 매길 다른 모델'), onchange: ev => { rs.otherModel = ev.target.value; } },
     el('option', { value: '' }, T('다른 모델 고르기')),
-    others.map(m => el('option', { value: m.id, selected: m.id === rs.otherModel ? true : null }, `${m.name || m.id}${m.quant ? ' · ' + m.quant : ''}`)));
+    others.map(m => el('option', { value: m.id, selected: m.id === rs.otherModel ? true : null }, `${m.name || m.id}${quantLabel(m) ? ' · ' + quantLabel(m) : ''}`)));
   out.push(el('section', { class: 'rs-sec', 'aria-label': T('계산') }, el('h2', null, T('계산')),
     el('div', { class: 'xp-actions st-form' },
       el('label', { class: 'st-inline', for: 'rs-topk' }, T('모든 스텝의 상위 후보')), kIn,
       el('button', {
         type: 'button', class: 'btn', disabled: can ? null : true,
         onclick: () => { const K = Math.max(2, Math.min(TOP_MAX, Math.round(Number(rs.topK)) || TOP_DEFAULT)); rs.topK = K; scoreAll(ctx, d, K); },
-      }, T('계산')),
+      }, T('계산', '단추')),
       el('span', { class: 'muted' }, full ? T`실행 ${full.entry.id} 의 상위 ${full.K} 개 — 스텝 상세와 스텝 · 층 화면이 그 후보를 보입니다.`
         : T('답 전체를 echo 로 점수 매겨 스텝마다의 상위 후보를 이 실험의 실행으로 남깁니다.'))),
     el('div', { class: 'xp-actions' },

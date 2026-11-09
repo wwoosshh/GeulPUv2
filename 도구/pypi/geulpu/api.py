@@ -12,7 +12,7 @@ token, send a request again and compare runs bit for bit. Python standard librar
         f = g.branch(a, step=3)                        # take the runner-up token at step 3 and continue
         print(g.info())                                # GeulPU version, GPU, driver, model SHA-256, computation path
 
-Everything goes through the app's HTTP API — the one its research panel and debugger use (docs/research-guide.md section 5,
+Everything goes through the app's HTTP API — the one its screens and debugger use (docs/research-guide.md section 5,
 docs/debugger-guide.md section 8) — so every value is the engine's own; this module computes nothing itself. docs/python-api.md
 describes each function.
 """

@@ -1741,6 +1741,7 @@ const DICT = {
   "점수 매길 다른 모델": "Other model to score with",
   "다른 모델 고르기": "Pick another model",
   "계산": "Computations",
+  "계산|단추": "Compute",
   "모든 스텝의 상위 후보": "Top candidates at every step",
   "실행 {} 의 상위 {} 개 — 스텝 상세와 스텝 · 층 화면이 그 후보를 보입니다.": "Run {}'s top {} — the step details and the step and layer screen show these candidates.",
   "답 전체를 echo 로 점수 매겨 스텝마다의 상위 후보를 이 실험의 실행으로 남깁니다.": "Scores the whole answer with echo and records the top candidates of every step as a run of this experiment.",

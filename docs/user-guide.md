@@ -217,7 +217,7 @@ tokens, every step's log-probability, entropy, top candidates and logit hash, th
 sampling settings actually used and the seed (and any logit lens computed). The per-step values come from a whole-answer score run, so
 without one the screen scores the whole answer first (that run stays in the experiment).
 
-Whoever receives the file loads its model and drops the file into **Reproduce › Checks › Check a reproduction file** — scoring,
+Whoever receives the file loads its model and drops the file into **Reproduce › Check › Check a reproduction file** — scoring,
 regeneration and the fingerprint are compared bit for bit, and a difference shows the first differing step and the settings that differ.
 From the CLI: `GeulPU experiment repro --path <experiment> --run r1 --out repro.json` and `GeulPU check repro --json @repro.json`.
 
@@ -250,9 +250,9 @@ the same experiments.
 - **Models › Performance — speed test**: prompt processing (512 and 2048 tokens) and generation speed in tokens per second.
 - **Settings › Device — hardware diagnosis**: measures memory bandwidth and tensor-core throughput and shows how close each kernel comes
   to the hardware's limit.
-- **Reproduce › Checks — reproducibility check**: solves 32 math problems with DeepSeek-R1-Distill-Qwen-7B Q8_0 and compares the output
+- **Reproduce › Check — reproducibility check**: solves 32 math problems with DeepSeek-R1-Distill-Qwen-7B Q8_0 and compares the output
   with the reference PC bit for bit (the quick check uses 2 problems and 64 tokens).
-- **Reproduce › Checks — file-pair reproducibility** (0.11.1): runs GGUF files that quantize the same model in different ways — the
+- **Reproduce › Check — file-pair reproducibility** (0.11.1): runs GGUF files that quantize the same model in different ways — the
   files of Liu and Tsai's paper on GGUF supply chains (arXiv:2610.19498) — in exact mode. It checks that every step of 32 problems gives
   the same logit hash as the reference PC, and measures how the files differ (the first step where the greedy answers diverge, the
   log-probability difference per token). The card downloads the files and checks their SHA-256. Details and reference results:
@@ -553,7 +553,7 @@ Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are
   logit computation; `geulpu.layer_lens` holds each layer's log-probability, entropy, top k, logit hash and rank (the logit lens — Qwen2.5,
   Qwen3 and Llama architectures). With a J file (`<name>.jlens.safetensors`) next to the model file, `"layer_lens": {"jacobian": true}`
   also returns the same row's Jacobian lens as `geulpu.jacobian_lens` — see
-  [experiment 8 of the research guide](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-layer-lens).
+  [experiment 8 of the research guide](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-logit-lens).
 - `/tokenize` · `/detokenize` · `/tokenizer_info` — in the same shape as vLLM.
 - In `geulpu`, `tokens` and `logit_hashes` include the step that sampled the stop token (EOS), while the log-probability arrays
   (`logprobs`, `entropy`, `top_ids`, `top_logprobs`) cover only the answer's tokens, as in OpenAI — one shorter when the answer ends with
