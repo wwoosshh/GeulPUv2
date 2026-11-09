@@ -1414,6 +1414,8 @@ const DICT = {
   "영어 소문자 · 숫자 · - 만 씁니다. 폴더 이름은 오늘 날짜와 이 이름입니다.": "Lowercase letters, digits and - only. The folder name is today's date and this name.",
   "제목": "Title",
   "연구 질문": "Research question",
+  "저자": "Authors",
+  "여럿이면 쉼표로 나눕니다.": "Separate several with commas.",
   "이름은 영어 소문자 · 숫자로 시작하고 영어 소문자 · 숫자 · - 만 64 자까지 씁니다": "The name starts with a lowercase letter or a digit and uses lowercase letters, digits and - only, up to 64 characters",
   "실행 {}": "Runs {}",
   "판정 {} / {} 통과": "Criteria {} / {} passed",

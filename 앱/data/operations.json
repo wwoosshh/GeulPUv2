@@ -2280,8 +2280,8 @@
     "en": "Create an experiment (folder, experiment.json, plan.md)"
    },
    "description": {
-    "ko": "실험 만들기 — 템플릿에서 폴더 · experiment.json · plan.md · results.md 를 만들고 index.md 에 한 줄.",
-    "en": "Create an experiment from the template (folder, experiment.json, plan.md, results.md) and add it to index.md."
+    "ko": "실험 만들기 — 템플릿에서 폴더 · experiment.json · plan.md · results.md 를 만들고 index.md 에 한 줄. lang 이 ko 면 한국어 템플릿, authors 로 저자.",
+    "en": "Create an experiment from the template (folder, experiment.json, plan.md, results.md) and add it to index.md. lang ko uses the Korean template; authors sets the authors."
    },
    "status": "exists",
    "http": {
@@ -2314,6 +2314,24 @@
      "description": {
       "ko": "연구 질문 하나",
       "en": "the one research question"
+     }
+    },
+    {
+     "name": "lang",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "템플릿의 언어 — en(기본) · ko",
+      "en": "language of the template — en (default) or ko"
+     }
+    },
+    {
+     "name": "authors",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "저자 — 이름의 배열(또는 이름 하나)",
+      "en": "authors — an array of names (or one name)"
      }
     },
     {
@@ -2492,8 +2510,8 @@
     "en": "Update an experiment (plan, criteria, results)"
    },
    "description": {
-    "ko": "실험의 제목 · 연구 질문 · plan.md · 판정 기준 · results.md · 상태를 바꾼다(준 것만). 제목 · 연구 질문 · plan.md · 판정 기준의 id · text 는 실행이 없을 때만 바꾸고(실행 전에 적고 고정), 판정(result · note) · results.md · 상태는 언제든.",
-    "en": "Change an experiment's title, question, plan.md, criteria, results.md or status (only what is given). The title, question, plan.md and the criteria's id and text change only while the experiment has no runs (written before any run, then fixed); verdicts (result, note), results.md and status change at any time."
+    "ko": "실험의 제목 · 연구 질문 · plan.md · 판정 기준 · results.md · 상태 · 저자 · 장치 · 재현 명령을 바꾸고 직접 더한 파일을 files 에 적는다(준 것만). 제목 · 연구 질문 · plan.md · 판정 기준의 id · text 는 실행이 없을 때만 바꾸고(실행 전에 적고 고정), 나머지는 언제든. 모르는 필드는 400 으로 거절한다.",
+    "en": "Change an experiment's title, question, plan.md, criteria, results.md, status, authors, devices or reproduce commands, and list files you added (only what is given). The title, question, plan.md and the criteria's id and text change only while the experiment has no runs (written before any run, then fixed); the rest at any time. Unknown fields are refused (400)."
    },
    "status": "exists",
    "http": {
@@ -2562,6 +2580,42 @@
      "description": {
       "ko": "상태 — planned · running · done",
       "en": "status — planned, running or done"
+     }
+    },
+    {
+     "name": "authors",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "저자 — 이름의 배열(또는 이름 하나)",
+      "en": "authors — an array of names (or one name)"
+     }
+    },
+    {
+     "name": "devices",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "장치 — [{name, driver}]",
+      "en": "devices — [{name, driver}]"
+     }
+    },
+    {
+     "name": "reproduce",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "재현 방법 — {commands: [명령], expected: 글}",
+      "en": "how to reproduce — {commands: [command], expected: text}"
+     }
+    },
+    {
+     "name": "add_files",
+     "type": "array",
+     "required": false,
+     "description": {
+      "ko": "직접 더한 파일의 상대 경로(/ 로) — 앱이 SHA-256 과 크기를 files 에 적는다(세 문서는 빼고)",
+      "en": "relative paths (with /) of files you added — the app lists them in files with SHA-256 and size (not the three documents)"
      }
     },
     {

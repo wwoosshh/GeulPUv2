@@ -251,6 +251,78 @@ def check_folder(folder, schema):
     return errors
 
 
+# F3-2 — the template texts: English (experiments/_template, or data/experiment-template next to this file in the app) and Korean
+# (앱/data/experiment-template-ko, or data/experiment-template-ko). A new experiment that still holds them gets warnings, not failures.
+TEMPLATE_DIRS = (os.path.join(HERE, "experiment-template"), os.path.join(EXPERIMENTS, TEMPLATE),
+                 os.path.join(HERE, "experiment-template-ko"), os.path.join(ROOT, "앱", "data", "experiment-template-ko"))
+TITLE_PLACEHOLDER = "Short title of the experiment"            # experiment create puts the title here
+
+
+def template_texts():
+    """The template texts of every template folder that exists: plan.md texts, and the question, authors and criteria texts of
+    experiment.json (English) and template.json (Korean)."""
+    out = {"plan": [], "question": set(), "authors": set(), "criteria": set()}
+    for d in TEMPLATE_DIRS:
+        p = os.path.join(d, "plan.md")
+        if os.path.isfile(p):
+            with open(p, encoding="utf-8") as f:
+                out["plan"].append(f.read())
+        for name in ("experiment.json", "template.json"):
+            q = os.path.join(d, name)
+            if not os.path.isfile(q):
+                continue
+            try:
+                t = load_json(q)
+            except (ValueError, UnicodeDecodeError):
+                continue
+            if not isinstance(t, dict):
+                continue
+            if isinstance(t.get("question"), str):
+                out["question"].add(t["question"])
+            out["authors"].update(a for a in t.get("authors") or [] if isinstance(a, str))
+            out["criteria"].update(c["text"] for c in t.get("criteria") or [] if isinstance(c, dict) and isinstance(c.get("text"), str))
+    return out
+
+
+def template_warnings(folder, exp, tpl):
+    """What an experiment still has word for word from a template — warnings; the check still passes."""
+    warnings = []
+    title = exp.get("title") if isinstance(exp.get("title"), str) else ""
+    try:
+        with open(os.path.join(folder, "plan.md"), encoding="utf-8") as f:
+            plan = f.read()
+    except OSError:
+        plan = None
+    if plan is not None and any(plan == t.replace(TITLE_PLACEHOLDER, title, 1) for t in tpl["plan"]):
+        warnings.append("plan.md is still the template text")
+    if isinstance(exp.get("question"), str) and exp["question"] in tpl["question"]:
+        warnings.append("question is still the template text")
+    for c in exp.get("criteria") or []:
+        if isinstance(c, dict) and isinstance(c.get("text"), str) and c["text"] in tpl["criteria"]:
+            warnings.append(f"criteria {c.get('id')} is still the template text")
+    if any(isinstance(a, str) and a in tpl["authors"] for a in exp.get("authors") or []):
+        warnings.append("authors still has the template's placeholder")
+    return warnings
+
+
+def folder_checks(folder):
+    """What check_folder looks at, for the record of a check (the app writes these lines into the job log)."""
+    try:
+        exp = load_json(os.path.join(folder, "experiment.json"))
+    except (OSError, ValueError, UnicodeDecodeError):
+        return ["experiment.json"]
+    exp = exp if isinstance(exp, dict) else {}
+    files = exp.get("files") if isinstance(exp.get("files"), list) else []
+    runs = exp.get("runs") if isinstance(exp.get("runs"), list) else []
+    out = ["experiment.json against experiment.schema.json", "id is the folder name", "plan.md, and results.md when status is done",
+           f"files: {len(files)} listed — each one's SHA-256 and size, and every other file in the folder is listed",
+           f"runs: {len(runs)} — unique ids, known bases, records listed in files"]
+    if os.path.isfile(os.path.join(folder, "expected.json")):
+        out.append("expected.json names only existing runs")
+    out.append("the folder compresses to at most 5 MB")
+    return out
+
+
 def index_errors(root, names, whole):
     """index.md in root must link every experiment folder in names (not _template); with whole, every experiment folder it links must
     exist in root."""
@@ -303,20 +375,35 @@ def check(folders, whole, as_json=False):
     """Check the folders and their index.md. Text: one line per folder (with its errors) and a summary; with as_json one JSON object
     {"format", "pass", "summary", "results": [{"path", "kind", "pass", "problems"}]} (the app's `experiment check` reads it). The exit code."""
     schema = load_schema()
-    results = [{"path": shown(folder), "kind": "folder", "problems": check_folder(folder, schema)} for folder in folders]
+    tpl = template_texts()
+    results = []
+    for folder in folders:
+        r = {"path": shown(folder), "kind": "folder", "problems": check_folder(folder, schema), "warnings": [], "checked": folder_checks(folder)}
+        if os.path.basename(os.path.normpath(folder)) != TEMPLATE:          # the template folder is the template text
+            try:
+                exp = load_json(os.path.join(folder, "experiment.json"))
+            except (OSError, ValueError, UnicodeDecodeError):
+                exp = None
+            if isinstance(exp, dict):
+                r["warnings"] = template_warnings(folder, exp, tpl)
+        results.append(r)
     by_root = {EXPERIMENTS: []} if whole else {}
     for folder in folders:
         full = os.path.normpath(os.path.abspath(folder))
         by_root.setdefault(os.path.dirname(full), []).append(os.path.basename(full))
     for root, names in by_root.items():
         if whole or any(n != TEMPLATE for n in names):
-            results.append({"path": shown(os.path.join(root, "index.md")), "kind": "index", "problems": index_errors(root, names, whole)})
+            results.append({"path": shown(os.path.join(root, "index.md")), "kind": "index", "problems": index_errors(root, names, whole),
+                            "warnings": [], "checked": ["index.md links every experiment folder"]})
     n = len(folders)
     failed = sum(1 for r in results if r["kind"] == "folder" and r["problems"])
     indexes = [r for r in results if r["kind"] == "index"]
     line = f"experiment check: folders {n - failed}/{n} pass"
     if indexes:
         line += " · index.md " + ("fails" if any(r["problems"] for r in indexes) else "passes")
+    warned = sum(len(r["warnings"]) for r in results)
+    if warned:
+        line += f" · {warned} warning{'s' if warned > 1 else ''}"
     ok = not any(r["problems"] for r in results)
     if as_json:
         print(json.dumps({"format": "geulpu-experiment-check/1", "pass": ok, "summary": line,
@@ -324,6 +411,8 @@ def check(folders, whole, as_json=False):
     else:
         for r in results:
             report(r["path"], r["problems"])
+            for w in r["warnings"]:
+                print("     warning: " + w)
         print(line)
     return 0 if ok else 1
 
@@ -450,11 +539,26 @@ def self_test():
             hit = [e for e in errors if marker in e]
             caught += bool(hit)
             print(f"{'caught' if hit else 'MISSED'} {fault} — {hit[0] if hit else ('; '.join(errors) or 'no error')}")
+        # F3-2 — template warnings: the correct experiment still holds the template's plan.md, question, criteria text and author
+        # (four warnings, the check passes); filled in, none
+        tpl = template_texts()
+        _, folder = fresh(len(FAULTS) + 1)
+        before = template_warnings(folder, load_json(os.path.join(folder, "experiment.json")), tpl)
+
+        def fill(e):
+            e.update(question="Does filling the template clear its warnings?", authors=["Self Test"])
+            e["criteria"][0]["text"] = "No warning is left"
+        _edit(folder, fill)
+        _write(folder, "plan.md", "# Plan — self-test\n\nFilled in.\n")
+        after = template_warnings(folder, load_json(os.path.join(folder, "experiment.json")), tpl)
+        warn_ok = len(before) == 4 and not after
+        print(f"{'caught' if warn_ok else 'MISSED'} template warnings — {len(before)} on the template text ({'; '.join(before)}), "
+              f"{len(after)} once filled in")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    ok = not template and not control and caught == len(FAULTS)
+    ok = not template and not control and caught == len(FAULTS) and warn_ok
     print(f"self-test: template {'passes' if not template else 'FAILS'} · control {'passes' if not control else 'FAILS'} · "
-          f"{caught}/{len(FAULTS)} faults caught ({time.time() - t0:.1f} s)")
+          f"{caught}/{len(FAULTS)} faults caught · template warnings {'4 → 0' if warn_ok else 'WRONG'} ({time.time() - t0:.1f} s)")
     return 0 if ok else 1
 
 

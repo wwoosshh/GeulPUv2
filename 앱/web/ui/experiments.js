@@ -265,6 +265,8 @@ function newExperiment() {
   const name = el('input', { type: 'text', id: 'xp-name', autocomplete: 'off', spellcheck: 'false', placeholder: 'margin-branch', 'aria-label': T('이름'), 'aria-describedby': 'xp-name-hint' });
   const title = el('input', { type: 'text', id: 'xp-title', autocomplete: 'off' });
   const question = el('textarea', { id: 'xp-q', rows: '3' });
+  // F3-2 — 저자(쉼표로 여럿) — experiment.json 의 authors. 비우면 템플릿의 글이 남고 점검이 경고한다
+  const authors = el('input', { type: 'text', id: 'xp-authors', autocomplete: 'off', 'aria-describedby': 'xp-authors-hint' });
   const err = el('p', { class: 'xp-err', role: 'alert' });
   const form = el('div', { class: 'xp-form' },
     el('h2', null, T('새 실험')),
@@ -272,6 +274,8 @@ function newExperiment() {
     el('p', { class: 'muted', id: 'xp-name-hint' }, T('영어 소문자 · 숫자 · - 만 씁니다. 폴더 이름은 오늘 날짜와 이 이름입니다.')),
     el('label', { for: 'xp-title' }, T('제목')), title,
     el('label', { for: 'xp-q' }, T('연구 질문')), question,
+    el('label', { for: 'xp-authors' }, T('저자')), authors,
+    el('p', { class: 'muted', id: 'xp-authors-hint' }, T('여럿이면 쉼표로 나눕니다.')),
     err);
   const ok = el('button', {
     class: 'btn primary', type: 'button',
@@ -284,8 +288,12 @@ function newExperiment() {
       }
       ok.disabled = true;
       let r;
+      // F3-2 — 템플릿은 화면 언어로(lang), 저자는 쉼표로 나눠 배열로
+      const who = authors.value.split(',').map(s => s.trim()).filter(Boolean);
+      const body = { name: n, title: title.value.trim(), question: question.value.trim(), lang: EN() ? 'en' : 'ko', ...rootParam() };
+      if (who.length) body.authors = who;
       try {
-        r = await call('experiment.create', { name: n, title: title.value.trim(), question: question.value.trim(), ...rootParam() });
+        r = await call('experiment.create', body);
       } catch (_) {
         r = null;
       }

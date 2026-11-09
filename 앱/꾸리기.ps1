@@ -118,6 +118,9 @@ Copy-Item -LiteralPath (Join-Path $Here 'data\operations.json') -Destination (Jo
 # 앱리디자인 C2 — 실험 기록의 템플릿 · 스키마 · 점검 도구(experiment create · check — 문서/명령줄.md §3)
 New-Item -ItemType Directory -Path (Join-Path $Dist 'data\experiment-template') -Force | Out-Null
 Copy-Item -Path (Join-Path $Root 'experiments\_template\*') -Destination (Join-Path $Dist 'data\experiment-template')
+# 앱리디자인 F3-2 — 한국어 화면의 실험 템플릿(experiment create --lang ko — 문서/사용성시험.md §3)
+New-Item -ItemType Directory -Path (Join-Path $Dist 'data\experiment-template-ko') -Force | Out-Null
+Copy-Item -Path (Join-Path $Here 'data\experiment-template-ko\*') -Destination (Join-Path $Dist 'data\experiment-template-ko')
 Copy-Item -LiteralPath (Join-Path $Root 'experiments\experiment.schema.json') -Destination (Join-Path $Dist 'data')
 Copy-Item -LiteralPath (Join-Path $Root '도구\experiment_check.py') -Destination (Join-Path $Dist 'data')
 Copy-Item -LiteralPath (Join-Path $Root 'docs\cli.md') -Destination (Join-Path $Dist 'data\cli-guide.md')   # 앱리디자인 C3 — GeulPU guide
