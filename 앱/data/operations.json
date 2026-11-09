@@ -4,289 +4,475 @@
   "ko": "GeulPU 의 모든 기능 — 문서/기능목록.md. 앱 · CLI 가 이 목록을 읽는다. 고친 뒤에는 python -I -X utf8 시험/기능목록점검.py",
   "en": "Every GeulPU operation — see 문서/기능목록.md. The app and the CLI read this list. After editing run python -I -X utf8 시험/기능목록점검.py"
  },
+ "screens": {
+  "exp": {
+   "kind": "view",
+   "ko": "실험",
+   "en": "Experiments"
+  },
+  "chat": {
+   "kind": "view",
+   "ko": "실험 › 대화",
+   "en": "Experiments › Conversations"
+  },
+  "debug": {
+   "kind": "view",
+   "ko": "실험 › 디버거",
+   "en": "Experiments › Debugger"
+  },
+  "models": {
+   "kind": "view",
+   "ko": "모델 › 파일",
+   "en": "Models › Files"
+  },
+  "eval": {
+   "kind": "view",
+   "ko": "모델 › 평가",
+   "en": "Models › Evaluation"
+  },
+  "perf": {
+   "kind": "view",
+   "ko": "모델 › 성능",
+   "en": "Models › Performance"
+  },
+  "llama": {
+   "kind": "view",
+   "ko": "재현 › llama.cpp",
+   "en": "Reproduce › llama.cpp"
+  },
+  "checks": {
+   "kind": "view",
+   "ko": "재현 › 검사",
+   "en": "Reproduce › Checks"
+  },
+  "results": {
+   "kind": "view",
+   "ko": "재현 › 검사 결과",
+   "en": "Reproduce › Check results"
+  },
+  "jobs": {
+   "kind": "view",
+   "ko": "작업",
+   "en": "Jobs"
+  },
+  "settings": {
+   "kind": "view",
+   "ko": "설정 › 앱",
+   "en": "Settings › App"
+  },
+  "device": {
+   "kind": "view",
+   "ko": "설정 › 장치",
+   "en": "Settings › Devices"
+  },
+  "cache": {
+   "kind": "view",
+   "ko": "설정 › 프롬프트 캐시",
+   "en": "Settings › Prompt cache"
+  },
+  "agents": {
+   "kind": "view",
+   "ko": "명령 창 › AI 세션",
+   "en": "Command console › AI sessions"
+  },
+  "run": {
+   "kind": "part",
+   "ko": "실험 › 실행(실행 화면 · 비교)",
+   "en": "Experiments › Run (run screen · compare)"
+  },
+  "step": {
+   "kind": "part",
+   "ko": "실험 › 실행 › 스텝 · 층",
+   "en": "Experiments › Run › Step and layer"
+  },
+  "console": {
+   "kind": "part",
+   "ko": "명령 창",
+   "en": "Command console"
+  },
+  "common": {
+   "kind": "part",
+   "ko": "모든 화면(위 막대 · 상태 막대 · 작업 카드 · 파일 선택)",
+   "en": "Every screen (top bar · status bar · job cards · file picker)"
+  }
+ },
  "result_types": {
   "agents": {
-   "gui_view": "명령 창 › AI 세션(에이전트 화면)",
+   "screens": [
+    "agents"
+   ],
    "description": {
     "ko": "에이전트 목록",
     "en": "agents"
    }
   },
   "branch": {
-   "gui_view": "실행 화면(비교) · 연구 패널(분기)",
+   "screens": [
+    "run",
+    "chat",
+    "debug"
+   ],
    "description": {
     "ko": "분기 결과",
     "en": "branch"
    }
   },
   "check_report": {
-   "gui_view": "재현(앱리디자인 단계 E)",
+   "screens": [
+    "exp"
+   ],
    "description": {
     "ko": "점검 보고",
     "en": "check report"
    }
   },
   "debug_status": {
-   "gui_view": "실험 › 디버거(실행 목록)",
+   "screens": [
+    "debug"
+   ],
    "description": {
     "ko": "디버거 상태",
     "en": "debugger status"
    }
   },
   "devices": {
-   "gui_view": "설정 › 장치",
+   "screens": [
+    "device"
+   ],
    "description": {
     "ko": "장치 정보",
     "en": "device details"
    }
   },
   "eval_check": {
-   "gui_view": "모델 › 평가(변환 검증)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "변환 검증 결과",
     "en": "conversion check"
    }
   },
   "eval_comparison": {
-   "gui_view": "모델 › 평가(전후 비교)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "전후 비교",
     "en": "comparison"
    }
   },
   "eval_improve": {
-   "gui_view": "모델 › 평가(개선)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "개선 보고서",
     "en": "improvement report"
    }
   },
   "eval_item": {
-   "gui_view": "모델 › 평가(대화)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "대화 하나",
     "en": "conversation"
    }
   },
   "eval_meta": {
-   "gui_view": "모델 › 평가(메타데이터)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "메타데이터 고칠 거리",
     "en": "metadata fixes"
    }
   },
   "eval_original": {
-   "gui_view": "모델 › 평가(원래 모델과 비교)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "원래 모델과 견준 값",
     "en": "original-model comparison"
    }
   },
   "eval_result": {
-   "gui_view": "모델 › 평가(결과)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "평가 결과",
     "en": "evaluation result"
    }
   },
   "eval_tools": {
-   "gui_view": "모델 › 평가(도구 준비)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "도구 준비 상태",
     "en": "tool status"
    }
   },
   "eval_workspaces": {
-   "gui_view": "모델 › 평가(작업 공간 목록)",
+   "screens": [
+    "eval"
+   ],
    "description": {
     "ko": "작업 공간 목록",
     "en": "workspaces"
    }
   },
   "events": {
-   "gui_view": "명령 창(앱리디자인 단계 E)",
+   "screens": [
+    "console"
+   ],
    "description": {
     "ko": "이벤트",
     "en": "events"
    }
   },
   "experiment": {
-   "gui_view": "실험(실험 화면)",
+   "screens": [
+    "exp"
+   ],
    "description": {
     "ko": "실험",
     "en": "experiment"
    }
   },
   "experiment_file": {
-   "gui_view": "실험(계획 · 결과 · 기록 탭)",
+   "screens": [
+    "exp",
+    "run"
+   ],
    "description": {
     "ko": "실험 파일",
     "en": "experiment file"
    }
   },
   "experiment_list": {
-   "gui_view": "실험(목록)",
+   "screens": [
+    "exp"
+   ],
    "description": {
     "ko": "실험 목록",
     "en": "experiment list"
    }
   },
   "file": {
-   "gui_view": "재현 › 검사 결과",
+   "screens": [
+    "results"
+   ],
    "description": {
     "ko": "파일",
     "en": "file"
    }
   },
   "files": {
-   "gui_view": "모델 › 파일 · 공통(파일 선택)",
+   "screens": [
+    "models",
+    "common"
+   ],
    "description": {
     "ko": "파일 목록",
     "en": "file listing"
    }
   },
   "generation": {
-   "gui_view": "실행 화면 · 실험 › 대화(채팅) · 연구 패널",
+   "screens": [
+    "run",
+    "exp",
+    "chat",
+    "debug"
+   ],
    "description": {
     "ko": "생성 결과",
     "en": "generation"
    }
   },
   "health": {
-   "gui_view": "공통",
+   "screens": [
+    "common"
+   ],
    "description": {
     "ko": "건강 확인",
     "en": "health"
    }
   },
   "hf_file": {
-   "gui_view": "모델 › 파일(모델 찾기)",
+   "screens": [
+    "models"
+   ],
    "description": {
     "ko": "Hugging Face 파일 정보",
     "en": "Hugging Face file info"
    }
   },
   "jlens_file": {
-   "gui_view": "연구 패널(앱리디자인 단계 E)",
+   "planned": "실험대",
    "description": {
     "ko": "J 파일",
     "en": "J file"
    }
   },
   "job": {
-   "gui_view": "작업 · 공통(작업 카드)",
+   "screens": [
+    "jobs",
+    "common"
+   ],
    "description": {
     "ko": "일 번호와 상태",
     "en": "job id and state"
    }
   },
   "job_log": {
-   "gui_view": "작업 · 공통(작업 카드)",
+   "screens": [
+    "jobs",
+    "common"
+   ],
    "description": {
     "ko": "일의 기록",
     "en": "job log"
    }
   },
   "lens": {
-   "gui_view": "스텝 · 층 화면 · 연구 패널(로짓 렌즈)",
+   "screens": [
+    "step",
+    "chat"
+   ],
    "description": {
     "ko": "로짓 렌즈",
     "en": "logit lens"
    }
   },
   "models": {
-   "gui_view": "모델 › 파일",
+   "screens": [
+    "models"
+   ],
    "description": {
     "ko": "모델 목록 · 정보",
     "en": "models"
    }
   },
   "ok": {
-   "gui_view": "공통(알림)",
+   "screens": [
+    "common"
+   ],
    "description": {
     "ko": "처리 결과",
     "en": "acknowledgement"
    }
   },
   "operations": {
-   "gui_view": "명령 창(명령 해석)",
+   "screens": [
+    "console"
+   ],
    "description": {
     "ko": "기능 목록",
     "en": "operation registry"
    }
   },
   "panel_records": {
-   "gui_view": "연구 패널",
+   "planned": "E6-2",
    "description": {
     "ko": "연구 패널 기록",
     "en": "research-panel records"
    }
   },
   "provenance": {
-   "gui_view": "연구 패널(재현 파일)",
+   "screens": [
+    "chat"
+   ],
    "description": {
     "ko": "출처",
     "en": "provenance"
    }
   },
   "receipts": {
-   "gui_view": "재현 › llama.cpp",
+   "screens": [
+    "llama"
+   ],
    "description": {
     "ko": "영수증 목록",
     "en": "receipts"
    }
   },
   "recorder": {
-   "gui_view": "재현 › llama.cpp",
+   "screens": [
+    "llama"
+   ],
    "description": {
     "ko": "기록기 설정",
     "en": "recorder settings"
    }
   },
   "results": {
-   "gui_view": "재현 › 검사 결과",
+   "screens": [
+    "results"
+   ],
    "description": {
     "ko": "결과 목록",
     "en": "results"
    }
   },
   "run_log": {
-   "gui_view": "실험 › 디버거(실행 보기)",
+   "screens": [
+    "debug"
+   ],
    "description": {
     "ko": "실행 로그",
     "en": "run log"
    }
   },
   "score": {
-   "gui_view": "스텝 · 층 화면 · 연구 패널(점수)",
+   "screens": [
+    "step",
+    "chat",
+    "debug"
+   ],
    "description": {
     "ko": "점수",
     "en": "score"
    }
   },
   "settings": {
-   "gui_view": "설정 › 앱 · 프롬프트 캐시",
+   "screens": [
+    "settings",
+    "cache"
+   ],
    "description": {
     "ko": "설정",
     "en": "settings"
    }
   },
   "state": {
-   "gui_view": "공통(위 막대 · 상태 막대)",
+   "screens": [
+    "common"
+   ],
    "description": {
     "ko": "앱 상태",
     "en": "app state"
    }
   },
   "store": {
-   "gui_view": "설정 › 프롬프트 캐시",
+   "screens": [
+    "cache"
+   ],
    "description": {
     "ko": "문맥 저장소",
     "en": "context store"
    }
   },
   "tokens": {
-   "gui_view": "스텝 · 층 화면(점수) · 연구 패널(토큰)",
+   "screens": [
+    "step",
+    "chat",
+    "models",
+    "exp"
+   ],
    "description": {
     "ko": "토큰",
     "en": "tokens"
@@ -337,7 +523,9 @@
     "en": "agents launch"
    },
    "gui": {
-    "view": "명령 창 › AI 세션(에이전트 화면)"
+    "screens": [
+     "agents"
+    ]
    }
   },
   {
@@ -364,7 +552,9 @@
     "en": "agents list"
    },
    "gui": {
-    "view": "명령 창 › AI 세션(에이전트 화면)"
+    "screens": [
+     "agents"
+    ]
    }
   },
   {
@@ -410,7 +600,9 @@
     "en": "bench crosscheck"
    },
    "gui": {
-    "view": "재현 › 검사"
+    "screens": [
+     "checks"
+    ]
    }
   },
   {
@@ -447,7 +639,9 @@
     "en": "bench diag"
    },
    "gui": {
-    "view": "설정 › 장치"
+    "screens": [
+     "device"
+    ]
    }
   },
   {
@@ -493,7 +687,9 @@
     "en": "bench pair"
    },
    "gui": {
-    "view": "재현 › 검사"
+    "screens": [
+     "checks"
+    ]
    }
   },
   {
@@ -520,7 +716,9 @@
     "en": "bench results"
    },
    "gui": {
-    "view": "재현 › 검사 결과"
+    "screens": [
+     "results"
+    ]
    }
   },
   {
@@ -566,7 +764,9 @@
     "en": "bench results file"
    },
    "gui": {
-    "view": "재현 › 검사 결과"
+    "screens": [
+     "results"
+    ]
    }
   },
   {
@@ -603,7 +803,9 @@
     "en": "bench results zip"
    },
    "gui": {
-    "view": "재현 › 검사 결과"
+    "screens": [
+     "results"
+    ]
    }
   },
   {
@@ -640,7 +842,9 @@
     "en": "bench speed"
    },
    "gui": {
-    "view": "모델 › 성능"
+    "screens": [
+     "perf"
+    ]
    }
   },
   {
@@ -654,7 +858,7 @@
     "en": "GPU-free reproduction check (tool repro_check.py)."
    },
    "status": "planned",
-   "stage": "C",
+   "stage": "실험대 7",
    "params": [],
    "result": "check_report",
    "job": false,
@@ -664,7 +868,7 @@
     "en": "check repro"
    },
    "gui": {
-    "planned": "E"
+    "planned": "실험대 7"
    }
   },
   {
@@ -678,7 +882,7 @@
     "en": "Same-bits check — alone and in a batch (tool same_bits.py)."
    },
    "status": "planned",
-   "stage": "C",
+   "stage": "실험대 7",
    "params": [],
    "result": "check_report",
    "job": false,
@@ -688,7 +892,7 @@
     "en": "check same-bits"
    },
    "gui": {
-    "planned": "E"
+    "planned": "실험대 7"
    }
   },
   {
@@ -725,7 +929,9 @@
     "en": "debug record start"
    },
    "gui": {
-    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
+    "screens": [
+     "debug"
+    ]
    }
   },
   {
@@ -752,7 +958,9 @@
     "en": "debug record stop"
    },
    "gui": {
-    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
+    "screens": [
+     "debug"
+    ]
    }
   },
   {
@@ -798,7 +1006,9 @@
     "en": "debug run append"
    },
    "gui": {
-    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
+    "screens": [
+     "debug"
+    ]
    }
   },
   {
@@ -835,7 +1045,9 @@
     "en": "debug run delete"
    },
    "gui": {
-    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
+    "screens": [
+     "debug"
+    ]
    }
   },
   {
@@ -872,7 +1084,9 @@
     "en": "debug run get"
    },
    "gui": {
-    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
+    "screens": [
+     "debug"
+    ]
    }
   },
   {
@@ -936,7 +1150,9 @@
     "en": "debug run import"
    },
    "gui": {
-    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
+    "screens": [
+     "debug"
+    ]
    }
   },
   {
@@ -963,7 +1179,9 @@
     "en": "debug status"
    },
    "gui": {
-    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
+    "screens": [
+     "debug"
+    ]
    }
   },
   {
@@ -1009,7 +1227,9 @@
     "en": "eval check get"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1055,7 +1275,9 @@
     "en": "eval check run"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1110,7 +1332,9 @@
     "en": "eval compare"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1156,7 +1380,9 @@
     "en": "eval data import"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1211,7 +1437,9 @@
     "en": "eval fix"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1248,7 +1476,9 @@
     "en": "eval improve get"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1294,7 +1524,9 @@
     "en": "eval improve run"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1349,7 +1581,9 @@
     "en": "eval item"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1386,7 +1620,9 @@
     "en": "eval make"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1423,7 +1659,9 @@
     "en": "eval meta"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1469,7 +1707,9 @@
     "en": "eval open"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1515,7 +1755,9 @@
     "en": "eval original get"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1552,7 +1794,9 @@
     "en": "eval original run"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1598,7 +1842,9 @@
     "en": "eval result"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1653,7 +1899,9 @@
     "en": "eval run"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1699,7 +1947,9 @@
     "en": "eval to-debugger"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1726,7 +1976,9 @@
     "en": "eval tools get"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1753,7 +2005,9 @@
     "en": "eval tools prepare"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1844,7 +2098,9 @@
     "en": "eval version"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1944,7 +2200,9 @@
     "en": "eval workspace"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -1971,7 +2229,9 @@
     "en": "eval workspaces"
    },
    "gui": {
-    "view": "모델 › 평가"
+    "screens": [
+     "eval"
+    ]
    }
   },
   {
@@ -2017,7 +2277,9 @@
     "en": "experiment check"
    },
    "gui": {
-    "view": "실험(기록 탭 — 점검)"
+    "screens": [
+     "exp"
+    ]
    }
   },
   {
@@ -2081,7 +2343,9 @@
     "en": "experiment create"
    },
    "gui": {
-    "view": "실험(새 실험)"
+    "screens": [
+     "exp"
+    ]
    }
   },
   {
@@ -2118,7 +2382,9 @@
     "en": "experiment list"
    },
    "gui": {
-    "view": "실험(목록)"
+    "screens": [
+     "exp"
+    ]
    }
   },
   {
@@ -2164,7 +2430,10 @@
     "en": "experiment show"
    },
    "gui": {
-    "view": "실험(실험 화면)"
+    "screens": [
+     "exp",
+     "console"
+    ]
    }
   },
   {
@@ -2219,7 +2488,10 @@
     "en": "experiment read"
    },
    "gui": {
-    "view": "실험(계획 · 결과 · 기록 탭)"
+    "screens": [
+     "exp",
+     "run"
+    ]
    }
   },
   {
@@ -2319,7 +2591,9 @@
     "en": "experiment update"
    },
    "gui": {
-    "view": "실험(계획 · 결과 탭 — 편집)"
+    "screens": [
+     "exp"
+    ]
    }
   },
   {
@@ -2346,7 +2620,10 @@
     "en": "job cancel"
    },
    "gui": {
-    "view": "작업 · 공통(작업 카드)"
+    "screens": [
+     "jobs",
+     "common"
+    ]
    }
   },
   {
@@ -2383,7 +2660,10 @@
     "en": "job log"
    },
    "gui": {
-    "view": "작업 · 공통(작업 카드)"
+    "screens": [
+     "jobs",
+     "common"
+    ]
    }
   },
   {
@@ -2407,7 +2687,7 @@
     "en": "lens jacobian-fit"
    },
    "gui": {
-    "planned": "E"
+    "planned": "실험대"
    }
   },
   {
@@ -2444,7 +2724,9 @@
     "en": "model add"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2481,7 +2763,9 @@
     "en": "model download cancel"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2518,7 +2802,9 @@
     "en": "model download discard"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2555,7 +2841,9 @@
     "en": "model download start"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2637,7 +2925,9 @@
     "en": "model hf add"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2692,7 +2982,9 @@
     "en": "model hf check"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2719,7 +3011,9 @@
     "en": "model hf check-status"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2765,7 +3059,18 @@
     "en": "model hf pull"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ],
+    "via": [
+     "model.hf.check",
+     "model.hf.add",
+     "model.download.start"
+    ],
+    "note": {
+     "ko": "실행기의 한 줄 설치(--hf)를 떠 있는 앱에 맡기는 경로 — 화면은 같은 일을 모델 찾기 · 더하기 · 다운로드로 한다",
+     "en": "The launcher's one-line install (--hf) handed to a running app — the screen does the same through model search, add and download"
+    }
    }
   },
   {
@@ -2802,7 +3107,10 @@
     "en": "model load"
    },
    "gui": {
-    "view": "공통(모델 불러오기) · 모델 › 파일"
+    "screens": [
+     "common",
+     "models"
+    ]
    }
   },
   {
@@ -2848,7 +3156,9 @@
     "en": "model remove"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2875,7 +3185,10 @@
     "en": "model unload"
    },
    "gui": {
-    "view": "공통 · 모델 › 파일"
+    "screens": [
+     "common",
+     "models"
+    ]
    }
   },
   {
@@ -2912,7 +3225,9 @@
     "en": "model verify"
    },
    "gui": {
-    "view": "모델 › 파일"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -2926,7 +3241,7 @@
     "en": "Read and write research-panel records in the app (now browser-only)."
    },
    "status": "planned",
-   "stage": "E",
+   "stage": "E6-2",
    "params": [],
    "result": "panel_records",
    "job": false,
@@ -2936,7 +3251,7 @@
     "en": "panel records"
    },
    "gui": {
-    "view": "연구 패널"
+    "planned": "E6-2"
    }
   },
   {
@@ -3060,7 +3375,7 @@
     "en": "replay branch"
    },
    "gui": {
-    "planned": "E"
+    "planned": "실험대 3"
    }
   },
   {
@@ -3106,7 +3421,9 @@
     "en": "replay import"
    },
    "gui": {
-    "view": "재현 › llama.cpp"
+    "screens": [
+     "llama"
+    ]
    }
   },
   {
@@ -3158,7 +3475,9 @@
     "en": "replay receipts"
    },
    "gui": {
-    "view": "재현 › llama.cpp"
+    "screens": [
+     "llama"
+    ]
    }
   },
   {
@@ -3185,7 +3504,9 @@
     "en": "replay recorder get"
    },
    "gui": {
-    "view": "재현 › llama.cpp"
+    "screens": [
+     "llama"
+    ]
    }
   },
   {
@@ -3249,7 +3570,9 @@
     "en": "replay recorder set"
    },
    "gui": {
-    "view": "재현 › llama.cpp"
+    "screens": [
+     "llama"
+    ]
    }
   },
   {
@@ -3286,7 +3609,9 @@
     "en": "replay verify"
    },
    "gui": {
-    "view": "재현 › llama.cpp"
+    "screens": [
+     "llama"
+    ]
    }
   },
   {
@@ -3467,7 +3792,11 @@
     "en": "run branch"
    },
    "gui": {
-    "view": "실행 화면(분기) · 연구 패널 · 디버거"
+    "screens": [
+     "run",
+     "chat",
+     "debug"
+    ]
    }
   },
   {
@@ -3729,7 +4058,10 @@
     "en": "run chat"
    },
    "gui": {
-    "view": "실험(새 실행) · 실험 › 대화(채팅) · 연구 패널"
+    "screens": [
+     "exp",
+     "chat"
+    ]
    }
   },
   {
@@ -3964,7 +4296,11 @@
     "en": "run complete"
    },
    "gui": {
-    "view": "실험(새 실행) · 연구 패널 · 디버거"
+    "screens": [
+     "exp",
+     "chat",
+     "debug"
+    ]
    }
   },
   {
@@ -4001,7 +4337,9 @@
     "en": "run detokenize"
    },
    "gui": {
-    "view": "연구 패널"
+    "screens": [
+     "step"
+    ]
    }
   },
   {
@@ -4135,7 +4473,10 @@
     "en": "run lens"
    },
    "gui": {
-    "view": "스텝 · 층 화면 · 연구 패널"
+    "screens": [
+     "step",
+     "chat"
+    ]
    }
   },
   {
@@ -4217,7 +4558,9 @@
     "en": "run messages"
    },
    "gui": {
-    "view": "실험 › 대화(채팅)"
+    "screens": [
+     "exp"
+    ]
    }
   },
   {
@@ -4272,7 +4615,9 @@
     "en": "run messages count-tokens"
    },
    "gui": {
-    "view": "실험 › 대화(채팅)"
+    "screens": [
+     "exp"
+    ]
    }
   },
   {
@@ -4299,7 +4644,9 @@
     "en": "run models"
    },
    "gui": {
-    "view": "공통"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -4372,7 +4719,9 @@
     "en": "run responses"
    },
    "gui": {
-    "view": "실험 › 대화(채팅)"
+    "screens": [
+     "exp"
+    ]
    }
   },
   {
@@ -4454,7 +4803,11 @@
     "en": "run score"
    },
    "gui": {
-    "view": "스텝 · 층 화면 · 연구 패널 · 디버거"
+    "screens": [
+     "step",
+     "chat",
+     "debug"
+    ]
    }
   },
   {
@@ -4527,7 +4880,10 @@
     "en": "run tokenize"
    },
    "gui": {
-    "view": "스텝 · 층 화면(점수) · 연구 패널"
+    "screens": [
+     "step",
+     "chat"
+    ]
    }
   },
   {
@@ -4554,7 +4910,9 @@
     "en": "run tokenizer-info"
    },
    "gui": {
-    "planned": "E"
+    "screens": [
+     "models"
+    ]
    }
   },
   {
@@ -4726,7 +5084,10 @@
     "en": "settings set"
    },
    "gui": {
-    "view": "설정 › 앱 · 프롬프트 캐시"
+    "screens": [
+     "settings",
+     "cache"
+    ]
    }
   },
   {
@@ -4753,7 +5114,9 @@
     "en": "store clear"
    },
    "gui": {
-    "view": "설정 › 프롬프트 캐시"
+    "screens": [
+     "cache"
+    ]
    }
   },
   {
@@ -4780,7 +5143,9 @@
     "en": "store status"
    },
    "gui": {
-    "view": "설정 › 프롬프트 캐시"
+    "screens": [
+     "cache"
+    ]
    }
   },
   {
@@ -4807,7 +5172,9 @@
     "en": "system device-check"
    },
    "gui": {
-    "view": "설정 › 장치"
+    "screens": [
+     "device"
+    ]
    }
   },
   {
@@ -4834,7 +5201,9 @@
     "en": "system devices"
    },
    "gui": {
-    "view": "설정 › 장치"
+    "screens": [
+     "device"
+    ]
    }
   },
   {
@@ -4880,7 +5249,9 @@
     "en": "system events"
    },
    "gui": {
-    "planned": "E"
+    "screens": [
+     "console"
+    ]
    }
   },
   {
@@ -4942,7 +5313,10 @@
     "en": "system fs"
    },
    "gui": {
-    "view": "모델 › 파일 · 공통(파일 선택)"
+    "screens": [
+     "models",
+     "common"
+    ]
    }
   },
   {
@@ -5013,7 +5387,11 @@
     "en": "system open"
    },
    "gui": {
-    "view": "모델 › 파일 · 재현 › 검사 결과"
+    "screens": [
+     "models",
+     "results",
+     "settings"
+    ]
    }
   },
   {
@@ -5065,7 +5443,9 @@
     "en": "system provenance"
    },
    "gui": {
-    "view": "연구 패널(재현 파일)"
+    "screens": [
+     "chat"
+    ]
    }
   },
   {
@@ -5092,7 +5472,12 @@
     "en": "system state"
    },
    "gui": {
-    "view": "공통"
+    "screens": [
+     "common",
+     "console",
+     "exp",
+     "run"
+    ]
    }
   }
  ]

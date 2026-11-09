@@ -1,7 +1,7 @@
 """기능 목록(앱/data/operations.json — geulpu-operations/1)의 점검 — 앱리디자인 단계 B1(문서/기능목록.md 3 · 4 절). GPU 없이, 표준 라이브러리만.
 
   python -I -X utf8 시험/기능목록점검.py              점검(못 미침이 있으면 종료 1)
-  python -I -X utf8 시험/기능목록점검.py --자체시험    일부러 넣은 잘못 일곱을 모두 잡는지
+  python -I -X utf8 시험/기능목록점검.py --자체시험    일부러 넣은 잘못 열둘을 모두 잡는지
   python -I -X utf8 시험/기능목록점검.py --뽑기        코드에서 뽑은 경로 · 메서드 · 키 · 서버 필드를 JSON 으로(목록을 고칠 때)
 
 점검(문서/기능목록.md 3 절):
@@ -9,8 +9,12 @@
   2 경로 대조 — 앱의 글(geul) 코드가 처리하는 /api/… 경로(메서드와 함께)와 목록의 경로가 같다(코드에만 · 목록에만 있는 것 0).
     전달 경로(/v1/* · /llama/*)와 서버 API 의 /v1 경로도 목록에 있다.
   3 CLI — 내부용이 아닌 모든 기능에 CLI 이름(ko · en)이 있고 같은 언어 안에서 겹치지 않는다.
-  4 화면 — 내부용이 아닌 모든 기능에 gui 가 있고, 모든 결과 형식에 gui_view 가 있다.
-  5 웹 코드 — 앱/web/*.js 가 부르는 /api/… · /v1/… 경로가 모두 목록에 있다.
+  4 화면(앱리디자인 E6 — 문서/화면구현.md §6) — 화면 표(screens: id 마다 kind view · part 와 ko · en)의 view 가 웹 코드의 화면(app.js 의
+    VIEW_GROUP)과 같다. 내부용이 아닌 있는 기능마다 gui.screens(표에 있는 화면 id)가 있고 gui.via 는 있는 기능이다. 앞으로의 기능은 gui.planned.
+    결과 형식마다 screens(앞으로의 기능만의 결과면 planned)가 있고, 어느 기능의 결과다.
+  5 웹 코드(앱리디자인 E6) — (가) 화면 코드(ui/ops.js · ui/command.js 밖)에 앱 · 서버 경로의 글(/api/ · /v1/ · /llama/ · /tokenize ·
+    /detokenize · /tokenizer_info)이 없다 — 앱은 기능 목록 클라이언트로만 부른다. (나) 기능 id 형식의 글(점 앞이 목록의 기능 id 앞부분)은 목록에 있는
+    있는 기능이다. (다) 내부용이 아닌 있는 기능의 id 가 모두 화면 코드에 있다(화면에서 닿는다) — 아니면 그 기능의 gui.via 가 모두.
   6 인자 — 경로를 처리하는 코드 블록이 직접 읽는 요청 키(GET 은 질의, POST 는 몸의 JSON)가 모두 그 기능의 params 에 있다.
     서버가 읽는 GeulPU 필드(geulpu.* · 그 밖의 확장 필드)가 모두 어느 기능의 params 에 있다.
 """
@@ -125,12 +129,84 @@ def 일만드는함수들(texts):
     return 이름들
 
 
-def 웹경로들(texts):
-    out = set()
-    for f in 웹파일:
-        for m in re.finditer(r"""['"`](/(?:api|v1)/[A-Za-z0-9_\-/.]*)""", texts[f]):
-            out.add(m.group(1).rstrip("/").split("?")[0])
+# 앱리디자인 E6 — 화면 코드: 기능 목록 클라이언트(ui/ops.js)와 명령 해석(ui/command.js)만 경로를 안다
+클라이언트파일 = {"앱/web/ui/ops.js", "앱/web/ui/command.js"}
+화면파일 = [f for f in 웹파일 if f not in 클라이언트파일]
+정규식앞 = set("(,=:[!&|?{};+-*%<>~^")
+정규식앞말 = {"return", "typeof", "case", "in", "of", "delete", "void", "throw", "new", "else", "do"}
+
+
+def JS글들(t):
+    """JS 코드의 글 그대로(작은 · 큰따옴표 글과 템플릿 — 템플릿은 ${…} 까지 그대로)와 그 줄. 주석 · 정규식은 건너뛴다(작은 훑기)."""
+    out, i, n, 앞 = [], 0, len(t), ""
+    while i < n:
+        c = t[i]
+        if c == "/" and t.startswith("//", i):
+            j = t.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        if c == "/" and t.startswith("/*", i):
+            j = t.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        if c == "/" and (앞 in 정규식앞 or 앞 == ""):
+            j, 대괄호안 = i + 1, False
+            while j < n and t[j] != "\n":
+                if t[j] == "\\":
+                    j += 2
+                    continue
+                if t[j] == "[":
+                    대괄호안 = True
+                elif t[j] == "]":
+                    대괄호안 = False
+                elif t[j] == "/" and not 대괄호안:
+                    break
+                j += 1
+            i, 앞 = j + 1, "x"
+            continue
+        if c in "'\"`":
+            j, 깊이 = i + 1, 0
+            while j < n:
+                if t[j] == "\\":
+                    j += 2
+                    continue
+                if c == "`" and t.startswith("${", j):
+                    깊이 += 1
+                    j += 2
+                    continue
+                if c == "`" and t[j] == "}" and 깊이:
+                    깊이 -= 1
+                elif t[j] == c and 깊이 == 0:
+                    break
+                j += 1
+            out.append((t[i + 1:j], t.count("\n", 0, i) + 1))
+            i, 앞 = j + 1, "x"
+            continue
+        if c.isalpha() or c in "_$":
+            m = re.match(r"[A-Za-z_$][\w$]*", t[i:])
+            if m:
+                앞 = "(" if m.group(0) in 정규식앞말 else "x"
+                i += len(m.group(0))
+                continue
+        if not c.isspace():
+            앞 = c
+        i += 1
     return out
+
+
+def 경로글(v):
+    return v.startswith(("/api/", "/v1/", "/llama/")) or re.match(r"^/(tokenize|detokenize|tokenizer_info)(\?|$)", v) is not None
+
+
+def 웹경로들(texts):
+    """화면 코드에 남은 경로의 글(--뽑기 · 점검 5 가)."""
+    return {v.split("?")[0] for f in 화면파일 for v, _ in JS글들(texts[f]) if 경로글(v)}
+
+
+def 웹화면들(texts):
+    """app.js 의 VIEW_GROUP 키 — 웹 코드의 화면 이름."""
+    m = re.search(r"const VIEW_GROUP = \{(.*?)\};", texts["앱/web/app.js"], re.S)
+    return set(re.findall(r"([a-z]+):", m.group(1))) if m else set()
 
 
 def 서버뽑기(t):
@@ -225,25 +301,79 @@ def 점검(reg, texts):
                 알림(3, f"CLI 이름({말}) 겹침: {c!r} — {본[c]} · {o.get('id')}")
             else:
                 본[c] = o.get("id")
-    # 4 화면
+    # 4 화면 — 화면 표 · 기능의 gui · 결과 형식의 screens(앱리디자인 E6)
+    화면표 = reg.get("screens") or {}
+    for 이름, v in 화면표.items():
+        if not (isinstance(v, dict) and v.get("kind") in ("view", "part") and v.get("ko") and v.get("en")):
+            알림(4, f"화면 {이름}: kind(view · part) · ko · en")
+    웹화면 = 웹화면들(texts)
+    표화면 = {k for k, v in 화면표.items() if isinstance(v, dict) and v.get("kind") == "view"}
+    for v in sorted(웹화면 - 표화면):
+        알림(4, f"웹 코드의 화면 {v} 가 기능 목록의 screens 에 없음")
+    for v in sorted(표화면 - 웹화면):
+        알림(4, f"기능 목록의 화면 {v} 가 웹 코드(VIEW_GROUP)에 없음")
+    아이디 = {o.get("id"): o for o in ops}
     for o in ops:
         if o.get("internal"):
             continue
         g = o.get("gui") or {}
-        if not (g.get("view") or g.get("planned")):
-            알림(4, f"{o.get('id')}: gui 없음")
+        i = o.get("id")
+        if o.get("status") == "planned":
+            if not g.get("planned"):
+                알림(4, f"{i}: 앞으로의 기능인데 gui.planned 없음")
+            continue
+        sc = g.get("screens")
+        if not (isinstance(sc, list) and sc):
+            알림(4, f"{i}: gui.screens 없음")
+            continue
+        for x in sc:
+            if x not in 화면표:
+                알림(4, f"{i}: 없는 화면 id {x!r}")
+        for v in g.get("via") or []:
+            w = 아이디.get(v) or {}
+            if w.get("status") != "exists" or w.get("internal"):
+                알림(4, f"{i}: gui.via 의 {v!r} 가 내부용이 아닌 있는 기능이 아님")
+    결과의기능 = {}
+    for o in ops:
+        결과의기능.setdefault(o.get("result"), []).append(o)
     for 이름, v in rt.items():
-        if not (v or {}).get("gui_view"):
-            알림(4, f"결과 형식 {이름}: gui_view 없음")
-    # 5 웹 코드
-    for p in sorted(웹경로들(texts)):
-        if p in 목록패스:
+        v = v or {}
+        생산 = 결과의기능.get(이름, [])
+        if not 생산:
+            알림(4, f"결과 형식 {이름}: 어느 기능의 결과도 아님")
+        if v.get("planned"):
+            if any(o.get("status") == "exists" for o in 생산):
+                알림(4, f"결과 형식 {이름}: 있는 기능의 결과인데 planned")
             continue
-        if any(q.startswith(p + "/") for q in 목록패스):
-            continue                                   # 덧붙여 짓는 앞부분(예: '/api/bench/' + 종류)
-        if p.startswith("/v1/") and "/v1/*" in 목록패스 and p in 서버경로:
+        sc = v.get("screens")
+        if not (isinstance(sc, list) and sc):
+            알림(4, f"결과 형식 {이름}: screens 없음")
             continue
-        알림(5, f"웹 코드가 부르는 목록 밖 경로: {p}")
+        for x in sc:
+            if x not in 화면표:
+                알림(4, f"결과 형식 {이름}: 없는 화면 id {x!r}")
+    # 5 웹 코드 — (가) 경로 글 없음 (나) 기능 id 형식의 글은 있는 기능 (다) 내부용이 아닌 있는 기능은 화면 코드에서 불린다(앱리디자인 E6)
+    앞부분들 = {i.split(".")[0] for i in ids}
+    화면글 = {}
+    for f in 화면파일:
+        for v, 줄 in JS글들(texts[f]):
+            화면글.setdefault(v, []).append(f"{f.split('/')[-1]}:{줄}")
+    for v, 곳 in sorted(화면글.items()):
+        if 경로글(v):
+            알림(5, f"화면 코드의 경로 글: {곳[0]} {v[:60]!r} — 기능 id 로 ui/ops.js 를 부른다")
+        elif ID.match(v) and v.split(".")[0] in 앞부분들:
+            o = 아이디.get(v)
+            if o is None:
+                알림(5, f"목록에 없는 기능 id 를 부름: {곳[0]} {v!r}")
+            elif o.get("status") != "exists":
+                알림(5, f"앞으로의 기능을 부름: {곳[0]} {v!r}")
+    for o in ops:
+        if o.get("internal") or o.get("status") != "exists":
+            continue
+        via = (o.get("gui") or {}).get("via") or []
+        if o["id"] in 화면글 or (via and all(v in 화면글 for v in via)):
+            continue
+        알림(5, f"{o['id']}: 화면 코드에서 불리지 않음(화면에서 닿지 않는 기능)")
     # 6 인자
     for k, x in sorted(코드.items()):
         for o in 목록경로.get(k, []):
@@ -258,7 +388,7 @@ def 점검(reg, texts):
 
 
 def 자체시험(reg, texts):
-    """잘못 일곱을 하나씩 넣어 모두 잡는지(문서/기능목록.md 3 절 7)."""
+    """잘못 열둘을 하나씩 넣어 모두 잡는지(문서/기능목록.md 3 절 7 · 문서/화면구현.md §6)."""
     경우 = []
     t = copy.deepcopy(texts)
     f, 이름, _ = 처리함수[1]                                 # 관리보냄(POST)
@@ -276,11 +406,27 @@ def 자체시험(reg, texts):
     xs = [o for o in r["operations"] if not o.get("internal")]; xs[1]["cli"] = dict(xs[0]["cli"])
     경우.append(("CLI 이름 겹침", r, texts, f"[3] CLI 이름(ko) 겹침"))
     r = copy.deepcopy(reg)
-    k0 = sorted(r["result_types"])[0]; r["result_types"][k0] = {**r["result_types"][k0], "gui_view": ""}
-    경우.append(("화면 없는 결과 형식", r, texts, f"[4] 결과 형식 {k0}: gui_view 없음"))
+    k0 = sorted(r["result_types"])[0]; r["result_types"][k0] = {**r["result_types"][k0], "screens": []}
+    경우.append(("화면 없는 결과 형식", r, texts, f"[4] 결과 형식 {k0}: screens 없음"))
     t = copy.deepcopy(texts)
     t[웹파일[0]] += "\nfetch('/api/zz/webonly');\n"
-    경우.append(("웹 코드가 부르는 목록 밖 경로", reg, t, "[5] 웹 코드가 부르는 목록 밖 경로: /api/zz/webonly"))
+    경우.append(("화면 코드의 경로 글", reg, t, "[5] 화면 코드의 경로 글: app.js:"))
+    t = copy.deepcopy(texts)
+    t[웹파일[0]] += "\ncallOp('run.zz_unknown');\n"
+    경우.append(("목록에 없는 기능 id 를 부름", reg, t, "[5] 목록에 없는 기능 id 를 부름: app.js:"))
+    r = copy.deepcopy(reg)
+    st = next(o for o in r["operations"] if o["id"] == "system.state")
+    r["operations"].append({**copy.deepcopy(st), "id": "system.zz_unreached", "cli": {"ko": "zz 닿지 않음", "en": "zz unreached"}})
+    경우.append(("화면에서 닿지 않는 기능", r, texts, "[5] system.zz_unreached: 화면 코드에서 불리지 않음"))
+    r = copy.deepcopy(reg)
+    x = next(o for o in r["operations"] if not o.get("internal") and o.get("status") == "exists"); x["gui"] = {"screens": ["zz_screen"]}
+    경우.append(("없는 화면 id", r, texts, f"[4] {x['id']}: 없는 화면 id 'zz_screen'"))
+    r = copy.deepcopy(reg)
+    del r["screens"]["perf"]
+    경우.append(("기능 목록에 없는 화면", r, texts, "[4] 웹 코드의 화면 perf 가 기능 목록의 screens 에 없음"))
+    r = copy.deepcopy(reg)
+    r["result_types"]["zz_orphan"] = {"screens": ["common"], "description": {"ko": "zz", "en": "zz"}}
+    경우.append(("어느 기능의 결과도 아닌 결과 형식", r, texts, "[4] 결과 형식 zz_orphan: 어느 기능의 결과도 아님"))
     t = copy.deepcopy(texts)
     코드 = 코드뽑기(texts)
     (m, p) = next(k for k in sorted(코드) if k[0] == "POST")

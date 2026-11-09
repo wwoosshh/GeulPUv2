@@ -9,6 +9,9 @@ import { MEASURE_OPS, measureLabel, measureView } from './steps.js';
 const BAR_KEY = 'geulpu.runBar';
 const BARS = ['margin', 'prob', 'entropy'];
 const CHAT_OPS = new Set(['run.chat', 'run.messages', 'run.responses']);
+// 앱리디자인 E6 — Anthropic Messages · OpenAI Responses 형식: 서버가 시드와 GeulPU 확장 필드를 받지 않아(엔진의 형식 바꾸기) 토큰별 값이 없다
+const AGENT_OPS = new Set(['run.messages', 'run.responses']);
+const AGENT_KIND = { 'run.messages': 'messages', 'run.responses': 'responses' };
 const MARGIN_FULL = 3;          // 막대가 꽉 차는 마진(nat)
 const LIST_MAX = 200;           // 실행 탭에서 기록 파일을 읽는 실행 수(최근 것부터)
 
@@ -280,7 +283,7 @@ export function fetchPieces(ids, ctx) {
   const need = [...new Set(ids)].filter(id => !pieces.has(id));
   if (!need.length) return;
   for (const id of need) pieces.set(id, null);
-  Promise.all(need.map(id => send({ op: 'proxy.detokenize', method: 'POST', path: '/detokenize', body: JSON.stringify({ tokens: [id] }) })
+  Promise.all(need.map(id => call('proxy.detokenize', { tokens: [id] }, { method: 'POST' })
     .then(r => { if (r.ok && r.json && typeof r.json.prompt === 'string') pieces.set(id, r.json.prompt); }, () => { /* 모델이 없으면 번호로 */ })))
     .then(() => ctx.rerender());
 }
@@ -325,6 +328,8 @@ export function kindLabel(entry) {
   if (k === 'check') return T('재실행');
   if (k === 'score') return T('점수', '실행');
   if (k === 'lens') return T('로짓 렌즈');
+  if (entry.operation === 'run.messages') return 'Anthropic Messages';
+  if (entry.operation === 'run.responses') return 'OpenAI Responses';
   if (CHAT_OPS.has(entry.operation)) return T('채팅');
   if (k === 'generate') return T('텍스트 생성');
   return k || T('실행');
@@ -346,6 +351,12 @@ function describe(ctx, entry, d) {
   } else if (MEASURE_OPS.has(entry.operation)) {
     const lab = measureLabel(ctx, entry);              // E4 — 'r1 의 스텝 3 · 28 층' · 'r1 의 스텝 3 에 " The" · 로그확률 −2.31'
     if (lab) return lab;
+  }
+  if (AGENT_OPS.has(entry.operation)) {
+    if (typeof s.temperature === 'number') parts.push(T`온도 ${s.temperature}`);
+    const a = d && d.res ? agentParts(entry.operation, d.res) : null;
+    if (a && typeof a.outTok === 'number') parts.push(T`출력 토큰 ${a.outTok}`);
+    return parts.join(' · ');
   }
   if (sampling) {
     const seed = d && d.seedText ? d.seedText : entry.seed;
@@ -573,14 +584,18 @@ const num = (v, int) => {
 /** 새 실행 창 — prefill 은 '이 설정으로 새 실행'의 실행 값 */
 export async function newRun(ctx, prefill) {
   const req = prefill ? prefill.req : {};
-  const chatInit = prefill ? prefill.chat : false;
+  const kind0 = prefill ? AGENT_KIND[prefill.entry.operation] || (prefill.chat ? 'chat' : 'complete') : 'complete';
+  const chatInit = kind0 !== 'complete';
   const msgs = Array.isArray(req.messages) ? req.messages : [];
   const textOf = m => (typeof m.content === 'string' ? m.content : Array.isArray(m.content) ? m.content.map(x => (x && x.text) || '').join('') : '');
-  const sys0 = msgs.filter(m => m && m.role === 'system').map(textOf).join('\n');
-  const user0 = msgs.filter(m => m && m.role === 'user').map(textOf).pop() || '';
+  const sys0 = typeof req.system === 'string' ? req.system : typeof req.instructions === 'string' ? req.instructions
+    : msgs.filter(m => m && m.role === 'system').map(textOf).join('\n');
+  const user0 = typeof req.input === 'string' ? req.input : msgs.filter(m => m && m.role === 'user').map(textOf).pop() || '';
   const kind = el('select', { id: 'nr-kind', class: 'input' },
-    el('option', { value: 'complete', selected: chatInit ? null : true }, T('텍스트 생성')),
-    el('option', { value: 'chat', selected: chatInit ? true : null }, T('채팅')));
+    el('option', { value: 'complete', selected: kind0 === 'complete' ? true : null }, T('텍스트 생성')),
+    el('option', { value: 'chat', selected: kind0 === 'chat' ? true : null }, T('채팅')),
+    el('option', { value: 'messages', selected: kind0 === 'messages' ? true : null }, 'Anthropic Messages'),
+    el('option', { value: 'responses', selected: kind0 === 'responses' ? true : null }, 'OpenAI Responses'));
   const prompt = el('textarea', { id: 'nr-prompt', rows: '4', spellcheck: 'false' });
   prompt.value = typeof req.prompt === 'string' ? req.prompt : '';
   const system = el('textarea', { id: 'nr-system', rows: '2', spellcheck: 'false' });
@@ -588,7 +603,7 @@ export async function newRun(ctx, prefill) {
   const user = el('textarea', { id: 'nr-user', rows: '4', spellcheck: 'false' });
   user.value = user0;
   const v = (k, dflt) => (req[k] !== undefined ? String(req[k]) : dflt);
-  const maxT = el('input', { type: 'number', min: '1', step: '1', value: v('max_tokens', '64') });
+  const maxT = el('input', { type: 'number', min: '1', step: '1', value: req.max_output_tokens !== undefined ? String(req.max_output_tokens) : v('max_tokens', '64') });
   const temp = el('input', { type: 'number', min: '0', step: '0.05', value: v('temperature', '0.8') });
   const seed = el('input', { type: 'text', inputmode: 'numeric', value: prefill && prefill.seedText ? prefill.seedText : String(1 + Math.floor(Math.random() * 2147483646)) });
   const topP = el('input', { type: 'number', min: '0', max: '1', step: '0.05', value: v('top_p', ''), placeholder: T('기본') });
@@ -598,11 +613,32 @@ export async function newRun(ctx, prefill) {
   const err = el('p', { class: 'xp-err', role: 'alert' });
   const note = el('p', { class: 'muted run-note' });
   const promptBox = el('div', { class: 'run-form-part' }, field(T('프롬프트'), prompt));
-  const chatBox = el('div', { class: 'run-form-part' }, field(T('시스템 프롬프트'), system, T('비우면 넣지 않습니다')), field(T('사용자 메시지'), user));
+  // Messages 의 토큰 수 세기(run.messages.count_tokens — 실험의 명령 기록에 남는다)
+  const countOut = el('span', { class: 'muted small' });
+  const countRow = el('div', { class: 'row g8' }, el('button', {
+    class: 'btn ghost sm', type: 'button',
+    onclick: async () => {
+      const o = { messages: [{ role: 'user', content: user.value }] };
+      if (system.value.trim()) o.system = system.value;
+      countOut.textContent = T('세는 중…');
+      try {
+        const r = await call('run.messages.count_tokens', o, { experiment: ctx.exp.path });
+        countOut.textContent = r.ok && r.json && typeof r.json.input_tokens === 'number' ? T`입력 토큰 ${r.json.input_tokens}` : appError(r);
+      } catch (_) { countOut.textContent = T('앱에 닿지 못했습니다'); }
+    },
+  }, T('토큰 수 세기')), countOut);
+  const chatBox = el('div', { class: 'run-form-part' }, field(T('시스템 프롬프트'), system, T('비우면 넣지 않습니다')), field(T('사용자 메시지'), user), countRow);
+  const fSeed = field(T('시드'), seed), fTopK = field('top-k', topK), fMinP = field('min-p', minP), fCands = field(T('상위 후보 수'), cands, T('마진에는 2 가 필요합니다'));
+  const noteGeulpu = el('p', { class: 'muted' }, T('요청에는 늘 logprobs · geulpu.top_logprobs · geulpu.logit_hash · geulpu.prompt_tokens 를 넣습니다. 결과는 이 실험의 실행으로 남습니다.'));
+  const noteAgent = el('p', { class: 'muted' }, T('이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않습니다 — 결과는 이 실험의 실행으로 남지만 답의 텍스트 · 도구 호출 · 사용량만 있고 토큰별 값은 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.'));
   const sync = () => {
-    const chat = kind.value === 'chat';
-    promptBox.hidden = chat;
-    chatBox.hidden = !chat;
+    const k = kind.value, agent = k === 'messages' || k === 'responses';
+    promptBox.hidden = k !== 'complete';
+    chatBox.hidden = k === 'complete';
+    countRow.hidden = k !== 'messages';
+    for (const f of [fSeed, fTopK, fMinP, fCands]) f.hidden = agent;
+    noteGeulpu.hidden = agent;
+    noteAgent.hidden = !agent;
   };
   kind.addEventListener('change', sync);
   sync();
@@ -612,20 +648,52 @@ export async function newRun(ctx, prefill) {
     field(T('종류'), kind),
     promptBox, chatBox,
     el('div', { class: 'run-form-grid' },
-      field(T('최대 토큰'), maxT), field(T('온도'), temp), field(T('시드'), seed),
-      field('top-p', topP), field('top-k', topK), field('min-p', minP),
-      field(T('상위 후보 수'), cands, T('마진에는 2 가 필요합니다'))),
-    el('p', { class: 'muted' }, T('요청에는 늘 logprobs · geulpu.top_logprobs · geulpu.logit_hash · geulpu.prompt_tokens 를 넣습니다. 결과는 이 실험의 실행으로 남습니다.')),
+      field(T('최대 토큰'), maxT), field(T('온도'), temp), fSeed,
+      field('top-p', topP), fTopK, fMinP, fCands),
+    noteGeulpu, noteAgent,
     err);
   const ok = el('button', {
     class: 'btn primary', type: 'button',
     onclick: async () => {
       const chat = kind.value === 'chat';
-      const vals = { max_tokens: num(maxT.value, true), temperature: num(temp.value, false), top_p: num(topP.value, false), top_k: num(topK.value, true), min_p: num(minP.value, false) };
+      const agent = kind.value === 'messages' || kind.value === 'responses';
+      const vals = agent ? { max_tokens: num(maxT.value, true), temperature: num(temp.value, false), top_p: num(topP.value, false) }
+        : { max_tokens: num(maxT.value, true), temperature: num(temp.value, false), top_p: num(topP.value, false), top_k: num(topK.value, true), min_p: num(minP.value, false) };
       const K = num(cands.value, true);
       const bad = Object.entries(vals).find(([, x]) => x === null);
-      if (bad || !vals.max_tokens || vals.max_tokens < 1 || vals.temperature === undefined || !K || K < 2 || K > 20) {
+      if (bad || !vals.max_tokens || vals.max_tokens < 1 || vals.temperature === undefined || (!agent && (!K || K < 2 || K > 20))) {
         err.textContent = T('숫자를 확인하세요 — 최대 토큰은 1 이상, 상위 후보 수는 2 ~ 20');
+        return;
+      }
+      if (agent) {
+        if (!user.value.trim()) {
+          err.textContent = T('사용자 메시지를 적으세요');
+          return;
+        }
+        const a = {};
+        if (kind.value === 'messages') {
+          a.max_tokens = vals.max_tokens;
+          if (system.value.trim()) a.system = system.value;
+          a.messages = [{ role: 'user', content: user.value }];
+        } else {
+          if (system.value.trim()) a.instructions = system.value;
+          a.input = user.value;
+          a.max_output_tokens = vals.max_tokens;
+        }
+        a.temperature = vals.temperature;
+        if (vals.top_p !== undefined) a.top_p = vals.top_p;
+        ok.disabled = true;
+        err.textContent = '';
+        note.textContent = T('실행하는 중…');
+        try {
+          const { id } = await runCall(ctx, kind.value === 'messages' ? 'run.messages' : 'run.responses', JSON.stringify(a));
+          globalThis.closeModal();
+          if (id) ctx.openRun(id);
+        } catch (e) {
+          note.textContent = '';
+          err.textContent = e.message;
+          ok.disabled = false;
+        }
         return;
       }
       const sd = seed.value.trim();
@@ -856,6 +924,46 @@ export function busyLine(ctx, id) {
   return out;
 }
 
+/** Anthropic Messages · OpenAI Responses 응답의 부분(답 · 도구 호출)과 사용량 · 끝난 까닭 */
+function agentParts(op, res) {
+  const parts = [];
+  const u = (res && res.usage) || {};
+  if (op === 'run.messages') {
+    for (const b of Array.isArray(res.content) ? res.content : []) {
+      if (!b || typeof b !== 'object') continue;
+      if (b.type === 'text') parts.push(['text', String(b.text || '')]);
+      else if (b.type === 'tool_use') parts.push(['tool', `${b.name}(${JSON.stringify(b.input)})`]);
+    }
+    // Anthropic 의 input_tokens 는 캐시에서 읽지 않은 것만 — 캐시에서 읽은 것 · 캐시에 쓴 것과 더한 것이 입력 전체
+    const cached = u.cache_read_input_tokens || 0;
+    const inTok = typeof u.input_tokens === 'number' ? u.input_tokens + cached + (u.cache_creation_input_tokens || 0) : undefined;
+    return { parts, stop: res.stop_reason, inTok, cached, outTok: u.output_tokens };
+  }
+  for (const it of Array.isArray(res.output) ? res.output : []) {
+    if (!it || typeof it !== 'object') continue;
+    if (it.type === 'message') {
+      for (const c of Array.isArray(it.content) ? it.content : []) if (c && c.type === 'output_text') parts.push(['text', String(c.text || '')]);
+    } else if (it.type === 'function_call') parts.push(['tool', `${it.name}(${it.arguments})`]);
+  }
+  return { parts, stop: res.status, inTok: u.input_tokens, cached: (u.input_tokens_details && u.input_tokens_details.cached_tokens) || 0, outTok: u.output_tokens };
+}
+
+function agentView(ctx, entry, d, text) {
+  const a = agentParts(entry.operation, d.res || {});
+  const label = { text: T('답'), tool: T('도구 호출') };
+  return [
+    el('p', { class: 'note-line' }, T('이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않아 토큰별 값(확률 · 마진 · 로짓 해시)이 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.')),
+    ...(a.parts.length ? a.parts.map(([k, t]) => el('div', { class: 'run-agent-part' }, el('div', { class: 'k' }, label[k]), el('pre', { class: 'xp-pre' }, t)))
+      : [el('p', { class: 'muted' }, T('답에 텍스트가 없습니다.'))]),
+    el('p', { class: 'muted small' }, T`입력 토큰 ${a.inTok ?? '-'}` + (a.cached ? ' ' + T`(캐시에서 ${a.cached})` : '') + ' · ' + T`출력 토큰 ${a.outTok ?? '-'}` + ' · ' + T`끝난 까닭 ${a.stop || '-'}`),
+    el('div', { class: 'xp-actions' },
+      el('button', { type: 'button', class: 'btn', disabled: ui.busy || !rawRequest(text) ? true : null, onclick: () => doRerun(ctx, d, text) }, T('재실행')),
+      el('button', { type: 'button', class: 'btn ghost', onclick: () => newRun(ctx, d) }, T('이 설정으로 새 실행'))),
+    el('h2', null, T('요청', '하나')), el('pre', { class: 'xp-pre' }, JSON.stringify(d.req, null, 2)),
+    el('details', { class: 'run-raw' }, el('summary', null, T('응답(JSON)')), el('pre', { class: 'xp-pre' }, JSON.stringify(d.res, null, 2))),
+  ];
+}
+
 /** 경로에 쓰는 실행 화면의 이름 */
 export function runTitle(ctx, id) {
   const entry = entryOf(ctx, id);
@@ -880,6 +988,10 @@ export function runView(ctx, id) {
   }
   if (MEASURE_OPS.has(entry.operation)) {             // E4 — 점수 · 로짓 렌즈 실행은 그 표(steps.js)
     out.push(...measureView(ctx, entry, c));
+    return out;
+  }
+  if (AGENT_OPS.has(entry.operation)) {
+    out.push(...agentView(ctx, entry, d, c.text));
     return out;
   }
   if (!d.n) {

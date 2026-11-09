@@ -23,6 +23,8 @@ const st = {
   view: 'logit',                        // 로짓 렌즈 표 — 'logit' · 'jacobian'
   open: new Set(),                      // 펼친 층 '<실험 경로>|<실행 id>|<렌즈>|<층>'
   text: new Map(),                      // '<실험 경로>|<실행 id>|<스텝>' → 점수 입력
+  inMode: new Map(),                    // 같은 키 → 입력의 종류 'text' · 'ids'(앱리디자인 E6 — 토큰 id 는 run.detokenize 로 글을 보인다)
+  idText: new Map(),                    // 같은 키 → 토큰 id 입력의 글
   scoreError: null,                     // {key, text}
   server: null,                         // system.state 의 답(불러온 모델 · J 파일)
   serverTry: 0,
@@ -447,19 +449,38 @@ function doLens(ctx, d, k, jac) {
 
 async function doScore(ctx, d, k, key) {
   const text = st.text.get(key) || '';
+  const byIds = st.inMode.get(key) === 'ids';
   st.scoreError = null;
   if (!text.trim()) {
-    st.scoreError = { key, text: T('점수를 계산할 텍스트를 적으세요') };
+    st.scoreError = { key, text: byIds ? T('점수를 계산할 토큰 id 를 적으세요') : T('점수를 계산할 텍스트를 적으세요') };
     ctx.rerender();
     return;
   }
   let toks = null;
-  try {
-    const r = await call('run.tokenize', { prompt: text, add_special_tokens: false });
-    if (r.ok && r.json && isIds(r.json.tokens)) toks = r.json.tokens;
-    else st.scoreError = { key, text: appError(r) };
-  } catch (_) {
-    st.scoreError = { key, text: T('앱에 닿지 못했습니다') };
+  if (byIds) {
+    // 토큰 id 그대로 — 텍스트로 적을 수 없는 특수 토큰도. 그 글은 run.detokenize 로(명령 창에 그 명령이 남는다)
+    const parts = text.trim().split(/[\s,]+/);
+    if (!parts.every(x => /^\d{1,9}$/.test(x))) {
+      st.scoreError = { key, text: T('토큰 id 는 0 이상의 정수를 쉼표나 공백으로 나눠 적습니다') };
+      ctx.rerender();
+      return;
+    }
+    toks = parts.map(Number);
+    try {
+      const r = await call('run.detokenize', { tokens: toks });
+      if (r.ok && r.json && typeof r.json.prompt === 'string') st.idText.set(key, r.json.prompt);
+      else st.scoreError = { key, text: appError(r) };
+    } catch (_) {
+      st.scoreError = { key, text: T('앱에 닿지 못했습니다') };
+    }
+  } else {
+    try {
+      const r = await call('run.tokenize', { prompt: text, add_special_tokens: false });
+      if (r.ok && r.json && isIds(r.json.tokens)) toks = r.json.tokens;
+      else st.scoreError = { key, text: appError(r) };
+    } catch (_) {
+      st.scoreError = { key, text: T('앱에 닿지 못했습니다') };
+    }
   }
   if (toks && !toks.length) st.scoreError = { key, text: T('텍스트가 토큰이 되지 않았습니다') };
   if (st.scoreError) {
@@ -575,15 +596,24 @@ function lensSection(ctx, d, k, ms, can, srv) {
 function scoreSection(ctx, d, k, ms, can) {
   const key = ctx.path + '|' + d.entry.id + '|' + k;
   const kids = [];
+  const mode = st.inMode.get(key) || 'text';
+  const modeSel = el('select', {
+    id: 'st-score-mode', class: 'input st-inmode', 'aria-label': T('점수 입력의 종류'),
+    onchange: ev => { st.inMode.set(key, ev.target.value); st.idText.delete(key); st.scoreError = null; ctx.rerender(); },
+  }, el('option', { value: 'text', selected: mode === 'text' ? true : null }, T('텍스트')),
+  el('option', { value: 'ids', selected: mode === 'ids' ? true : null }, T('토큰 id')));
   const input = el('input', {
-    id: 'st-score-in', class: 'input', type: 'text', value: st.text.get(key) || '', placeholder: T('예: " Paris"'), autocomplete: 'off',
-    oninput: ev => { st.text.set(key, ev.target.value); },
+    id: 'st-score-in', class: 'input', type: 'text', value: st.text.get(key) || '', autocomplete: 'off',
+    placeholder: mode === 'ids' ? T('예: 151645, 198') : T('예: " Paris"'), 'aria-label': mode === 'ids' ? T('토큰 id') : T('텍스트'),
+    oninput: ev => { st.text.set(key, ev.target.value); if (mode === 'ids') st.idText.delete(key); },
     onkeydown: ev => { if (ev.key === 'Enter' && can) { ev.preventDefault(); doScore(ctx, d, k, key); } },
   });
-  kids.push(el('div', { class: 'xp-actions st-form' },
-    el('label', { class: 'st-inline', for: 'st-score-in' }, T('텍스트')), input,
+  kids.push(el('div', { class: 'xp-actions st-form' }, modeSel, input,
     el('button', { type: 'button', class: 'btn', disabled: can ? null : true, onclick: () => doScore(ctx, d, k, key) }, T('점수 계산'))));
-  kids.push(el('p', { class: 'muted st-note' }, T('텍스트를 토큰으로 나눠(특수 토큰 없이) 이 스텝부터 이어 붙이고, 토큰마다의 로그확률을 계산합니다(echo 스코어링). 앞의 공백도 텍스트입니다.')));
+  if (mode === 'ids' && st.idText.has(key)) kids.push(el('p', { class: 'st-meta' }, T('토큰 id 의 글: '), el('b', null, quoteTok(st.idText.get(key)))));
+  kids.push(el('p', { class: 'muted st-note' }, mode === 'ids'
+    ? T('토큰 id 를 그대로 이 스텝부터 이어 붙이고, 토큰마다의 로그확률을 계산합니다(echo 스코어링) — 텍스트로 적을 수 없는 특수 토큰(예: <|im_end|>)도 됩니다. 글은 run.detokenize 로 보입니다.')
+    : T('텍스트를 토큰으로 나눠(특수 토큰 없이) 이 스텝부터 이어 붙이고, 토큰마다의 로그확률을 계산합니다(echo 스코어링). 앞의 공백도 텍스트입니다.')));
   if (st.scoreError && st.scoreError.key === key) kids.push(el('p', { class: 'xp-check' }, el('span', { class: 'tag err' }, T('실패')), st.scoreError.text));
   const list = ms ? ms.scores.filter(x => !(x.q.length === x.at + 1 && x.tok === d.ids[k])) : [];
   for (const x of list.slice(0, 5)) {

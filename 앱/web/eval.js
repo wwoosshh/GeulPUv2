@@ -732,17 +732,17 @@ async function evLoad() {
   EV.loading = true;
   EV.at = Date.now();
   try {
-    const r = await api('/api/eval');
+    const r = await callOp('eval.workspaces');
     const sig = JSON.stringify(r);
     EV.err = '';
     if (sig !== EV.listSig) { EV.listSig = sig; EV.list = r; }
   } catch (e) { EV.err = e.message; }
   finally { EV.loading = false; EV.at = Date.now(); renderEval(); }
 }
-function evFetch(kind, key, url) {
+function evFetch(kind, key, id, params) {
   if (EV[kind][key] !== undefined || EVF.has(kind + key)) return;
   EVF.add(kind + key);
-  api(url).then(r => { EV[kind][key] = r; }, e => { EV[kind][key] = { error: e.message }; })
+  callOp(id, params).then(r => { EV[kind][key] = r; }, e => { EV[kind][key] = { error: e.message }; })
     .finally(() => { EVF.delete(kind + key); EV.tick++; renderEval(); });
 }
 const evResKey = (w, dir) => w.id + '/' + dir;
@@ -751,11 +751,11 @@ const evRes = (w, dir) => EV.res[evResKey(w, dir)];
 // 지금 보기에 드는 응답을 받는다(결과 · 비교 · 대화)
 function evNeed(w) {
   if (!w) return;
-  const res = dir => evFetch('res', evResKey(w, dir), `/api/eval/result?workspace=${evEnc(w.id)}&dir=${evEnc(dir)}`);
+  const res = dir => evFetch('res', evResKey(w, dir), 'eval.result', { workspace: w.id, dir });
   if ((EV.view === 'result' || EV.view === 'item') && EV.dir) res(EV.dir);
-  if (EV.view === 'item' && EV.dir && EV.item >= 0) evFetch('items', `${w.id}/${EV.dir}/${EV.item}`, `/api/eval/item?workspace=${evEnc(w.id)}&dir=${evEnc(EV.dir)}&i=${EV.item}`);
+  if (EV.view === 'item' && EV.dir && EV.item >= 0) evFetch('items', `${w.id}/${EV.dir}/${EV.item}`, 'eval.item', { workspace: w.id, dir: EV.dir, i: EV.item });
   if (EV.view === 'compare' && EV.cmpA && EV.cmpB) {
-    evFetch('cmp', `${w.id}/${EV.cmpA}/${EV.cmpB}`, `/api/eval/compare?workspace=${evEnc(w.id)}&a=${evEnc(EV.cmpA)}&b=${evEnc(EV.cmpB)}`);
+    evFetch('cmp', `${w.id}/${EV.cmpA}/${EV.cmpB}`, 'eval.compare', { workspace: w.id, a: EV.cmpA, b: EV.cmpB });
     res(EV.cmpA); res(EV.cmpB);
   }
 }
@@ -764,7 +764,7 @@ function evCheckNeed(w, vid) {
   const key = `${w.id}/${vid}`;
   if (EV.checks[key] !== undefined || EVF.has('chk' + key)) return;
   EVF.add('chk' + key);
-  api(`/api/eval/check?workspace=${evEnc(w.id)}&version=${evEnc(vid)}`).then(r => { EV.checks[key] = r; }, () => { EV.checks[key] = { missing: true }; })
+  callOp('eval.check.get', { workspace: w.id, version: vid }).then(r => { EV.checks[key] = r; }, () => { EV.checks[key] = { missing: true }; })
     .finally(() => { EVF.delete('chk' + key); EV.tick++; renderEval(); });
 }
 function evGo(view, o) {
@@ -786,7 +786,7 @@ function evNewWs() {
   const orig = h('input', { class: 'input mono', type: 'text', placeholder: 'C:\\models\\my-finetune', 'aria-label': T('원래 모델 폴더') });
   const go = async () => {
     try {
-      const w = await api('/api/eval/workspace', { action: 'create', name: name.value.trim() || T('새 작업 공간'), reference: ref.value, original_dir: orig.value.trim() });
+      const w = await callOp('eval.workspace', { action: 'create', name: name.value.trim() || T('새 작업 공간'), reference: ref.value, original_dir: orig.value.trim() });
       closeModal();
       await evLoad();
       evGo('ws', { sel: w.id });
@@ -805,7 +805,7 @@ function evNewWs() {
 function evRename(w) {
   const name = h('input', { class: 'input', type: 'text', value: w.name, maxlength: 80 });
   const go = async () => {
-    try { await api('/api/eval/workspace', { action: 'update', id: w.id, name: name.value.trim() || w.name }); closeModal(); evLoad(); }
+    try { await callOp('eval.workspace', { action: 'update', id: w.id, name: name.value.trim() || w.name }); closeModal(); evLoad(); }
     catch (e) { toast(e.message, 'err'); }
   };
   modal(h('div', { class: 'col g16' }, h('h2', null, T('이름 바꾸기')), h('label', { class: 'col g8' }, h('span', { class: 'small muted' }, T('이름')), name)),
@@ -816,7 +816,7 @@ function evSetRef(w) {
   if (!ms.length) { toast(T('고를 수 있는 모델이 없습니다')); return; }
   const ref = h('select', { class: 'input', 'aria-label': T('기준 모델') }, evModelOpts(ms, w.reference.model));
   const go = async () => {
-    try { await api('/api/eval/workspace', { action: 'update', id: w.id, reference: ref.value }); closeModal(); evLoad(); }
+    try { await callOp('eval.workspace', { action: 'update', id: w.id, reference: ref.value }); closeModal(); evLoad(); }
     catch (e) { toast(e.message, 'err'); }
   };
   modal(h('div', { class: 'col g16' }, h('h2', null, T('기준 모델 바꾸기')),
@@ -825,7 +825,7 @@ function evSetRef(w) {
 }
 async function evDelWs(w) {
   if (!(await confirmBox(T('작업 공간 지우기'), h('p', { class: 'muted m0' }, T`${w.name} — 목록에서 지웁니다. 결과 파일은 자료 폴더의 평가\\지운작업공간\\ 으로 옮겨 둡니다(모델 파일은 그대로).`), T('지우기'), 'danger'))) return;
-  try { await api('/api/eval/workspace', { action: 'delete', id: w.id }); EV.sel = ''; store('geulpu.ev.sel', ''); await evLoad(); evGo('ws'); }
+  try { await callOp('eval.workspace', { action: 'delete', id: w.id }); EV.sel = ''; store('geulpu.ev.sel', ''); await evLoad(); evGo('ws'); }
   catch (e) { toast(e.message, 'err'); }
 }
 function evAddVersion(w) {
@@ -835,7 +835,7 @@ function evAddVersion(w) {
   const memo = h('input', { class: 'input', type: 'text', maxlength: '120', placeholder: T('예: LoRA r16 · 되풀이 데이터 섞음'), 'aria-label': T('메모(고름)') });
   const go = async () => {
     try {
-      const r = await api('/api/eval/version', { workspace: w.id, model: sel.value, label: memo.value.trim() });
+      const r = await callOp('eval.version', { workspace: w.id, model: sel.value, label: memo.value.trim() });
       closeModal();
       const o = EV.opts[w.id];
       if (o && r.current) o.versions.add(r.current);
@@ -849,14 +849,14 @@ function evAddVersion(w) {
 }
 async function evDelVersion(w, v) {
   if (!(await confirmBox(T('버전 지우기'), h('p', { class: 'muted m0' }, T`${v.id} — 작업 공간에서 뺍니다. 모델 파일과 지난 결과는 그대로 남습니다.`), T('지우기'), 'danger'))) return;
-  try { await api('/api/eval/version', { workspace: w.id, action: 'delete', id: v.id }); evLoad(); }
+  try { await callOp('eval.version', { workspace: w.id, action: 'delete', id: v.id }); evLoad(); }
   catch (e) { toast(e.message, 'err'); }
 }
 // 2-1 — 메타데이터 고치기: 채팅 템플릿 · 특수 토큰(번호) · add_bos/eos 를 바꾼 새 GGUF(텐서는 바이트 그대로)를 새 버전으로
 const EV_SPECIAL = [['bos', 'tokenizer.ggml.bos_token_id', 'BOS'], ['eos', 'tokenizer.ggml.eos_token_id', 'EOS'], ['eot', 'tokenizer.ggml.eot_token_id', 'EOT'], ['pad', 'tokenizer.ggml.padding_token_id', 'PAD']];
 async function evFixMeta(w, v) {
   let M;
-  try { M = await api('/api/eval/meta?model=' + evEnc(v.model)); } catch (e) { toast(e.message, 'err'); return; }
+  try { M = await callOp('eval.meta', { model: v.model }); } catch (e) { toast(e.message, 'err'); return; }
   const ctl = M.control || [];
   const tpl = h('textarea', { class: 'input mono ev-tpl', rows: 12, spellcheck: 'false', 'aria-label': T('채팅 템플릿') });
   tpl.value = M.chat_template || '';
@@ -888,7 +888,7 @@ async function evFixMeta(w, v) {
     }
     if (!ch.length) { toast(T('바뀐 것이 없습니다')); return; }
     try {
-      await api('/api/eval/fix', { workspace: w.id, from: v.id, changes: ch });
+      await callOp('eval.fix', { workspace: w.id, from: v.id, changes: ch });
       closeModal();
       S.jobHide = '';
       EV.at = 0;
@@ -911,7 +911,7 @@ function evImport(w) {
   const name = h('input', { class: 'input', type: 'text', placeholder: T('비우면 파일 이름') });
   const go = async () => {
     try {
-      const r = await api('/api/eval/data/import', Object.assign({ path: path.value.trim() }, name.value.trim() ? { name: name.value.trim() } : {}));
+      const r = await callOp('eval.data.import', Object.assign({ path: path.value.trim() }, name.value.trim() ? { name: name.value.trim() } : {}));
       closeModal();
       evOpts(w).data = r.name;
       toast(T`데이터를 불러왔습니다 — ${r.name}`, 'ok');
@@ -945,7 +945,7 @@ async function evRun(w) {
   if (S.streaming) { toast(T('채팅의 답이 끝난 뒤 실행할 수 있습니다')); return; }
   if (S.st.server.state === 'ready' && !(await confirmBox(T('채팅 모델을 내립니다'), h('p', { class: 'muted m0' }, T('평가하는 동안 GPU를 혼자 쓰도록 불러온 채팅 모델을 내립니다. 계속할까요?')), T('계속')))) return;
   try {
-    await api('/api/eval/run', { workspace: w.id, versions: vs, data: o.data, mode: o.mode, max_tokens: o.max, thinking: o.think, chunks: o.chunks, slots: o.slots, dump: o.dump });
+    await callOp('eval.run', { workspace: w.id, versions: vs, data: o.data, mode: o.mode, max_tokens: o.max, thinking: o.think, chunks: o.chunks, slots: o.slots, dump: o.dump });
     S.jobHide = '';
     EV.at = 0;
     resetSig();
@@ -1032,7 +1032,7 @@ async function evApplyFix(w, vid, changes) {
   const keys = [...new Set(changes.map(c => c.key))].join(', ');
   const from = vid === 'ref' ? T('기준 모델') : vid;
   if (!(await confirmBox(T('고친 버전 만들기'), h('p', { class: 'muted m0' }, T`${from}에서 메타데이터만 바꾼 새 버전을 만듭니다 — 바꾸는 키: ${keys}. 새 파일이 모델 폴더에 쓰입니다(${fmtBytes(v ? v.size : rm ? rm.size : 0)}).`), T('만들기')))) return;
-  try { await api('/api/eval/fix', { workspace: w.id, from: vid, changes }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+  try { await callOp('eval.fix', { workspace: w.id, from: vid, changes }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
   catch (e) { toast(e.message, 'err'); }
 }
 function evCheckCard(w, busy) {
@@ -1048,7 +1048,7 @@ function evCheckCard(w, busy) {
   const run = async () => {
     const d = dir.value.trim();
     if (!d) { toast(T('원래 모델 폴더를 정하세요')); return; }
-    try { await api('/api/eval/check', { workspace: w.id, version: vid, original_dir: d }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    try { await callOp('eval.check.run', { workspace: w.id, version: vid, original_dir: d }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
     catch (e) { toast(e.message, 'err'); }
   };
   let body;
@@ -1086,7 +1086,7 @@ const evMB = n => `${((n || 0) / 1048576).toFixed(1)} MB`;
 function evToolsNeed() {
   if (EV.tools !== undefined || EVF.has('tools')) return;
   EVF.add('tools');
-  api('/api/eval/tools').then(r => { EV.tools = r; }, e => { EV.tools = { error: e.message }; })
+  callOp('eval.tools.get').then(r => { EV.tools = r; }, e => { EV.tools = { error: e.message }; })
     .finally(() => { EVF.delete('tools'); EV.tick++; renderEval(); });
 }
 // 받을 것(출처 · 크기)을 보이고, 누르면 작업 'tools'
@@ -1095,7 +1095,7 @@ function evToolsSetup() {
   const py = h('input', { class: 'input mono', type: 'text', placeholder: T('비우면 자동(py -3 · python · python3)'), 'aria-label': T('파이썬 경로') });
   const row = (what, size, src) => h('div', { class: 'ev-chk' }, h('div', { class: 'ink' }, what), h('div', { class: 'small muted' }, [size, src].filter(Boolean).join(NB)));
   const go = async () => {
-    try { await api('/api/eval/tools', { python: py.value.trim() }); closeModal(); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    try { await callOp('eval.tools.prepare', { python: py.value.trim() }); closeModal(); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
     catch (e) { toast(e.message, 'err'); }
   };
   const cands = t.python_candidates || [];
@@ -1166,7 +1166,7 @@ function evMakeCard(w, busy) {
     if (tt.length && !o.quants.size) { toast(T('행렬별 형식은 양자화 형식과 함께 씁니다')); return; }
     if (o.imode !== 'none' && !o.ipath.trim()) { toast(T('imatrix에 쓸 파일을 정하세요')); return; }
     try {
-      await api('/api/eval/make', { workspace: w.id, from: o.from, source_dir: d, outtype: o.outtype, quants: EV_QUANTS.filter(q => o.quants.has(q)), imatrix: { mode: o.imode, path: o.ipath.trim() }, tensor_types: tt, label: o.label.trim() });
+      await callOp('eval.make', { workspace: w.id, from: o.from, source_dir: d, outtype: o.outtype, quants: EV_QUANTS.filter(q => o.quants.has(q)), imatrix: { mode: o.imode, path: o.ipath.trim() }, tensor_types: tt, label: o.label.trim() });
       S.jobHide = ''; EV.at = 0; resetSig(); refresh();
     } catch (e) { toast(e.message, 'err'); }
   };
@@ -1213,7 +1213,7 @@ function evMakeCard(w, busy) {
 function evImpNeed(w) {
   if (EV.imp[w.id] !== undefined || EVF.has('imp' + w.id)) return;
   EVF.add('imp' + w.id);
-  api(`/api/eval/improve?workspace=${evEnc(w.id)}`).then(r => { EV.imp[w.id] = r; }, () => { EV.imp[w.id] = { missing: true }; })
+  callOp('eval.improve.get', { workspace: w.id }).then(r => { EV.imp[w.id] = r; }, () => { EV.imp[w.id] = { missing: true }; })
     .finally(() => { EVF.delete('imp' + w.id); EV.tick++; renderEval(); });
 }
 // #197 — 같은 데이터 · 설정으로 잰 이 작업 공간의 버전들의 크기와 품질(KL · 정답률). 더 작고 품질이 같거나 나은 버전이 있으면 짚는다 —
@@ -1271,7 +1271,7 @@ function evImproveCard(w, busy) {
     class: o.restore === v ? 'on' : '', role: 'radio', 'aria-checked': o.restore === v ? 'true' : 'false', 'data-fk': 'ev-imp-r-' + v,
     onclick: () => { o.restore = v; renderEval(true); } }, l)));
   const run = async () => {
-    try { await api('/api/eval/improve', { workspace: w.id, base: o.base, data: o.data, max_tokens: o.max, restore: o.restore, layer_ranges: o.ranges }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    try { await callOp('eval.improve.run', { workspace: w.id, base: o.base, data: o.data, max_tokens: o.max, restore: o.restore, layer_ranges: o.ranges }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
     catch (e) { toast(e.message, 'err'); }
   };
   let table = null;
@@ -1312,7 +1312,7 @@ function evImproveCard(w, busy) {
       try {
         // #200 — 고른 무리의 이름이 메모 · 파일 이름의 꼬리(예: ffn_gate+ffn_up+attn_v.Q6_K)
         const label = `${sel.map(r => r.name.replace(/\s+/g, '')).join('+')}.${String(rep.restore).toUpperCase()}`;
-        await api('/api/eval/make', { workspace: w.id, from: 'ref', quants: [rep.base.type], imatrix: rep.base.imatrix ? { mode: 'file', path: rep.base.imatrix } : { mode: 'none' },
+        await callOp('eval.make', { workspace: w.id, from: 'ref', quants: [rep.base.type], imatrix: rep.base.imatrix ? { mode: 'file', path: rep.base.imatrix } : { mode: 'none' },
           tensor_types: tt, based_on: rep.base.version, label, then_eval: { data: rep.data, max_tokens: rep.max_tokens, versions: [rep.base.version] } });
         S.jobHide = ''; EV.at = 0; resetSig(); refresh();
       } catch (e) { toast(e.message, 'err'); }
@@ -1384,7 +1384,7 @@ function evOrigCard(w, dir) {
   const key = `${w.id}/${dir}`;
   if (EV.orig[key] === undefined && !EVF.has('orig' + key)) {
     EVF.add('orig' + key);
-    api(`/api/eval/original?workspace=${evEnc(w.id)}&dir=${evEnc(dir)}`).then(r => { EV.orig[key] = r; }, () => { EV.orig[key] = { missing: true }; })
+    callOp('eval.original.get', { workspace: w.id, dir }).then(r => { EV.orig[key] = r; }, () => { EV.orig[key] = { missing: true }; })
       .finally(() => { EVF.delete('orig' + key); EV.tick++; renderEval(); });
   }
   const O = EV.orig[key];
@@ -1402,7 +1402,7 @@ function evOrigCard(w, dir) {
   const run = async () => {
     const d = inp.value.trim();
     if (!d) { toast(T('원래 모델 폴더를 정하세요')); return; }
-    try { await api('/api/eval/original', { workspace: w.id, dir, original_dir: d, dtype: EV.origDt, limit: EV.origLimit || 0 }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
+    try { await callOp('eval.original.run', { workspace: w.id, dir, original_dir: d, dtype: EV.origDt, limit: EV.origLimit || 0 }); S.jobHide = ''; EV.at = 0; resetSig(); refresh(); }
     catch (e) { toast(e.message, 'err'); }
   };
   let body = null;
@@ -1485,7 +1485,7 @@ function evRunCard(w, busy) {
       // #199 — 비교용 모델(미세조정 전): 채점 데이터면 결과마다 배운 것 · 잊은 것. 그 모델의 답은 기준값처럼 한 번 만들고 다시 쓴다
       h('div', { class: 'col g8' }, h('span', { class: 'small muted' }, T('비교용 모델(미세조정 전 — 고름)')),     // #217 — 텍스트 데이터에서도(같은 토큰의 PPL)
         h('select', { class: 'input', 'data-fk': 'ev-base', 'aria-label': T('비교용 모델'), onchange: async ev => {
-          try { await api('/api/eval/workspace', { action: 'update', id: w.id, baseline: ev.target.value }); evLoad(); } catch (e) { toast(e.message, 'err'); }
+          try { await callOp('eval.workspace', { action: 'update', id: w.id, baseline: ev.target.value }); evLoad(); } catch (e) { toast(e.message, 'err'); }
         } }, h('option', { value: '', selected: w.baseline && w.baseline.model ? null : true }, T('없음')),
           evModelOpts(evRunnables().filter(m => m.id !== w.reference.model), (w.baseline && w.baseline.model) || '')),
         h('span', { class: 'small muted' }, text ? T('미세조정 전 모델을 고르면 텍스트 결과에 그 모델의 같은 토큰 PPL과 PPL 비를 함께 보입니다(이어서 사전학습의 PPL 변화). 그 모델의 값은 한 번 재어 다시 씁니다.')
@@ -1527,7 +1527,7 @@ function evJobCard(j) {
     h('div', { class: 'head' },
       h('div', { class: 't' }, h('div', { class: 'ink h3' }, jobName(j)), h('div', { class: 'small muted', id: 'ev-job-step' }, j.state === 'running' ? TM(j.step || '') : '')),
       h('span', { class: 'tag ' + tone, id: 'ev-job-time' }, ''),
-      j.state === 'running' ? h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev-job-stop', onclick: () => api('/api/job/cancel', {}).then(refresh).catch(e => toast(e.message, 'err')) }, I('stop', 's'), T('중지'))
+      j.state === 'running' ? h('button', { class: 'btn sm needs-conn', 'data-fk': 'ev-job-stop', onclick: () => callOp('job.cancel', {}).then(refresh).catch(e => toast(e.message, 'err')) }, I('stop', 's'), T('중지'))
         : h('button', { class: 'icon-btn', 'data-tip': T('카드 닫기'), 'data-tip-pos': 'left', 'aria-label': T('끝난 작업 카드 닫기'), onclick: () => { S.jobHide = jobKey(j); store('geulpu.jobHide', S.jobHide); renderEval(true); } }, I('x', 's'))),
     h('div', { class: 'bar' + (j.state === 'done' ? ' done' : j.state === 'failed' ? ' fail' : '') }, h('i', { id: 'ev-job-bar', style: `width:${j.state === 'done' ? 100 : j.progress / 10}%` })),
     j.state === 'done' && j.summary ? h('div', { class: 'small' }, TM(j.summary)) : null,
@@ -1778,8 +1778,8 @@ function evPairCard(o, cols) {
   if (!opts.some(p => p.key === o.pb) || o.pb === o.pa) o.pb = (opts.find(p => p.key !== o.pa) || opts[1]).key;
   const A = opts.find(p => p.key === o.pa), B = opts.find(p => p.key === o.pb);
   const ra = EV.res[evResKey(A.w, A.dir)], rb = EV.res[evResKey(B.w, B.dir)];
-  if (ra === undefined) evFetch('res', evResKey(A.w, A.dir), `/api/eval/result?workspace=${evEnc(A.w.id)}&dir=${evEnc(A.dir)}`);
-  if (rb === undefined) evFetch('res', evResKey(B.w, B.dir), `/api/eval/result?workspace=${evEnc(B.w.id)}&dir=${evEnc(B.dir)}`);
+  if (ra === undefined) evFetch('res', evResKey(A.w, A.dir), 'eval.result', { workspace: A.w.id, dir: A.dir });
+  if (rb === undefined) evFetch('res', evResKey(B.w, B.dir), 'eval.result', { workspace: B.w.id, dir: B.dir });
   let body = h('div', { class: 'row g8 muted small' }, h('i', { class: 'dot busy' }), T('불러오는 중'));
   if (ra && rb && !ra.error && !rb.error) {
     const fa = A.side === 'ref' ? 'ref_correct' : 'cand_correct', fb = B.side === 'ref' ? 'ref_correct' : 'cand_correct';
@@ -1942,7 +1942,7 @@ function evWsView(w) {
         delta ? h('div', { class: 'small muted' }, T`${base.id} 대비 ${delta}`) : null),
       h('div', { class: 'ev-vmenu' }, h('button', { class: 'icon-btn', 'aria-label': T`${v.id} 메뉴`, 'aria-haspopup': 'menu', onclick: ev => menu(ev.currentTarget, T`${v.id} 메뉴`, [
         r ? { icon: 'chevR', label: T('최근 결과 보기'), run: () => evGo('result', { dir: r.dir }) } : null,
-        w.current !== v.id ? { icon: 'check', label: T('지금 버전으로'), run: () => api('/api/eval/workspace', { action: 'update', id: w.id, current: v.id }).then(evLoad, e => toast(e.message, 'err')) } : null,
+        w.current !== v.id ? { icon: 'check', label: T('지금 버전으로'), run: () => callOp('eval.workspace', { action: 'update', id: w.id, current: v.id }).then(evLoad, e => toast(e.message, 'err')) } : null,
         { icon: 'edit', label: T('메타데이터 고치기'), sub: T('채팅 템플릿 · 특수 토큰 — 새 버전으로'), run: () => evFixMeta(w, v) },
         '-', { icon: 'trash', label: T('버전 지우기'), danger: true, run: () => evDelVersion(w, v) }], 'right') }, I('dots'))));
   });
@@ -1984,7 +1984,7 @@ function evResultView(w) {
   const out = [crumb,
     h('div', { class: 'fd-dhead' },
       h('div', { class: 'row g8' }, h('span', { class: 'eyebrow' }, [s.version_model && s.version_model.file, s.data && s.data.name, evMode(st.mode)].filter(Boolean).join(NB)), h('span', { class: 'grow' }),
-        h('button', { class: 'btn sm ghost needs-conn', onclick: () => api('/api/eval/open', { workspace: w.id, dir: EV.dir }).catch(e => toast(e.message, 'err')) }, I('folder', 's'), T('결과 폴더 열기')),
+        h('button', { class: 'btn sm ghost needs-conn', onclick: () => callOp('eval.open', { workspace: w.id, dir: EV.dir }).catch(e => toast(e.message, 'err')) }, I('folder', 's'), T('결과 폴더 열기')),
         chat ? h('button', { class: 'btn sm ghost needs-conn', onclick: () => evToDebugger(w, EV.dir, -1) }, I('bug', 's'), T('디버거로 열기')) : null),
       h('div', { class: 'fd-title' }, T`${s.version} 결과`),
       h('div', { class: 'fd-sub' }, T`${s.finished || evDirWhen(EV.dir)} · ${evNum(s.seconds, 0)}초`)),
@@ -2269,7 +2269,7 @@ function evItemView(w) {
 }
 async function evToDebugger(w, dir, i) {
   try {
-    const r = await api('/api/eval/debug', { workspace: w.id, dir });
+    const r = await callOp('eval.to_debugger', { workspace: w.id, dir });
     show('debug');
     dbgSelect(r.run);
     if (i >= 0) { DBG.view = 'req'; DBG.ri = i; }
