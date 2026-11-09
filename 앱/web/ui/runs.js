@@ -404,18 +404,28 @@ function modeLabel(p) {
   return p === 'exact' ? T('정밀') : p === 'fast' ? T('빠름') : p || '–';
 }
 
-/** 실행 정보 줄 — 기록 파일의 server(모델 SHA-256 · 계산 방식) · app(GeulPU 버전) · 시드 · 출처 */
+/** 5-2 — 기록의 sampling(엔진이 쓴 온도 · top-k · top-p · min-p — 요청에 없으면 기본값)을 한 줄로. 없으면(점수 · 렌즈 · 이 빌드 전의 기록) null */
+function samplingText(sm) {
+  if (!sm || typeof sm !== 'object' || typeof sm.temperature !== 'number') return null;
+  return T`온도 ${sm.temperature} · top-k ${sm.top_k} · top-p ${sm.top_p} · min-p ${sm.min_p}`;
+}
+
+/** 실행 정보 줄 — 기록 파일의 server(모델 SHA-256 · 계산 방식) · app(GeulPU 버전) · device(장치) · 시드 · sampling · 출처 */
 export function runInfo(ctx, d) {
   const s = d.rec.server || {};
   const models = Array.isArray((ctx.exp.experiment || {}).models) ? ctx.exp.experiment.models : [];
   const m = models.find(x => x && typeof x === 'object' && x.sha256 && x.sha256 === s.sha256);
   const name = m ? m.name || m.file : d.rec.model || '';
   const [src] = sourceLabel(d.rec.source, d.rec.session);
+  const dev = d.rec.device && typeof d.rec.device === 'object' && d.rec.device.name ? d.rec.device : null;
+  const smp = samplingText(d.rec.sampling);
   return el('div', { class: 'xp-prov', 'aria-label': T('실행 정보') },
     el('span', null, T('모델', '하나'), ' ', el('b', null, name), s.sha256 ? el('code', null, ' ' + String(s.sha256).slice(0, 8)) : null),
     el('span', null, T('계산 방식'), ' ', el('b', null, modeLabel(s.precision))),
     d.rec.app ? el('span', null, 'GeulPU ', el('b', null, d.rec.app)) : null,
+    dev ? el('span', { title: dev.driver ? T`드라이버 ${dev.driver}` : null }, T('장치'), ' ', el('b', null, dev.name)) : null,
     d.seedText && d.entry.kind !== 'score' && d.entry.kind !== 'lens' && !MEASURE_OPS.has(d.entry.operation) ? el('span', null, T('시드'), ' ', el('b', null, d.seedText)) : null,
+    smp ? el('span', null, T('샘플링'), ' ', el('b', null, smp)) : null,
     el('span', null, T('출처'), ' ', el('b', null, src)),
     typeof d.rec.ms === 'number' ? el('span', null, fmtMs(d.rec.ms)) : null,
     ...infoExtras(ctx, d));
@@ -780,6 +790,10 @@ export async function newRun(ctx, prefill) {
   try {
     const s = await call('system.state');
     const sv = s.json && s.json.server;
+    // 5-2 — 비운 top-p · top-k · min-p 는 엔진의 기본값으로 샘플링한다 — 그 값을 수로(system state 의 server.sampling_defaults). 비워 두면 요청에
+    // 넣지 않고, 실제로 쓴 값은 실행 기록의 sampling 에 남는다
+    const sd = sv && sv.sampling_defaults;
+    if (sd) for (const [inp, k] of [[topP, 'top_p'], [topK, 'top_k'], [minP, 'min_p']]) if (typeof sd[k] === 'number') inp.placeholder = T`기본값 ${sd[k]}`;
     if (!(sv && sv.state === 'ready' && sv.model)) {
       note.replaceChildren(T('불러온 모델이 없습니다 — 모델 화면에서 모델을 불러온 뒤 실행하세요. '),
         el('button', { type: 'button', class: 'linkish', onclick: () => { globalThis.closeModal(); if (typeof globalThis.show === 'function') globalThis.show('models'); } }, T('모델 화면으로')));

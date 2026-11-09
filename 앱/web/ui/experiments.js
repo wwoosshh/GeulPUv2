@@ -437,6 +437,10 @@ function runInfo(e) {
   const g = e.geulpu || {};
   if (g.mode) parts.push(el('span', null, T('계산 방식'), ' ', el('b', null, g.mode === 'exact' ? T('정밀') : g.mode === 'fast' ? T('빠름') : g.mode)));
   if (g.version) parts.push(el('span', null, 'GeulPU ', el('b', null, g.version)));
+  // 5-2 — 실행을 계산한 장치(앱이 실행을 남길 때 더한다 — 이름 · 드라이버)
+  for (const dv of Array.isArray(e.devices) ? e.devices : []) {
+    if (dv && typeof dv === 'object' && dv.name) parts.push(el('span', { title: dv.driver ? T`드라이버 ${dv.driver}` : null }, T('장치'), ' ', el('b', null, dv.name)));
+  }
   return parts.length ? el('div', { class: 'xp-prov', 'aria-label': T('실행 정보') }, parts) : null;
 }
 

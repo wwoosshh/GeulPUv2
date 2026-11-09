@@ -63,8 +63,8 @@ With the GeulPU app running, the CLI (and the app's experiment screen) does step
 <name> --root experiments` makes the folder from this template and adds it to `index.md`; `GeulPU experiment update` writes the plan and
 criteria (only before the first run), then the verdicts, `results.md` and status; `--experiment <folder>` on any command writes that
 call to `records/commands.jsonl`, and a run that answers 200 to `records/runs/<id>.json` with an entry in `runs` (kind, base,
-intervention), its model in `models`, and the `files` entries of what the app wrote; `GeulPU experiment check --path <folder> --wait`
-runs this checker ([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md) §3 · §4). Files you add yourself still go
+intervention), its model in `models`, its device in `devices`, and the `files` entries of what the app wrote;
+`GeulPU experiment check --path <folder> --wait` runs this checker ([문서/명령줄.md](../문서/명령줄.md), [문서/화면구현.md](../문서/화면구현.md) §3 · §4). Files you add yourself still go
 through step 4.
 
 ## Check

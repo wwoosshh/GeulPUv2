@@ -134,15 +134,18 @@ the request equals an earlier run's (a repeat that tests reproducibility). A bra
 tokens. A score or lens gets `base` when its prompt is the start of a run's prompt + answer, and also `intervention` when its prompt
 holds that run's prompt tokens and then differs from the answer at step k (a text scored from step k, the lens of another candidate);
 `intervention.step` is the step number the screens show (a branch's steps continue its base's, `geulpu.step_offset`). The model goes
-into `models`. Keep `geulpu.prompt_tokens` on so this works. The app's step and layer screen sends these same score and lens requests,
-so its computations and yours show up in both places. A streamed run's record also keeps every event it got (`events`), where the
-answer text and the per-token log-probabilities are. The app's chat is the experiment `<date>-chat` (title "대화"): every chat answer is
-one of its runs. The app keeps `files` current for what it writes; list any other file you add with `experiment update`
-`add_files` (relative paths with `/`) or the check fails. `--lang ko` on `experiment create` uses the Korean template. Prefer
-`experiment update` to editing experiment.json (it also takes `authors`, `devices` and `reproduce`, and refuses fields it does not
-know); if you edit it yourself (runs of other kinds: compare · replay · evaluate), read it again just before writing — the app
-rewrites it with each recorded call. Title, question, plan and criteria (id, text) change only before the first run; verdicts,
-notes, results.md, status, authors, devices, reproduce and files any time. A recorded entry:
+into `models`, the device (name, driver) into `devices`. A run record also has `device` (where it ran — not in `server`, which holds only
+what decides the bits) and, except for score and lens runs, `sampling`: the temperature, top_k, top_p and min_p the engine used (the
+request's, else the defaults 0.8 · 40 · 0.95 · 0.05 — `system state` → `server.sampling_defaults`; Messages always uses the default min_p,
+Responses the default top_k and min_p) and the answer's seed. Keep `geulpu.prompt_tokens` on so this works. The app's step and layer screen
+sends these same score and lens requests, so its computations and yours show up in both places. A streamed run's record also keeps every
+event it got (`events`), where the answer text and the per-token log-probabilities are. The app's chat is the experiment `<date>-chat`
+(title "대화"): every chat answer is one of its runs. The app keeps `files` current for what it writes; list any other file you add with
+`experiment update` `add_files` (relative paths with `/`) or the check fails. `--lang ko` on `experiment create` uses the Korean template.
+Prefer `experiment update` to editing experiment.json (it also takes `authors`, `devices` and `reproduce`, and refuses fields it does not
+know); if you edit it yourself (runs of other kinds: compare · replay · evaluate), read it again just before writing — the app rewrites it
+with each recorded call. Title, question, plan and criteria (id, text) change only before the first run; verdicts, notes, results.md,
+status, authors, devices, reproduce and files any time. A recorded entry:
 
 ```
 {"id": "r2", "kind": "branch", "operation": "run.branch", "record": "records/runs/r2.json",
@@ -158,7 +161,8 @@ criteria came first; the check does not require it.
 **Reproducing a run.** Send the `request` from its record (`records/runs/<id>.json`) again with `--experiment`: an identical request is
 recorded as kind `check` with `base`, and its `geulpu.tokens` and `geulpu.logit_hashes` must equal the original's. To hand a run to
 someone else, make its reproduction file (`geulpu-capsule/1`: prompt and answer tokens, every step's log-probability, entropy, top
-candidates and logit hash, the model's SHA-256, the seed): `GeulPU experiment repro --path <id> --run r1 --out repro.json`. It needs a
+candidates and logit hash, the model's SHA-256, the device it was made on (`made_on.device` — empty for runs an earlier version recorded),
+the sampling settings actually used and the seed): `GeulPU experiment repro --path <id> --run r1 --out repro.json`. It needs a
 whole-answer score run in the experiment — `GeulPU experiment score --run r1` makes one (the 409 says so too).
 `GeulPU check repro --json @repro.json` checks a file on this PC with its model loaded: `ok`, `score.first_diff_step` (1 = the answer's
 first token), whether regenerating gives the same tokens and logit hashes, the fingerprint, and the settings that differ from the file

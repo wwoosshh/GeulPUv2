@@ -269,6 +269,27 @@ def 기록비교(출력):
     알림("기록 비교 — 자체 시험(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
 
 
+def 샘플링기본값대조(엔진글, 앱글):
+    """엔진(엔진/서버몸.gl — 요청에 없을 때 쓰는 값)과 앱(앱/실험.gl 의 실험기본샘플링글)의 샘플링 기본값 → (같은가, 엔진의 값, 앱의 값)"""
+    이름 = {"온도": "temperature", "topk": "top_k", "topp": "top_p", "minp": "min_p"}
+    엔진 = {}
+    for k, v in re.findall(r"j→(온도|topk|topp|minp) = ([0-9][0-9.]*)\.\s", 엔진글):
+        엔진.setdefault(이름[k], []).append(float(v))
+    앱 = {}
+    for k, v in re.findall(r'문자열_같은가\(키, "(temperature|top_k|top_p|min_p)"\)이면 \{ 반환 "([0-9][0-9.]*)"\. \}', 앱글):
+        앱.setdefault(k, []).append(float(v))
+    같음 = len(엔진) == 4 and all(len(x) == 1 for x in 엔진.values()) and 엔진 == 앱
+    return 같음, 엔진, 앱
+
+
+def 샘플링기본값():
+    """5-2(문서/사용성시험.md §5) — 앱이 실행 기록 · 재현 파일 · system state 에 적는 샘플링 기본값이 엔진이 쓰는 값과 같은가(GPU 없이)"""
+    엔진글 = open(os.path.join(ROOT, "엔진", "서버몸.gl"), encoding="utf-8").read()
+    앱글 = open(os.path.join(ROOT, "앱", "실험.gl"), encoding="utf-8").read()
+    같음, 엔진, 앱 = 샘플링기본값대조(엔진글, 앱글)
+    알림("샘플링 기본값 — 앱 = 엔진(GPU 없이)", 같음, f"엔진 {엔진} · 앱 {앱}")
+
+
 def 개발도구(출력):
     """여러 세션으로 개발하기(문서/개발.md) — GPU 줄의 자체 시험(GPU 없이: 겹침 · 선 차례 · 죽은 대기자의 자리)과 바뀐 것 조각의 꼴"""
     t0 = time.time()
@@ -728,6 +749,7 @@ def main():
     기능목록(출력)
     실험기록(출력)
     기록비교(출력)
+    샘플링기본값()
     개발도구(출력)
     판표()
     벌칸선언짝()

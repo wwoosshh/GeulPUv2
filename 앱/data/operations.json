@@ -4244,8 +4244,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "온도(0 이면 탐욕)",
-      "en": "temperature (0 = greedy)"
+      "ko": "온도(0 이면 그리디 디코딩 · 없으면 0.8)",
+      "en": "temperature (0 = greedy decoding; 0.8 when not given)"
      }
     },
     {
@@ -4253,8 +4253,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "top-p",
-      "en": "top-p"
+      "ko": "top-p(없으면 0.95)",
+      "en": "top-p (0.95 when not given)"
      }
     },
     {
@@ -4262,8 +4262,8 @@
      "type": "integer",
      "required": false,
      "description": {
-      "ko": "top-k",
-      "en": "top-k"
+      "ko": "top-k(없으면 40)",
+      "en": "top-k (40 when not given)"
      }
     },
     {
@@ -4271,8 +4271,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "min-p",
-      "en": "min-p"
+      "ko": "min-p(없으면 0.05)",
+      "en": "min-p (0.05 when not given)"
      }
     },
     {
@@ -4280,8 +4280,8 @@
      "type": "integer",
      "required": false,
      "description": {
-      "ko": "시드",
-      "en": "seed"
+      "ko": "시드(없으면 엔진이 고르고 응답의 geulpu.seed 로 알린다)",
+      "en": "seed (when not given, the engine picks one and returns it in geulpu.seed)"
      }
     },
     {
@@ -4402,8 +4402,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "온도(0 이면 탐욕)",
-      "en": "temperature (0 = greedy)"
+      "ko": "온도(0 이면 그리디 디코딩 · 없으면 0.8)",
+      "en": "temperature (0 = greedy decoding; 0.8 when not given)"
      }
     },
     {
@@ -4411,8 +4411,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "top-p",
-      "en": "top-p"
+      "ko": "top-p(없으면 0.95)",
+      "en": "top-p (0.95 when not given)"
      }
     },
     {
@@ -4420,8 +4420,8 @@
      "type": "integer",
      "required": false,
      "description": {
-      "ko": "top-k",
-      "en": "top-k"
+      "ko": "top-k(없으면 40)",
+      "en": "top-k (40 when not given)"
      }
     },
     {
@@ -4429,8 +4429,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "min-p",
-      "en": "min-p"
+      "ko": "min-p(없으면 0.05)",
+      "en": "min-p (0.05 when not given)"
      }
     },
     {
@@ -4438,8 +4438,8 @@
      "type": "integer",
      "required": false,
      "description": {
-      "ko": "시드",
-      "en": "seed"
+      "ko": "시드(없으면 엔진이 고르고 응답의 geulpu.seed 로 알린다)",
+      "en": "seed (when not given, the engine picks one and returns it in geulpu.seed)"
      }
     },
     {
@@ -4667,8 +4667,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "온도(0 이면 탐욕)",
-      "en": "temperature (0 = greedy)"
+      "ko": "온도(0 이면 그리디 디코딩 · 없으면 0.8)",
+      "en": "temperature (0 = greedy decoding; 0.8 when not given)"
      }
     },
     {
@@ -4676,8 +4676,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "top-p",
-      "en": "top-p"
+      "ko": "top-p(없으면 0.95)",
+      "en": "top-p (0.95 when not given)"
      }
     },
     {
@@ -4685,8 +4685,8 @@
      "type": "integer",
      "required": false,
      "description": {
-      "ko": "top-k",
-      "en": "top-k"
+      "ko": "top-k(없으면 40)",
+      "en": "top-k (40 when not given)"
      }
     },
     {
@@ -4694,8 +4694,8 @@
      "type": "number",
      "required": false,
      "description": {
-      "ko": "min-p",
-      "en": "min-p"
+      "ko": "min-p(없으면 0.05)",
+      "en": "min-p (0.05 when not given)"
      }
     },
     {
@@ -4703,8 +4703,8 @@
      "type": "integer",
      "required": false,
      "description": {
-      "ko": "시드",
-      "en": "seed"
+      "ko": "시드(없으면 엔진이 고르고 응답의 geulpu.seed 로 알린다)",
+      "en": "seed (when not given, the engine picks one and returns it in geulpu.seed)"
      }
     },
     {
