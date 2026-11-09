@@ -276,6 +276,8 @@ function newExperiment() {
     el('label', { for: 'xp-q' }, T('연구 질문')), question,
     el('label', { for: 'xp-authors' }, T('저자')), authors,
     el('p', { class: 'muted', id: 'xp-authors-hint' }, T('여럿이면 쉼표로 나눕니다.')),
+    // F3-5 — 다시 확인 세션: 판정 기준 · 계획을 어디서 적는지(대화상자에는 입력 필드가 없다)
+    el('p', { class: 'muted' }, T('판정 기준과 계획은 만든 뒤 계획 탭의 편집에서 적습니다 — 첫 실행 전에(실행이 생기면 고칠 수 없습니다).')),
     err);
   const ok = el('button', {
     class: 'btn primary', type: 'button',

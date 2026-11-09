@@ -1,6 +1,6 @@
 # 계획 — Short title of the experiment
 
-이 파일과 `experiment.json` 의 `criteria` 를 어떤 실행보다 먼저 쓰고 먼저 커밋한다 — git 이력이 판정 기준이 결과보다 먼저였음을 보여 준다.
+판정 기준과 이 계획은 어떤 실행보다 먼저 적는다 — 첫 실행 뒤에는 고칠 수 없다. 실험 폴더를 git 저장소에 두면 먼저 커밋해 이력으로도 남긴다.
 
 ## 연구 질문
 
@@ -12,8 +12,8 @@
 
 ## 방법
 
-모델(파일 · SHA-256 · 출처), GeulPU 버전과 계산 방식, 실행과 그 설정, 실행이 쓰는 GeulPU 기능(예: `run.chat` · `run.branch` · `run.lens` —
-`GeulPU ops` 가 모두 보인다).
+모델(파일 · SHA-256 · 출처), GeulPU 버전과 계산 방식, 실행과 그 설정, 실행이 쓰는 GeulPU 기능(예: 텍스트 생성 · 분기 · 로짓 렌즈 — CLI 의
+이름은 `run.complete` · `run.branch` · `run.lens`).
 
 ## 판정 기준
 

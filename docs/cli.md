@@ -41,7 +41,7 @@ the original random numbers, read what each layer predicted, and record it all a
 ## Models
 
 ```
-GeulPU system state                                  # app state; "models" lists the models it knows, "server" the loaded one
+GeulPU system state --select server,settings.precision  # app state (long — pick parts); "models" lists the models it knows
 GeulPU model add --path C:\models\Qwen3-0.6B-Q8_0.gguf  # → {"id": "qwen3-0.6b-q8_0", ...}
 GeulPU model load --model qwen3-0.6b-q8_0 --wait     # loads it on the GPU; ends with the job JSON
 GeulPU model unload
@@ -106,7 +106,7 @@ with the prompt. The whole branched answer is the original `tokens[0..k-1]`, the
 so are the top lists) or look for it in each layer's `top_ids` (`top_k` up to 20). The last layer's logit hash equals the
 generation's hash at that step. With a J file loaded (`server.jlens_sha256` in `system state`), `"layer_lens": {"jacobian": true}`
 adds `geulpu.jacobian_lens` in the same shape. The answer carries a `seed` it does not use. The model must support the lens
-(`layer_lens_ok` in its `system state` entry).
+(`shape.layer_lens_ok` in its `system state` entry).
 
 ## Experiments — record what you did
 
@@ -115,9 +115,10 @@ GeulPU experiment create --name lighthouse --title "Where the keeper hesitated" 
 GeulPU experiment update --json @plan.json             # {"path", "plan": "<plan.md text>", "criteria": [{"id", "text"}]} — before any run
 GeulPU run complete ... --experiment <id or path>      # the app records the run: records/runs/r1.json and an entry in "runs"
 GeulPU experiment show --path <id>                     # experiment.json, documents, number of recorded commands
-GeulPU experiment update --json @verdicts.json         # {"path", "criteria": [... "result", "note"], "results": "<results.md>", "status": "done"}
+GeulPU experiment update --json @verdicts.json         # {"path", "criteria": [... "result" (pending · pass · fail), "note"], "results": "<results.md>", "status": "done"}
 GeulPU experiment update --json @files.json            # {"path", "add_files": ["expected.json"]} — the app lists them with SHA-256 and size
 GeulPU experiment check --path <id> --wait             # the experiment checker (Python 3.10+); exit 0 = it passes; warnings in "summary"
+GeulPU job log                                         # the last job's log — for a check, what it looked at and each warning
 ```
 
 An experiment is a folder (`<date>-<name>`): `experiment.json`, `plan.md`, `results.md`, `records/`. Default place: `experiments` in
@@ -156,9 +157,10 @@ criteria came first; the check does not require it.
 recorded as kind `check` with `base`, and its `geulpu.tokens` and `geulpu.logit_hashes` must equal the original's. To hand a run to
 someone else, make its reproduction file (`geulpu-capsule/1`: prompt and answer tokens, every step's log-probability, entropy, top
 candidates and logit hash, the model's SHA-256, the seed): `GeulPU experiment repro --path <id> --run r1 --out repro.json`. It needs a
-whole-answer score run in the experiment; without one the 409 gives the `run score` request to send first. `GeulPU check repro --json
-@repro.json` checks a file on this PC with its model loaded: `ok`, `score.first_diff_step` (1 = the answer's first token), whether
-regenerating gives the same tokens and logit hashes, the fingerprint, and the settings that differ from the file (`differences`). The run
+whole-answer score run in the experiment; without one the 409's message ends with the `run score` request (a JSON object) to send first.
+`GeulPU check repro --json @repro.json` checks a file on this PC with its model loaded: `ok`, `score.first_diff_step` (1 = the answer's
+first token), whether regenerating gives the same tokens and logit hashes, the fingerprint, and the settings that differ from the file
+(`differences`); `check_seed` is true when scoring matches but regenerating does not at a temperature above 0 — look at the seed. The run
 screen's export and Reproduce › Checks use the same two operations. Without GeulPU, `python 도구/repro_check.py repro.json model.gguf`
 (in the repository) checks a file against the precision contract's CPU reference.
 
