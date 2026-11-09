@@ -890,12 +890,12 @@
   {
    "name": "앞으로 만들 기능",
    "argv": [
-    "check.repro"
+    "check.same_bits"
    ],
-   "line": "check.repro",
+   "line": "check.same_bits",
    "expect": {
     "error": {
-     "message": "check.repro is planned, not available yet",
+     "message": "check.same_bits is planned, not available yet",
      "next": "GeulPU ops lists every command"
     }
    }
@@ -1380,6 +1380,84 @@
     "error": {
      "message": "--select needs a value",
      "next": "GeulPU help experiment compare"
+    }
+   }
+  },
+  {
+   "name": "실험 재현 파일 만들기(GET)",
+   "argv": [
+    "experiment",
+    "repro",
+    "--path",
+    "2026-11-09-a",
+    "--run",
+    "r1"
+   ],
+   "line": "experiment repro --path 2026-11-09-a --run r1",
+   "expect": {
+    "request": {
+     "op": "experiment.repro",
+     "method": "GET",
+     "path": "/api/experiments/repro?path=2026-11-09-a&run=r1",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "재현 확인 — 본문은 재현 파일",
+   "argv": [
+    "check",
+    "repro",
+    "--json",
+    "{\"format\":\"geulpu-capsule/1\",\"model\":{\"sha256\":\"ab\"},\"request\":{\"prompt_tokens\":[1,2],\"temperature\":0},\"result\":{\"tokens\":[3],\"top_ids\":[[3]]}}"
+   ],
+   "line": "check repro --json '{\"format\":\"geulpu-capsule/1\",\"model\":{\"sha256\":\"ab\"},\"request\":{\"prompt_tokens\":[1,2],\"temperature\":0},\"result\":{\"tokens\":[3],\"top_ids\":[[3]]}}'",
+   "expect": {
+    "request": {
+     "op": "check.repro",
+     "method": "POST",
+     "path": "/api/check/repro",
+     "body": {
+      "format": "geulpu-capsule/1",
+      "model": {
+       "sha256": "ab"
+      },
+      "request": {
+       "prompt_tokens": [
+        1,
+        2
+       ],
+       "temperature": 0
+      },
+      "result": {
+       "tokens": [
+        3
+       ],
+       "top_ids": [
+        [
+         3
+        ]
+       ]
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "재현 확인 — 한국어 이름 · 고르기",
+   "argv": [
+    "재현",
+    "확인",
+    "--json",
+    "{\"format\":\"geulpu-capsule/1\",\"model\":{},\"request\":{},\"result\":{}}",
+    "--select",
+    "body.format,path"
+   ],
+   "line": "재현 확인 --json '{\"format\":\"geulpu-capsule/1\",\"model\":{},\"request\":{},\"result\":{}}' --select body.format,path",
+   "expect": {
+    "selected": {
+     "body.format": "geulpu-capsule/1",
+     "path": "/api/check/repro"
     }
    }
   }

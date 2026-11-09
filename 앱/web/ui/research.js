@@ -418,75 +418,26 @@ function exportTokens(ctx, d, kind) {
   download(name + '.json', JSON.stringify(Object.assign(head, runMeta(ctx, d), { steps: t.rows })) + '\n', 'application/json');
 }
 
-/** 이 실행의 렌즈 실행(스텝 k 의 행 — 프롬프트 = 프롬프트 토큰 + 답의 0 ~ k) — {step(1 부터), layer_lens, jacobian_lens} */
-function lensOf(ctx, d) {
-  const P = d.ptoks.length;
-  const out = new Map();
-  for (const e of runsOf(ctx)) {
-    if (e.operation !== 'run.lens') continue;
-    const c = recordOf(ctx, e);
-    if (!c.rec) continue;
-    const req = c.rec.request && typeof c.rec.request === 'object' ? c.rec.request : {};
-    const gq = req.geulpu && typeof req.geulpu === 'object' ? req.geulpu : {};
-    const q = req.prompt;
-    if (!isIds(q) || !Number.isInteger(gq.echo_from)) continue;
-    const k = gq.echo_from - P;
-    if (k < 0 || k >= d.n || q.length !== P + k + 1 || !sameIds(q, d.ptoks.concat(d.ids.slice(0, k + 1)))) continue;
-    if ((c.rec.server || {}).sha256 !== (d.rec.server || {}).sha256) continue;
-    const g = (c.rec.response && c.rec.response.geulpu) || {};
-    if (g.layer_lens && g.layer_lens.layers) out.set(k, Object.assign(out.get(k) || {}, { lens: g.layer_lens }));
-    if (g.jacobian_lens && g.jacobian_lens.layers) out.set(k, Object.assign(out.get(k) || {}, { jac: g.jacobian_lens }));
-  }
-  return out;
-}
-
-/** 재현 파일(geulpu-capsule/1 — 연구 패널과 같은 형식, 도구/repro_check.py 가 읽는다) */
+/** 재현 파일(geulpu-capsule/1 — 도구/repro_check.py 가 읽는다) — 앱의 experiment.repro 가 만든다(F3-4 — CLI 의 experiment repro 와 같은 파일).
+   답 전체 점수 실행이 없으면 먼저 점수를 매긴다(상위 후보 10) */
 async function exportCapsule(ctx, d) {
-  let f = fullScores(ctx, d).find(x => x.sameModel);
-  if (!f) {
+  if (!fullScores(ctx, d).some(x => x.sameModel)) {
     const id = await scoreAll(ctx, d, CAPSULE_K);
     if (!id) return;
-    for (let i = 0; i < 40 && !f; i++) {                // 남긴 실행의 기록 파일을 읽을 때까지(recordOf 가 읽기를 시작한다)
-      f = fullScores(ctx, d).find(x => x.sameModel);
-      if (!f) await sleep(250);
-    }
-    if (!f) {
-      rs.err = T('재현 파일에 넣을 점수 실행을 읽지 못했습니다 — 실험을 다시 연 뒤 다시 누르세요.');
-      ctx.rerender();
-      return;
-    }
   }
-  const s = d.rec.server || {};
-  const m = modelBySha(s.sha256);
-  const temp = typeof d.req.temperature === 'number' ? d.req.temperature : 0;
-  const req = { prompt_tokens: d.ptoks, max_tokens: Number.isInteger(d.req.max_tokens) ? d.req.max_tokens : d.n, temperature: temp };
-  if (temp > 0) {
-    for (const k of ['top_k', 'top_p', 'min_p']) if (d.req[k] !== undefined) req[k] = d.req[k];
-    req.seed = '__SEED__';
+  let r = null;
+  for (let i = 0; i < 20; i++) {                      // 점수 실행이 실험 기록에 들어갈 때까지(그 전에는 409)
+    r = await call('experiment.repro', { path: ctx.path, run: d.entry.id });
+    if (r.ok || r.status !== 409) break;
+    await sleep(250);
   }
-  if (d.off) req.step_offset = d.off;
-  const fp = await fpOf(s.sha256, d.ptoks, d.ids, f.hashes);
-  const cap = {
-    format: 'geulpu-capsule/1', created: new Date().toISOString(), contract: '5.2',
-    app: { version: d.rec.app || '', commit: (rs.state && rs.state.app && rs.state.app.commit) || '' },
-    model: { name: m ? m.name || '' : d.rec.model || '', quant: m ? m.quant || '' : '', file: m ? String(m.path || '').split(/[\\/]/).pop() : '', size: m ? m.size : null, sha256: s.sha256 || '' },
-    made_on: { device: '', layer: s.layer || '', precision: s.precision || 'exact', kv8: !!s.kv8, fast_attention: !!s.fast_attention, yarn: s.yarn || 0 },
-    request: req,
-    result: { tokens: d.ids, token_logprobs: f.lp, entropy: f.ent, top_ids: f.topIds, top_logprobs: f.topLp, logit_hashes: f.hashes },
-    fingerprint: { token: fp.fp, logit: fp.fpLogit },
-    experiment: { id: expId(ctx), run: d.entry.id, score_run: f.entry.id },
-  };
-  const lens = lensOf(ctx, d);
-  const ll = [...lens.entries()].filter(([, v]) => v.lens).sort((a, b) => a[0] - b[0]).map(([k, v]) => Object.assign({ step: k + 1 }, v.lens));
-  if (ll.length) cap.result.layer_lens = ll;
-  const jl = [...lens.entries()].filter(([, v]) => v.jac).sort((a, b) => a[0] - b[0]).map(([k, v]) => Object.assign({ step: k + 1 }, v.jac));
-  if (jl.length) {
-    cap.result.jacobian_lens = jl;
-    cap.jlens = { sha256: jl[0].jlens_sha256 || '', file: (rs.state && rs.state.server && rs.state.server.jlens_file) || '' };
+  if (!r || !r.ok || !r.json) {
+    rs.err = appError(r);
+    ctx.rerender();
+    return;
   }
-  const txt = '{\n' + Object.keys(cap).map(k => JSON.stringify(k) + ':' + JSON.stringify(cap[k])).join(',\n') + '\n}\n';
-  const out = temp > 0 ? txt.replace('"seed":"__SEED__"', '"seed":' + (d.seedText || '0')) : txt;
-  download(`geulpu-repro-${fp.fp.slice(0, 12)}.json`, out, 'application/json');
+  const fp = String((r.json.fingerprint && r.json.fingerprint.token) || '');
+  download(`geulpu-repro-${fp.slice(0, 12)}.json`, r.text, 'application/json');
 }
 
 function pythonCode(ctx, d) {

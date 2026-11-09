@@ -400,6 +400,24 @@
     "en": "recorder settings"
    }
   },
+  "repro_check": {
+   "screens": [
+    "checks"
+   ],
+   "description": {
+    "ko": "재현 파일 확인",
+    "en": "reproduction file check"
+   }
+  },
+  "repro_file": {
+   "screens": [
+    "run"
+   ],
+   "description": {
+    "ko": "재현 파일",
+    "en": "reproduction file"
+   }
+  },
   "results": {
    "screens": [
     "results"
@@ -860,25 +878,85 @@
   {
    "id": "check.repro",
    "title": {
-    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 로짓 렌즈 — 도구/repro_check.py)",
-    "en": "GPU-free reproduction check (tool repro_check.py)"
+    "ko": "재현 파일 확인 — 같은 모델 파일로 이 PC 에서 비트까지",
+    "en": "Check a reproduction file — on this PC with the same model file, bit for bit"
    },
    "description": {
-    "ko": "GPU 없는 재현 확인(재현 파일 · 실행 로그 · 로짓 렌즈 — 도구/repro_check.py).",
-    "en": "GPU-free reproduction check (tool repro_check.py)."
+    "ko": "본문 = 재현 파일(geulpu-capsule/1 — CLI 는 --json @<파일>). 재현 파일의 모델(SHA-256)을 불러온 서버에서 (1) 프롬프트 + 답 토큰을 점수 매겨 스텝마다 로그확률 · 엔트로피 · 상위 k · 로짓 해시를, (2) 재현 파일의 요청(시드는 64비트 정수 그대로)으로 다시 생성한 토큰 · 로짓 해시를, (3) 지문을 비트까지 비교하고, 계산 방식 · KV 8비트 · 빠른 어텐션 · YaRN 배가 재현 파일과 다르면 적는다 — 재현 › 검사 화면의 확인과 같다. 답 geulpu-repro-check/1. 모델이 설치되어 있지 않으면 404, 불러와 있지 않으면 409. 확인의 요청은 실행으로 남지 않는다. GeulPU 없이 하는 확인은 저장소의 도구/repro_check.py(정밀도 계약의 CPU 참조).",
+    "en": "Body = the reproduction file (geulpu-capsule/1 — CLI: --json @<file>). With the file's model (SHA-256) loaded: (1) scores the prompt + answer tokens and compares each step's log-probability, entropy, top k and logit hash, (2) regenerates with the file's request (the 64-bit seed as written) and compares the tokens and logit hashes, (3) compares the fingerprints — bit for bit — and lists computation mode, 8-bit KV, fast attention or YaRN factor that differ from the file; the same check as the Reproduce › Checks screen. Answer geulpu-repro-check/1. 404 when the model is not installed, 409 when it is not loaded. The check's requests are not recorded as runs. Checking without GeulPU: tool repro_check.py in the repository (the precision contract's CPU reference)."
    },
-   "status": "planned",
-   "stage": "실험대 7",
-   "params": [],
-   "result": "check_report",
+   "status": "exists",
+   "http": {
+    "method": "POST",
+    "path": "/api/check/repro"
+   },
+   "params": [
+    {
+     "name": "format",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "geulpu-capsule/1",
+      "en": "geulpu-capsule/1"
+     }
+    },
+    {
+     "name": "model",
+     "type": "object",
+     "required": true,
+     "description": {
+      "ko": "모델 — sha256 · name · quant · file · size",
+      "en": "model — sha256, name, quant, file, size"
+     }
+    },
+    {
+     "name": "made_on",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "만든 곳 — device · layer · precision · kv8 · fast_attention · yarn",
+      "en": "where it was made — device, layer, precision, kv8, fast_attention, yarn"
+     }
+    },
+    {
+     "name": "request",
+     "type": "object",
+     "required": true,
+     "description": {
+      "ko": "요청 — prompt_tokens · max_tokens · temperature(온도가 있으면 top_k · top_p · min_p · seed) · step_offset",
+      "en": "request — prompt_tokens, max_tokens, temperature (with a temperature: top_k, top_p, min_p, seed), step_offset"
+     }
+    },
+    {
+     "name": "result",
+     "type": "object",
+     "required": true,
+     "description": {
+      "ko": "결과 — tokens · token_logprobs · entropy · top_ids · top_logprobs · logit_hashes",
+      "en": "result — tokens, token_logprobs, entropy, top_ids, top_logprobs, logit_hashes"
+     }
+    },
+    {
+     "name": "fingerprint",
+     "type": "object",
+     "required": false,
+     "description": {
+      "ko": "지문 — token · logit(geulpu-fp/1)",
+      "en": "fingerprint — token, logit (geulpu-fp/1)"
+     }
+    }
+   ],
+   "result": "repro_check",
    "job": false,
-   "records": "check",
+   "records": "none",
    "cli": {
     "ko": "재현 확인",
     "en": "check repro"
    },
    "gui": {
-    "planned": "실험대 7"
+    "screens": [
+     "checks"
+    ]
    }
   },
   {
@@ -2648,6 +2726,63 @@
    "cli": {
     "ko": "실험 실행 비교",
     "en": "experiment compare"
+   },
+   "gui": {
+    "screens": [
+     "run"
+    ]
+   }
+  },
+  {
+   "id": "experiment.repro",
+   "title": {
+    "ko": "실험 재현 파일 만들기",
+    "en": "Make a reproduction file"
+   },
+   "description": {
+    "ko": "실험의 실행 하나의 재현 파일(geulpu-capsule/1)을 답으로 낸다 — 실행 화면의 '재현 파일(JSON)'과 같은 파일이다. 그 실행의 기록, 같은 실험의 같은 모델(SHA-256) '답 전체 점수 실행'(상위 후보가 가장 많은 것), 그 실행의 스텝마다의 로짓 렌즈 실행에서 읽는다(모델 필요 없음). 답 전체 점수 실행이 없으면 409 와 그 점수 요청. CLI 는 --out <파일> 로 저장한다.",
+    "en": "The reproduction file (geulpu-capsule/1) of one run of an experiment, as the answer — the same file as the run screen's 'reproduction file (JSON)'. Built from the run's record, the experiment's whole-answer score run with the same model (SHA-256; the one with the most top candidates) and the run's per-step logit lens runs (no model needed). Without a whole-answer score run: 409 with that score request. Save it with --out <file>."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/experiments/repro"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id",
+      "en": "experiment folder, or an experiment id inside the root"
+     }
+    },
+    {
+     "name": "run",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실행 id(예: r1)",
+      "en": "run id (e.g. r1)"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "repro_file",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 재현 파일 만들기",
+    "en": "experiment repro"
    },
    "gui": {
     "screens": [

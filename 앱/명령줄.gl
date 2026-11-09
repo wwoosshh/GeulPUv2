@@ -420,6 +420,13 @@
     (상태 == 409 그리고 문자열_찾기(말 에서, "다른 작업") != 없음)이면 {
         반환 "another job is running: wait for it (GeulPU system state) or cancel it (GeulPU job cancel)".
     }
+    (* F3-4 — 재현 파일: 답 전체 점수 실행이 없음(experiment repro) · 재현 파일의 모델을 불러오지 않음(check repro) — 까닭에 요청 · 명령이 있다 *)
+    (상태 == 409 그리고 문자열_찾기(말 에서, "run score") != 없음)이면 {
+        반환 "score the whole answer first: send the request in the message with GeulPU run score --json '<request>' --experiment <the experiment>, then run this again".
+    }
+    (상태 == 409 그리고 문자열_찾기(말 에서, "model load") != 없음)이면 {
+        반환 "load the model the message names (GeulPU model load --model <id> --wait), then run this again".
+    }
     (* 앱리디자인 E3 — 다른 409(이미 있는 실험 · 첫 실행 뒤의 계획 고치기)는 작업과 상관없다 — 까닭(message)을 읽고 명령의 도움말로 *)
     (상태 == 400 또는 상태 == 404 또는 상태 == 409)이면 { 반환 잇기("check the parameters: GeulPU help ", 명령이름). }
     반환 잇기("GeulPU help ", 명령이름).
