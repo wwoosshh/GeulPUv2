@@ -6,7 +6,7 @@
 import { T, el } from './dom.js';
 import { call } from './ops.js';
 import {
-  appError, dataOf, fetchPieces, fx, isIds, measure, pct, pieceText, quoteTok, rawRequest, recordOf, runsOf, stepVals,
+  appError, dataOf, fetchPieces, fx, isIds, measure, pct, pieceText, quoteTok, rawRequest, recordOf, runsOf, stepVals, summaryOfRun,
 } from './runs.js';
 
 const DELTA_KEY = 'geulpu.lab.delta';                 // 연구 패널과 같은 키(이 브라우저에 기억한 δ 를 그대로)
@@ -22,6 +22,7 @@ const rs = {
   busy: null,                                          // 모델 불러오기 · 계산 방식 바꾸기 중의 글
   err: null,
   otherModel: '',                                      // 다른 모델로 점수 — 고른 모델 id
+  sum: new Map(),                                      // '<실험>|<실행>' → 마지막으로 받은 요약(δ 를 바꾸는 동안 보인다)
 };
 
 function readDelta() {
@@ -139,39 +140,16 @@ async function matchMode(ctx, want) {
 
 // ---- 요약 수치 · δ ----
 
-/** 실행의 요약 — 샘플링된 토큰의 로그확률 · 엔트로피 · 마진 · 순위가 있는 스텝만 센다 */
-export function summaryOf(d, delta = rs.delta) {
-  let sum = 0, nLp = 0, ent = 0, nEnt = 0, minM = Infinity, minAt = -1, low = 0, nM = 0, notTop = 0, nTop = 0;
-  for (let k = 0; k < d.n; k++) {
-    const v = stepVals(d, k);
-    if (v.lp !== null) { sum += v.lp; nLp++; }
-    if (v.ent !== null) { ent += v.ent; nEnt++; }
-    if (v.margin !== null) {
-      nM++;
-      if (v.margin < minM) { minM = v.margin; minAt = k; }
-      if (v.margin < delta) low++;
-    }
-    const tids = d.topIds ? d.topIds[k] : null;
-    if (Array.isArray(tids) && tids.length) {
-      nTop++;
-      if (v.rank !== 1) notTop++;
-    }
-  }
-  return {
-    n: d.n, nLp, sum, mean: nLp ? sum / nLp : null, ppl: nLp ? Math.exp(-sum / nLp) : null, ent: nEnt ? ent / nEnt : null,
-    minM: minAt < 0 ? null : minM, minAt, low, nM, notTop, nTop,
-  };
-}
-
-/** 토큰별 출력 위의 요약 수치와 δ(마진 < δ 인 스텝 사이를 옮겨 다닌다) */
+/** 토큰별 출력 위의 요약 수치와 δ(마진 < δ 인 스텝 사이를 옮겨 다닌다) — 값은 앱이 계산한다(experiment.summary, F3-3). δ 를 바꿔 새 값을
+   받는 동안은 그 실행의 앞 값을 보인다 */
 export function summaryView(ctx, d, sel, onSel) {
   rs.ctx = ctx;
-  const s = summaryOf(d);
-  const lows = [];
-  for (let k = 0; k < d.n; k++) {
-    const m = stepVals(d, k).margin;
-    if (m !== null && m < rs.delta) lows.push(k);
-  }
+  const q = summaryOfRun(ctx, d.entry, rs.delta);
+  const last = ctx.path + '|' + d.entry.id;
+  if (q.val) rs.sum.set(last, q.val);
+  const s = q.error ? null : q.val || rs.sum.get(last) || null;
+  if (!s) return el('div', { class: 'rs-sum' }, el('p', { class: 'muted' }, q.error || T('읽는 중…')));
+  const lows = s.low_margin_steps.map(x => x - s.first_step);
   const prev = [...lows].reverse().find(k => k < sel);
   const next = lows.find(k => k > sel);
   const dIn = el('input', {
@@ -184,14 +162,15 @@ export function summaryView(ctx, d, sel, onSel) {
       }
     },
   });
+  const mm = s.min_margin;
   return el('div', { class: 'rs-sum' },
     el('dl', { class: 'run-kv rs-kv' },
-      el('dt', null, T('평균 로그확률')), el('dd', null, fx(s.mean, 4)),
-      el('dt', null, T('퍼플렉서티')), el('dd', null, fx(s.ppl, 3)),
-      el('dt', null, T('평균 엔트로피')), el('dd', null, s.ent === null ? '–' : fx(s.ent, 3) + ' nat'),
-      el('dt', null, T('가장 작은 마진')), el('dd', null, s.minAt < 0 ? '–' : T`${fx(s.minM, 4)} nat · 스텝 ${d.off + s.minAt}`),
-      el('dt', null, T('마진 < δ 인 스텝')), el('dd', null, `${s.low} / ${s.nM}`),
-      el('dt', null, T('1위가 아닌 스텝')), el('dd', null, `${s.notTop} / ${s.nTop}`)),
+      el('dt', null, T('평균 로그확률')), el('dd', null, fx(s.mean_logprob, 4)),
+      el('dt', null, T('퍼플렉서티')), el('dd', null, fx(s.perplexity, 3)),
+      el('dt', null, T('평균 엔트로피')), el('dd', null, s.mean_entropy === null ? '–' : fx(s.mean_entropy, 3) + ' nat'),
+      el('dt', null, T('가장 작은 마진')), el('dd', null, mm ? T`${fx(mm.margin, 4)} nat · 스텝 ${mm.step}` : '–'),
+      el('dt', null, T('마진 < δ 인 스텝')), el('dd', null, `${s.low_margin_steps.length} / ${s.margin_steps}`),
+      el('dt', null, T('1위가 아닌 스텝')), el('dd', null, `${s.not_first_steps.length} / ${s.ranked_steps}`)),
     el('div', { class: 'xp-actions rs-delta' },
       el('label', { class: 'st-inline', for: 'rs-delta' }, T('마진 기준 δ')), dIn,
       el('button', { type: 'button', class: 'btn sm', disabled: prev === undefined ? true : null, onclick: () => onSel(prev, true) }, T('이전 — 마진 < δ')),
@@ -615,45 +594,23 @@ export function toolsView(ctx, d, text, busy) {
 
 // ---- 비교 탭 ----
 
-/** 위치 pos(프롬프트 + 답의 순서)의 토큰과 확률 · 순위 — 답이면 스텝의 값, 프롬프트면 echo 기록(분기 실행의 개입한 토큰 등). 없으면 null */
-function posInfo(d, pos) {
-  if (!d.ptoks) return null;
+/** 위치 pos(프롬프트 + 답의 순서)의 토큰 글 — 답이면 스텝의 글, 프롬프트면 기록의 글. 없으면 /detokenize 로 읽어 둔 것(아직 없으면 null) */
+function posText(d, pos, id) {
   const P = d.ptoks.length;
-  if (pos >= P) {
-    const k = pos - P;
-    if (k >= d.n) return null;
-    const v = stepVals(d, k);
-    return { id: d.ids[k], text: d.texts ? d.texts[k] : pieceText(d.ids[k]), prob: v.prob, rank: v.rank };
-  }
-  const id = d.ptoks[pos];
-  const ids = Array.isArray(d.g.prompt_top_ids) ? d.g.prompt_top_ids[pos] : null;
-  const lps = Array.isArray(d.g.prompt_top_logprobs) ? d.g.prompt_top_logprobs[pos] : null;
-  let rank = null;
-  let prob = null;
-  if (Array.isArray(ids) && Array.isArray(lps)) {
-    const r = ids.indexOf(id);
-    if (r >= 0) {
-      rank = r + 1;
-      prob = Math.exp(lps[r]);
-    }
-  }
-  // echo 기록만 token_logprobs 가 프롬프트 위치를 담는다(프롬프트 + 답). 생성 기록은 답의 스텝만이라 위치 번호로 읽으면 다른 스텝의 값이 된다(F2)
-  const lp0 = d.req && d.req.echo === true && d.ch && d.ch.logprobs;
-  if (prob === null && lp0 && Array.isArray(lp0.token_logprobs) && lp0.token_logprobs.length === P + d.n
-    && typeof lp0.token_logprobs[pos] === 'number') prob = Math.exp(lp0.token_logprobs[pos]);
-  const text = d.ptexts && typeof d.ptexts[pos] === 'string' ? d.ptexts[pos] : pieceText(id);
-  return { id, text, prob, rank };
+  if (pos >= P) return d.texts ? d.texts[pos - P] : pieceText(id);
+  return d.ptexts && typeof d.ptexts[pos] === 'string' ? d.ptexts[pos] : pieceText(id);
 }
 
-/** 두 실행의 처음 다른 스텝 · 수치 표 · 다른 프롬프트로 점수(Δ) */
-export function compareExtras(ctx, da, db, c) {
+/** 앱의 비교 값의 위치 하나(id · prob · rank) → 화면의 {id, text, prob, rank}. 없으면 null */
+const posOf = (d, pos, x) => (x ? { id: x.id, text: posText(d, pos, x.id), prob: x.prob, rank: x.rank } : null);
+
+/** 두 실행의 처음 다른 스텝 · 수치 표 · 다른 프롬프트로 점수(Δ). v 는 앱의 비교 값(experiment.compare, F3-3 — 받기 전에는 null) */
+export function compareExtras(ctx, da, db, v) {
   rs.ctx = ctx;
   const out = [];
-  // 처음 다른 스텝의 두 토큰 — 분기 실행에서는 그 토큰이 프롬프트(개입한 토큰)에 있으므로 echo 기록에서 확률 · 순위를 읽는다
-  if (c && !c.same) {
-    const ia = posInfo(da, c.L);
-    const ib = posInfo(db, c.L);
-    const ka = c.L - da.ptoks.length;
+  // 처음 다른 스텝의 두 토큰 — 분기 실행에서는 그 토큰이 프롬프트(개입한 토큰)에 있으므로 앱이 echo 기록에서 확률 · 순위를 읽는다
+  if (v && !v.same) {
+    const f = v.first;
     // 확률 · 순위는 기록에 있을 때만(프롬프트 위치는 echo 기록일 때만 있다)
     const side = x => {
       const kids = [el('b', null, x.text === null ? '#' + x.id : quoteTok(x.text))];
@@ -667,33 +624,35 @@ export function compareExtras(ctx, da, db, c) {
         el('span', null, label, el('code', null, da.entry.id), ' ', side(a), ' · ', el('code', null, db.entry.id), ' ', side(b)),
         k >= 0 && k < da.n ? el('button', { type: 'button', class: 'btn sm', onclick: () => ctx.openStep(da.entry.id, k) }, T`${da.entry.id} 의 이 스텝 보기`) : null);
     };
-    if (ia && ib) out.push(line(ka >= 0 ? T`처음 다른 스텝 ${da.off + ka}: ` : T`프롬프트가 처음 다른 위치 ${c.L}: `, ia, ib, ka));
+    const ia = posOf(da, f.position, f.a);
+    const ib = posOf(db, f.position, f.b);
+    if (ia && ib) out.push(line(!f.in_prompt ? T`처음 다른 스텝 ${f.step}: ` : T`프롬프트가 처음 다른 위치 ${f.position}: `, ia, ib, f.position - da.ptoks.length));
     // 프롬프트가 다르면 답끼리도 — 답이 처음 다른 스텝과 그 스텝의 두 토큰(각 실행의 기록에서 확률 · 순위, F2)
-    if (ka < 0 && da.n && db.n) {
-      const lo = Math.max(da.off, db.off);
-      const hi = Math.min(da.off + da.n, db.off + db.n);
-      let s = lo;
-      while (s < hi && da.ids[s - da.off] === db.ids[s - db.off]) s++;
-      if (s >= hi) out.push(el('p', { class: 'muted' }, T`답의 토큰이 스텝 ${lo} ~ ${hi - 1} 에서 모두 같습니다.`));
+    const fa = v.first_answer_step;
+    if (fa) {
+      if (fa.step === null) out.push(el('p', { class: 'muted' }, T`답의 토큰이 스텝 ${fa.from} ~ ${fa.to} 에서 모두 같습니다.`));
       else {
-        const xa = posInfo(da, da.ptoks.length + s - da.off);
-        const xb = posInfo(db, db.ptoks.length + s - db.off);
-        if (xa && xb) out.push(line(T`답이 처음 다른 스텝 ${s}: `, xa, xb, s - da.off));
+        const xa = posOf(da, da.ptoks.length + fa.step - da.off, fa.a);
+        const xb = posOf(db, db.ptoks.length + fa.step - db.off, fa.b);
+        if (xa && xb) out.push(line(T`답이 처음 다른 스텝 ${fa.step}: `, xa, xb, fa.step - da.off));
       }
     }
   }
-  // 수치 표
-  const sa = summaryOf(da);
-  const sb = summaryOf(db);
-  const row = (label, f) => el('tr', null, el('td', null, label), el('td', null, f(sa, da)), el('td', null, f(sb, db)));
-  out.push(el('h2', null, T('두 실행의 수치')),
-    el('table', { class: 'xp-files run-diff rs-cmp' }, el('tbody', null,
+  // 수치 표 — 앱의 요약(experiment.summary)
+  const qa = summaryOfRun(ctx, da.entry, rs.delta);
+  const qb = summaryOfRun(ctx, db.entry, rs.delta);
+  out.push(el('h2', null, T('두 실행의 수치')));
+  if (!qa.val || !qb.val) out.push(el('p', { class: 'muted' }, qa.error || qb.error || T('읽는 중…')));
+  else {
+    const row = (label, f) => el('tr', null, el('td', null, label), el('td', null, f(qa.val)), el('td', null, f(qb.val)));
+    out.push(el('table', { class: 'xp-files run-diff rs-cmp' }, el('tbody', null,
       el('tr', null, el('th', null, ''), el('th', null, da.entry.id), el('th', null, db.entry.id)),
-      row(T('토큰'), s => String(s.n)),
-      row(T('평균 로그확률'), s => fx(s.mean, 4)),
-      row(T('퍼플렉서티'), s => fx(s.ppl, 3)),
-      row(T('마진 < δ 인 스텝'), s => `${s.low} / ${s.nM}`),
-      row(T('1위가 아닌 스텝'), s => `${s.notTop} / ${s.nTop}`))));
+      row(T('토큰'), s => String(s.steps)),
+      row(T('평균 로그확률'), s => fx(s.mean_logprob, 4)),
+      row(T('퍼플렉서티'), s => fx(s.perplexity, 3)),
+      row(T('마진 < δ 인 스텝'), s => `${s.low_margin_steps.length} / ${s.margin_steps}`),
+      row(T('1위가 아닌 스텝'), s => `${s.not_first_steps.length} / ${s.ranked_steps}`))));
+  }
   // 프롬프트가 다르면 — A 의 답을 B 의 프롬프트로
   if (da.ptoks && db.ptoks && !sameIds(da.ptoks, db.ptoks) && da.n) {
     const want = db.ptoks.concat(da.ids);

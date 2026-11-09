@@ -23,6 +23,9 @@ the original random numbers, read what each layer predicted, and record it all a
   error-prone — write the body to a file and use `@`.
 - `--dry-run` prints the request without sending it. `--out <file>` saves any answer (also `ops`, `help`, `guide`; with `--wait`, the
   finished job's JSON) to a file.
+- `--select <path>[,<path>...]` prints only those values of the JSON answer: one dotted path (`min_margin.step`, `choices.0.text` —
+  arrays by index) gives that value, several give an object of path → value, a missing path gives null. It also picks from
+  `--dry-run`, `ops`, `help` and a waited job's JSON; error answers come whole.
 
 ## Results, errors, exit codes
 
@@ -119,7 +122,9 @@ GeulPU experiment check --path <id> --wait             # the experiment checker 
 
 An experiment is a folder (`<date>-<name>`): `experiment.json`, `plan.md`, `results.md`, `records/`. Default place: `experiments` in
 the app's data folder; with `--root <folder>` elsewhere — then give `--experiment` the folder path (a bare id is looked up in the
-default place). The app appends each POST call made with `--experiment` to `records/commands.jsonl` (op, params, status, ms). A run
+default place). `GEULPU_EXPERIMENT=<id or path>` stands for `--experiment` on every command except `experiment create` and an
+`experiment` command whose `path` names another experiment (another last folder name); `--experiment` on the command wins. The app
+appends each POST call made with `--experiment` to `records/commands.jsonl` (op, params, status, ms). A run
 (`run complete` · `chat` · `messages` · `responses` · `branch` · `score` · `lens`) that answers 200 is also recorded: the request and
 the answer in `records/runs/<id>.json`, and an entry in `runs` — `kind` generate · branch · score · lens, or `check` with `base` when
 the request equals an earlier run's (a repeat that tests reproducibility). A branch gets `base` and `intervention` from its prompt
@@ -156,6 +161,22 @@ What `experiment check` passes: `experiment.json` matches the schema (required f
 is listed, the runs in `expected.json` exist, the folder compresses to at most 5 MB, and the root's `index.md` links the folder
 (`experiment create` adds that row; update its status yourself). A pass means the record is complete and consistent — not that the
 results are right.
+
+## Analysis values — what the run screen shows
+
+```
+GeulPU experiment summary --path <id> --run r1 [--delta 0.05] --select min_margin   # one run
+GeulPU experiment compare --path <id> --a r1 --b r2 --select first_answer_step      # two runs
+```
+
+Both read recorded runs (no model needed) and compute what the app's run screen and compare tab show, with the same formulas. The
+summary (`geulpu-run-summary/1`): `steps`, `first_step` (a branch's steps continue its base's), `mean_logprob`, `perplexity`,
+`mean_entropy`, `min_margin` {`step`, `margin` = first − second top log-probability, `first`, `second`, `sampled`},
+`low_margin_steps` (margin < `delta`), `not_first_steps`, and for a lens run `lens` · `jacobian_lens` {`last_top1`,
+`last_top1_from_layer`, `token_top1_layers`}. The compare (`geulpu-run-compare/1`): `same`, `first` {`position`, `in_prompt`,
+`step`, `a`, `b` — each token's `id`, `prob`, `rank`; prompt positions have them only in echo records}, `first_answer_step` when
+the prompts differ, `same_tokens` of `compared_tokens`, `logit_hashes` {`equal`, `compared`, `first_diff_step`}. A run without
+recorded prompt tokens cannot be compared (409).
 
 ## Good habits
 

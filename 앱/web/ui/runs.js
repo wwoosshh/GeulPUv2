@@ -67,10 +67,34 @@ export function recordOf(ctx, run) {
   return loading;
 }
 
-/** 실험을 다시 읽을 때 — 읽지 못했던 기록 파일은 다시 읽는다 */
+/** 실험을 다시 읽을 때 — 읽지 못했던 기록 파일 · 분석 값은 다시 읽는다 */
 export function forgetErrors(path) {
   for (const [k, v] of records) if (v.error && k.startsWith(path + '|')) records.delete(k);
+  for (const [k, v] of analyses) if (v.error && k.startsWith(path + '|')) analyses.delete(k);
 }
+
+// ---- 분석 값(F3-3 — 문서/사용성시험.md §3) ----
+// 요약 수치 · 비교의 요약과 처음 다른 줄 · 렌즈 문장의 값은 앱이 계산한다(experiment.summary · experiment.compare — CLI 와 같은 값). 기록
+// 파일은 바뀌지 않으므로 실행 · δ · 쌍마다 한 번 부른다. 부르는 동안은 {loading: true}, 받으면 ctx.rerender()
+
+const analyses = new Map();     // '<실험 경로>|s|<기록 파일>|<δ>' · '<실험 경로>|c|<기록 파일 a>|<기록 파일 b>' → {val} · {error} · {loading}
+
+function analysisOf(ctx, key, opId, params) {
+  const c = analyses.get(key);
+  if (c) return c;
+  const loading = { loading: true };
+  analyses.set(key, loading);
+  call(opId, params)
+    .then(r => analyses.set(key, r.ok && r.json ? { val: r.json } : { error: appError(r) }), () => analyses.set(key, { error: T('앱에 닿지 못했습니다') }))
+    .then(() => ctx.rerender());
+  return loading;
+}
+/** 실행 하나의 요약(geulpu-run-summary/1) — {val} · {error} · {loading} */
+export const summaryOfRun = (ctx, run, delta) =>
+  analysisOf(ctx, `${ctx.path}|s|${recordFile(run)}|${delta}`, 'experiment.summary', { path: ctx.path, run: run.id, delta });
+/** 두 실행의 비교(geulpu-run-compare/1) — {val} · {error} · {loading} */
+export const compareOfRuns = (ctx, a, b) =>
+  analysisOf(ctx, `${ctx.path}|c|${recordFile(a)}|${recordFile(b)}`, 'experiment.compare', { path: ctx.path, a: a.id, b: b.id });
 
 export function runsOf(ctx) {
   const e = ctx.exp.experiment || {};
@@ -1178,24 +1202,22 @@ export function compareTab(ctx) {
   }
   const from = Math.min(da.ptoks.length - da.off, db.ptoks.length - db.off);   // 원래 프롬프트의 끝 — 답부터 보인다
   out.push(el('div', { class: 'run-cmp' }, cmpRow(da, c, c.sa, Math.max(0, from)), cmpRow(db, c, c.sb, Math.max(0, from))));
-  // 요약
-  const firstTok = c.same ? null : c.L;
-  const tokLine = firstTok === null ? T('토큰이 모두 같습니다')
-    : stepAt(da, firstTok) >= 0 ? T`토큰이 처음 다른 스텝: ${stepAt(da, firstTok)}` : T`프롬프트가 다릅니다(위치 ${firstTok})`;
-  const hashLine = !c.pos.length ? T('두 실행 모두 로짓 해시가 있는 위치가 없습니다')
-    : c.firstDiff < 0 ? T`로짓 해시 ${c.eq} / ${c.pos.length} 같음` : T`로짓 해시가 처음 다른 스텝: ${stepAt(da, c.firstDiff)} (${c.eq} / ${c.pos.length} 같음)`;
-  const ansA = da.ptoks.length;
-  const ansB = db.ptoks.length;
-  let sameTok = 0;
-  let both = 0;
-  for (let pos = Math.max(ansA - da.off, ansB - db.off); pos < Math.min(c.sa.length, c.sb.length); pos++) {
-    both++;
-    if (c.sa[pos] === c.sb[pos]) sameTok++;
+  // 요약 — 앱이 계산한 비교 값(experiment.compare, F3-3). 위의 두 줄과 아래의 해시 칩은 기록에서 바로 그린다
+  const cv = compareOfRuns(ctx, da.entry, db.entry);
+  const v = cv.val || null;
+  if (!v) out.push(el('p', { class: 'muted' }, cv.error || T('읽는 중…')));
+  else {
+    const f = v.first;
+    const tokLine = v.same ? T('토큰이 모두 같습니다')
+      : f.step !== null ? T`토큰이 처음 다른 스텝: ${f.step}` : T`프롬프트가 다릅니다(위치 ${f.position})`;
+    const h = v.logit_hashes;
+    const hashLine = !h.compared ? T('두 실행 모두 로짓 해시가 있는 위치가 없습니다')
+      : h.first_diff_step === null ? T`로짓 해시 ${h.equal} / ${h.compared} 같음` : T`로짓 해시가 처음 다른 스텝: ${h.first_diff_step} (${h.equal} / ${h.compared} 같음)`;
+    out.push(el('dl', { class: 'run-kv run-sum' },
+      el('dt', null, T('토큰')), el('dd', null, tokLine, v.compared_tokens ? T` · 같은 토큰 ${v.same_tokens} / ${v.compared_tokens}` : ''),
+      el('dt', null, T('로짓 해시')), el('dd', null, hashLine)));
   }
-  out.push(el('dl', { class: 'run-kv run-sum' },
-    el('dt', null, T('토큰')), el('dd', null, tokLine, both ? T` · 같은 토큰 ${sameTok} / ${both}` : ''),
-    el('dt', null, T('로짓 해시')), el('dd', null, hashLine)));
-  out.push(...compareExtras(ctx, da, db, c));
+  out.push(...compareExtras(ctx, da, db, v));
   // 해시 칩 — 처음 다른 스텝 앞뒤
   if (c.pos.length) {
     const at = c.firstDiff < 0 ? 0 : Math.max(0, c.pos.indexOf(c.firstDiff) - 4);

@@ -122,6 +122,9 @@ def quote(s):
 def cli_outcome(exe, argv):
     """예 하나를 CLI 로 — 요청(--dry-run) · 오류 · 도움말 · ops 가운데 하나를 예 파일의 expect 형식으로(모르는 답이면 None)."""
     rc, out = run(exe, argv + ["--dry-run"])
+    # F3-3 — --select 는 --dry-run 의 요청에서 고른 값(JSON 의 어느 형이든)
+    if rc == 0 and any(x == "--select" or x.startswith("--select=") for x in argv):
+        return {"selected": out}
     if not isinstance(out, dict):
         return None
     if rc == 2 and isinstance(out.get("error"), dict):

@@ -1396,6 +1396,7 @@ const DICT = {
   "기능 목록을 읽지 못했습니다 — 앱이 켜져 있는지 확인하세요": "Could not read the operation registry — check that the app is running",
   "에이전트용 안내 한 쪽은 터미널에서 GeulPU guide 로 봅니다(docs/cli.md).": "The one-page guide for agents is GeulPU guide in a terminal (docs/cli.md).",
   "명령 창에서는 쓰지 않는 옵션입니다: --{}": "Not used in the command console: --{}",
+  "답이 JSON 이 아니어서 --select 로 고르지 못했습니다": "The answer is not JSON, so --select cannot pick from it",
   "실험 폴더가 아닙니다: {}": "Not an experiment folder: {}",
   "앱에 닿지 못했습니다": "Could not reach the app",
   "작업 {}: 시작함(끝날 때까지 기다리려면 명령에 --wait)": "Job {}: started (add --wait to the command to wait for it)",

@@ -1257,6 +1257,131 @@
      "next": "GeulPU help experiment read"
     }
    }
+  },
+  {
+   "name": "실험 실행 요약(GET)",
+   "argv": [
+    "experiment",
+    "summary",
+    "--path",
+    "2026-11-09-a",
+    "--run",
+    "r1",
+    "--delta",
+    "0.1"
+   ],
+   "line": "experiment summary --path 2026-11-09-a --run r1 --delta 0.1",
+   "expect": {
+    "request": {
+     "op": "experiment.summary",
+     "method": "GET",
+     "path": "/api/experiments/summary?path=2026-11-09-a&run=r1&delta=0.1",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "실험 실행 비교 — 한국어 이름",
+   "argv": [
+    "실험",
+    "실행",
+    "비교",
+    "--path",
+    "2026-11-09-a",
+    "--a",
+    "r1",
+    "--b",
+    "r2"
+   ],
+   "line": "실험 실행 비교 --path 2026-11-09-a --a r1 --b r2",
+   "expect": {
+    "request": {
+     "op": "experiment.compare",
+     "method": "GET",
+     "path": "/api/experiments/compare?path=2026-11-09-a&a=r1&b=r2",
+     "body": null
+    }
+   }
+  },
+  {
+   "name": "--select 하나",
+   "argv": [
+    "run",
+    "complete",
+    "--prompt",
+    "x",
+    "--max_tokens",
+    "3",
+    "--select",
+    "body.max_tokens"
+   ],
+   "line": "run complete --prompt x --max_tokens 3 --select body.max_tokens",
+   "expect": {
+    "selected": 3
+   }
+  },
+  {
+   "name": "--select 여럿(빈칸)",
+   "argv": [
+    "experiment",
+    "summary",
+    "--path",
+    "2026-11-09-a",
+    "--run",
+    "r1",
+    "--select",
+    "op, path"
+   ],
+   "line": "experiment summary --path 2026-11-09-a --run r1 --select 'op, path'",
+   "expect": {
+    "selected": {
+     "op": "experiment.summary",
+     "path": "/api/experiments/summary?path=2026-11-09-a&run=r1"
+    }
+   }
+  },
+  {
+   "name": "--select 배열 번호 · 없는 경로",
+   "argv": [
+    "run",
+    "complete",
+    "--json",
+    "{\"prompt\":[5,6],\"max_tokens\":1}",
+    "--select",
+    "body.prompt.1,body.prompt.2,body.nope,body.prompt.x,op.x"
+   ],
+   "line": "run complete --json '{\"prompt\":[5,6],\"max_tokens\":1}' --select body.prompt.1,body.prompt.2,body.nope,body.prompt.x,op.x",
+   "expect": {
+    "selected": {
+     "body.prompt.1": 6,
+     "body.prompt.2": null,
+     "body.nope": null,
+     "body.prompt.x": null,
+     "op.x": null
+    }
+   }
+  },
+  {
+   "name": "--select 의 값이 비었음",
+   "argv": [
+    "experiment",
+    "compare",
+    "--path",
+    "2026-11-09-a",
+    "--a",
+    "r1",
+    "--b",
+    "r2",
+    "--select",
+    ","
+   ],
+   "line": "experiment compare --path 2026-11-09-a --a r1 --b r2 --select ,",
+   "expect": {
+    "error": {
+     "message": "--select needs a value",
+     "next": "GeulPU help experiment compare"
+    }
+   }
   }
  ]
 }

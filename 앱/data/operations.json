@@ -409,6 +409,15 @@
     "en": "results"
    }
   },
+  "run_compare": {
+   "screens": [
+    "run"
+   ],
+   "description": {
+    "ko": "실행 비교",
+    "en": "run comparison"
+   }
+  },
   "run_log": {
    "screens": [
     "debug"
@@ -416,6 +425,16 @@
    "description": {
     "ko": "실행 로그",
     "en": "run log"
+   }
+  },
+  "run_summary": {
+   "screens": [
+    "run",
+    "step"
+   ],
+   "description": {
+    "ko": "실행 요약",
+    "en": "run summary"
    }
   },
   "score": {
@@ -2499,6 +2518,139 @@
    "gui": {
     "screens": [
      "exp",
+     "run"
+    ]
+   }
+  },
+  {
+   "id": "experiment.summary",
+   "title": {
+    "ko": "실험 실행 요약",
+    "en": "Summarize a run"
+   },
+   "description": {
+    "ko": "실험의 실행 하나의 분석 값 — 스텝 수 · 평균 로그확률 · 퍼플렉서티 · 평균 엔트로피, 마진이 가장 작은 스텝(1 · 2 위 후보 · 샘플링된 토큰), 마진 < δ 인 스텝들, 샘플링된 토큰이 1 위가 아닌 스텝들, 렌즈 실행이면 렌즈의 요약(마지막 층의 1 위가 끝까지 1 위인 첫 층 · 토큰이 1 위인 층들). 실행 화면과 같은 식이다(geulpu-run-summary/1).",
+    "en": "Analysis values of one run in an experiment — steps, mean log-probability, perplexity, mean entropy, the step with the smallest margin (first and second candidates, sampled token), the steps with margin < δ, the steps whose sampled token is not first, and for a lens run the lens summary (the first layer from which the last layer's top token stays first, the layers where the token is first). Same formulas as the run screen (geulpu-run-summary/1)."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/experiments/summary"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id",
+      "en": "experiment folder, or an experiment id inside the root"
+     }
+    },
+    {
+     "name": "run",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실행 id(예: r1)",
+      "en": "run id (e.g. r1)"
+     }
+    },
+    {
+     "name": "delta",
+     "type": "number",
+     "required": false,
+     "description": {
+      "ko": "마진 기준 δ(nat, 0 < δ ≤ 5, 기본 0.05) — low_margin_steps 는 마진 < δ 인 스텝",
+      "en": "margin threshold δ in nats (0 < δ ≤ 5, default 0.05) — low_margin_steps are the steps with margin < δ"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "run_summary",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 실행 요약",
+    "en": "experiment summary"
+   },
+   "gui": {
+    "screens": [
+     "run",
+     "step"
+    ]
+   }
+  },
+  {
+   "id": "experiment.compare",
+   "title": {
+    "ko": "실험 실행 비교",
+    "en": "Compare two runs"
+   },
+   "description": {
+    "ko": "실험의 두 실행의 비교 — 토큰(프롬프트 + 답)이 처음 다른 위치(프롬프트인가 답인가)와 그 위치의 두 토큰(확률 · 순위), 프롬프트가 다르면 답이 처음 다른 스텝과 두 토큰, 같은 토큰 수, 로짓 해시가 같은 수와 처음 다른 스텝. 비교 탭과 같은 식이다(geulpu-run-compare/1). 프롬프트 토큰이 기록되지 않은 실행이면 409.",
+    "en": "Compare two runs of an experiment — the first position where the tokens (prompt + answer) differ (in the prompt or the answer) with both tokens' probability and rank, the first answer step that differs when the prompts differ, the matching tokens, and the equal logit hashes with the first step that differs. Same formulas as the compare tab (geulpu-run-compare/1). 409 when a run has no recorded prompt tokens."
+   },
+   "status": "exists",
+   "http": {
+    "method": "GET",
+    "path": "/api/experiments/compare"
+   },
+   "params": [
+    {
+     "name": "path",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "실험 폴더의 경로, 또는 그 위치 안의 실험 id",
+      "en": "experiment folder, or an experiment id inside the root"
+     }
+    },
+    {
+     "name": "a",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "첫째 실행 id(스텝 번호는 이 실행의 것)",
+      "en": "first run id (step numbers are this run's)"
+     }
+    },
+    {
+     "name": "b",
+     "type": "string",
+     "required": true,
+     "description": {
+      "ko": "둘째 실행 id",
+      "en": "second run id"
+     }
+    },
+    {
+     "name": "root",
+     "type": "string",
+     "required": false,
+     "description": {
+      "ko": "실험 폴더들의 위치(기본: 데이터 폴더의 experiments)",
+      "en": "folder that holds the experiments (default: experiments in the data folder)"
+     }
+    }
+   ],
+   "result": "run_compare",
+   "job": false,
+   "records": "none",
+   "cli": {
+    "ko": "실험 실행 비교",
+    "en": "experiment compare"
+   },
+   "gui": {
+    "screens": [
      "run"
     ]
    }
