@@ -6,7 +6,7 @@
  },
  "result_types": {
   "agents": {
-   "gui_view": "에이전트",
+   "gui_view": "명령 창 › AI 세션(에이전트 화면)",
    "description": {
     "ko": "에이전트 목록",
     "en": "agents"
@@ -27,77 +27,77 @@
    }
   },
   "debug_status": {
-   "gui_view": "디버거(실행 목록)",
+   "gui_view": "실험 › 디버거(실행 목록)",
    "description": {
     "ko": "디버거 상태",
     "en": "debugger status"
    }
   },
   "devices": {
-   "gui_view": "장치",
+   "gui_view": "설정 › 장치",
    "description": {
     "ko": "장치 정보",
     "en": "device details"
    }
   },
   "eval_check": {
-   "gui_view": "모델 평가(변환 검증)",
+   "gui_view": "모델 › 평가(변환 검증)",
    "description": {
     "ko": "변환 검증 결과",
     "en": "conversion check"
    }
   },
   "eval_comparison": {
-   "gui_view": "모델 평가(전후 비교)",
+   "gui_view": "모델 › 평가(전후 비교)",
    "description": {
     "ko": "전후 비교",
     "en": "comparison"
    }
   },
   "eval_improve": {
-   "gui_view": "모델 평가(개선)",
+   "gui_view": "모델 › 평가(개선)",
    "description": {
     "ko": "개선 보고서",
     "en": "improvement report"
    }
   },
   "eval_item": {
-   "gui_view": "모델 평가(대화)",
+   "gui_view": "모델 › 평가(대화)",
    "description": {
     "ko": "대화 하나",
     "en": "conversation"
    }
   },
   "eval_meta": {
-   "gui_view": "모델 평가(메타데이터)",
+   "gui_view": "모델 › 평가(메타데이터)",
    "description": {
     "ko": "메타데이터 고칠 거리",
     "en": "metadata fixes"
    }
   },
   "eval_original": {
-   "gui_view": "모델 평가(원래 모델과 견주기)",
+   "gui_view": "모델 › 평가(원래 모델과 비교)",
    "description": {
     "ko": "원래 모델과 견준 값",
     "en": "original-model comparison"
    }
   },
   "eval_result": {
-   "gui_view": "모델 평가(결과)",
+   "gui_view": "모델 › 평가(결과)",
    "description": {
     "ko": "평가 결과",
     "en": "evaluation result"
    }
   },
   "eval_tools": {
-   "gui_view": "모델 평가(도구 준비)",
+   "gui_view": "모델 › 평가(도구 준비)",
    "description": {
     "ko": "도구 준비 상태",
     "en": "tool status"
    }
   },
   "eval_workspaces": {
-   "gui_view": "모델 평가(작업 공간 목록)",
+   "gui_view": "모델 › 평가(작업 공간 목록)",
    "description": {
     "ko": "작업 공간 목록",
     "en": "workspaces"
@@ -132,21 +132,21 @@
    }
   },
   "file": {
-   "gui_view": "벤치마크(결과)",
+   "gui_view": "재현 › 검사 결과",
    "description": {
     "ko": "파일",
     "en": "file"
    }
   },
   "files": {
-   "gui_view": "모델(파일 선택)",
+   "gui_view": "모델 › 파일 · 공통(파일 선택)",
    "description": {
     "ko": "파일 목록",
     "en": "file listing"
    }
   },
   "generation": {
-   "gui_view": "실행 화면 · 채팅 · 연구 패널",
+   "gui_view": "실행 화면 · 실험 › 대화(채팅) · 연구 패널",
    "description": {
     "ko": "생성 결과",
     "en": "generation"
@@ -160,7 +160,7 @@
    }
   },
   "hf_file": {
-   "gui_view": "모델(모델 찾기)",
+   "gui_view": "모델 › 파일(모델 찾기)",
    "description": {
     "ko": "Hugging Face 파일 정보",
     "en": "Hugging Face file info"
@@ -174,14 +174,14 @@
    }
   },
   "job": {
-   "gui_view": "공통(작업 카드)",
+   "gui_view": "작업 · 공통(작업 카드)",
    "description": {
     "ko": "일 번호와 상태",
     "en": "job id and state"
    }
   },
   "job_log": {
-   "gui_view": "공통(작업 카드)",
+   "gui_view": "작업 · 공통(작업 카드)",
    "description": {
     "ko": "일의 기록",
     "en": "job log"
@@ -195,7 +195,7 @@
    }
   },
   "models": {
-   "gui_view": "모델",
+   "gui_view": "모델 › 파일",
    "description": {
     "ko": "모델 목록 · 정보",
     "en": "models"
@@ -230,28 +230,28 @@
    }
   },
   "receipts": {
-   "gui_view": "벤치마크(llama.cpp 재현)",
+   "gui_view": "재현 › llama.cpp",
    "description": {
     "ko": "영수증 목록",
     "en": "receipts"
    }
   },
   "recorder": {
-   "gui_view": "벤치마크(llama.cpp 재현)",
+   "gui_view": "재현 › llama.cpp",
    "description": {
     "ko": "기록기 설정",
     "en": "recorder settings"
    }
   },
   "results": {
-   "gui_view": "벤치마크(결과)",
+   "gui_view": "재현 › 검사 결과",
    "description": {
     "ko": "결과 목록",
     "en": "results"
    }
   },
   "run_log": {
-   "gui_view": "디버거(실행 보기)",
+   "gui_view": "실험 › 디버거(실행 보기)",
    "description": {
     "ko": "실행 로그",
     "en": "run log"
@@ -265,7 +265,7 @@
    }
   },
   "settings": {
-   "gui_view": "설정",
+   "gui_view": "설정 › 앱 · 프롬프트 캐시",
    "description": {
     "ko": "설정",
     "en": "settings"
@@ -279,7 +279,7 @@
    }
   },
   "store": {
-   "gui_view": "설정(문맥 저장소)",
+   "gui_view": "설정 › 프롬프트 캐시",
    "description": {
     "ko": "문맥 저장소",
     "en": "context store"
@@ -337,7 +337,7 @@
     "en": "agents launch"
    },
    "gui": {
-    "view": "에이전트"
+    "view": "명령 창 › AI 세션(에이전트 화면)"
    }
   },
   {
@@ -364,7 +364,7 @@
     "en": "agents list"
    },
    "gui": {
-    "view": "에이전트"
+    "view": "명령 창 › AI 세션(에이전트 화면)"
    }
   },
   {
@@ -410,7 +410,7 @@
     "en": "bench crosscheck"
    },
    "gui": {
-    "view": "벤치마크"
+    "view": "재현 › 검사"
    }
   },
   {
@@ -447,7 +447,7 @@
     "en": "bench diag"
    },
    "gui": {
-    "view": "벤치마크"
+    "view": "설정 › 장치"
    }
   },
   {
@@ -493,7 +493,7 @@
     "en": "bench pair"
    },
    "gui": {
-    "view": "벤치마크"
+    "view": "재현 › 검사"
    }
   },
   {
@@ -520,7 +520,7 @@
     "en": "bench results"
    },
    "gui": {
-    "view": "벤치마크(결과)"
+    "view": "재현 › 검사 결과"
    }
   },
   {
@@ -566,7 +566,7 @@
     "en": "bench results file"
    },
    "gui": {
-    "view": "벤치마크(결과)"
+    "view": "재현 › 검사 결과"
    }
   },
   {
@@ -603,7 +603,7 @@
     "en": "bench results zip"
    },
    "gui": {
-    "view": "벤치마크(결과)"
+    "view": "재현 › 검사 결과"
    }
   },
   {
@@ -640,7 +640,7 @@
     "en": "bench speed"
    },
    "gui": {
-    "view": "벤치마크"
+    "view": "모델 › 성능"
    }
   },
   {
@@ -725,7 +725,7 @@
     "en": "debug record start"
    },
    "gui": {
-    "view": "디버거"
+    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
    }
   },
   {
@@ -752,7 +752,7 @@
     "en": "debug record stop"
    },
    "gui": {
-    "view": "디버거"
+    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
    }
   },
   {
@@ -798,7 +798,7 @@
     "en": "debug run append"
    },
    "gui": {
-    "view": "디버거"
+    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
    }
   },
   {
@@ -835,7 +835,7 @@
     "en": "debug run delete"
    },
    "gui": {
-    "view": "디버거"
+    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
    }
   },
   {
@@ -872,7 +872,7 @@
     "en": "debug run get"
    },
    "gui": {
-    "view": "디버거"
+    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
    }
   },
   {
@@ -936,7 +936,7 @@
     "en": "debug run import"
    },
    "gui": {
-    "view": "디버거"
+    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
    }
   },
   {
@@ -963,7 +963,7 @@
     "en": "debug status"
    },
    "gui": {
-    "view": "디버거"
+    "view": "실험 › 디버거(기록 탭의 '디버거의 실행 로그')"
    }
   },
   {
@@ -1009,7 +1009,7 @@
     "en": "eval check get"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1055,7 +1055,7 @@
     "en": "eval check run"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1110,7 +1110,7 @@
     "en": "eval compare"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1156,7 +1156,7 @@
     "en": "eval data import"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1211,7 +1211,7 @@
     "en": "eval fix"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1248,7 +1248,7 @@
     "en": "eval improve get"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1294,7 +1294,7 @@
     "en": "eval improve run"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1349,7 +1349,7 @@
     "en": "eval item"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1386,7 +1386,7 @@
     "en": "eval make"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1423,7 +1423,7 @@
     "en": "eval meta"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1469,7 +1469,7 @@
     "en": "eval open"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1515,7 +1515,7 @@
     "en": "eval original get"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1552,7 +1552,7 @@
     "en": "eval original run"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1598,7 +1598,7 @@
     "en": "eval result"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1653,7 +1653,7 @@
     "en": "eval run"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1699,7 +1699,7 @@
     "en": "eval to-debugger"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1726,7 +1726,7 @@
     "en": "eval tools get"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1753,7 +1753,7 @@
     "en": "eval tools prepare"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1844,7 +1844,7 @@
     "en": "eval version"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1944,7 +1944,7 @@
     "en": "eval workspace"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -1971,7 +1971,7 @@
     "en": "eval workspaces"
    },
    "gui": {
-    "view": "모델 평가"
+    "view": "모델 › 평가"
    }
   },
   {
@@ -2346,7 +2346,7 @@
     "en": "job cancel"
    },
    "gui": {
-    "view": "공통(작업 카드)"
+    "view": "작업 · 공통(작업 카드)"
    }
   },
   {
@@ -2383,7 +2383,7 @@
     "en": "job log"
    },
    "gui": {
-    "view": "공통(작업 카드)"
+    "view": "작업 · 공통(작업 카드)"
    }
   },
   {
@@ -2444,7 +2444,7 @@
     "en": "model add"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2481,7 +2481,7 @@
     "en": "model download cancel"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2518,7 +2518,7 @@
     "en": "model download discard"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2555,7 +2555,7 @@
     "en": "model download start"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2637,7 +2637,7 @@
     "en": "model hf add"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2692,7 +2692,7 @@
     "en": "model hf check"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2719,7 +2719,7 @@
     "en": "model hf check-status"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2765,7 +2765,7 @@
     "en": "model hf pull"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2802,7 +2802,7 @@
     "en": "model load"
    },
    "gui": {
-    "view": "공통(모델 불러오기) · 설정"
+    "view": "공통(모델 불러오기) · 모델 › 파일"
    }
   },
   {
@@ -2848,7 +2848,7 @@
     "en": "model remove"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -2875,7 +2875,7 @@
     "en": "model unload"
    },
    "gui": {
-    "view": "공통 · 설정"
+    "view": "공통 · 모델 › 파일"
    }
   },
   {
@@ -2912,7 +2912,7 @@
     "en": "model verify"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일"
    }
   },
   {
@@ -3106,7 +3106,7 @@
     "en": "replay import"
    },
    "gui": {
-    "view": "벤치마크(llama.cpp 재현)"
+    "view": "재현 › llama.cpp"
    }
   },
   {
@@ -3158,7 +3158,7 @@
     "en": "replay receipts"
    },
    "gui": {
-    "view": "벤치마크(llama.cpp 재현)"
+    "view": "재현 › llama.cpp"
    }
   },
   {
@@ -3185,7 +3185,7 @@
     "en": "replay recorder get"
    },
    "gui": {
-    "view": "벤치마크(llama.cpp 재현)"
+    "view": "재현 › llama.cpp"
    }
   },
   {
@@ -3249,7 +3249,7 @@
     "en": "replay recorder set"
    },
    "gui": {
-    "view": "벤치마크(llama.cpp 재현)"
+    "view": "재현 › llama.cpp"
    }
   },
   {
@@ -3286,7 +3286,7 @@
     "en": "replay verify"
    },
    "gui": {
-    "view": "벤치마크(llama.cpp 재현)"
+    "view": "재현 › llama.cpp"
    }
   },
   {
@@ -3729,7 +3729,7 @@
     "en": "run chat"
    },
    "gui": {
-    "view": "실험(새 실행) · 채팅 · 연구 패널"
+    "view": "실험(새 실행) · 실험 › 대화(채팅) · 연구 패널"
    }
   },
   {
@@ -4217,7 +4217,7 @@
     "en": "run messages"
    },
    "gui": {
-    "view": "채팅"
+    "view": "실험 › 대화(채팅)"
    }
   },
   {
@@ -4272,7 +4272,7 @@
     "en": "run messages count-tokens"
    },
    "gui": {
-    "view": "채팅"
+    "view": "실험 › 대화(채팅)"
    }
   },
   {
@@ -4372,7 +4372,7 @@
     "en": "run responses"
    },
    "gui": {
-    "view": "채팅"
+    "view": "실험 › 대화(채팅)"
    }
   },
   {
@@ -4726,7 +4726,7 @@
     "en": "settings set"
    },
    "gui": {
-    "view": "설정"
+    "view": "설정 › 앱 · 프롬프트 캐시"
    }
   },
   {
@@ -4753,7 +4753,7 @@
     "en": "store clear"
    },
    "gui": {
-    "view": "설정"
+    "view": "설정 › 프롬프트 캐시"
    }
   },
   {
@@ -4780,7 +4780,7 @@
     "en": "store status"
    },
    "gui": {
-    "view": "설정"
+    "view": "설정 › 프롬프트 캐시"
    }
   },
   {
@@ -4807,7 +4807,7 @@
     "en": "system device-check"
    },
    "gui": {
-    "view": "장치"
+    "view": "설정 › 장치"
    }
   },
   {
@@ -4834,7 +4834,7 @@
     "en": "system devices"
    },
    "gui": {
-    "view": "장치"
+    "view": "설정 › 장치"
    }
   },
   {
@@ -4942,7 +4942,7 @@
     "en": "system fs"
    },
    "gui": {
-    "view": "모델"
+    "view": "모델 › 파일 · 공통(파일 선택)"
    }
   },
   {
@@ -5013,7 +5013,7 @@
     "en": "system open"
    },
    "gui": {
-    "view": "모델 · 벤치마크"
+    "view": "모델 › 파일 · 재현 › 검사 결과"
    }
   },
   {

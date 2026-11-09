@@ -3,10 +3,11 @@
 // 남긴다. 다른 곳(CLI · AI 세션)에서 이 실험으로 부른 호출이 끝나면 명령 창이 넘겨 준 이벤트(geulpu:event)로 다시 읽는다.
 // E3(문서/화면구현.md §3) — 실행 · 비교 탭과 실행 화면(ui/runs.js), 계획 · 결과 탭의 편집(experiment.update).
 // E4(문서/화면구현.md §4) — 스텝 · 층 화면(ui/steps.js — 경로: 실험 › id › 실행 › 스텝 k).
+// E5(문서/화면구현.md §5) — 기본 실험 "대화"(채팅의 답이 실행으로 남는 실험 — 찾거나 만든다), 기록 탭의 '디버거의 실행 로그'.
 import { toCommand } from './command.js';
 import { EN, T, TM, baseName, clock, copyButton, el, fmtMs, samePath, sourceLabel } from './dom.js';
 import { call, registry } from './ops.js';
-import { compareTab, forgetErrors, runTitle, runView, runsTab, selectStep, setCompare } from './runs.js';
+import { awaitRun, compareTab, forgetErrors, runTitle, runView, runsTab, selectStep, setCompare } from './runs.js';
 import { stepTitle, stepView } from './steps.js';
 
 const page = document.getElementById('page-exp');
@@ -306,6 +307,60 @@ function changeRoot() {
     { title: T('실험 폴더 위치 선택'), lead: T('실험 폴더들을 담을 폴더를 선택하세요. 이 브라우저에 기억합니다.') });
 }
 
+// ---- E5 — 기본 실험 "대화"(문서/화면구현.md §5) ----
+// 채팅의 답이 실행으로 남는 실험: 지금 실험 폴더 위치의 `<날짜>-chat`(제목 "대화" · "Chat"). 처음 보낼 때 찾거나 만들고 경로를 이 브라우저에
+// 기억한다. app.js 의 채팅이 globalThis.geulpuChatExperiment 로 묻고, 그 답의 실행 id 는 geulpuAwaitRun 으로(end 이벤트) 받는다
+const CHAT_KEY = 'geulpu.chatExp';
+const CHAT_TITLES = ['대화', 'Chat'];
+function isChatExp(x) { return !!x && /-chat$/.test(String(x.id || '')) && CHAT_TITLES.includes(x.title); }
+let chatOk = null;            // 이번에 확인한 경로
+let chatFind = null;          // 찾거나 만드는 중이면 그 약속(한 번에 하나)
+function chatSaved() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CHAT_KEY) || 'null');
+    return v && v.root === (st.root || '') && v.path ? v.path : null;
+  } catch (_) {
+    return null;
+  }
+}
+function chatSave(path) {
+  try { localStorage.setItem(CHAT_KEY, JSON.stringify({ root: st.root || '', path })); } catch (_) { /* 다음에 다시 찾는다 */ }
+}
+function chatExperiment() {
+  const saved = chatSaved();
+  if (saved && chatOk === saved) return Promise.resolve(saved);
+  if (chatFind) return chatFind;
+  chatFind = (async () => {
+    if (saved) {
+      const r = await call('experiment.show', { path: saved });
+      if (r.ok && r.json && isChatExp(r.json.experiment)) return (chatOk = saved);
+    }
+    const lr = await call('experiment.list', rootParam());
+    const hit = lr.ok && lr.json && Array.isArray(lr.json.experiments) ? lr.json.experiments.find(isChatExp) : null;
+    if (hit) {
+      chatSave(hit.path);
+      return (chatOk = hit.path);
+    }
+    const cr = await call('experiment.create', Object.assign({ name: 'chat', title: T('대화'), question: T('가벼운 대화 — 채팅의 답마다 실행으로 남습니다') }, rootParam()));
+    if (cr.ok && cr.json && cr.json.path) {
+      chatSave(cr.json.path);
+      if (!st.cur) loadList();
+      return (chatOk = cr.json.path);
+    }
+    return null;
+  })().catch(() => null).finally(() => { chatFind = null; });
+  return chatFind;
+}
+globalThis.geulpuChatExperiment = chatExperiment;
+globalThis.geulpuAwaitRun = (exp, body) => awaitRun(null, exp, body);
+// 채팅 화면 위의 경로 '실험 › 대화'(ui/nav.js) — 그 실험의 화면으로(아직 없으면 실험 목록)
+document.addEventListener('geulpu:open-chat-experiment', () => {
+  if (typeof globalThis.show === 'function') globalThis.show('exp');
+  const p = chatSaved();
+  if (p) openExp(p);
+  else if (st.cur) backToList();
+});
+
 // ---- 그리기 ----
 
 function render() {
@@ -347,12 +402,16 @@ function renderList() {
       kids.push(el('div', { class: 'empty-box' }, el('div', { class: 'big' }, T('아직 실험이 없습니다')),
         el('div', null, T('새 실험을 만들거나, CLI 에서 GeulPU experiment create --name <이름> 으로 만듭니다.'))));
     }
+    // E5 — 기본 실험 "대화"는 맨 아래 한 줄(누르면 채팅 화면 — 그 실험의 화면은 채팅 화면 위의 경로에서)
+    const chat = st.list.experiments.find(isChatExp) || null;
     kids.push(el('div', { class: 'xp-list', role: 'list', 'aria-label': T('실험 목록') },
-      st.list.experiments.map(expItem),
+      st.list.experiments.filter(x => x !== chat).map(expItem),
       el('button', { class: 'xp-item', role: 'listitem', type: 'button', onclick: () => globalThis.show && globalThis.show('chat') },
         el('span', { class: 't' }, T('대화')),
         el('span', { class: 'tag dim' }, T('채팅')),
-        el('span', { class: 'meta' }, el('span', null, T('채팅 화면으로 — 대화는 지금 이 브라우저에 저장됩니다'))))));
+        el('span', { class: 'meta' }, chat
+          ? [el('span', { class: 'id' }, chat.id), el('span', null, T`실행 ${chat.runs || 0}`), el('span', null, T('채팅의 답마다 실행으로 남습니다'))]
+          : el('span', null, T('채팅 화면으로 — 처음 보내면 이 실험이 만들어지고 답마다 실행으로 남습니다'))))));
   }
   page.replaceChildren(el('div', { class: 'xp' }, kids));
 }
@@ -597,6 +656,11 @@ function recordsTab(e) {
     : el('p', { class: 'muted' }, T('목록에 적은 파일이 없습니다')));
   const rep = e.reproduce && Array.isArray(e.reproduce.commands) ? e.reproduce.commands : [];
   if (rep.length) out.push(el('h2', null, T('재현 명령')), el('pre', { class: 'xp-pre' }, rep.join('\n')));
+  // E5 — 디버거(실험 › 디버거): 실험 밖에서 기록한 서버의 실행 로그
+  out.push(el('h2', null, T('디버거의 실행 로그')),
+    el('div', { class: 'xp-actions' },
+      el('button', { class: 'btn', type: 'button', onclick: () => globalThis.show && globalThis.show('debug') }, T('디버거 열기')),
+      el('span', { class: 'muted' }, T('실험 밖에서 기록한 서버의 실행 로그(디버거 v1 — 기록 켜기 · 가져오기 · 비교)는 디버거 화면에서 봅니다.'))));
   return out;
 }
 
@@ -633,6 +697,9 @@ function renderExp() {
       Array.isArray(e.authors) && e.authors.length ? el('span', null, e.authors.join(', ')) : null,
       el('span', { class: 'id', title: st.exp.path }, baseName(st.exp.path))),
     runInfo(e),
+    isChatExp(e) ? el('div', { class: 'xp-actions' },
+      el('button', { class: 'btn primary', type: 'button', onclick: () => globalThis.show && globalThis.show('chat') }, T('채팅 화면')),
+      el('span', { class: 'muted' }, T('기본 실험 — 채팅의 답마다 실행으로 남습니다. 실행 탭에서 답마다 토큰별 출력 · 분기 · 스텝 · 층 화면을 봅니다.'))) : null,
     el('div', { class: 'xp-tabs', role: 'tablist', 'aria-label': T('실험 탭') },
       TABS.map(([k, label]) => el('button', {
         type: 'button', role: 'tab', class: 'xp-tab' + (st.tab === k ? ' on' : ''), 'aria-selected': String(st.tab === k),

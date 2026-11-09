@@ -12,19 +12,16 @@
 <div id="app">
   <nav id="rail" aria-label="메뉴">
     <div class="mark" aria-hidden="true"><svg viewBox="0 0 64 64" focusable="false"><path fill="currentColor" d="M14.80 30.05 L14.80 25.99 L38.84 25.99 Q39.21 20.71 39.21 18.10 L19.80 18.10 L19.80 14.08 L44.05 14.08 Q44.05 18.63 43.53 25.99 L49.20 25.99 L49.20 30.05Z M19.91 49.92 L19.91 39.50 L39.36 39.50 L39.36 36.91 L19.91 36.91 L19.91 32.89 L44.16 32.89 L44.16 43.27 L24.72 43.27 L24.72 45.92 L45.11 45.92 L45.11 49.92Z"/></svg></div>
-    <button class="rail-btn" data-view="exp" data-tip="실험" aria-label="실험"></button>
-    <button class="rail-btn" data-view="chat" data-tip="채팅" aria-label="채팅"></button>
-    <button class="rail-btn" data-view="models" data-tip="모델" aria-label="모델"></button>
-    <button class="rail-btn" data-view="eval" data-tip="모델 평가" aria-label="모델 평가"></button>
-    <button class="rail-btn" data-view="agents" data-tip="에이전트" aria-label="에이전트"></button>
-    <button class="rail-btn" data-view="debug" data-tip="디버거" aria-label="디버거"></button>
-    <button class="rail-btn" data-view="bench" data-tip="벤치마크" aria-label="벤치마크"></button>
-    <button class="rail-btn" data-view="device" data-tip="하드웨어" aria-label="하드웨어"></button>
+    <button class="rail-btn" data-group="exp" data-tip="실험" aria-label="실험"></button>
+    <button class="rail-btn" data-group="model" data-tip="모델" aria-label="모델"></button>
+    <button class="rail-btn" data-group="repro" data-tip="재현" aria-label="재현"></button>
+    <button class="rail-btn" data-group="jobs" data-tip="작업" aria-label="작업"></button>
     <div class="rail-gap"></div>
-    <button class="rail-btn" data-view="settings" data-tip="설정" aria-label="설정"></button>
+    <button class="rail-btn" data-group="settings" data-tip="설정" aria-label="설정"></button>
   </nav>
   <main id="main">
     <div id="banner" hidden role="status"></div>
+    <nav id="grp" class="grp" aria-label="화면 탭" hidden></nav>
 
     <section id="view-exp" class="view" aria-label="실험"><div class="page" id="page-exp"></div></section>
     <section id="view-chat" class="view" aria-label="채팅">
@@ -67,9 +64,14 @@
     <section id="view-eval" class="view" aria-label="모델 평가"><div class="page wide" id="page-eval"></div></section>
     <section id="view-agents" class="view" aria-label="에이전트"><div class="page" id="page-agents"></div></section>
     <section id="view-debug" class="view" aria-label="디버거"><div class="page wide" id="page-debug"></div></section>
-    <section id="view-bench" class="view" aria-label="벤치마크"><div class="page" id="page-bench"></div></section>
-    <section id="view-device" class="view" aria-label="하드웨어"><div class="page" id="page-device"></div></section>
+    <section id="view-perf" class="view" aria-label="성능"><div class="page" id="page-perf"></div></section>
+    <section id="view-llama" class="view" aria-label="llama.cpp"><div class="page" id="page-llama"></div></section>
+    <section id="view-checks" class="view" aria-label="검사"><div class="page" id="page-checks"></div></section>
+    <section id="view-results" class="view" aria-label="검사 결과"><div class="page" id="page-results"></div></section>
+    <section id="view-jobs" class="view" aria-label="작업"><div class="page" id="page-jobs"></div></section>
+    <section id="view-device" class="view" aria-label="장치"><div class="page" id="page-device"></div></section>
     <section id="view-settings" class="view" aria-label="설정"><div class="page" id="page-settings"></div></section>
+    <section id="view-cache" class="view" aria-label="프롬프트 캐시"><div class="page" id="page-cache"></div></section>
 
     <footer id="statusbar" aria-label="상태"></footer>
   </main>
@@ -83,5 +85,7 @@
 <script src="/eval.js"></script>
 <script type="module" src="/ui/console.js"></script>
 <script type="module" src="/ui/experiments.js"></script>
+<script type="module" src="/ui/nav.js"></script>
+<script type="module" src="/ui/jobs.js"></script>
 </body>
 </html>

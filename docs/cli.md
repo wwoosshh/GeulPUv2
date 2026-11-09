@@ -30,7 +30,8 @@ the original random numbers, read what each layer predicted, and record it all a
 - Errors: `{"error": {"message", "status", "op", "next", "exit"}}`. `message` comes from the app and is often Korean; `next` (English)
   says what to do. A common one: `geulpu.top_logprobs` needs `logprobs` in the same request.
 - Long jobs answer `{"ok": true, "job": N}`. Add `--wait` to wait for the end and get the job's JSON (`state` done · failed · cancelled,
-  `summary`, `reason`). Only one job runs at a time (409 otherwise).
+  `summary`, `reason`). Only one job runs at a time (409 otherwise). The app's console and jobs screen follow that job, so the user
+  sees its progress while you wait.
 - The CLI does not stream; answers come whole.
 
 ## Models
@@ -124,7 +125,9 @@ tokens. A score or lens gets `base` when its prompt is the start of a run's prom
 holds that run's prompt tokens and then differs from the answer at step k (a text scored from step k, the lens of another candidate);
 `intervention.step` is the step number the screens show (a branch's steps continue its base's, `geulpu.step_offset`). The model goes
 into `models`. Keep `geulpu.prompt_tokens` on so this works. The app's step and layer screen sends these same score and lens requests,
-so its computations and yours show up in both places. The app keeps `files`
+so its computations and yours show up in both places. A streamed run's record also keeps every event it got (`events`), where the
+answer text and the per-token log-probabilities are. The app's chat is the experiment `<date>-chat` (title "대화"): every chat answer is
+one of its runs. The app keeps `files`
 current for what it writes; list any other file you add (`python <GeulPU folder>/data/experiment_check.py --files <path>` prints the
 list) or the check fails. Prefer `experiment update` to editing experiment.json; if you edit it yourself (runs of other kinds:
 compare · replay · evaluate), read it again just before writing — the app rewrites it with each recorded call. Title, question, plan
