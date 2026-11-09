@@ -1,7 +1,7 @@
 // 앱리디자인 E1(문서/화면구현.md §1 · 화면설계.md §5) — 명령 창. 모든 화면의 오른쪽에서 기능 호출을 한 줄씩 보이고(어느 출처든 — GUI · 사용자
 // CLI · AI 세션 · 파이썬), 입력 줄에 친 GeulPU 명령을 CLI 와 같은 요청으로 보낸다. 이벤트는 롱 폴링(GET /api/events)으로 받고, 보이는 명령은
 // 이벤트의 요청 본문(params)을 CLI 형식으로 다시 쓴 것이다. 앱은 기능 목록 클라이언트(ops.js)로만 부른다.
-import { callable, commandName, parse, quote, toCommand } from './command.js';
+import { callable, commandName, parse, quote, selectPaths, selectValue, toCommand } from './command.js';
 import { CHEVRON, EN, T, TM, baseName, clock, copyButton, el, fmtBytes, fmtMs, icon, sourceLabel as labelOf } from './dom.js';
 import { call, registry, send } from './ops.js';
 
@@ -375,7 +375,8 @@ async function waitJob(rec, job) {
     if (!j) continue;
     if (j.id === job && j.state !== 'running') {
       rec.summary = T`작업 ${job}: ${j.state}${j.summary ? ' — ' + TM(j.summary) : ''}`;
-      rec.result = { job: j };
+      rec.result = rec.select ? selectValue({ job: j }, rec.select) : { job: j };
+      if (rec.select) rec.showOut = true;
       if (j.state !== 'done') rec.state = 'fail';
       render(rec);
       return;
@@ -444,6 +445,7 @@ async function runLine(text) {
     rec.local = true;
     rec.state = 'note';
     rec.result = { op: r.op, method: r.method, path: r.path, body: r.body === null ? null : JSON.parse(r.body) };
+    if (o.select !== null) rec.result = selectValue(rec.result, selectPaths(o.select));      // F3-3 — CLI 처럼 --dry-run 의 요청에서도
     rec.showOut = true;
     add(rec);
     return;
@@ -482,10 +484,21 @@ async function runLine(text) {
     return;
   }
   rec.result = ans.json !== null ? ans.json : ans.text;
+  // F3-3 — --select: 성공한 JSON 답에서 고른 값만(CLI 와 같음 — 오류 답은 그대로). 작업을 기다리면 끝난 작업에서 고른다
+  if (o.select !== null) rec.select = selectPaths(o.select);
+  const notJson = rec.select && ans.ok && ans.json === null;
+  if (rec.select && ans.ok && ans.json !== null && !(o.wait && typeof ans.json.job === 'number')) {
+    rec.result = selectValue(ans.json, rec.select);
+    rec.showOut = true;
+  }
   // 상태는 답으로 — POST 는 이벤트의 end 가 걸린 시간을 더 적는다(이벤트가 답보다 늦게 와도 같은 줄)
   if (rec.status === undefined) rec.status = ans.status;
   if (rec.state === 'sent' || rec.state === 'run' || r.method !== 'POST') rec.state = ans.ok ? 'done' : 'fail';
   if (!ans.ok && ans.json && ans.json.error) rec.message = TM(ans.json.error.message || '');
+  if (notJson) {
+    rec.state = 'fail';
+    rec.message = T('답이 JSON 이 아니어서 --select 로 고르지 못했습니다');
+  }
   if (ans.ok && ans.json && typeof ans.json.job === 'number') {
     if (o.wait) {
       render(rec);

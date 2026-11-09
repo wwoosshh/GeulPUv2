@@ -4,10 +4,10 @@
 // 실행의 실행 화면(그 표)과 실행 목록의 설명도 여기서 만든다.
 import { EN, T, el } from './dom.js';
 import { call } from './ops.js';
-import { matchLine } from './research.js';
+import { deltaNow, matchLine } from './research.js';
 import {
   appError, busyLine, candText, dataById, dataOf, doBranch, entryOf, fetchPieces, fx, isBusy, isIds, measure, pct, pieceText, quoteTok,
-  recordOf, runInfo, runsOf, selectStep, stepVals,
+  recordOf, runInfo, runsOf, selectStep, stepVals, summaryOfRun,
 } from './runs.js';
 
 export const MEASURE_OPS = new Set(['run.score', 'run.lens']);
@@ -305,9 +305,10 @@ function lensTable(ctx, m, who, base) {
     return t === null ? '#' + id : quoteTok(t);
   };
   const last = n - 1;
-  const fin = L.top_ids[last][0];
-  let first = last;
-  while (first > 0 && L.top_ids[first - 1][0] === fin) first--;
+  // 렌즈의 요약 — 앱이 계산한 값(experiment.summary 의 lens · jacobian_lens, F3-3). 받기 전에는 끝까지 1 위인 층을 칠하지 않는다
+  const q = summaryOfRun(ctx, m.entry, deltaNow());
+  const ls = q.val ? (view === 'jacobian' ? q.val.jacobian_lens : q.val.lens) : null;
+  const first = ls ? ls.last_top1_from_layer : n;
   const K = Math.max(...L.top_ids.map(a => a.length));
   const cols = Math.min(COLS, K);
   const key = ctx.path + '|' + m.entry.id + '|' + view;
@@ -345,11 +346,12 @@ function lensTable(ctx, m, who, base) {
       el('th', { scope: 'col', class: 'num' }, T('로그확률')),
       el('th', { scope: 'col', class: 'num' }, T('엔트로피')))),
     el('tbody', null, rows))));
-  const ones = [];
-  for (let l = 0; l < n; l++) if (L.ranks[l] === 1) ones.push(l);
-  out.push(el('p', { class: 'st-note' },
-    T`마지막 층의 1 위 ${show(fin)} 는 층 ${first} 부터 끝까지 1 위입니다.`, ' ',
-    ones.length ? T`${who} ${show(m.tok)} 는 층 ${ranges(ones)} 에서 1 위입니다.` : T`${who} ${show(m.tok)} 는 어느 층에서도 1 위가 아닙니다.`));
+  if (ls) {
+    const ones = ls.token_top1_layers;
+    out.push(el('p', { class: 'st-note' },
+      T`마지막 층의 1 위 ${show(ls.last_top1)} 는 층 ${ls.last_top1_from_layer} 부터 끝까지 1 위입니다.`, ' ',
+      ones.length ? T`${who} ${show(m.tok)} 는 층 ${ranges(ones)} 에서 1 위입니다.` : T`${who} ${show(m.tok)} 는 어느 층에서도 1 위가 아닙니다.`));
+  } else out.push(el('p', { class: 'st-note muted' }, q.error || T('읽는 중…')));
   if (view === 'jacobian') {
     out.push(el('p', { class: 'st-note muted' }, T`Jacobian lens — 층마다 J 파일(${String(L.jlens_sha256 || '').slice(0, 8)})의 J 로 마지막 층의 공간에 옮긴 뒤 읽습니다(정밀도 계약 5.4, J 를 쓴 층 ${fmtInt(L.source_layers)} 개). 마지막 층은 J 없이 읽어 로짓 렌즈와 같습니다.`));
   }

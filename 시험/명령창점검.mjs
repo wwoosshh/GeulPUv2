@@ -26,7 +26,12 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const norm = body => (body === null ? null : JSON.parse(body));
 
 function outcome(r) {
-  if (r.kind === 'request') return { request: { op: r.op, method: r.method, path: r.path, body: norm(r.body) } };
+  if (r.kind === 'request') {
+    const req = { op: r.op, method: r.method, path: r.path, body: norm(r.body) };
+    // F3-3 — --select 는 CLI 처럼 --dry-run 의 요청에서 고른 값
+    if (r.options && r.options.select !== null) return { selected: C.selectValue(req, C.selectPaths(r.options.select)) };
+    return { request: req };
+  }
   if (r.kind === 'error') return { error: { message: r.message, next: r.next } };
   if (r.kind === 'help') return { help: r.op ? r.op.id : null };
   if (r.kind === 'ops') return { ops: true };

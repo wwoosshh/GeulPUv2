@@ -4,7 +4,7 @@
 // 시험한다(시험/명령창점검.mjs · 시험/명령창예.json — 같은 예를 시험/명령줄점검.py 가 CLI 로 확인한다).
 
 const BOOL_WORDS = ['true', 'false', '1', '0', 'yes', 'no'];
-const CLI_OPTIONS = ['port', 'app-port', '포트', 'session', '세션', 'timeout', 'json', 'out', 'experiment', '실험'];
+const CLI_OPTIONS = ['port', 'app-port', '포트', 'session', '세션', 'timeout', 'json', 'out', 'experiment', '실험', 'select'];
 const INT_TEXT = /^\s*-?[0-9]+\s*$/;
 const SAFE_WORD = /^[A-Za-z0-9._\-/:@%+=,가-힣]+$/;
 
@@ -194,7 +194,7 @@ export function parseArgv(reg, argv) {
   if (help) return { kind: 'help', op: o };
 
   // 5. 옵션과 인자 — 기능에 같은 이름의 인자가 있으면 기능의 인자다
-  const options = { wait: false, dryRun: false, json: null, experiment: null, port: null, session: null, timeout: null, out: null };
+  const options = { wait: false, dryRun: false, json: null, experiment: null, port: null, session: null, timeout: null, out: null, select: null };
   const args = [];
   for (; k < argv.length; k++) {
     const a = argv[k];
@@ -221,7 +221,10 @@ export function parseArgv(reg, argv) {
         else if (nm === 'session' || nm === '세션') options.session = val;
         else if (nm === 'timeout') options.timeout = val;
         else if (nm === 'out') options.out = val;
-        else options.port = val;
+        else if (nm === 'select') {
+          if (!selectPaths(val).length) return fail(`--${nm} needs a value`, `값이 필요합니다: --${nm}`, helpNext(name), null, id);
+          options.select = val;
+        } else options.port = val;
         continue;
       }
       const names = (o.params || []).map(x => x.name);
@@ -270,6 +273,35 @@ export function parseArgv(reg, argv) {
     else if (args.length) path += '?' + args.map(a => percent(a.name) + '=' + percent(a.type === 'string' && a.raw !== null ? a.raw : a.json)).join('&');
   }
   return { kind: 'request', op: id, name, method, path, body, options };
+}
+
+// ---- --select(F3-3) — CLI(앱/명령줄.gl 의 명령고르기)와 같은 규칙 ----
+
+/** 쉼표로 나눈 경로들 — 앞뒤 빈칸을 빼고, 빈 것과 겹친 것은 뺀다 */
+export function selectPaths(spec) {
+  const out = [];
+  for (const s of String(spec).split(',')) {
+    const p = s.replace(/^[ \t]+|[ \t]+$/g, '');
+    if (p && !out.includes(p)) out.push(p);
+  }
+  return out;
+}
+
+/** 값 v 에서 경로들의 값 — 하나면 그 값, 여럿이면 경로 → 값의 객체. 점으로 이은 경로의 객체는 키, 배열은 0 부터의 번호(숫자 18 개까지).
+   없는 경로는 null */
+export function selectValue(v, paths) {
+  const one = path => {
+    let x = v;
+    for (const k of path.split('.')) {
+      if (Array.isArray(x)) x = /^[0-9]{1,18}$/.test(k) && Number(k) < x.length ? x[Number(k)] : null;
+      else if (x !== null && typeof x === 'object') x = Object.prototype.hasOwnProperty.call(x, k) ? x[k] : null;
+      else x = null;
+      if (x === undefined) x = null;
+      if (x === null) break;
+    }
+    return x;
+  };
+  return paths.length === 1 ? one(paths[0]) : Object.fromEntries(paths.map(p => [p, one(p)]));
 }
 
 // ---- 기능 id 와 인자로 요청(화면 코드가 쓴다) ----
