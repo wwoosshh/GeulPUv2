@@ -162,6 +162,16 @@ function jobText(rec) {
   return T`작업 ${rec.job}`;
 }
 const jobLines = new Set();    // 끝나지 않은 작업의 줄
+// 끝난 것을 못 본 작업(새로 고침 뒤 · 더 새 작업이 시작됨)은 작업 화면이 이 브라우저에 남긴 지난 작업에서(ui/jobs.js — 같은 번호의 가장 새 것)
+function jobFromHistory(id) {
+  try {
+    const h = JSON.parse(localStorage.getItem('geulpu.jobs') || '[]');
+    const x = Array.isArray(h) ? h.find(r => r && r.id === id) : null;
+    return x ? { state: x.state, seconds: x.seconds, reason: x.reason } : null;
+  } catch (_) {
+    return null;
+  }
+}
 // app.js 가 1 초마다 읽는 상태(geulpu:state) — 그 작업이 지금 작업이면 값을 옮기고, 더 새 작업이 시작됐으면 그 줄은 끝(작업 화면에 남는다)
 document.addEventListener('geulpu:state', ev => {
   const j = ev.detail && ev.detail.job;
@@ -170,7 +180,11 @@ document.addEventListener('geulpu:state', ev => {
       const v = { state: j.state, progress: j.progress, step: j.step, seconds: j.seconds, reason: j.reason };
       if (JSON.stringify(v) !== JSON.stringify(rec.jobInfo)) { rec.jobInfo = v; render(rec); }
       if (j.state !== 'running') jobLines.delete(rec);
-    } else if (j && j.id > rec.job) jobLines.delete(rec);
+    } else if (j && j.id > rec.job) {
+      jobLines.delete(rec);
+      const h = jobFromHistory(rec.job);
+      if (h && h.state !== 'running') { rec.jobInfo = h; render(rec); }
+    }
   }
 });
 

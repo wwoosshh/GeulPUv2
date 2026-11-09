@@ -311,7 +311,7 @@ function changeRoot() {
 // 채팅의 답이 실행으로 남는 실험: 지금 실험 폴더 위치의 `<날짜>-chat`(제목 "대화" · "Chat"). 처음 보낼 때 찾거나 만들고 경로를 이 브라우저에
 // 기억한다. app.js 의 채팅이 globalThis.geulpuChatExperiment 로 묻고, 그 답의 실행 id 는 geulpuAwaitRun 으로(end 이벤트) 받는다
 const CHAT_KEY = 'geulpu.chatExp';
-const CHAT_TITLES = ['대화', 'Chat'];
+const CHAT_TITLES = ['대화', 'Chat', 'Conversations'];   // 만들 때의 화면 언어로(T('대화')) — 어느 언어로 만들었어도 찾는다
 function isChatExp(x) { return !!x && /-chat$/.test(String(x.id || '')) && CHAT_TITLES.includes(x.title); }
 let chatOk = null;            // 이번에 확인한 경로
 let chatFind = null;          // 찾거나 만드는 중이면 그 약속(한 번에 하나)

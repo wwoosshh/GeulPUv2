@@ -1626,7 +1626,7 @@ const DICT = {
   "작업 {} 실패": "Job {} failed",
   "작업 {} 중지됨": "Job {} stopped",
   "작업 {} · {}": "Job {} · {}",
-  "이 답의 실행 — 실험 › 대화": "This answer's run — Experiments › Chat",
+  "이 답의 실행 — 실험 › 대화": "This answer's run — Experiments › Conversations",
   "가벼운 대화 — 채팅의 답마다 실행으로 남습니다": "Casual chat — every chat answer is recorded as a run",
   "채팅의 답마다 실행으로 남습니다": "Every chat answer is recorded as a run",
   "채팅 화면으로 — 처음 보내면 이 실험이 만들어지고 답마다 실행으로 남습니다": "To the chat screen — the first message creates this experiment, and every answer is recorded as a run",
@@ -5924,7 +5924,7 @@ function saveSettings(note, recheck, delay, withDir, row) {
   setTimer = setTimeout(async () => {
     // 앱리디자인 E5 — 설정은 탭 둘(앱 · 프롬프트 캐시)에 나뉜다. 화면에 있는 입력 필드만 읽고, 없는 필드는 지금 설정값
     const pages = [$('#page-settings'), $('#page-cache')];
-    const page = { querySelector: sel => pages.map(x => x.querySelector(sel)).find(Boolean) || null };
+    const page = { querySelector: sel => pages.map(x => x.querySelector(sel)).find(Boolean) || null, contains: el => pages.some(x => x.contains(el)) };
     const cur = S.st.settings;
     const on = $('#page-settings').querySelector('.seg-ctl button.on');
     const num = (id, lo, hi, dflt) => { const e = page.querySelector(id); const v = e ? parseInt(e.value, 10) : NaN; return isNaN(v) ? dflt : Math.min(hi, Math.max(lo, v)); };
@@ -5948,6 +5948,10 @@ function saveSettings(note, recheck, delay, withDir, row) {
       body.context_store_gb = num('#set-sgb', 1, 100000, 20);
       body.context_store_write = (page.querySelector('#set-swrite') || {}).value || 'all';
       page.querySelector('#set-sgb').value = body.context_store_gb;
+    } else {                                   // 앱리디자인 E5 — 프롬프트 캐시 탭이 화면에 없으면 지금 설정값(옛 설정 화면과 같은 본문)
+      body.context_store = cur.context_store || 'auto';
+      body.context_store_gb = cur.context_store_gb || 20;
+      body.context_store_write = cur.context_store_write || 'all';
     }
     if (withDir === 'store') body.context_store_dir = page.querySelector('#set-sdir').value.trim();
     // 범위에 맞춘 값을 칸에도 다시 적는다(1~8 · 1024~131072)

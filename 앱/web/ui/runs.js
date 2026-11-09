@@ -142,9 +142,10 @@ export function dataOf(entry, rec, text) {
     ptoks: isIds(g.prompt_tokens) ? g.prompt_tokens : isIds(req.prompt) ? req.prompt : null,
     off: Number.isInteger(gq.step_offset) ? gq.step_offset : 0,
     echoFrom: req.echo === true && Number.isInteger(gq.echo_from) ? gq.echo_from : null,
-    topIds: Array.isArray(g.top_ids) && g.top_ids.length >= n && n > 0 ? g.top_ids : null,
-    topLp: Array.isArray(g.top_logprobs) && g.top_logprobs.length >= n && n > 0 ? g.top_logprobs : null,
-    ent: Array.isArray(g.entropy) && g.entropy.length >= n && n > 0 ? g.entropy : null,
+    // 끝 토큰(EOS)으로 멈춘 답은 그 스텝의 값이 없다(채팅의 logprobs.content 도 그렇다 — 앱리디자인 E5 의 채팅 실행에서 찾음)
+    topIds: Array.isArray(g.top_ids) && g.top_ids.length >= n - 1 && n > 0 ? g.top_ids : null,
+    topLp: Array.isArray(g.top_logprobs) && g.top_logprobs.length >= n - 1 && n > 0 ? g.top_logprobs : null,
+    ent: Array.isArray(g.entropy) && g.entropy.length >= n - 1 && n > 0 ? g.entropy : null,
     hashes: Array.isArray(g.logit_hashes) ? g.logit_hashes : null,
     echoHashes: Array.isArray(g.prompt_logit_hashes) ? g.prompt_logit_hashes : null,
     texts: null, lps: null, alts: null, ptexts: null, seedText: null,
