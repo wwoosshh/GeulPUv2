@@ -1665,7 +1665,8 @@ const DICT = {
   "이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않습니다 — 결과는 이 실험의 실행으로 남지만 답의 텍스트 · 도구 호출 · 사용량만 있고 토큰별 값은 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.": "The server does not take a seed or GeulPU extension fields in this format — the result is recorded as a run of this experiment with the answer text, tool calls and usage, but no per-token values. At temperature 0 the same request gives the same answer.",
   "이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않아 토큰별 값(확률 · 마진 · 로짓 해시)이 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.": "The server does not take a seed or GeulPU extension fields in this format, so there are no per-token values (probability, margin, logit hash). At temperature 0 the same request gives the same answer.",
   "답에 텍스트가 없습니다.": "The answer has no text.",
-  "입력 토큰 {} · 출력 토큰 {} · 끝난 까닭 {}": "Input tokens {} · output tokens {} · stop reason {}",
+  "(캐시에서 {})": "({} from the cache)",
+  "끝난 까닭 {}": "stop reason {}",
   "점수를 계산할 토큰 id 를 적으세요": "Enter the token ids to score",
   "토큰 id 는 0 이상의 정수를 쉼표나 공백으로 나눠 적습니다": "Token ids are integers of 0 or more, separated by commas or spaces",
   "점수 입력의 종류": "Score input type",
@@ -4532,7 +4533,7 @@ async function serverInfo(m) {
   catch (e) { closeModal(); toast(TM(e.message), 'err'); return; }
   const d = (ms && Array.isArray(ms.data) && ms.data[0]) || {};
   tk = tk || {};
-  const tok = (t, id) => (t === null || t === undefined ? T('없음') : `${JSON.stringify(t)}${id === undefined ? '' : NB + '(' + id + ')'}`);
+  const tok = (t, id) => (t === null || t === undefined ? T('없음') : `${JSON.stringify(t)}${id === undefined ? '' : ' (' + id + ')'}`);
   const rows = [
     [T('모델 이름'), d.id || '-'],
     [T('문맥 길이'), d.max_model_len ? fmtNum(d.max_model_len) : '-'],

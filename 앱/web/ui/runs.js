@@ -934,7 +934,10 @@ function agentParts(op, res) {
       if (b.type === 'text') parts.push(['text', String(b.text || '')]);
       else if (b.type === 'tool_use') parts.push(['tool', `${b.name}(${JSON.stringify(b.input)})`]);
     }
-    return { parts, stop: res.stop_reason, inTok: u.input_tokens, outTok: u.output_tokens };
+    // Anthropic 의 input_tokens 는 캐시에서 읽지 않은 것만 — 캐시에서 읽은 것 · 캐시에 쓴 것과 더한 것이 입력 전체
+    const cached = u.cache_read_input_tokens || 0;
+    const inTok = typeof u.input_tokens === 'number' ? u.input_tokens + cached + (u.cache_creation_input_tokens || 0) : undefined;
+    return { parts, stop: res.stop_reason, inTok, cached, outTok: u.output_tokens };
   }
   for (const it of Array.isArray(res.output) ? res.output : []) {
     if (!it || typeof it !== 'object') continue;
@@ -942,17 +945,20 @@ function agentParts(op, res) {
       for (const c of Array.isArray(it.content) ? it.content : []) if (c && c.type === 'output_text') parts.push(['text', String(c.text || '')]);
     } else if (it.type === 'function_call') parts.push(['tool', `${it.name}(${it.arguments})`]);
   }
-  return { parts, stop: res.status, inTok: u.input_tokens, outTok: u.output_tokens };
+  return { parts, stop: res.status, inTok: u.input_tokens, cached: (u.input_tokens_details && u.input_tokens_details.cached_tokens) || 0, outTok: u.output_tokens };
 }
 
-function agentView(entry, d) {
+function agentView(ctx, entry, d, text) {
   const a = agentParts(entry.operation, d.res || {});
   const label = { text: T('답'), tool: T('도구 호출') };
   return [
     el('p', { class: 'note-line' }, T('이 형식은 서버가 시드와 GeulPU 확장 필드를 받지 않아 토큰별 값(확률 · 마진 · 로짓 해시)이 없습니다. 온도 0 이면 같은 요청에 같은 답입니다.')),
     ...(a.parts.length ? a.parts.map(([k, t]) => el('div', { class: 'run-agent-part' }, el('div', { class: 'k' }, label[k]), el('pre', { class: 'xp-pre' }, t)))
       : [el('p', { class: 'muted' }, T('답에 텍스트가 없습니다.'))]),
-    el('p', { class: 'muted small' }, T`입력 토큰 ${a.inTok ?? '-'} · 출력 토큰 ${a.outTok ?? '-'} · 끝난 까닭 ${a.stop || '-'}`),
+    el('p', { class: 'muted small' }, T`입력 토큰 ${a.inTok ?? '-'}` + (a.cached ? ' ' + T`(캐시에서 ${a.cached})` : '') + ' · ' + T`출력 토큰 ${a.outTok ?? '-'}` + ' · ' + T`끝난 까닭 ${a.stop || '-'}`),
+    el('div', { class: 'xp-actions' },
+      el('button', { type: 'button', class: 'btn', disabled: ui.busy || !rawRequest(text) ? true : null, onclick: () => doRerun(ctx, d, text) }, T('재실행')),
+      el('button', { type: 'button', class: 'btn ghost', onclick: () => newRun(ctx, d) }, T('이 설정으로 새 실행'))),
     el('h2', null, T('요청', '하나')), el('pre', { class: 'xp-pre' }, JSON.stringify(d.req, null, 2)),
     el('details', { class: 'run-raw' }, el('summary', null, T('응답(JSON)')), el('pre', { class: 'xp-pre' }, JSON.stringify(d.res, null, 2))),
   ];
@@ -985,7 +991,7 @@ export function runView(ctx, id) {
     return out;
   }
   if (AGENT_OPS.has(entry.operation)) {
-    out.push(...agentView(entry, d));
+    out.push(...agentView(ctx, entry, d, c.text));
     return out;
   }
   if (!d.n) {
