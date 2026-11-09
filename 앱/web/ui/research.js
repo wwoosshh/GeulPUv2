@@ -611,24 +611,52 @@ export function toolsView(ctx, d, text, busy) {
 
 // ---- 비교 탭 ----
 
+/** 위치 pos(프롬프트 + 답의 순서)의 토큰과 확률 · 순위 — 답이면 스텝의 값, 프롬프트면 echo 기록(분기 실행의 개입한 토큰 등). 없으면 null */
+function posInfo(d, pos) {
+  if (!d.ptoks) return null;
+  const P = d.ptoks.length;
+  if (pos >= P) {
+    const k = pos - P;
+    if (k >= d.n) return null;
+    const v = stepVals(d, k);
+    return { id: d.ids[k], text: d.texts ? d.texts[k] : pieceText(d.ids[k]), prob: v.prob, rank: v.rank };
+  }
+  const id = d.ptoks[pos];
+  const ids = Array.isArray(d.g.prompt_top_ids) ? d.g.prompt_top_ids[pos] : null;
+  const lps = Array.isArray(d.g.prompt_top_logprobs) ? d.g.prompt_top_logprobs[pos] : null;
+  let rank = null;
+  let prob = null;
+  if (Array.isArray(ids) && Array.isArray(lps)) {
+    const r = ids.indexOf(id);
+    if (r >= 0) {
+      rank = r + 1;
+      prob = Math.exp(lps[r]);
+    }
+  }
+  const lp0 = d.ch && d.ch.logprobs;
+  if (prob === null && lp0 && Array.isArray(lp0.token_logprobs) && typeof lp0.token_logprobs[pos] === 'number') prob = Math.exp(lp0.token_logprobs[pos]);
+  const text = d.ptexts && typeof d.ptexts[pos] === 'string' ? d.ptexts[pos] : pieceText(id);
+  return { id, text, prob, rank };
+}
+
 /** 두 실행의 처음 다른 스텝 · 수치 표 · 다른 프롬프트로 점수(Δ) */
 export function compareExtras(ctx, da, db, c) {
   rs.ctx = ctx;
   const out = [];
-  // 처음 다른 스텝의 두 토큰
+  // 처음 다른 스텝의 두 토큰 — 분기 실행에서는 그 토큰이 프롬프트(개입한 토큰)에 있으므로 echo 기록에서 확률 · 순위를 읽는다
   if (c && !c.same) {
+    const ia = posInfo(da, c.L);
+    const ib = posInfo(db, c.L);
     const ka = c.L - da.ptoks.length;
-    const kb = c.L - db.ptoks.length;
-    if (ka >= 0 && kb >= 0 && ka < da.n && kb < db.n) {
-      const side = (d, k) => {
-        const v = stepVals(d, k);
-        const t = d.texts ? d.texts[k] : pieceText(d.ids[k]);
-        return el('span', null, el('b', null, t === null ? '#' + d.ids[k] : quoteTok(t)), ' ', T`확률 ${pct(v.prob)}`, v.rank ? T` · ${v.rank} 위` : '');
-      };
-      if (!da.texts) fetchPieces([da.ids[ka]], ctx);
+    if (ia && ib) {
+      const side = x => el('span', null, el('b', null, x.text === null ? '#' + x.id : quoteTok(x.text)), ' ',
+        T`확률 ${pct(x.prob)}`, x.rank ? T` · ${x.rank} 위` : '');
+      const miss = [ia, ib].filter(x => x.text === null).map(x => x.id);
+      if (miss.length) fetchPieces(miss, ctx);
       out.push(el('div', { class: 'xp-actions rs-div' },
-        el('span', null, T`처음 다른 스텝 ${da.off + ka}: `, el('code', null, da.entry.id), ' ', side(da, ka), ' · ', el('code', null, db.entry.id), ' ', side(db, kb)),
-        el('button', { type: 'button', class: 'btn sm', onclick: () => ctx.openStep(da.entry.id, ka) }, T`${da.entry.id} 의 이 스텝 보기`)));
+        el('span', null, ka >= 0 ? T`처음 다른 스텝 ${da.off + ka}: ` : T`처음 다른 위치 ${c.L}: `, el('code', null, da.entry.id), ' ', side(ia), ' · ',
+          el('code', null, db.entry.id), ' ', side(ib)),
+        ka >= 0 && ka < da.n ? el('button', { type: 'button', class: 'btn sm', onclick: () => ctx.openStep(da.entry.id, ka) }, T`${da.entry.id} 의 이 스텝 보기`) : null));
     }
   }
   // 수치 표

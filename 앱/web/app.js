@@ -1680,9 +1680,9 @@ const DICT = {
   "답이 흐르는 동안에는 할 수 없습니다 — 끝난 뒤에 다시 누르세요": "Not while an answer is streaming — press again when it ends",
   "기본 실험 \"대화\"를 찾거나 만들지 못했습니다": "Could not find or create the default experiment \"Conversations\"",
   "이 답을 만든 계산 방식으로 바꾸지 못했습니다": "Could not switch to the computation mode this answer was made with",
-  "다시 생성한 토큰이 연구 기록과 다릅니다(스텝 {}) — 실행 {} 은 남았지만 이 답에 잇지 않았습니다": "The regenerated tokens differ from the research record (step {}) — run {} was recorded but not linked to this answer",
+  "다시 생성한 토큰이 연구 기록과 다릅니다(스텝 {}) — 실험에는 남았지만(실행 {}) 이 답에 잇지 않았습니다": "The regenerated tokens differ from the research record (step {}) — run {} was recorded but not linked to this answer",
   "실행은 남았지만 실행 id 를 받지 못했습니다 — 실험의 실행 탭에서 보세요": "The run was recorded but its id did not arrive — see the experiment's Runs tab",
-  "실험 \"대화\"에 실행 {} 으로 남겼습니다": "Recorded as run {} in \"Conversations\"",
+  "실험 \"대화\"에 남겼습니다 — 실행 {}": "Recorded in \"Conversations\" — run {}",
   "모델을 불러오는 중 — {}": "Loading the model — {}",
   "모델을 불러오지 못했습니다 — 시간이 다 됐습니다": "Could not load the model — timed out",
   "재현 파일을 읽는 중": "Reading the reproduction file",
@@ -1739,6 +1739,7 @@ const DICT = {
   "재현 파일은 끝 토큰의 스텝까지 값이 있어야 해서, 없으면 먼저 답 전체를 점수 매깁니다(상위 후보 10).": "The reproduction file needs values up to the end-token step, so when they are missing it first scores the whole answer (top 10 candidates).",
   "확률 {}": "probability {}",
   "처음 다른 스텝 {}: ": "First differing step {}: ",
+  "처음 다른 위치 {}: ": "First differing position {}: ",
   "{} 의 이 스텝 보기": "Show this step of {}",
   "두 실행의 수치": "Numbers of the two runs",
   "{} 의 답을 {} 의 프롬프트로": "{}'s answer under {}'s prompt",
@@ -6260,13 +6261,13 @@ async function recordOldAnswer(m, btn) {
     const id = wait ? await wait.promise : null;
     let k = 0;
     while (k < toks.length && k < cp.tokens.length && toks[k] === cp.tokens[k]) k++;
-    if (k !== toks.length || k !== cp.tokens.length) throw new Error(T`다시 생성한 토큰이 연구 기록과 다릅니다(스텝 ${k}) — 실행 ${id || '-'} 은 남았지만 이 답에 잇지 않았습니다`);
+    if (k !== toks.length || k !== cp.tokens.length) throw new Error(T`다시 생성한 토큰이 연구 기록과 다릅니다(스텝 ${k}) — 실험에는 남았지만(실행 ${id || '-'}) 이 답에 잇지 않았습니다`);
     if (!id) throw new Error(T('실행은 남았지만 실행 id 를 받지 못했습니다 — 실험의 실행 탭에서 보세요'));
     m.run = id;
     m.exp = exp;
     saveRooms();
     if (S.view === 'chat') renderMsgs();
-    toast(T`실험 "대화"에 실행 ${id} 으로 남겼습니다`, 'ok');
+    toast(T`실험 "대화"에 남겼습니다 — 실행 ${id}`, 'ok');
   } catch (e) { toast(TM(e.message), 'err'); }
   finally { if (btn && btn.isConnected) btn.disabled = false; }
 }

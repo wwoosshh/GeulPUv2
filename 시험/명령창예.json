@@ -890,12 +890,12 @@
   {
    "name": "앞으로 만들 기능",
    "argv": [
-    "panel.records"
+    "check.repro"
    ],
-   "line": "panel.records",
+   "line": "check.repro",
    "expect": {
     "error": {
-     "message": "panel.records is planned, not available yet",
+     "message": "check.repro is planned, not available yet",
      "next": "GeulPU ops lists every command"
     }
    }
