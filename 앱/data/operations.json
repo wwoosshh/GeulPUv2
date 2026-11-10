@@ -3042,8 +3042,8 @@
     "en": "Update an experiment (plan, criteria, results)"
    },
    "description": {
-    "ko": "실험의 제목 · 연구 질문 · plan.md · 판정 기준 · results.md · 상태 · 저자 · 장치 · 재현 명령을 바꾸고 직접 더한 파일을 files 에 적는다(준 것만). 제목 · 연구 질문 · plan.md · 판정 기준의 id · text 는 실행이 없을 때만 바꾸고(실행 전에 적고 고정), 나머지는 언제든. 모르는 필드는 400 으로 거절한다.",
-    "en": "Change an experiment's title, question, plan.md, criteria, results.md, status, authors, devices or reproduce commands, and list files you added (only what is given). The title, question, plan.md and the criteria's id and text change only while the experiment has no runs (written before any run, then fixed); the rest at any time. Unknown fields are refused (400)."
+    "ko": "실험의 제목 · 연구 질문 · plan.md · 판정 기준 · results.md · 상태 · 저자 · 장치 · 재현 명령을 바꾸고 직접 더한 파일을 files 에 적는다(준 것만). 제목 · 연구 질문 · plan.md · 판정 기준의 id · text 는 실행이 없을 때만 바꾸고(실행 전에 적고 고정), 나머지는 언제든 — 판정은 criteria 에 {id, result, note} 만 주면 된다. 모르는 필드는 400 으로 거절한다.",
+    "en": "Change an experiment's title, question, plan.md, criteria, results.md, status, authors, devices or reproduce commands, and list files you added (only what is given). The title, question, plan.md and the criteria's id and text change only while the experiment has no runs (written before any run, then fixed); the rest at any time — for a verdict, give criteria entries as {id, result, note}. Unknown fields are refused (400)."
    },
    "status": "exists",
    "http": {
@@ -3092,8 +3092,8 @@
      "type": "array",
      "required": false,
      "description": {
-      "ko": "판정 기준 전체 — [{id, text, result, note}](id · text 는 실행이 없을 때만 바꾼다)",
-      "en": "the whole list of criteria — [{id, text, result, note}] (id and text change only while there are no runs)"
+      "ko": "판정 기준 — [{id, text, result, note}]. 항목마다 text 가 있으면 판정 기준 전체를 정한다(id · text 는 실행이 없을 때만 바꾼다). text 가 없는 항목은 이미 있는 그 id 의 판정(result · note)만 바꾸고 나머지 판정 기준은 그대로 둔다",
+      "en": "criteria — [{id, text, result, note}]. When every entry has text, the list replaces the whole list of criteria (id and text change only while there are no runs). An entry without text only sets the verdict (result, note) of the existing criterion with that id and leaves the other criteria as they are"
      }
     },
     {
@@ -3657,8 +3657,8 @@
     "en": "Load a model (start the inference server)"
    },
    "description": {
-    "ko": "모델 불러오기(추론 서버 시작).",
-    "en": "Load a model (start the inference server)."
+    "ko": "모델 불러오기(추론 서버 시작). 앱이 시작 직후 하드웨어를 확인하는 동안(몇 초)에는 503 으로 답한다 — system state 의 device.checked 가 true 가 된 뒤 다시 한다.",
+    "en": "Load a model (start the inference server). While the app is still checking the hardware right after it starts (a few seconds), the answer is 503 — run it again once device.checked in system state is true."
    },
    "status": "exists",
    "http": {
