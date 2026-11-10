@@ -70,7 +70,7 @@
   },
   {
    "name": "deepseek2",
-   "vulkan_reason": "GLM-4.7-Flash(deepseek2 구조)는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
+   "vulkan_reason": "deepseek2 구조의 모델(GLM-4.7-Flash · Kanana-2)은 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
    "exact_only": true,
    "quants": [
     "K"

@@ -379,7 +379,7 @@
 [생성사용법쓰기]는 {
     "사용법: 커널생성 qwen2Q8 | qwen2Q8_7b | qwen2Q4_7b <출력.gl>   (--공유32|--shared32 — 공유 메모리 32 KB 장치의 판, Q8_0 · Q4_0)\n"을 쓰다.
     "       커널생성 qwen2큰|qwen2 | qwen2e5큰|qwen2e5 | qwen3큰|qwen3 | llama큰|llama | llamae6큰|llamae6 | qwen35큰|qwen35 | gemma4큰|gemma4 <Q8_0|Q4_0|K|KI|W16> <너비> <머리 수> <KV 머리 수> <확장폭> <낱말 수> <출력.gl>\n"을 쓰다.
-    "       커널생성 deepseek2큰|deepseek2 K <너비> <머리 수> <KV 머리 수(1)> <확장폭> <낱말 수> <출력.gl> --MoE K [--W16] [--MLA <q_lora_rank — 없으면 0>] [--eps5]\n"을 쓰다.
+    "       커널생성 deepseek2큰|deepseek2 K <너비> <머리 수> <KV 머리 수(1)> <확장폭> <낱말 수> <출력.gl> --MoE K [--W16] [--MLA <q_lora_rank — 없으면 0>] [--eps5] [--MLAK]\n"을 쓰다.
     "           [--빠른|--fast] [--먼|--exact] [--KV8] [--F2] [--F2B] [--W16 — 16비트 블록 가중치의 판을 더한다] [--MoE Q8_0|K] [--헤드|--head 64|96|128] [--RoPE n]\n"을 쓰다.
     "           [--공유32|--shared32] [--협력|--coop] [--레인|--lane 16x8|16x16] [--시간|--time]\n"을 쓰다.
     "       커널생성 라마재현|llama-replay <출력.gl>   (llama.cpp 실행의 비트 재현의 모듈 — 문서/라마재현.md)\n"을 쓰다.
@@ -447,6 +447,7 @@
         문자열_같은가(argv[a], "--W16")이면 { W16판 = 참. }           (* 0.12.0 12-3c — 16비트 블록 가중치(F16 · BF16 · F32)의 판을 모듈 끝에 *)
         (문자열_같은가(argv[a], "--MLA") 그리고 a + 1 < argc)이면 { MLA질의LoRA = 정수로_변환(argv[a + 1]). }     (* 0.24.0 24-2 — q 압축의 너비(0 이면 없다) *)
         (문자열_같은가(argv[a], "--eps5") 그리고 MLA판)이면 { RMS_eps = "0.00001". e5판 = 참. }      (* 0.24.0 24-2 — RMSNorm eps 10⁻⁵(GLM — 표시 eps5표시) *)
+        (문자열_같은가(argv[a], "--MLAK") 그리고 MLA판)이면 { MLA머리K = 참. }      (* 0.24.0 24-2 — 헤드마다의 k-양자화 행렬(Kanana-2 의 attn_v_b): 머리행렬곱MLAK *)
         (문자열_같은가(argv[a], "--헤드") 그리고 a + 1 < argc)이면 { 실머리 = 정수로_변환(argv[a + 1]). }     (* 0.12.0 12-3c-2 — 헤드 크기 h *)
         (문자열_같은가(argv[a], "--RoPE") 그리고 a + 1 < argc)이면 { 돌림인자 = 정수로_변환(argv[a + 1]). }   (* RoPE 차원 n_rot(없으면 h) *)
         문자열_같은가(argv[a], "--협력")이면 { 협력판 = 참. }         (* 34단계 — Vulkan 협력 행렬의 타일 판(SPIR-V 뒷단 --협력 으로만) *)
