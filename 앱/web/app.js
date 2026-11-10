@@ -384,7 +384,7 @@ const DICT = {
   "토큰 표 CSV": "Token table CSV",
   "모델 폴더 고르기": "Choose the model folder",
   "받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.": "Choose where downloaded models go. Applies from the next start.",
-  "GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the architectures the engine accepts (qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B and others). Support is checked as soon as you add a file.",
+  "GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 270M · 1B · 4B · 12B · GLM-4.7-Flash 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the architectures the engine accepts (qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 270M · 1B · 4B · 12B · GLM-4.7-Flash and others). Support is checked as soon as you add a file.",
   "이동": "Go",
   "이 폴더 선택": "Choose this folder",
   "구조 정보 없음": "No architecture info",
@@ -400,11 +400,11 @@ const DICT = {
   "Gemma 4 26B-A4B(MoE) — 아직 미지원": "Gemma 4 26B-A4B (MoE) — not supported yet",
   "전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.": "Mixture-of-experts Gemma 4 files are not accepted by the engine yet.",
   "Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Gemma 4 31B has not been run in GeulPU yet. GeulPU fetches the start of the file to check that it runs before downloading.",
-  "Gemma 3 270M · 1B — 아직 미지원": "Gemma 3 270M · 1B — not supported yet",
-  "Gemma 3 270M · 1B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.": "Gemma 3 270M · 1B files are not accepted by the engine yet. The 4B and 12B run.",
   "Gemma 3 27B — 아직 미지원": "Gemma 3 27B — not supported yet",
-  "Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.": "Gemma 3 27B files are not accepted by the engine yet. The 4B and 12B run.",
-  "흔한 Gemma 3 크기(4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Not a common Gemma 3 size (4B · 12B). GeulPU fetches the start of the file to check that it runs before downloading.",
+  "Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 270M · 1B · 4B · 12B는 실행됩니다.": "Gemma 3 27B files are not accepted by the engine yet. The 270M, 1B, 4B and 12B run.",
+  "Gemma 3 270M · 1B는 Q8_0 파일만 실행됩니다. 이 저장소에는 Q8_0 파일이 없습니다.": "Gemma 3 270M and 1B run from Q8_0 files only. This repository has no Q8_0 file.",
+  "Gemma 3 270M · 1B는 Q8_0 파일만 받습니다": "Gemma 3 270M and 1B: Q8_0 files only",
+  "흔한 Gemma 3 크기(270M · 1B · 4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Not a common Gemma 3 size (270M · 1B · 4B · 12B). GeulPU fetches the start of the file to check that it runs before downloading.",
   "분할 파일만 있음": "Split files only",
   "여러 조각으로 나뉜 파일만 있습니다. llama.cpp의 llama-gguf-split --merge로 합친 파일만 받습니다.": "Only files split into several parts. GeulPU takes a single file merged with llama.cpp's llama-gguf-split --merge.",
   "받는 형식의 파일 없음": "No file in a supported format",
@@ -696,6 +696,10 @@ const DICT = {
   "Qwen3.5의 4B 모델입니다(4비트 k-양자화, 2.6 GB). 층 넷 가운데 셋이 선형 어텐션이라 긴 글에서도 KV 캐시가 작습니다. 빠른 모드는 0.13.0부터 됩니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-25).": "Qwen3.5's 4B model (4-bit k-quant, 2.6 GB). Three layers in four use linear attention, so the KV cache stays small on long text. Fast mode works from 0.13.0. It runs on CUDA (NVIDIA GPUs) only for now, without speculative decoding or the context store. This file was run on CUDA (RTX 4070 Ti) (2026-10-25).",
   "가장 작은 Qwen3.5 모델입니다(0.8 GB). 그래픽 메모리가 아주 적은 PC에서도 실행되지만, 답의 질은 큰 모델보다 낮습니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24).": "The smallest Qwen3.5 model (0.8 GB). It runs on PCs with very little graphics memory, but its answers are weaker than a larger model's. It runs on CUDA (NVIDIA GPUs) only for now, without speculative decoding or the context store. This file was run on CUDA (RTX 4070 Ti) (2026-10-24).",
   "Google의 Gemma 4 12B 대화 모델입니다(4비트 k-양자화, 6.6 GB). 0.13.0부터 실행됩니다. 답하기 전에 생각 과정을 쓸 수 있고, 생성 설정에서 켜고 끕니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 12 GB GPU에서 문맥은 약 7,300 토큰까지입니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-10-25).": "Google's Gemma 4 12B chat model (4-bit k-quant, 6.6 GB). Runs from 0.13.0. It can write a thought process before answering, which you turn on and off in the generation settings. CUDA (NVIDIA GPU) and Exact mode only for now, without speculative decoding or the context store. On a 12 GB GPU the context goes up to about 7,300 tokens. This file was checked to run and to make tool calls on CUDA (RTX 4070 Ti) (2026-10-25).",
+  "Google의 Gemma 3 4B 대화 모델입니다(4비트 k-양자화, 2.5 GB). 0.24.0부터 실행됩니다. 텍스트만 씁니다(그림 입력은 아직 쓰지 않습니다). 채팅 템플릿에 도구가 없어 도구 호출은 받지 않습니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. Gemma 이용 약관(Gemma Terms of Use)을 따릅니다 — 금지된 사용 정책이 있고, 모델이나 파생 모델을 배포(API 등의 서비스로 제공하는 것 포함)할 때는 약관의 사용 제한을 그대로 전달하고 약관 사본을 함께 주어야 합니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-11-10).": "Google's Gemma 3 4B chat model (4-bit k-quant, 2.5 GB). Runs from 0.24.0. Text only (image input is not used yet). Its chat template has no tools, so it does not take tool calls. CUDA (NVIDIA GPU) and Exact mode only for now, without speculative decoding or the prompt cache. It is under the Gemma Terms of Use — there is a prohibited use policy, and whoever distributes the model or a derivative (including offering it as a service through an API) must pass on the terms' use restrictions and provide a copy of the terms. This file was checked to run on CUDA (RTX 4070 Ti) (2026-11-10).",
+  "Google의 Gemma 3 12B 대화 모델입니다(4비트 k-양자화, 7.3 GB). 0.24.0부터 실행됩니다. 텍스트만 씁니다(그림 입력은 아직 쓰지 않습니다). 채팅 템플릿에 도구가 없어 도구 호출은 받지 않습니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. Gemma 이용 약관(Gemma Terms of Use)을 따릅니다 — 금지된 사용 정책이 있고, 모델이나 파생 모델을 배포(API 등의 서비스로 제공하는 것 포함)할 때는 약관의 사용 제한을 그대로 전달하고 약관 사본을 함께 주어야 합니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-11-10).": "Google's Gemma 3 12B chat model (4-bit k-quant, 7.3 GB). Runs from 0.24.0. Text only (image input is not used yet). Its chat template has no tools, so it does not take tool calls. CUDA (NVIDIA GPU) and Exact mode only for now, without speculative decoding or the prompt cache. It is under the Gemma Terms of Use — there is a prohibited use policy, and whoever distributes the model or a derivative (including offering it as a service through an API) must pass on the terms' use restrictions and provide a copy of the terms. This file was checked to run on CUDA (RTX 4070 Ti) (2026-11-10).",
+  "Google의 Gemma 3 1B 대화 모델입니다(8비트 양자화, 1.1 GB). 0.24.0부터 실행됩니다. 그래픽 메모리가 적은 PC에서도 실행되지만, 답의 질은 큰 모델보다 낮습니다. 이 크기의 Gemma 3는 Q8_0 파일만 실행됩니다. 채팅 템플릿에 도구가 없어 도구 호출은 받지 않습니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. Gemma 이용 약관(Gemma Terms of Use)을 따릅니다 — 금지된 사용 정책이 있고, 모델이나 파생 모델을 배포(API 등의 서비스로 제공하는 것 포함)할 때는 약관의 사용 제한을 그대로 전달하고 약관 사본을 함께 주어야 합니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-11-10).": "Google's Gemma 3 1B chat model (8-bit quantization, 1.1 GB). Runs from 0.24.0. It runs on PCs with little graphics memory, but its answers are weaker than a larger model's. Gemma 3 of this size runs from Q8_0 files only. Its chat template has no tools, so it does not take tool calls. CUDA (NVIDIA GPU) and Exact mode only for now, without speculative decoding or the prompt cache. It is under the Gemma Terms of Use — there is a prohibited use policy, and whoever distributes the model or a derivative (including offering it as a service through an API) must pass on the terms' use restrictions and provide a copy of the terms. This file was checked to run on CUDA (RTX 4070 Ti) (2026-11-10).",
+  "Google의 Gemma 3 270M 대화 모델입니다(8비트 양자화, 0.3 GB). 0.24.0부터 실행됩니다. 그래픽 메모리가 아주 적은 PC에서도 실행되지만, 답의 질은 큰 모델보다 낮습니다. 이 크기의 Gemma 3는 Q8_0 파일만 실행됩니다. 채팅 템플릿에 도구가 없어 도구 호출은 받지 않습니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. Gemma 이용 약관(Gemma Terms of Use)을 따릅니다 — 금지된 사용 정책이 있고, 모델이나 파생 모델을 배포(API 등의 서비스로 제공하는 것 포함)할 때는 약관의 사용 제한을 그대로 전달하고 약관 사본을 함께 주어야 합니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-11-10).": "Google's Gemma 3 270M chat model (8-bit quantization, 0.3 GB). Runs from 0.24.0. It runs on PCs with very little graphics memory, but its answers are weaker than a larger model's. Gemma 3 of this size runs from Q8_0 files only. Its chat template has no tools, so it does not take tool calls. CUDA (NVIDIA GPU) and Exact mode only for now, without speculative decoding or the prompt cache. It is under the Gemma Terms of Use — there is a prohibited use policy, and whoever distributes the model or a derivative (including offering it as a service through an API) must pass on the terms' use restrictions and provide a copy of the terms. This file was checked to run on CUDA (RTX 4070 Ti) (2026-11-10).",
   "Qwen3.6의 MoE 모델입니다(35B — 전문가 256개 가운데 토큰마다 8개를 써서, 한 토큰에 쓰는 가중치는 약 3B). 그래픽 메모리에 들지 않는 전문가 가중치는 RAM(고정 메모리)에 두고 GPU가 PCIe로 바로 읽으며, 자주 쓰는 전문가를 그래픽 메모리로 옮깁니다 — 12 GB GPU에서는 RAM을 약 10.5 GB 씁니다. 아직 CUDA · 정밀 모드만 됩니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24).": "A Qwen3.6 MoE model (35B — it uses 8 of its 256 experts per token, so about 3B of weights per token). Expert weights that do not fit in graphics memory stay in RAM (pinned memory) and the GPU reads them directly over PCIe; frequently used experts are moved into graphics memory — on a 12 GB GPU it uses about 10.5 GB of RAM. CUDA and Exact mode only for now. This file was run on CUDA (RTX 4070 Ti) (2026-10-24).",
   "활성값 8비트(llama.cpp와 같은 급) — 프롬프트가 빠릅니다. 같은 설정이면 비트까지 재현되지만, 정밀과는 답이 다를 수 있습니다": "8-bit activations (llama.cpp class) — faster prompts. Reproducible bit for bit with the same settings, but answers can differ from Exact",
   "바꾸면 불러온 모델을 그 방식으로 다시 불러옵니다": "Switching reloads the loaded model in that mode",
@@ -2656,7 +2660,7 @@ function pathLabel(l) {
   return String(l || '').replace(/협력 행렬 모듈\s*([0-9x]*)/g, (_, s) => T('텐서 코어 경로') + (s ? ` (${s})` : '')).replace(/기본 모듈/g, T('기본 경로')).replace(/CUDA 모듈/g, T('CUDA 경로'));
 }
 // 10B 이상이면 문맥 · 작업 메모리를 더 크게 어림한다(목록의 "14B" · Hugging Face 에서 더한 "14.8B" 모두)
-const isBig = c => { const p = parseFloat(String(c.params || '').replace(/[^\d.]/g, '')); return p >= 10 || (!(p > 0) && /\b(1[0-9]|[2-9]\d)b\b/i.test(c.id || '')); };
+const isBig = c => { const s = String(c.params || ''); const p = parseFloat(s.replace(/[^\d.]/g, '')) * (/m\s*$/i.test(s) ? 1e-3 : 1); return p >= 10 || (!(p > 0) && /\b(1[0-9]|[2-9]\d)b\b/i.test(c.id || '')); };      // "268M"(1B 미만 — fmtParams)은 0.268B
 // 파일 이름의 형식 → 도는 장치(목록의 devices 와 같은 값): IQ4_XS 는 CUDA 만, F16 · BF16 · F32 는 공유 메모리 32 KB GPU 밖, 나머지는 어디서나
 const devicesOfQuant = q => q === 'IQ4_XS' ? 'cuda' : /F16|F32/.test(q) ? 'w16' : /K/.test(q) ? 'k' : 'all';
 // 이 PC 의 그래픽 메모리에 맞는가(목록의 크기 + 문맥 · 작업 메모리 어림)
@@ -4849,7 +4853,7 @@ async function browse(path, pick, text) {
   };
   inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
   modal(h('div', null, h('h2', null, pick ? ((text && text.title) || T('모델 폴더 고르기')) : T('GGUF 파일 추가')),
-    h('p', { class: 'small muted m0 mb12' }, pick ? ((text && text.lead) || T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.')) : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
+    h('p', { class: 'small muted m0 mb12' }, pick ? ((text && text.lead) || T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.')) : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 270M · 1B · 4B · 12B · GLM-4.7-Flash 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
     h('div', { class: 'fs-path' }, inp, h('button', { class: 'btn', onclick: go }, T('이동'))), list),
     [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('닫기')),
       pick ? h('button', { class: 'btn primary', disabled: j.path ? null : true, onclick: () => { closeModal(); pick(j.path); } }, T('이 폴더 선택')) : null].filter(Boolean), false, '.fs-item');
@@ -4890,6 +4894,13 @@ const Q3OK = [[0.55e9, 0.8e9], [1.6e9, 2.1e9], [3.9e9, 4.5e9], [7.9e9, 8.4e9], [
 // 0.12.0 12-2 — 1.4B ~ 2.5B 에는 머리 128 인 것(HyperCLOVAX-SEED 1.5B · MiniCPM5 2B)도 있어 받기 전 확인, 앱 목록에서 돌려 본 저장소는 실행
 const L3OK = [[3.1e9, 3.3e9], [7.1e9, 7.4e9], [7.9e9, 8.1e9], [70.4e9, 70.7e9]];
 const inRange = (p, rs) => rs.some(([lo, hi]) => p >= lo && p <= hi);
+// 0.24.0 — Gemma 3: 4B · 12B(같은 크기의 미세조정도)와 270M · 1B 는 실행, 27B(헤드 128)는 엔진이 받지 않는다(구조/gemma3/엔진.gl 의 설정읽기).
+// 270M · 1B 는 너비(640 · 1,152)가 256 의 배수가 아니어서 k-양자화 파일이 Q5_0 · Q8_0 을 섞어 쓴다(형식이 섞인 파일) → Q8_0 파일만 실행된다
+const G3OK = [[3.7e9, 4.4e9], [11.5e9, 12.5e9]];
+const G3Q8 = [[0.25e9, 0.29e9], [0.95e9, 1.05e9]];
+const fdQ8Only = m => fdArch(m) === 'gemma3' && inRange((m && m.gguf && m.gguf.total) || 0, G3Q8);
+// 그 저장소에서 이 형식의 파일이 실행되는가 — 구조가 받는 형식(quantOkFor) 가운데, 위의 두 크기는 Q8_0 만
+const fdQuantOk = (q, m) => quantOkFor(q, fdArch(m)) && (!fdQ8Only(m) || q === 'Q8_0');
 // 대화용이 아닌 모델(이미지 생성의 텍스트 인코더 · 임베딩 · 순위 매기기 · 음성) — 같은 구조라도 채팅에 쓰지 못한다(꼬리표 · 용도 · 이름으로)
 const NONCHAT = ['text-to-image', 'image-to-image', 'feature-extraction', 'sentence-similarity', 'text-classification', 'text-ranking',
   'text-to-speech', 'automatic-speech-recognition', 'text-to-audio', 'audio-to-audio'];
@@ -4924,28 +4935,25 @@ function fdSupport(m) {
     if (p < 10e9) return { k: 'variant', t: T('Gemma 4 E2B · E4B — 아직 미지원'), why: T('층마다 따로 쓰는 임베딩(PLE)이 있는 Gemma 4 E2B · E4B 파일은 엔진이 아직 받지 않습니다.') };
     if (p > 20e9 && p < 28e9) return { k: 'variant', t: T('Gemma 4 26B-A4B(MoE) — 아직 미지원'), why: T('전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.') };
   }
-  // 0.24.0 — Gemma 3 는 헤드 256 의 꼴(4B · 12B — 같은 크기의 미세조정도)만: 27B(헤드 128)와 270M · 1B(너비가 256 의 배수가 아니다)는 엔진이
-  // 받지 않는다(구조/gemma3/엔진.gl 의 설정읽기). 그 밖의 크기(같은 구조를 쓰는 다른 모델)는 아래에서 받기 전 확인으로
-  if (a === 'gemma3' && p) {
-    if (p < 2e9) return { k: 'variant', t: T('Gemma 3 270M · 1B — 아직 미지원'), why: T('Gemma 3 270M · 1B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.') };
-    if (p > 20e9) return { k: 'variant', t: T('Gemma 3 27B — 아직 미지원'), why: T('Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.') };
-  }
+  // 0.24.0 — Gemma 3 27B(헤드 128)는 엔진이 받지 않는다. 270M · 1B 는 아래에서 Q8_0 파일만, 그 밖의 크기(같은 구조를 쓰는 다른 모델)는 받기 전 확인으로
+  if (a === 'gemma3' && p > 20e9) return { k: 'variant', t: T('Gemma 3 27B — 아직 미지원'), why: T('Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 270M · 1B · 4B · 12B는 실행됩니다.') };
   // 파일 이름 — 받는 형식의 파일이 하나는 있어야 한다(분할 파일 · IQ2 · Q3_K · 독자 형식만 있는 저장소는 받을 것이 없다)
   if (files.length) {
     const whole = files.filter(f => !fdSplit(f));
     if (!whole.length) return { k: 'split', t: T('분할 파일만 있음'), why: T('여러 조각으로 나뉜 파일만 있습니다. llama.cpp의 llama-gguf-split --merge로 합친 파일만 받습니다.') };
     const known = whole.filter(f => quantFromName(f));      // 이름에 형식이 있는 파일 — 없으면(독자 이름) 머리를 봐야 안다
     if (!known.length) return { k: 'check', t: T('확인 필요'), why: T('파일 이름에 형식(Q4_K_M · Q8_0 등)이 없어 받을 수 있는지 모릅니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
-    const okf = known.filter(f => quantOkFor(quantFromName(f), a));
+    const okf = known.filter(f => fdQuantOk(quantFromName(f), m));
     if (!okf.length) {
+      if (fdQ8Only(m)) return { k: 'quant', t: T('받는 형식의 파일 없음'), why: T('Gemma 3 270M · 1B는 Q8_0 파일만 실행됩니다. 이 저장소에는 Q8_0 파일이 없습니다.') };
       const seen = [...new Set(known.map(f => quantFromName(f)))].slice(0, 5).join(' · ');
       return { k: 'quant', t: T('받는 형식의 파일 없음'), why: T`이 저장소의 파일 형식(${seen})은 아직 미지원입니다.` };
     }
     if (!okf.some(f => !fdUD(f))) return { k: 'check', t: T('확인 필요'), why: T('unsloth의 UD 파일은 이름의 형식 안에 다른 형식이 섞여 있을 수 있어, 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   }
   if (a === 'gemma4' && p >= 28e9) return { k: 'check', t: T('확인 필요'), why: T('Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
-  if (a === 'gemma3' && !((p >= 3.7e9 && p <= 4.4e9) || (p >= 11.5e9 && p <= 12.5e9))) {
-    return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Gemma 3 크기(4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
+  if (a === 'gemma3' && !(inRange(p, G3OK) || fdQ8Only(m))) {
+    return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Gemma 3 크기(270M · 1B · 4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   }
   if (a === 'llama') {
     if (inRange(p, L3OK) || fdChecked(m.id)) return { k: 'ok', t: T('실행 가능') };
@@ -4957,7 +4965,7 @@ function fdSupport(m) {
   }
   return { k: 'ok', t: T('실행 가능') };
 }
-const fmtParams = p => (p >= 1e9 ? (p / 1e9).toFixed(p >= 1e10 ? 0 : 1) + 'B' : Math.round(p / 1e6) + 'M');
+const fmtParams = p => (p >= 999.5e6 ? (p / 1e9).toFixed(p >= 1e10 ? 0 : 1) + 'B' : Math.round(p / 1e6) + 'M');      // 999,885,952(Gemma 3 1B)는 1000M 이 아니라 1.0B
 // 수는 만 · 억으로(55.5만 · 1.2억)
 function fmtCount(n) {
   n = n || 0;
@@ -5339,7 +5347,7 @@ function fdDetail(repo) {
 function fdBest(rows, sup, m) {
   if (fdHard(sup.k)) return null;
   const a = fdArch(m);
-  const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOkFor(q, a) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
+  const ok = rows.filter(f => { const q = quantFromName(f.path); return fdQuantOk(q, m) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
   const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: cudaArch(a) ? 'cuda' : devicesOfQuant(q), moe: moeArch(a) }); };
   const good = ok.filter(f => { const t = fit(f); return t && t.k === 'ok'; });
   if (good.length) return good.find(f => quantFromName(f.path) === 'Q4_K_M') || good.sort((a, b) => b.size - a.size)[0];
@@ -5372,6 +5380,7 @@ function fdFileRow(repo, f, sup, best, m) {
   else if (sup.k === 'variant') why = sup.t;
   else if (split) why = T('여러 조각으로 나뉜 파일 — 합친 파일만 받습니다');
   else if (q && !quantOkFor(q, a)) why = T`${q} 형식은 아직 미지원`;
+  else if (q && !fdQuantOk(q, m)) why = T('Gemma 3 270M · 1B는 Q8_0 파일만 받습니다');
   else if (!q) why = T('양자화 형식을 알 수 없는 파일');
   else if (!c && !(f.lfs && f.lfs.oid)) why = T('SHA-256 정보가 없는 파일');
   const k = repo + '/' + f.path;
