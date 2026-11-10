@@ -12,7 +12,8 @@
    <tool_call><function=…><parameter=…> XML · 4 MiniCPM 의 <function name=…><param name=…> XML · 0.13.0 5 Gemma 4 의
    <|tool_call>call:이름{열쇠:값,…}<tool_call|>(젬마도구.gl). 0.24.0 — 표지가 특수 토큰이 아니라 글인 두 꼴: 6 <tool_call>{JSON}</tool_call>
    을 글로 쓰는 템플릿(어휘에 <tool_call> 토큰이 없다 — KT Mi:dm 2.0, llama.cpp 의 Hermes 2 Pro 꼴), 7 functionary v3.1 의
-   <function=이름>{JSON}</function>(카카오 Kanana 1.5, llama.cpp 의 FUNCTIONARY_V3_1_LLAMA_3_1). 아는 꼴이 아니면 tools 는 400.
+   <function=이름>{JSON}</function>(카카오 Kanana 1.5, llama.cpp 의 FUNCTIONARY_V3_1_LLAMA_3_1). 0.24.0 24-2 — 8 GLM-4.5 · 4.7 의
+   <tool_call>이름<arg_key>키</arg_key><arg_value>값</arg_value>…</tool_call>(표지가 모두 특수 토큰). 아는 꼴이 아니면 tools 는 400.
    생각 묶음은 <think> … </think>(틀생각), 0.13.0 — 또는 Gemma 4 의 <|channel>thought … <channel|>(틀채널 — 채널 이름 'thought' 와 뒤의
    빈칸은 생각 글에 넣지 않는다). *)
 포함 "진해석.gl"
@@ -44,7 +45,7 @@
 정수 젬마따옴번호 = -1.
 정수 채널시작번호 = -1.            (* 0.13.0 — <|channel> · <channel|> *)
 정수 채널끝번호 = -1.
-문자열 도구못받음글 = "이 모델의 채팅 틀은 도구를 받지 않는다(tools) — 틀이 tools 를 그리지 않거나, GeulPU 가 읽는 호출 꼴(Qwen 의 <tool_call> JSON · Llama 3 의 JSON · Qwen3.5 · Coder 의 XML · MiniCPM 의 XML · Gemma 4 의 <|tool_call>call: · 글로 쓴 <tool_call> JSON · functionary 의 <function=이름>)이 아니다".
+문자열 도구못받음글 = "이 모델의 채팅 틀은 도구를 받지 않는다(tools) — 틀이 tools 를 그리지 않거나, GeulPU 가 읽는 호출 꼴(Qwen 의 <tool_call> JSON · Llama 3 의 JSON · Qwen3.5 · Coder 의 XML · MiniCPM 의 XML · Gemma 4 의 <|tool_call>call: · 글로 쓴 <tool_call> JSON · functionary 의 <function=이름> · GLM 의 <arg_key>)이 아니다".
 
 (* 그린 프롬프트가 생각을 연 채 끝나는가('<think>' 뒤에 줄바꿈뿐 — 0.13.0 틀채널 이면 '<|channel>thought' 뒤에 빈칸뿐) *)
 [바이트열 참조 b를 끝이생각열기인가]는 -> 참거짓 {
@@ -102,11 +103,13 @@
     틀에있나("<|tool_call>call:")이면 { 틀도구꼴 = 5. }                                        (* 0.13.0 — Gemma 4 *)
     아니면 (틀에있나("<function=") 그리고 틀에있나("<parameter="))이면 { 틀도구꼴 = 3. }
     아니면 (틀에있나("<function name=") 그리고 틀에있나("<param name="))이면 { 틀도구꼴 = 4. }
+    아니면 (틀에있나("<arg_key>") 그리고 틀에있나("<arg_value>"))이면 { 틀도구꼴 = 8. }                (* 0.24.0 24-2 — GLM-4.5 · 4.7 *)
     아니면 (틀에있나("<tool_call>") 그리고 틀에있나("tojson"))이면 { 틀도구꼴 = 1. }
     아니면 틀에있나("<function=")이면 { 틀도구꼴 = 7. }                                          (* 0.24.0 — functionary v3.1(<parameter= 가 없다) *)
     아니면 (라마BPE 그리고 틀에있나("<|start_header_id|>") 그리고 틀에있나("tojson"))이면 { 틀도구꼴 = 2. }
     (틀도구꼴 == 1 그리고 (도구시작번호 < 0 또는 도구끝번호 < 0))이면 { 틀도구꼴 = 6. }               (* 0.24.0 — <tool_call> 을 글로 쓴다 *)
     (틀도구꼴 == 3 그리고 (도구시작번호 < 0 또는 도구끝번호 < 0))이면 { 틀도구꼴 = 0. }
+    (틀도구꼴 == 8 그리고 (도구시작번호 < 0 또는 도구끝번호 < 0))이면 { 틀도구꼴 = 0. }            (* 0.24.0 24-2 — GLM 의 표지는 특수 토큰 *)
     (틀도구꼴 == 4 그리고 (함수시작번호 < 0 또는 함수끝번호 < 0 또는 매개시작번호 < 0 또는 매개끝번호 < 0))이면 { 틀도구꼴 = 0. }
     (틀도구꼴 == 5 그리고 (젬마도구시작번호 < 0 또는 젬마도구끝번호 < 0 또는 젬마따옴번호 < 0))이면 { 틀도구꼴 = 0. }
     아닌 틀도구그림이면 { 틀도구꼴 = 0. }
