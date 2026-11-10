@@ -179,6 +179,7 @@ GGUF 파일 하나를 받습니다(여러 조각이면 llama.cpp 의 `llama-gguf
 | `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B(0.13.0 부터 — ggml-org · lmstudio 의 Q4_K_M) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K, 0.16.0 부터 IQ4_XS · F16 · BF16 · F32 도(행렬마다 섞인 파일도) | CUDA, 정밀 · 빠름(빠름은 0.13.0 부터) |
 | `qwen35moe` | Qwen3.6-35B-A3B(MoE — 그래픽 메모리에 들지 않는 전문가는 RAM 에) | Q4_K_M(전문가 Q4_K · Q5_K · Q6_K 또는 Q8_0), 0.16.0 부터 IQ4_XS · 16비트 행렬도 | CUDA, 정밀 |
 | `gemma4` | Gemma 4 12B instruct(0.13.0 부터) | 행렬이 모두 k-양자화(Q4_K_M 등)이거나 모두 Q8_0 인 파일 | CUDA, 정밀 |
+| `deepseek2` | GLM-4.7-Flash · Kanana-2-30B-A3B(0.24.0 부터 — MLA 어텐션 + MoE, 그래픽 메모리에 들지 않는 전문가는 RAM 에) | k-양자화(Q4_K_M 등 — 헤드마다의 행렬은 Q8_0 · Q5_0 도) | CUDA, 정밀 |
 
 GeulPU 가 직접 돌려 본 파일(앱의 **GeulPU 확인됨** — 앱에서 받으면 바로 씁니다)을 그래픽 메모리로 나누면:
 
@@ -187,17 +188,17 @@ GeulPU 가 직접 돌려 본 파일(앱의 **GeulPU 확인됨** — 앱에서 �
 | 4 GB | Qwen3-0.6B Q8_0 · Qwen3.5-0.8B Q8_0 · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M · MiniCPM5-2B Q4_K_M |
 | 6 GB | Qwen3-1.7B Q8_0 · Qwen2.5-1.5B-Instruct Q8_0 · Qwen3-4B Q4_K_M · Qwen3.5-4B Q4_K_M · Llama-3.2-3B-Instruct Q8_0 · Qwen2.5-3B-Instruct Q8_0 |
 | 8 GB | Qwen3-8B Q4_K_M · Qwen3.5-9B Q4_K_M · Qwen2.5-7B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-7B Q4_K_M · DeepSeek-R1-Distill-Llama-8B Q4_K_M · Llama-3.1-8B-Instruct Q4_K_M · Mistral-7B-Instruct-v0.3 Q4_K_M · Qwen3-4B Q8_0 |
-| 12 GB | Qwen3-8B Q8_0 · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 · Llama-3.1-8B-Instruct Q8_0 · Mistral-7B-Instruct-v0.3 Q8_0 · Gemma-4-12B-it Q4_K_M(0.13.0 부터) · Qwen3.6-35B-A3B Q4_K_M(RAM 약 10.5 GB 더) |
+| 12 GB | Qwen3-8B Q8_0 · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 · Llama-3.1-8B-Instruct Q8_0 · Mistral-7B-Instruct-v0.3 Q8_0 · Gemma-4-12B-it Q4_K_M(0.13.0 부터) · Qwen3.6-35B-A3B Q4_K_M(RAM 약 10.5 GB 더) · GLM-4.7-Flash Q4_K_M(0.24.0 부터, RAM 약 10 GB 더) · Kanana-2-30B-A3B Q4_K_M(0.24.0 부터, RAM 약 11 GB 더) |
 | 16 GB 이상 | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M |
 
 헤드 크기 64 · 96 · 128 을 받고, RoPE 를 헤드의 일부에만 거는 모델도 받습니다. 미세조정 모델도 돕니다 — 서버가 모델 파일의 채팅 템플릿을
 그대로 실행합니다(transformers와 바이트까지 같은 jinja 해석기). Qwen2.5(7B 이상) · Qwen3는 YaRN으로 문맥 131,072 토큰까지 받습니다.
 메타데이터에 RoPE 늘이기가 이미 든 파일(`rope.scaling.type` — 커뮤니티의 "128K" GGUF 등)은 어느 구조든 받지 않습니다 —
 Qwen2.5 · Qwen3 는 같은 모델의 늘이기 없는 파일이 이 YaRN 으로 131,072 토큰까지 갑니다. GPU: NVIDIA RTX 30 시리즈 이상은 CUDA, 그
-밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버처럼 공유 메모리가 32 KB인 GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음). Qwen3.5 · Qwen3.6 MoE · Gemma 4 는 아직 CUDA 에서만 돕니다. 릴리스는 Windows x64 · Linux
-x86-64용입니다(Linux는 CUDA만 — WSL2와 실제 Linux에서 시험). 아직 안 되는 것: 다른 구조(Phi 등), Gemma 4 의 E2B · E4B · 26B-A4B(MoE) · 31B, 다른 MoE
-모델(Mixtral · Qwen3-30B-A3B 등), 이미지 입력, Q2_K · Q3_K · IQ4_XS 밖의 IQ 형식(IQ4_XS 는 CUDA 에서), macOS
-([자세히 — 크기 · 라이선스 · GPU 마다](사용안내.md#지원하는-모델)). 앱의 **모델 찾기**는 Hugging Face 의 GGUF 모델 가운데 GeulPU 에서 실행되는
+밖의 Vulkan 1.3 GPU(AMD Radeon RX 9060 XT에서 확인 — AMD의 Windows 드라이버처럼 공유 메모리가 32 KB인 GPU에서는 F16 · BF16 · F32 파일이 아직 돌지 않음). Qwen3.5 · Qwen3.6 MoE · Gemma 4 · deepseek2 모델은 아직 CUDA 에서만 돕니다. 릴리스는 Windows x64 · Linux
+x86-64용입니다(Linux는 CUDA만 — WSL2와 실제 Linux에서 시험). 아직 안 되는 것: 다른 구조(Phi · GLM-4.5 · 4.6 · 4.7 · 5.x 등 — GLM 은 GLM-4.7-Flash 만), Gemma 4 의 E2B · E4B · 26B-A4B(MoE) · 31B, 다른 MoE
+모델(Mixtral · Qwen3-30B-A3B · DeepSeek-V3 등), 이미지 입력, Q2_K · Q3_K · IQ4_XS 밖의 IQ 형식(IQ4_XS 는 CUDA 에서), macOS
+([자세히 — 크기 · 라이선스 · GPU 마다](사용안내.md#지원하는-모델), 환경 · 구조 · 형식 · 모델 파일마다 한 벌의 표: [지원범위.md](지원범위.md)). 앱의 **모델 찾기**는 Hugging Face 의 GGUF 모델 가운데 GeulPU 에서 실행되는
 것을 보이고(실행 안 되는 것은 켜면 까닭과 함께), 파일마다 이 PC 의 그래픽 메모리에 맞는지 알려 줍니다.
 
 ## 동작 방식
@@ -222,6 +223,7 @@ PTX(NVIDIA)나 SPIR-V(Vulkan)로 바꿉니다. 추론 서버는 그 커널을 �
 | | 한국어 | English |
 |---|---|---|
 | 사용 안내 — 설치 · 모델 · 채팅 · 설정 · API · 문제 해결 | [사용안내.md](사용안내.md) | [docs/user-guide.md](docs/user-guide.md) |
+| 지원 범위 — 환경 · 구조 · 형식 · 모델 파일 | [지원범위.md](지원범위.md) | [docs/support.md](docs/support.md) |
 | 디버거 안내서 | [디버거안내.md](디버거안내.md) | [docs/debugger-guide.md](docs/debugger-guide.md) |
 | 연구자 안내서 | [연구자안내.md](연구자안내.md) | [docs/research-guide.md](docs/research-guide.md) |
 | 모델 평가 안내서 — GGUF 만들기 · 확인 · 고치기 | [모델평가안내.md](모델평가안내.md) | [docs/model-evaluation-guide.md](docs/model-evaluation-guide.md) |

@@ -221,6 +221,9 @@ def 엔진규칙(모, 확인):
     모["먼됨"] = bool(확인.get("far_ok", True))
     모["KV8"] = bool(확인.get("kv8_ok")) and not 모["정밀만"]
     모["빠른어텐션"] = ("F2B" if 확인.get("f2b") else "F2") if 모["KV8"] and 확인.get("fast_attention_ok") else None
+    모["CUDA만"] = bool(확인.get("vulkan_reason"))                       # 0.24.0 24-2 — 목록 초안의 devices · 설명
+    모["전문가"] = int(확인.get("experts") or 0)                          # 0.24.0 24-2 — MoE(엔진의 모델 확인 — 목록의 moe · expert_bytes)
+    모["전문가바이트"] = int(확인.get("expert_bytes") or 0)
 
 
 def 변형들(모):
@@ -738,7 +741,17 @@ def 단계목록(gguf, 모, 확인, 저장소, 앱봄):
     if 확인.get("문맥") and 확인["문맥"] < 8192:
         ko.append("문맥 길이는 엔진이 그래픽 메모리에 맞춰 자동으로 줄입니다.")
         en.append("The engine reduces the context length automatically to fit the graphics memory.")
-    if 모["형식글"] in ("Q8_0", "Q4_0"):
+    if 모.get("전문가"):                             # 0.24.0 24-2 — MoE: 전문가는 RAM 에(앱/일.gl 의 알림과 같은 뜻)
+        ko.append("그래픽 메모리에 들지 않는 전문가 가중치는 RAM(고정 메모리)에 둡니다.")
+        en.append("Expert weights that do not fit in graphics memory stay in RAM (pinned memory).")
+    if 모.get("CUDA만"):                             # 0.24.0 24-2 — 엔진이 Vulkan 의 까닭을 낸 구조
+        if 모.get("정밀만"):
+            ko.append("아직 CUDA(NVIDIA GPU) · 정밀 모드만 됩니다.")
+            en.append("For now it runs only on CUDA (NVIDIA GPUs) in exact mode.")
+        else:
+            ko.append("아직 CUDA(NVIDIA GPU)에서만 실행됩니다.")
+            en.append("For now it runs only on CUDA (NVIDIA GPUs).")
+    elif 모["형식글"] in ("Q8_0", "Q4_0"):
         ko.append(f"{모['형식글']} 파일이라 공유 메모리가 32 KB인 GPU(AMD 등)에서도 실행됩니다.")
         en.append(f"As a {모['형식글']} file it also runs on GPUs with 32 KB of shared memory (AMD and others).")
     elif 모["형식글"] == "K" and (모["헤드크기"] or 모["너비"] // max(모["헤드"], 1)) == 128:
@@ -767,8 +780,11 @@ def 단계목록(gguf, 모, 확인, 저장소, 앱봄):
     항목 = {"id": os.path.splitext(파일)[0].lower(), "name": 모["이름"] or os.path.splitext(파일)[0], "params": params, "quant": 양자,
             "file": 파일, "url": f"https://huggingface.co/{저장소}/resolve/main/{파일}" if 저장소 else "<저장소의 resolve/main 주소>",
             "source": f"huggingface.co/{저장소}" if 저장소 else "<huggingface.co/저장소>", "size": os.path.getsize(gguf),
-            "sha256": h.hexdigest(), "license": 라이선스, "check": "tested", "devices": "all" if 모["형식글"] in ("Q8_0", "Q4_0") else "k",
-            "note": note}
+            "sha256": h.hexdigest(), "license": 라이선스, "check": "tested",
+            "devices": "cuda" if 모.get("CUDA만") else "all" if 모["형식글"] in ("Q8_0", "Q4_0") else "k", "note": note}
+    if 모.get("전문가"):                             # 0.24.0 24-2 — 앱의 메모리 어림(app.js fitOf)
+        항목["moe"] = True
+        항목["expert_bytes"] = 모["전문가바이트"]
     번역 = f'  {json.dumps(note, ensure_ascii=False)}: {json.dumps("<model description (size GB)> " + " ".join(en), ensure_ascii=False)},'
     with open(os.path.join(작업, "목록초안.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump({"models.json 항목": 항목, "app.js DICT 줄": 번역}, f, ensure_ascii=False, indent=2)

@@ -191,6 +191,7 @@ GeulPU takes a single GGUF file (merge split files with llama.cpp's `llama-gguf-
 | `qwen35` | Qwen3.5 0.8B · 4B · 9B, Qwen3.8-27B (from 0.13.0 — the ggml-org and lmstudio Q4_K_M files) | Q8_0 · Q4_K_M · Q5_K_M · Q6_K, from 0.16.0 also IQ4_XS · F16 · BF16 · F32 (files may mix them from matrix to matrix) | CUDA, Exact · Fast (Fast from 0.13.0) |
 | `qwen35moe` | Qwen3.6-35B-A3B (MoE — experts that do not fit in graphics memory stay in RAM) | Q4_K_M (experts Q4_K · Q5_K · Q6_K or Q8_0), from 0.16.0 also IQ4_XS and 16-bit matrices | CUDA, Exact |
 | `gemma4` | Gemma 4 12B instruct (from 0.13.0) | files whose matrices are all k-quants (Q4_K_M, …) or all Q8_0 | CUDA, Exact |
+| `deepseek2` | GLM-4.7-Flash · Kanana-2-30B-A3B (from 0.24.0 — MLA attention + MoE, experts that do not fit in graphics memory stay in RAM) | k-quants (Q4_K_M, …; per-head matrices also Q8_0 · Q5_0) | CUDA, Exact |
 
 Files GeulPU has run itself (**Verified by GeulPU** in the app — download them there and they are ready), by graphics memory:
 
@@ -199,7 +200,7 @@ Files GeulPU has run itself (**Verified by GeulPU** in the app — download them
 | 4 GB | Qwen3-0.6B Q8_0 · Qwen3.5-0.8B Q8_0 · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M · MiniCPM5-2B Q4_K_M |
 | 6 GB | Qwen3-1.7B Q8_0 · Qwen2.5-1.5B-Instruct Q8_0 · Qwen3-4B Q4_K_M · Qwen3.5-4B Q4_K_M · Llama-3.2-3B-Instruct Q8_0 · Qwen2.5-3B-Instruct Q8_0 |
 | 8 GB | Qwen3-8B Q4_K_M · Qwen3.5-9B Q4_K_M · Qwen2.5-7B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-7B Q4_K_M · DeepSeek-R1-Distill-Llama-8B Q4_K_M · Llama-3.1-8B-Instruct Q4_K_M · Mistral-7B-Instruct-v0.3 Q4_K_M · Qwen3-4B Q8_0 |
-| 12 GB | Qwen3-8B Q8_0 · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 · Llama-3.1-8B-Instruct Q8_0 · Mistral-7B-Instruct-v0.3 Q8_0 · Gemma-4-12B-it Q4_K_M (from 0.13.0) · Qwen3.6-35B-A3B Q4_K_M (plus about 10.5 GB of RAM) |
+| 12 GB | Qwen3-8B Q8_0 · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 · Llama-3.1-8B-Instruct Q8_0 · Mistral-7B-Instruct-v0.3 Q8_0 · Gemma-4-12B-it Q4_K_M (from 0.13.0) · Qwen3.6-35B-A3B Q4_K_M (plus about 10.5 GB of RAM) · GLM-4.7-Flash Q4_K_M (from 0.24.0, plus about 10 GB of RAM) · Kanana-2-30B-A3B Q4_K_M (from 0.24.0, plus about 11 GB of RAM) |
 | 16 GB or more | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M |
 
 Head sizes 64 · 96 · 128 are accepted, including models that apply RoPE to only part of each head. Fine-tunes of these models run too —
@@ -208,10 +209,11 @@ larger) and Qwen3 take up to 131,072 tokens of context with YaRN. Files whose me
 (`rope.scaling.type` — community "128K" GGUFs and the like) are refused in every architecture; for Qwen2.5 · Qwen3, the same model's
 file without it reaches 131,072 tokens through this YaRN. GPUs: NVIDIA RTX 30-series and newer on CUDA; other GPUs with Vulkan 1.3
 (verified on an AMD Radeon RX 9060 XT — on GPUs with 32 KB of shared memory, such as AMD's Windows driver, F16 · BF16 · F32 files
-don't run yet). Qwen3.5, Qwen3.6 MoE and Gemma 4 run on CUDA only for now. Releases are built for Windows x64 and Linux
-x86-64 (Linux: CUDA only — tested under WSL2 and on native Linux). Not yet: other architectures (Phi, …), Gemma 4's E2B · E4B · 26B-A4B (MoE) · 31B, other
-mixture-of-experts models (Mixtral, Qwen3-30B-A3B, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS (which runs on CUDA),
-macOS ([details — sizes, licenses, GPUs](docs/user-guide.md#supported-models)). The app's **Find models** browses the GGUF models on Hugging
+don't run yet). Qwen3.5, Qwen3.6 MoE, Gemma 4 and the deepseek2 models run on CUDA only for now. Releases are built for Windows x64 and Linux
+x86-64 (Linux: CUDA only — tested under WSL2 and on native Linux). Not yet: other architectures (Phi, GLM-4.5 · 4.6 · 4.7 · 5.x — only GLM-4.7-Flash runs, …), Gemma 4's E2B · E4B · 26B-A4B (MoE) · 31B, other
+mixture-of-experts models (Mixtral, Qwen3-30B-A3B, DeepSeek-V3, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS (which runs on CUDA),
+macOS ([details — sizes, licenses, GPUs](docs/user-guide.md#supported-models); every environment, architecture, format and model file in
+one set of tables: [docs/support.md](docs/support.md)). The app's **Find models** browses the GGUF models on Hugging
 Face, shows only those GeulPU runs (the others on request, with the reason) and marks for each file whether it fits your graphics memory.
 
 ## How it works
@@ -236,6 +238,7 @@ directly. Activations are block integers, sums are exact on integer tensor cores
 | | English | 한국어 |
 |---|---|---|
 | User guide — install, models, chat, settings, API, troubleshooting | [docs/user-guide.md](docs/user-guide.md) | [사용안내.md](사용안내.md) |
+| What GeulPU runs — environments, architectures, formats, model files | [docs/support.md](docs/support.md) | [지원범위.md](지원범위.md) |
 | Debugger guide | [docs/debugger-guide.md](docs/debugger-guide.md) | [디버거안내.md](디버거안내.md) |
 | Research guide | [docs/research-guide.md](docs/research-guide.md) | [연구자안내.md](연구자안내.md) |
 | Model evaluation guide — make, check and improve GGUF files | [docs/model-evaluation-guide.md](docs/model-evaluation-guide.md) | [모델평가안내.md](모델평가안내.md) |
