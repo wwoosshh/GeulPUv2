@@ -46,6 +46,10 @@ is split into blocks of 32 values, and for each block:
 The activation grid is 2⁻¹⁴ of the block maximum — 128 times finer than llama.cpp's re-quantization of activations to 8 bits (2⁻⁷).
 (A four-digit variant with a 2⁻²⁹ grid is also part of the contract and was used for GPT-2 in the early stages.)
 
+**Q5_0** (0.24.0 24-2 — Kanana-2's `attn_k_b`): a block of 32 = fp16 scale d · 32 high bits (4 bytes) · 16 bytes of nibbles,
+q_j = (nibble | high bit · 16) − 16 ∈ [−16, 15] (unpacked like llama.cpp's dequantize_row_q5_0) — the Q8_0 formula of steps 1 – 4 as it is.
+The engine converts the blocks to Q8_0 when it loads them (q fits in int8, so the values are the same).
+
 ### 1.1 k-quants (stage 26)
 
 Weights are the file's integers and scales as stored. Activations are the same 32-value blocks with two digits as above.
@@ -357,6 +361,38 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
    The layers are x ← x + RMSNorm(attention(RMSNorm(x; `attn_norm`)); `post_attention_norm`), x ← x + RMSNorm(GeGLU(RMSNorm(x; `ffn_norm`));
    `post_ffw_norm`), x ← x · s_l. This is llama.cpp's `src/models/gemma4.cpp` (master 7894e8b) with its order fixed (PLE, KV sharing and
    MoE — E2B · E4B · 26B-A4B — are not covered yet).
+13. **deepseek2 — MLA attention and sigmoid-routed MoE** (0.24.0 24-2 — architecture `deepseek2`: GLM-4.7-Flash · Kanana-2-30B-A3B,
+   [`구조/deepseek2/기록.md`](../구조/deepseek2/기록.md)): H heads, kv compression C = `attention.kv_lora_rank`, RoPE dimension
+   R = `rope.dimension_count`, per-head nope N = `attention.key_length_mla` − R, value V = `attention.value_length_mla` (GLM: 20 · 512 · 64 ·
+   192 · 256, Kanana-2: 32 · 512 · 64 · 128 · 128). The other blocks are items 1 – 5 as they are (no biases — 0 is added).
+   1. **q**: h = RMSNorm(x; `attn_norm`) (item 1). With `attn_q_a`, a = `attn_q_a` · h, a′ = RMSNorm(a; `attn_q_a_norm`) (item 1 — width
+      `q_lora_rank`), q = `attn_q_b` · a′; without it q = `attn_q` · h. Head i of q is [nope N | rope R].
+   2. **kv**: kv = `attn_kv_a_mqa` · h, c = kv[0, C), k_pe = kv[C, C + R), c′ = RMSNorm(c; `attn_kv_a_norm`) (item 1 — width C).
+   3. **RoPE (NORM — adjacent pairs)**: with the table of item 2 of "Head size and RoPE dimensions" (θ_i = θ^(−2i/R), [position][R/2]) the
+      pairs (2i, 2i + 1) are rotated — x′_(2i) = fma(x_(2i), cos, −(x_(2i+1) · sin)), x′_(2i+1) = fma(x_(2i+1), cos, x_(2i) · sin) (the formula of
+      item 2 of head size 128 with different pairs). Applied to the rope part of q (per head) and to k_pe.
+   4. **Weight absorption**: per head i, q_abs,i = `attn_k_b`[i] · q_nope,i — the contract of section 1 (the input is q_nope,i's N elements in the
+      16-bit format, the weight is head i's C × N matrix). Q_i = [q_abs,i | q′_pe,i] (C + R elements).
+   5. **KV**: key K = [c′ | k′_pe] (C + R — one KV head), value = c′. Both in the 16-bit format of section 2 — the value's C/32 blocks are the
+      same integers and exponents as key blocks 0 … C/32 − 1.
+   6. **Attention**: every query head reads the one KV head (item 4's GQA). Sections 2 and 3 as they are — the score chain runs over the key's
+      (C + R)/32 blocks, the weighted sum over the value's C/32 blocks, score scale c = fp32(1/√(N + R)) (the place of item 1 of "Head size
+      and RoPE dimensions" — exact 1/16 for GLM, fp32(1/√192) = 0x3D93CD3A for Kanana-2). Output o_i = O_i / L_i (C elements).
+   7. **Value expansion**: o′_i = `attn_v_b`[i] · o_i — section 1 (input o_i in the 16-bit format, weight head i's V × C matrix). Output =
+      `attn_output` · [o′_0 | … | o′_(H−1)], x ← x + output (one addition).
+   8. **FFN**: h₂ = RMSNorm(x; `ffn_norm`). Layers l < `leading_dense_block_count` use item 3's SwiGLU. The later layers are MoE — only the
+      differences from item 11:
+      1. Router l_e = `ffn_gate_inp`_e · h₂ (item 11.1 — no shared-gate column). p_e = σ(l_e) (the σ of item 9).
+      2. Selection score s_e = p_e + b_e (one fp32 addition — b = `exp_probs_b.bias`, s = p without it). Top k by descending s (item 11.3 on s).
+      3. The weights are the chosen experts' p: when `expert_weights_norm` is true, item 11.4 (sum in rank order · max(sum, 2⁻¹⁴) · one
+         division), then w_r ← w_r · β (one product — β = fp32 of `expert_weights_scale`: GLM 0x3FE66666 · Kanana-2 0x401CAC08, no product
+         when it is 1).
+      4. Experts and sum as in items 11.5 and 11.6. Shared expert y_s = down_s(SwiGLU(gate_s · h₂, up_s · h₂)) (`ffn_*_shexp` — several shared
+         experts are one matrix in the file), o ← o + y_s (one addition — item 11.7's σ gate is absent), x ← x + o.
+   9. **End**: RMSNorm(x; `output_norm`), logits = `output` · x (section 1).
+   The layers are x ← x + attention (1 – 7), x ← x + FFN (8). This is llama.cpp's `src/models/deepseek2.cpp` and `build_moe_ffn` (b12224) with
+   its order fixed. CPU reference: [`시험/참조deepseek2.py`](../시험/참조deepseek2.py) (`rope이웃`, `시그모이드전문가` and `어텐션` with a value
+   width different from the key in `계약/정수계약.py`), math reference: [`시험/deepseek2수학.py`](../시험/deepseek2수학.py).
 
 ### Head size 128 (stage 22 — Qwen2.5-7B and larger)
 

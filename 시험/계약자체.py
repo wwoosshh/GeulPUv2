@@ -18,6 +18,8 @@
      바꿔도 같은 비트, 행 = 계약 문장대로 따로 접은 것)
   11. Jacobian lens 의 계약 5.4(#96 2단계): J곱 대 계약 문장을 칸 하나씩 옮긴 배정밀도의 차례 합 + 정확한 유리수의 규칙 R 반올림(반실수의
      비정규수 · −0 · 65504, 차례가 값을 바꾸는 상쇄, 2⁻¹²⁶ 문턱 둘레), J 파일(safetensors)의 쓰기 · 읽기와 명세대로 손으로 만든 파일, 거절
+  12. deepseek2 의 계약 4.13 과 1 절의 Q5_0(0.24.0 24-2): 상수, Q5_0 풀기 대 llama.cpp 의 식, NORM RoPE 대 계약 문장 · NeoX 식, 시그모이드
+     라우팅 대 계약 문장, 값의 폭이 키와 다른 어텐션
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
@@ -828,6 +830,70 @@ def 시험_gemma4(r):
     확인("계약 4.12 — 슬라이딩 윈도의 행 = 계약 문장대로 따로 접은 것(보는 조각 · 묶음만, 첫 것이 처음 값)", 같음)
 
 
+def 시험_deepseek2(r):
+    """0.24.0 24-2 — 계약 4.13(deepseek2)과 1 절의 Q5_0: 상수의 비트, Q5_0 풀기 대 llama.cpp 의 식을 칸 하나씩, NORM RoPE 대 계약 문장(스칼라)과
+    차원을 바꾼 NeoX 식, 시그모이드 라우팅 대 계약 문장(스칼라 — 같은 점수는 작은 번호 먼저), 값의 폭이 키와 다른 어텐션 = 값을 키 전체로
+    둔 어텐션의 앞 열(그룹 둘)."""
+    확인("계약 4.13 — 상수 fp32(1/√192) · 1/16 · β 둘의 비트",
+         int(f32(1.0 / np.sqrt(np.float64(192))).view(np.int32)) == 0x3D93CD3A and f32(1.0 / np.sqrt(np.float64(256))) == f32(0.0625) and
+         int(f32(1.7999999523162842).view(np.int32)) == 0x3FE66666 and int(f32(2.447999954223633).view(np.int32)) == 0x401CAC08)
+    N, K = 5, 96
+    raw = r.integers(0, 256, (N, K // 32, 22), dtype=np.uint8)
+    d16 = (r.standard_normal((N, K // 32)) * 0.01).astype(np.float16)
+    raw[:, :, :2] = d16.view(np.uint8).reshape(N, K // 32, 2)
+    q, d = C.풀기Q5_0(raw.reshape(-1), N, K)
+    같음 = True
+    for n in range(N):
+        for b in range(K // 32):
+            bl = raw[n, b]
+            qh = int.from_bytes(bytes(bl[2:6]), "little")
+            for j in range(16):                                        # llama.cpp 의 dequantize_row_q5_0 그대로
+                x0 = ((int(bl[6 + j]) & 0x0F) | (((qh >> j) << 4) & 0x10)) - 16
+                x1 = ((int(bl[6 + j]) >> 4) | ((qh >> (j + 12)) & 0x10)) - 16
+                같음 &= int(q[n, 32 * b + j]) == x0 and int(q[n, 32 * b + j + 16]) == x1
+            같음 &= bool(d[n, b] == f32(d16[n, b]))
+    확인("Q5_0 — 풀기 대 llama.cpp 의 dequantize_row_q5_0(칸 하나씩)", 같음)
+    Rr = 64
+    cos, sin = C.rope표(64, 1e6, hd=Rr)
+    위치 = np.array([0, 1, 2, 5, 17, 30, 31, 40, 63])
+    x = (r.standard_normal((len(위치), Rr)) * 3).astype(f32)
+    y = C.rope이웃(x, cos, sin, 위치)
+    문장 = np.empty_like(y)
+    for t in range(len(위치)):
+        for i in range(Rr // 2):
+            c_, s_ = cos[위치[t], i], sin[위치[t], i]
+            문장[t, 2 * i] = C.fma32(x[t, 2 * i], c_, -C.곱(x[t, 2 * i + 1], s_))
+            문장[t, 2 * i + 1] = C.fma32(x[t, 2 * i + 1], c_, C.곱(x[t, 2 * i], s_))
+    짝 = np.concatenate([np.arange(0, Rr, 2), np.arange(1, Rr, 2)])        # 이웃 짝 (2i, 2i + 1) → 반쪽 짝 (i, i + R/2)
+    neox = np.empty_like(y)
+    neox[:, 짝] = C.rope(np.ascontiguousarray(x[:, 짝]), cos, sin, 위치)
+    확인("계약 4.13 3 — NORM RoPE 대 계약 문장(스칼라) · 차원을 바꾼 NeoX 식", 다른칸(y, 문장) == 0 and 다른칸(y, neox) == 0)
+    T, E, k, β = 6, 64, 4, 1.7999999523162842
+    l = (r.standard_normal((T, E)) * 2).astype(f32)
+    b = (r.standard_normal(E) * 0.01).astype(f32)
+    l[1, 3] = l[1, 7] = f32(5.0)                                       # 같은 점수 둘(상위 k 안)
+    b[7] = b[3]
+    고른, w = C.시그모이드전문가(l, b, k, True, β)
+    같음 = True
+    for t in range(T):
+        p = [C.시그모이드(l[t, e]) for e in range(E)]
+        s = [C.더(p[e], b[e]) for e in range(E)]
+        순 = sorted(range(E), key=lambda e: (-float(s[e]), e))[:k]
+        합 = p[순[0]]
+        for e in 순[1:]:
+            합 = C.더(합, p[e])
+        ww = np.array([C.곱(C.나눔(p[e], max(합, f32(2.0 ** -14))), f32(β)) for e in 순], f32)
+        같음 &= 고른[t].tolist() == 순 and 다른칸(w[t], ww) == 0
+    줄1 = 고른[1].tolist()
+    확인("계약 4.13 8 — 시그모이드 라우팅 대 계약 문장(스칼라 — 같은 점수는 작은 번호 먼저)",
+         같음 and 3 in 줄1 and 7 in 줄1 and 줄1.index(3) + 1 == 줄1.index(7), str(줄1))
+    n, Dk, Dv = 1100, 96, 64
+    q, kk = (r.standard_normal((n, Dk)).astype(f32) for _ in range(2))
+    전체 = C.어텐션(q, kk, kk, 눈금=f32(0.0625))
+    앞 = C.어텐션(q, kk, np.ascontiguousarray(kk[:, :Dv]), 눈금=f32(0.0625))
+    확인("계약 4.13 6 — 값의 폭이 키와 다른 어텐션 = 값을 키 전체로 둔 어텐션의 앞 열(그룹 둘)", 다른칸(앞, 전체[:, :Dv]) == 0)
+
+
 def _J곱한칸(J행, x행):
     """계약 5.4 의 2 를 칸 하나씩 — 파이썬 실수(배정밀도)로 s ← s + J · x 를 j 차례로(규칙 R 의 입력 읽기), 끝은 정확한 유리수에서 규칙 R."""
     s = 0.0
@@ -919,6 +985,7 @@ def main():
     시험_GDN(r)
     시험_MoE(r)
     시험_gemma4(r)
+    시험_deepseek2(r)
     시험_J곱(r)
     시험_J파일(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
