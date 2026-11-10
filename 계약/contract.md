@@ -419,8 +419,10 @@ returns it in `geulpu.seed`, so the response can be reproduced. The order differ
 to the temperature-1 distribution and the temperature last. This contract applies the temperature first (the Hugging Face order).
 
 **Inside a tool call (0.15.0).** When the request has tools and the reply has opened a Qwen-style tool call (`<tool_call>` …
-`</tool_call>`, JSON or XML), special tokens (GGUF types 3 and 4 — control and user-defined) are removed from the candidates, except the
-closing `</tool_call>` and the tokens that end generation. Greedy decoding picks the largest z among the remaining indices (the smaller
+`</tool_call>`, JSON or XML — and since 0.24.0 the two forms whose markers are plain text rather than special tokens: `<tool_call>` …
+`</tool_call>` written as text, and functionary's `<function=` … `</function>`), special tokens (GGUF types 3 and 4 — control and
+user-defined) are removed from the candidates, except the closing `</tool_call>` (when it is a special token) and the tokens that end
+generation. Greedy decoding picks the largest z among the remaining indices (the smaller
 index on ties); otherwise steps 1–9 above run on the row with the removed tokens' z set to −∞ (same seed and step). Outside a call, and
 at steps inside a call where the chosen token is not a removed one, nothing changes. Why: when the model picks a special token such as
 `<|im_start|>` in the middle of a call (at a rare token), the call is cut and cannot be parsed (real-use evaluation — Qwen3-32B gave it
