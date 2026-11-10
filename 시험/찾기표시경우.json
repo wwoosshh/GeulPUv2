@@ -1,5 +1,5 @@
 {
- "출처": "2026-10-30 조사(E:/geulpu-work/compat — fetch_trend.py 가 받은 Hugging Face 트렌딩 상위 200 GGUF 저장소, t1030_rows.json 의 판정 block). expect: accepted(받는 파일 있음) · check(크기 규칙으로 모름) · arch(미지원 구조) · quant(받는 형식 없음) · quant(UD-only, unverified) · split-only · gemma4-PLE · gemma4-MoE · gemma4-31B-unverified · no-arch · clip-arch · nonllm(텍스트 LLM 아님). archs: 서버 --구조들 의 archs(시험/찾기표시.py --엔진 이 엔진과 견준다)",
+ "출처": "2026-10-30 조사(E:/geulpu-work/compat — fetch_trend.py 가 받은 Hugging Face 트렌딩 상위 200 GGUF 저장소, t1030_rows.json 의 판정 block). expect: accepted(받는 파일 있음) · check(크기 규칙으로 모름) · arch(미지원 구조) · quant(받는 형식 없음) · quant(UD-only, unverified) · split-only · gemma4-PLE · gemma4-MoE · gemma4-31B-unverified · no-arch · clip-arch · nonllm(텍스트 LLM 아님). archs: 서버 --구조들 의 archs(시험/찾기표시.py --엔진 이 엔진과 견준다) added: 조사 뒤에 더한 저장소 — 0.24.0 의 Gemma 3 여섯(2026-11-10 의 Hugging Face 메타데이터. 4B · 12B · 같은 크기의 미세조정은 accepted, 27B · 1B · 270M 은 gemma3-size — 엔진이 아직 받지 않는 크기)",
  "archs": [
   {
    "name": "qwen2",
@@ -63,6 +63,16 @@
    "name": "gemma4",
    "vulkan_reason": "Gemma 4는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
    "exact_only": true,
+   "quants": [
+    "Q8_0",
+    "K"
+   ]
+  },
+  {
+   "name": "gemma3",
+   "vulkan_reason": "Gemma 3는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
+   "exact_only": true,
+   "moe": false,
    "quants": [
     "Q8_0",
     "K"
@@ -5646,6 +5656,247 @@
     "L3.2-8X3B-MOE-Dark-Champion-Inst-18.4B-uncen-ablit_D_AU-q5_k_m.gguf"
    ],
    "expect": "check"
+  }
+ ],
+ "added": [
+  {
+   "id": "unsloth/gemma-3-4b-it-GGUF",
+   "gguf": {
+    "architecture": "gemma3",
+    "total": 3880263168
+   },
+   "pipeline_tag": "image-text-to-text",
+   "tags": [],
+   "files": [
+    "gemma-3-4b-it-BF16.gguf",
+    "gemma-3-4b-it-IQ4_NL.gguf",
+    "gemma-3-4b-it-IQ4_XS.gguf",
+    "gemma-3-4b-it-Q2_K.gguf",
+    "gemma-3-4b-it-Q2_K_L.gguf",
+    "gemma-3-4b-it-Q3_K_M.gguf",
+    "gemma-3-4b-it-Q3_K_S.gguf",
+    "gemma-3-4b-it-Q4_0.gguf",
+    "gemma-3-4b-it-Q4_1.gguf",
+    "gemma-3-4b-it-Q4_K_M.gguf",
+    "gemma-3-4b-it-Q4_K_S.gguf",
+    "gemma-3-4b-it-Q5_K_M.gguf",
+    "gemma-3-4b-it-Q5_K_S.gguf",
+    "gemma-3-4b-it-Q6_K.gguf",
+    "gemma-3-4b-it-Q8_0.gguf",
+    "gemma-3-4b-it-UD-IQ1_M.gguf",
+    "gemma-3-4b-it-UD-IQ1_S.gguf",
+    "gemma-3-4b-it-UD-IQ2_M.gguf",
+    "gemma-3-4b-it-UD-IQ2_XXS.gguf",
+    "gemma-3-4b-it-UD-IQ3_XXS.gguf",
+    "gemma-3-4b-it-UD-Q2_K_XL.gguf",
+    "gemma-3-4b-it-UD-Q3_K_XL.gguf",
+    "gemma-3-4b-it-UD-Q4_K_XL.gguf",
+    "gemma-3-4b-it-UD-Q5_K_XL.gguf",
+    "gemma-3-4b-it-UD-Q6_K_XL.gguf",
+    "gemma-3-4b-it-UD-Q8_K_XL.gguf",
+    "mmproj-BF16.gguf",
+    "mmproj-F16.gguf",
+    "mmproj-F32.gguf"
+   ],
+   "expect": "accepted"
+  },
+  {
+   "id": "unsloth/gemma-3-12b-it-GGUF",
+   "gguf": {
+    "architecture": "gemma3",
+    "total": 11766034176
+   },
+   "pipeline_tag": "image-text-to-text",
+   "tags": [],
+   "files": [
+    "gemma-3-12b-it-BF16.gguf",
+    "gemma-3-12b-it-IQ4_NL.gguf",
+    "gemma-3-12b-it-IQ4_XS.gguf",
+    "gemma-3-12b-it-Q2_K.gguf",
+    "gemma-3-12b-it-Q2_K_L.gguf",
+    "gemma-3-12b-it-Q3_K_M.gguf",
+    "gemma-3-12b-it-Q3_K_S.gguf",
+    "gemma-3-12b-it-Q4_0.gguf",
+    "gemma-3-12b-it-Q4_1.gguf",
+    "gemma-3-12b-it-Q4_K_M.gguf",
+    "gemma-3-12b-it-Q4_K_S.gguf",
+    "gemma-3-12b-it-Q5_K_M.gguf",
+    "gemma-3-12b-it-Q5_K_S.gguf",
+    "gemma-3-12b-it-Q6_K.gguf",
+    "gemma-3-12b-it-Q8_0.gguf",
+    "gemma-3-12b-it-UD-IQ1_M.gguf",
+    "gemma-3-12b-it-UD-IQ1_S.gguf",
+    "gemma-3-12b-it-UD-IQ2_M.gguf",
+    "gemma-3-12b-it-UD-IQ2_XXS.gguf",
+    "gemma-3-12b-it-UD-IQ3_XXS.gguf",
+    "gemma-3-12b-it-UD-Q2_K_XL.gguf",
+    "gemma-3-12b-it-UD-Q3_K_XL.gguf",
+    "gemma-3-12b-it-UD-Q4_K_XL.gguf",
+    "gemma-3-12b-it-UD-Q5_K_XL.gguf",
+    "gemma-3-12b-it-UD-Q6_K_XL.gguf",
+    "gemma-3-12b-it-UD-Q8_K_XL.gguf",
+    "mmproj-BF16.gguf",
+    "mmproj-F16.gguf",
+    "mmproj-F32.gguf"
+   ],
+   "expect": "accepted"
+  },
+  {
+   "id": "unsloth/medgemma-4b-it-GGUF",
+   "gguf": {
+    "architecture": "gemma3",
+    "total": 3880263168
+   },
+   "pipeline_tag": "image-text-to-text",
+   "tags": [],
+   "files": [
+    "medgemma-4b-it-BF16.gguf",
+    "medgemma-4b-it-IQ4_NL.gguf",
+    "medgemma-4b-it-IQ4_XS.gguf",
+    "medgemma-4b-it-Q2_K.gguf",
+    "medgemma-4b-it-Q2_K_L.gguf",
+    "medgemma-4b-it-Q3_K_M.gguf",
+    "medgemma-4b-it-Q3_K_S.gguf",
+    "medgemma-4b-it-Q4_0.gguf",
+    "medgemma-4b-it-Q4_1.gguf",
+    "medgemma-4b-it-Q4_K_M.gguf",
+    "medgemma-4b-it-Q4_K_S.gguf",
+    "medgemma-4b-it-Q5_K_M.gguf",
+    "medgemma-4b-it-Q5_K_S.gguf",
+    "medgemma-4b-it-Q6_K.gguf",
+    "medgemma-4b-it-Q8_0.gguf",
+    "medgemma-4b-it-UD-IQ1_M.gguf",
+    "medgemma-4b-it-UD-IQ1_S.gguf",
+    "medgemma-4b-it-UD-IQ2_M.gguf",
+    "medgemma-4b-it-UD-IQ2_XXS.gguf",
+    "medgemma-4b-it-UD-IQ3_XXS.gguf",
+    "medgemma-4b-it-UD-Q2_K_XL.gguf",
+    "medgemma-4b-it-UD-Q3_K_XL.gguf",
+    "medgemma-4b-it-UD-Q4_K_XL.gguf",
+    "medgemma-4b-it-UD-Q5_K_XL.gguf",
+    "medgemma-4b-it-UD-Q6_K_XL.gguf",
+    "medgemma-4b-it-UD-Q8_K_XL.gguf",
+    "mmproj-BF16.gguf",
+    "mmproj-F16.gguf",
+    "mmproj-F32.gguf"
+   ],
+   "expect": "accepted"
+  },
+  {
+   "id": "unsloth/gemma-3-27b-it-GGUF",
+   "gguf": {
+    "architecture": "gemma3",
+    "total": 27009346304
+   },
+   "pipeline_tag": "image-text-to-text",
+   "tags": [],
+   "files": [
+    "BF16/gemma-3-27b-it-BF16-00001-of-00002.gguf",
+    "BF16/gemma-3-27b-it-BF16-00002-of-00002.gguf",
+    "gemma-3-27b-it-IQ4_NL.gguf",
+    "gemma-3-27b-it-IQ4_XS.gguf",
+    "gemma-3-27b-it-Q2_K.gguf",
+    "gemma-3-27b-it-Q2_K_L.gguf",
+    "gemma-3-27b-it-Q3_K_M.gguf",
+    "gemma-3-27b-it-Q3_K_S.gguf",
+    "gemma-3-27b-it-Q4_0.gguf",
+    "gemma-3-27b-it-Q4_1.gguf",
+    "gemma-3-27b-it-Q4_K_M.gguf",
+    "gemma-3-27b-it-Q4_K_S.gguf",
+    "gemma-3-27b-it-Q5_K_M.gguf",
+    "gemma-3-27b-it-Q5_K_S.gguf",
+    "gemma-3-27b-it-Q6_K.gguf",
+    "gemma-3-27b-it-Q8_0.gguf",
+    "gemma-3-27b-it-UD-IQ1_M.gguf",
+    "gemma-3-27b-it-UD-IQ1_S.gguf",
+    "gemma-3-27b-it-UD-IQ2_M.gguf",
+    "gemma-3-27b-it-UD-IQ2_XXS.gguf",
+    "gemma-3-27b-it-UD-IQ3_XXS.gguf",
+    "gemma-3-27b-it-UD-Q2_K_XL.gguf",
+    "gemma-3-27b-it-UD-Q3_K_XL.gguf",
+    "gemma-3-27b-it-UD-Q4_K_XL.gguf",
+    "gemma-3-27b-it-UD-Q5_K_XL.gguf",
+    "gemma-3-27b-it-UD-Q6_K_XL.gguf",
+    "gemma-3-27b-it-UD-Q8_K_XL.gguf",
+    "mmproj-BF16.gguf",
+    "mmproj-F16.gguf",
+    "mmproj-F32.gguf"
+   ],
+   "expect": "gemma3-size"
+  },
+  {
+   "id": "unsloth/gemma-3-1b-it-GGUF",
+   "gguf": {
+    "architecture": "gemma3",
+    "total": 999885952
+   },
+   "pipeline_tag": "text-generation",
+   "tags": [],
+   "files": [
+    "gemma-3-1b-it-BF16.gguf",
+    "gemma-3-1b-it-IQ4_NL.gguf",
+    "gemma-3-1b-it-IQ4_XS.gguf",
+    "gemma-3-1b-it-Q2_K.gguf",
+    "gemma-3-1b-it-Q2_K_L.gguf",
+    "gemma-3-1b-it-Q3_K_M.gguf",
+    "gemma-3-1b-it-Q3_K_S.gguf",
+    "gemma-3-1b-it-Q4_0.gguf",
+    "gemma-3-1b-it-Q4_1.gguf",
+    "gemma-3-1b-it-Q4_K_M.gguf",
+    "gemma-3-1b-it-Q4_K_S.gguf",
+    "gemma-3-1b-it-Q5_K_M.gguf",
+    "gemma-3-1b-it-Q5_K_S.gguf",
+    "gemma-3-1b-it-Q6_K.gguf",
+    "gemma-3-1b-it-Q8_0.gguf",
+    "gemma-3-1b-it-UD-IQ1_M.gguf",
+    "gemma-3-1b-it-UD-IQ1_S.gguf",
+    "gemma-3-1b-it-UD-IQ2_M.gguf",
+    "gemma-3-1b-it-UD-IQ2_XXS.gguf",
+    "gemma-3-1b-it-UD-IQ3_XXS.gguf",
+    "gemma-3-1b-it-UD-Q2_K_XL.gguf",
+    "gemma-3-1b-it-UD-Q3_K_XL.gguf",
+    "gemma-3-1b-it-UD-Q4_K_XL.gguf",
+    "gemma-3-1b-it-UD-Q5_K_XL.gguf",
+    "gemma-3-1b-it-UD-Q6_K_XL.gguf",
+    "gemma-3-1b-it-UD-Q8_K_XL.gguf"
+   ],
+   "expect": "gemma3-size"
+  },
+  {
+   "id": "unsloth/gemma-3-270m-it-GGUF",
+   "gguf": {
+    "architecture": "gemma3",
+    "total": 268098176
+   },
+   "pipeline_tag": "text-generation",
+   "tags": [],
+   "files": [
+    "gemma-3-270m-it-F16.gguf",
+    "gemma-3-270m-it-IQ4_NL.gguf",
+    "gemma-3-270m-it-IQ4_XS.gguf",
+    "gemma-3-270m-it-Q2_K.gguf",
+    "gemma-3-270m-it-Q2_K_L.gguf",
+    "gemma-3-270m-it-Q3_K_M.gguf",
+    "gemma-3-270m-it-Q3_K_S.gguf",
+    "gemma-3-270m-it-Q4_0.gguf",
+    "gemma-3-270m-it-Q4_1.gguf",
+    "gemma-3-270m-it-Q4_K_M.gguf",
+    "gemma-3-270m-it-Q4_K_S.gguf",
+    "gemma-3-270m-it-Q5_K_M.gguf",
+    "gemma-3-270m-it-Q5_K_S.gguf",
+    "gemma-3-270m-it-Q6_K.gguf",
+    "gemma-3-270m-it-Q8_0.gguf",
+    "gemma-3-270m-it-UD-IQ2_M.gguf",
+    "gemma-3-270m-it-UD-IQ2_XXS.gguf",
+    "gemma-3-270m-it-UD-IQ3_XXS.gguf",
+    "gemma-3-270m-it-UD-Q2_K_XL.gguf",
+    "gemma-3-270m-it-UD-Q3_K_XL.gguf",
+    "gemma-3-270m-it-UD-Q4_K_XL.gguf",
+    "gemma-3-270m-it-UD-Q5_K_XL.gguf",
+    "gemma-3-270m-it-UD-Q6_K_XL.gguf",
+    "gemma-3-270m-it-UD-Q8_K_XL.gguf"
+   ],
+   "expect": "gemma3-size"
   }
  ]
 }

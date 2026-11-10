@@ -400,6 +400,11 @@ const DICT = {
   "Gemma 4 26B-A4B(MoE) — 아직 미지원": "Gemma 4 26B-A4B (MoE) — not supported yet",
   "전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.": "Mixture-of-experts Gemma 4 files are not accepted by the engine yet.",
   "Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Gemma 4 31B has not been run in GeulPU yet. GeulPU fetches the start of the file to check that it runs before downloading.",
+  "Gemma 3 270M · 1B — 아직 미지원": "Gemma 3 270M · 1B — not supported yet",
+  "Gemma 3 270M · 1B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.": "Gemma 3 270M · 1B files are not accepted by the engine yet. The 4B and 12B run.",
+  "Gemma 3 27B — 아직 미지원": "Gemma 3 27B — not supported yet",
+  "Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.": "Gemma 3 27B files are not accepted by the engine yet. The 4B and 12B run.",
+  "흔한 Gemma 3 크기(4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Not a common Gemma 3 size (4B · 12B). GeulPU fetches the start of the file to check that it runs before downloading.",
   "분할 파일만 있음": "Split files only",
   "여러 조각으로 나뉜 파일만 있습니다. llama.cpp의 llama-gguf-split --merge로 합친 파일만 받습니다.": "Only files split into several parts. GeulPU takes a single file merged with llama.cpp's llama-gguf-split --merge.",
   "받는 형식의 파일 없음": "No file in a supported format",
@@ -4919,6 +4924,12 @@ function fdSupport(m) {
     if (p < 10e9) return { k: 'variant', t: T('Gemma 4 E2B · E4B — 아직 미지원'), why: T('층마다 따로 쓰는 임베딩(PLE)이 있는 Gemma 4 E2B · E4B 파일은 엔진이 아직 받지 않습니다.') };
     if (p > 20e9 && p < 28e9) return { k: 'variant', t: T('Gemma 4 26B-A4B(MoE) — 아직 미지원'), why: T('전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.') };
   }
+  // 0.24.0 — Gemma 3 는 헤드 256 의 꼴(4B · 12B — 같은 크기의 미세조정도)만: 27B(헤드 128)와 270M · 1B(너비가 256 의 배수가 아니다)는 엔진이
+  // 받지 않는다(구조/gemma3/엔진.gl 의 설정읽기). 그 밖의 크기(같은 구조를 쓰는 다른 모델)는 아래에서 받기 전 확인으로
+  if (a === 'gemma3' && p) {
+    if (p < 2e9) return { k: 'variant', t: T('Gemma 3 270M · 1B — 아직 미지원'), why: T('Gemma 3 270M · 1B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.') };
+    if (p > 20e9) return { k: 'variant', t: T('Gemma 3 27B — 아직 미지원'), why: T('Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 4B · 12B는 실행됩니다.') };
+  }
   // 파일 이름 — 받는 형식의 파일이 하나는 있어야 한다(분할 파일 · IQ2 · Q3_K · 독자 형식만 있는 저장소는 받을 것이 없다)
   if (files.length) {
     const whole = files.filter(f => !fdSplit(f));
@@ -4933,6 +4944,9 @@ function fdSupport(m) {
     if (!okf.some(f => !fdUD(f))) return { k: 'check', t: T('확인 필요'), why: T('unsloth의 UD 파일은 이름의 형식 안에 다른 형식이 섞여 있을 수 있어, 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   }
   if (a === 'gemma4' && p >= 28e9) return { k: 'check', t: T('확인 필요'), why: T('Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
+  if (a === 'gemma3' && !((p >= 3.7e9 && p <= 4.4e9) || (p >= 11.5e9 && p <= 12.5e9))) {
+    return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Gemma 3 크기(4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
+  }
   if (a === 'llama') {
     if (inRange(p, L3OK) || fdChecked(m.id)) return { k: 'ok', t: T('실행 가능') };
     return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Llama 3 · Mistral 크기(3B · 7~8B · 70B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
