@@ -2124,6 +2124,7 @@ const TMX = [
   [/이 GPU에서는 헤드 크기가 128이 아니거나 RoPE를 헤드의 일부에만 거는 모델을 아직 실행할 수 없습니다\(공유 메모리 32 KB인 GPU의 제약\)\./g, "This GPU can't run models whose head size isn't 128, or that apply RoPE to only part of each head, yet (a limit of GPUs with 32 KB of shared memory)."],
   [/Qwen3\.5는 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\./g, 'Qwen3.5 runs only on CUDA (NVIDIA GPUs) for now.'],
   [/MoE 모델\(Qwen3\.5 · 3\.6 MoE\)은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\./g, 'MoE models (Qwen3.5 · 3.6 MoE) run only on CUDA (NVIDIA GPUs) for now.'],
+  [/GLM-4\.7-Flash\(deepseek2 구조\)는 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\./g, 'GLM-4.7-Flash (deepseek2 architecture) runs only on CUDA (NVIDIA GPUs) for now.'],      // 0.24.0 24-2
   [/이 MoE 모델은 전문가 가중치 가운데 그래픽 메모리에 들지 않는 약 ([\d.]+) GB를 RAM\(고정 메모리\)에 둡니다\. 지금 남은 RAM이 ([\d.]+) GB라 모자랍니다 — 다른 프로그램을 닫고 다시 불러오세요\./g, 'This MoE model keeps about $1 GB of expert weights that do not fit in graphics memory in RAM (pinned memory). Only $2 GB of RAM is free — close other programs and load it again.'],
   [/MoE 모델: 전문가 가중치 ([\d.]+) GB 가운데 그래픽 메모리에 들지 않는 몫\(약 ([\d.]+) GB\)은 RAM\(고정 메모리\)에 둡니다\./g, 'MoE model: of its $1 GB of expert weights, the part that does not fit in graphics memory (about $2 GB) stays in RAM (pinned memory).'],
   [/IQ4_XS 파일은 아직 CUDA\(NVIDIA GPU\)에서만 실행합니다\. 같은 모델의 Q4_K_M · Q8_0 파일은 Vulkan에서도 실행됩니다\./g, "IQ4_XS files run only on CUDA (NVIDIA GPUs) for now. The same model's Q4_K_M · Q8_0 files also run on Vulkan."],
@@ -4860,6 +4861,8 @@ const engArchs = () => (S.st && S.st.engine && Array.isArray(S.st.engine.archs))
 const archOk = a => { const l = engArchs(); return l ? l.some(x => x.name === a) : (a === 'qwen2' || a === 'qwen3' || a === 'llama' || a === 'qwen35' || a === 'qwen35moe'); };      // 39단계 — llama(Llama 3.1 · 3.2 · Mistral). 0.12.0 — Qwen3.5 · MoE
 // 0.12.0 12-3g-4 — 아직 CUDA 만 도는 구조(Qwen3.5 · MoE), 저장소의 구조
 const cudaArch = a => { const l = engArchs(); return l ? l.some(x => x.name === a && !!x.vulkan_reason) : (a === 'qwen35' || a === 'qwen35moe'); };
+// 0.24.0 24-2 — MoE 구조(서버 --구조들 의 moe — 메모리 어림은 dense 몫만 그래픽 메모리에), 없으면 옛 목록
+const moeArch = a => { const l = engArchs(); return l ? l.some(x => x.name === a && !!x.moe) : a === 'qwen35moe'; };
 const fdArch = m => (m && m.gguf && m.gguf.architecture) || '';
 // 2026-10-30 형식 섞임 B — 구조가 받는 형식은 엔진의 것(서버 --구조들 의 quants: Q8_0 · Q4_0 · K · IQ4_XS · W16 — 파일 이름의 형식을 그 갈래로).
 // 엔진의 목록이 없으면(엔진을 띄우지 못함 · 옛 엔진) 예전 규칙 — CUDA 만 도는 구조(Qwen3.5 · MoE · Gemma 4)는 Q8_0 · k-양자화 셋
@@ -5321,7 +5324,7 @@ function fdBest(rows, sup, m) {
   if (fdHard(sup.k)) return null;
   const a = fdArch(m);
   const ok = rows.filter(f => { const q = quantFromName(f.path); return quantOkFor(q, a) && !/-\d{5}-of-\d{5}\.gguf$/i.test(f.path); });
-  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: cudaArch(a) ? 'cuda' : devicesOfQuant(q), moe: a === 'qwen35moe' }); };
+  const fit = f => { const q = quantFromName(f.path); return fitOf({ size: f.size, params: '', id: '', devices: cudaArch(a) ? 'cuda' : devicesOfQuant(q), moe: moeArch(a) }); };
   const good = ok.filter(f => { const t = fit(f); return t && t.k === 'ok'; });
   if (good.length) return good.find(f => quantFromName(f.path) === 'Q4_K_M') || good.sort((a, b) => b.size - a.size)[0];
   const tight = ok.filter(f => { const t = fit(f); return t && t.k === 'tight'; }).sort((a, b) => a.size - b.size);
@@ -5345,7 +5348,7 @@ function fdFileRow(repo, f, sup, best, m) {
   const ds = c ? dlStateOf(c) : null;
   const a = fdArch(m);
   const fit = fitOf({ size: f.size, params: '', id: repo, devices: c && c.devices ? c.devices : cudaArch(a) ? 'cuda' : devicesOfQuant(q),
-    moe: c ? !!c.moe : a === 'qwen35moe', expert_bytes: c && c.expert_bytes ? c.expert_bytes : 0 });      // 0.12.0 12-3g-4
+    moe: c ? !!c.moe : moeArch(a), expert_bytes: c && c.expert_bytes ? c.expert_bytes : 0 });      // 0.12.0 12-3g-4 · 0.24.0 24-2 — 구조의 moe
   let why = '';
   if (sup.k === 'arch') why = T('지원하지 않는 구조');
   else if (sup.k === 'size') why = T('아직 미지원 크기');
