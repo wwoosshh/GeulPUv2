@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "GeulPU 앱이 다운로드할 수 있는 모델 목록. check: crosscheck = 재현성 검증의 기준 모델(출력이 기준 PC와 비트 단위로 같은지 확인할 수 있음) · tested = 이 파일로 GeulPU에서 실행해 확인함(어느 백엔드에서 확인했는지는 note) · untested = 엔진이 지원하는 형식이지만 이 파일로는 아직 실행해 보지 않음(다운로드가 끝나면 앱이 GGUF 헤더를 보고 지원 여부를 알린다). size · sha256은 Hugging Face의 값(2026-10-15 · Llama · Mistral은 2026-10-16 · 0.12.0 에 넣은 아홉은 2026-10-23 · Qwen3.6-35B-A3B는 2026-10-24 · Qwen3.5 셋 · Gemma 4 12B는 2026-10-25 · A.X 4.0 Light는 2026-11-09 · Mi:dm 2.0 · Kanana 1.5는 2026-11-10).",
+  "note": "GeulPU 앱이 다운로드할 수 있는 모델 목록. check: crosscheck = 재현성 검증의 기준 모델(출력이 기준 PC와 비트 단위로 같은지 확인할 수 있음) · tested = 이 파일로 GeulPU에서 실행해 확인함(어느 백엔드에서 확인했는지는 note) · untested = 엔진이 지원하는 형식이지만 이 파일로는 아직 실행해 보지 않음(다운로드가 끝나면 앱이 GGUF 헤더를 보고 지원 여부를 알린다). size · sha256은 Hugging Face의 값(2026-10-15 · Llama · Mistral은 2026-10-16 · 0.12.0 에 넣은 아홉은 2026-10-23 · Qwen3.6-35B-A3B는 2026-10-24 · Qwen3.5 셋 · Gemma 4 12B는 2026-10-25 · A.X 4.0 Light는 2026-11-09 · Mi:dm 2.0 · Kanana 1.5 · Gemma 3 넷은 2026-11-10 · Gemma 3 27B · Gemma 4 31B는 2026-11-11).",
   "models": [
     {
       "id": "deepseek-r1-distill-qwen-7b-q8_0",
@@ -350,6 +350,21 @@
       "note": "Google의 Gemma 4 12B 대화 모델입니다(4비트 k-양자화, 6.6 GB). 0.13.0부터 실행됩니다. 답하기 전에 생각 과정을 쓸 수 있고, 생성 설정에서 켜고 끕니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 12 GB GPU에서 문맥은 약 7,300 토큰까지입니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-10-25)."
     },
     {
+      "id": "gemma-4-31b-it-q4_k_m",
+      "name": "Gemma-4-31B-it",
+      "params": "31B",
+      "quant": "Q4_K_M",
+      "file": "gemma-4-31B-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/gemma-4-31B-it-GGUF/resolve/main/gemma-4-31B-it-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/gemma-4-31B-it-GGUF",
+      "size": 18323733440,
+      "sha256": "38bd64c852c4b460434cc7162fa9bdcf242faf86502581a754cb72956bb17f84",
+      "license": "Apache-2.0",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "Google의 Gemma 4 31B 대화 모델입니다(4비트 k-양자화, 18.3 GB). 그래픽 메모리를 문맥 4,096에서 약 20 GB 씁니다(H100에서 잰 값) — 24 GB 이상의 GPU가 필요합니다. 답하기 전에 생각 과정을 쓸 수 있고, 생성 설정에서 켜고 끕니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. 이 파일은 Linux의 CUDA(H100)에서 GeulPU 서버로 실행과 도구 호출을 확인했습니다(2026-11-11) — 개발 PC의 GPU(12 GB)에 들지 않아 앱 화면에서는 돌려 보지 않았습니다."
+    },
+    {
       "id": "gemma-3-4b-it-q4_k_m",
       "name": "Gemma-3-4B-it",
       "params": "4B",
@@ -378,6 +393,21 @@
       "check": "tested",
       "devices": "cuda",
       "note": "Google의 Gemma 3 12B 대화 모델입니다(4비트 k-양자화, 7.3 GB). 0.24.0부터 실행됩니다. 텍스트만 씁니다(그림 입력은 아직 쓰지 않습니다). 채팅 템플릿에 도구가 없어 도구 호출은 받지 않습니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. Gemma 이용 약관(Gemma Terms of Use)을 따릅니다 — 금지된 사용 정책이 있고, 모델이나 파생 모델을 배포(API 등의 서비스로 제공하는 것 포함)할 때는 약관의 사용 제한을 그대로 전달하고 약관 사본을 함께 주어야 합니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-11-10)."
+    },
+    {
+      "id": "gemma-3-27b-it-q4_k_m",
+      "name": "Gemma-3-27B-it",
+      "params": "27B",
+      "quant": "Q4_K_M",
+      "file": "gemma-3-27b-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/gemma-3-27b-it-GGUF/resolve/main/gemma-3-27b-it-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/gemma-3-27b-it-GGUF",
+      "size": 16546688736,
+      "sha256": "f1b699659942c777bd3ec0bcb527d6ebf34ae14ca76e3af103d58d0c9cbdadee",
+      "license": "Gemma Terms of Use",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "Google의 Gemma 3 27B 대화 모델입니다(4비트 k-양자화, 16.5 GB). 0.24.0부터 실행됩니다. 그래픽 메모리를 문맥 4,096에서 약 17 GB, 16,384에서 약 18 GB 씁니다(H100에서 잰 값) — 24 GB GPU를 권합니다. 텍스트만 씁니다(그림 입력은 아직 쓰지 않습니다). 채팅 템플릿에 도구가 없어 도구 호출은 받지 않습니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. Gemma 이용 약관(Gemma Terms of Use)을 따릅니다 — 금지된 사용 정책이 있고, 모델이나 파생 모델을 배포(API 등의 서비스로 제공하는 것 포함)할 때는 약관의 사용 제한을 그대로 전달하고 약관 사본을 함께 주어야 합니다. 이 파일은 Linux의 CUDA(H100)에서 GeulPU 서버로 실행을 확인했습니다(2026-11-11) — 개발 PC의 GPU(12 GB)에 들지 않아 앱 화면에서는 돌려 보지 않았습니다."
     },
     {
       "id": "gemma-3-1b-it-q8_0",

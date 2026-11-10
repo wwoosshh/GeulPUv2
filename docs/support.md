@@ -40,7 +40,7 @@ the file is executed as it is).
 | `llama` | Llama 3.1 · 3.2 · Mistral 7B v0.3 · DeepSeek-R1-Distill-Llama · HyperCLOVAX-SEED · MiniCPM5 · Mi:dm 2.0 · Kanana 1.5 | same | ✓ | ✓ | ✓ ¹ | exact · fast | ✓ ² | ✓ | ✓ | ✓ |
 | `qwen35` | Qwen3.5 · Qwen3.8 (full-attention and linear-attention layers mixed) | Q8_0 · k-quants · IQ4_XS · F16 · BF16 · F32 | ✓ | — | — | exact · fast | — | — | — | — |
 | `qwen35moe` | Qwen3.5 · 3.6 MoE | same | ✓ | — | — | exact | — | — | — | — |
-| `gemma4` | Gemma 4 12B | all matrices Q8_0 or all k-quants | ✓ | — | — | exact | — | — | — | ✓ |
+| `gemma4` | Gemma 4 12B · 31B | all matrices Q8_0 or all k-quants | ✓ | — | — | exact | — | — | — | ✓ |
 | `gemma3` | Gemma 3 270M · 1B · 4B · 12B · 27B (0.24.0 — fine-tunes of those sizes too) | same ³ | ✓ | — | — | exact | — | — | — | — |
 | `deepseek2` | GLM-4.7-Flash · Kanana-2-30B-A3B (0.24.0 — MLA attention + MoE) | k-quants (per-head matrices also Q8_0 · Q5_0 · k-quants) | ✓ | — | — | exact | — | — | — | — |
 
@@ -75,7 +75,8 @@ for each Hugging Face GGUF repository, which files run by these tables and wheth
 ## 4. Model list — files the app downloads
 
 The files in the app's model list (the app checks their SHA-256 after downloading). **Checked** is the backend and date this file
-was run on with GeulPU; under **Tool calls**, ✓ means the app's tool-call test passed, — means the chat template has no tools, and
+was run on with GeulPU; under **Tool calls**, ✓ means the tool-call test passed in the app (with the server for the Gemma 4 31B, which does not fit on
+this PC), — means the chat template has no tools, and
 blank means not yet tested with that file. `crosscheck` is the reference model of the reproducibility check; `untested` means the
 bits were checked only with a synthetic model of the same shape. File sizes are in units of 10⁹ bytes (Windows Explorer's
 1024-based units show them a little smaller).
@@ -105,8 +106,10 @@ bits were checked only with a synthetic model of the same shape. File sizes are 
 | Qwen3.5-4B | `qwen35` | 4B | Q4_K_M · 2.7 GB | ✓ | — | — | | CUDA · 2026-10-25 | Apache-2.0 | |
 | Qwen3.5-0.8B | `qwen35` | 0.8B | Q8_0 · 0.8 GB | ✓ | — | — | | CUDA · 2026-10-24 | Apache-2.0 | |
 | Gemma-4-12B-it | `gemma4` | 12B | Q4_K_M · 7.1 GB | ✓ | — | — | ✓ | CUDA · 2026-10-25 | Apache-2.0 | |
+| Gemma-4-31B-it | `gemma4` | 31B | Q4_K_M · 18.3 GB | ✓ | — | — | ✓ | CUDA (H100 · Linux — with the server) · 2026-11-11 | Apache-2.0 | 24 GB of graphics memory or more · not run in the app's screens · 0.24.0 |
 | Gemma-3-4B-it | `gemma3` | 4B | Q4_K_M · 2.5 GB | ✓ | — | — | — | CUDA · 2026-11-10 | Gemma Terms of Use | text only · 0.24.0 |
 | Gemma-3-12B-it | `gemma3` | 12B | Q4_K_M · 7.3 GB | ✓ | — | — | — | CUDA · 2026-11-10 | Gemma Terms of Use | text only · 0.24.0 |
+| Gemma-3-27B-it | `gemma3` | 27B | Q4_K_M · 16.5 GB | ✓ | — | — | — | CUDA (H100 · Linux — with the server) · 2026-11-11 | Gemma Terms of Use | text only · a 24 GB GPU is recommended · not run in the app's screens · 0.24.0 |
 | Gemma-3-1B-it | `gemma3` | 1B | Q8_0 · 1.1 GB | ✓ | — | — | — | CUDA · 2026-11-10 | Gemma Terms of Use | Q8_0 files only · 0.24.0 |
 | Gemma-3-270M-it | `gemma3` | 270M | Q8_0 · 0.3 GB | ✓ | — | — | — | CUDA · 2026-11-10 | Gemma Terms of Use | Q8_0 files only · 0.24.0 |
 | GLM-4.7-Flash | `deepseek2` | 30B | Q4_K_M · 18.3 GB | ✓ | — | — | ✓ | CUDA · 2026-11-10 | MIT | MoE — about 10 GB of RAM on a 12 GB GPU · 0.24.0 |
@@ -138,7 +141,7 @@ the experts that do not fit in RAM (that much RAM must be free as well).
 | 8 GB | 7B · 8B · 9B Q4_K_M (Qwen3-8B · Qwen3.5-9B · Qwen2.5-7B · R1-Distill-Qwen-7B · R1-Distill-Llama-8B · Llama-3.1-8B · Mistral-7B · A.X 4.0 Light · Kanana 1.5) · Qwen3-4B Q8_0 | — |
 | 12 GB | 7B · 8B Q8_0 · Mi:dm 2.0 Q4_K_M · Gemma-4-12B Q4_K_M · Gemma-3-12B Q4_K_M · 14B Q4_K_M (with a shorter context) | Qwen3.6-35B-A3B (about 10.5 GB of RAM) · GLM-4.7-Flash (about 10 GB) · Kanana-2-30B-A3B (about 11 GB) |
 | 16 GB and more | Qwen2.5-14B · Qwen2.5-Coder-14B · R1-Distill-Qwen-14B Q4_K_M | as above, with less RAM |
-| 24 GB and more | Gemma-3-27B Q4_K_M (16.5 GB — the app's estimate; it does not fit on this PC and was checked on the remote H100 server, 47 GB) | — |
+| 24 GB and more | Gemma-3-27B Q4_K_M (about 17 GB at a context of 4,096) · Gemma-4-31B Q4_K_M (about 20 GB) — measured on the remote H100 server (they do not fit on this PC) | — |
 
 ## 6. Not yet supported
 
@@ -150,7 +153,7 @@ the experts that do not fit in RAM (that much RAM must be free as well).
 | other `deepseek2` models | DeepSeek-V3 · R1 · Kimi-K2 · DeepSeek-V2 (-Lite) | files with expert group selection, softmax routing or MTP layers are not taken yet |
 | `qwen3moe` · `mixtral` · `phi3` and others | Qwen3-30B-A3B · Qwen3-235B-A22B · Mixtral · Phi | no such architecture yet |
 | `raon1` | Raon-1 mini (Krafton) | stage 24-3 of the 0.24.0 plan |
-| `gemma4` variants · `exaone4` | Gemma 4 E2B · E4B · 26B-A4B (MoE) · 31B, EXAONE 4.0 · 4.5 | stage 24-5 of the 0.24.0 plan |
+| `gemma4` variants · `exaone4` | Gemma 4 E2B · E4B · 26B-A4B (MoE), EXAONE 4.0 · 4.5 | stage 24-5 of the 0.24.0 plan |
 | some `gemma3` files | the files of the Gemma 3 270M and 1B with k-quant names | the Q4_K_M and similar files mix in Q5_0 and Q8_0 matrices — use the Q8_0 file |
 | Image and audio input | vision and audio parts of multimodal models | text only |
 
@@ -168,7 +171,7 @@ prompt processing at about 0.6–1.05 times — [구조/gemma3/기록.md](../구
 | RTX 3080 Ti · RTX 5070 | Ampere · Blackwell | Windows · CUDA | the reproducibility check (DeepSeek-R1-Distill-Qwen-7B Q8_0 — 32 math problems, 82,673 steps): outputs and logits bit-identical to the 4070 Ti |
 | Radeon RX 9060 XT | RDNA4 | Windows · Vulkan (two PCs, two drivers) | the same check equal to the CUDA reference in all 82,673 steps (exact mode) |
 | Intel UHD Graphics 770 | integrated GPU | Windows · Vulkan (32 KB shared memory) | five requests · 240 steps of Qwen2.5-1.5B Q4_K_M with logits equal to CUDA (0.12.0) |
-| H100 NVL — MIG 3g.47gb | Hopper (sm_90) | Linux · CUDA (remote server) | 0.12.1's reproducibility test 24/24; 0.24.0's GLM-4.7-Flash, Kanana-2 and Gemma 3 4B · 12B modules and test outputs byte-identical to the 4070 Ti. The Gemma 3 27B, which does not fit on the 4070 Ti, is verified here (its module is byte-identical) |
+| H100 NVL — MIG 3g.47gb | Hopper (sm_90) | Linux · CUDA (remote server) | 0.12.1's reproducibility test 24/24; 0.24.0's GLM-4.7-Flash, Kanana-2 and Gemma 3 4B · 12B modules and test outputs byte-identical to the 4070 Ti. The Gemma 3 27B and Gemma 4 31B, which do not fit on the 4070 Ti, are verified here (their modules are byte-identical; chat checked with the server) |
 | RTX 6000 Ada · H100 NVL MIG · A100 MIG 7g.40gb | Ada · Hopper · Ampere | Linux · CUDA — independent test by UPM GING (0.21.0) | reproducibility kit 144/144, reproducibility check 32/32, all of their own suites passed ([repro-kit/independent](../repro-kit/independent/upm-ging-2026-11/README.md)) |
 
 This page is updated in every release that changes the architectures, formats or model list. Changes are listed in

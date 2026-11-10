@@ -40,7 +40,6 @@ const ALLOWED = {
   'split-only': ['split', 'quant'],
   'gemma4-PLE': ['variant'],
   'gemma4-MoE': ['variant'],
-  'gemma4-31B-unverified': ['check'],
   'no-arch': ['unknown'],
   'clip-arch': ['check', 'unknown', 'arch', 'quant'],
   nonllm: ['arch', 'task', 'unknown', 'quant', 'check'],      // check: Hugging Face 가 구조를 clip 으로 읽은 저장소에 모델 파일이 따로 있을 때
