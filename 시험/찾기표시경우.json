@@ -67,6 +67,14 @@
     "Q8_0",
     "K"
    ]
+  },
+  {
+   "name": "deepseek2",
+   "vulkan_reason": "GLM-4.7-Flash(deepseek2 구조)는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
+   "exact_only": true,
+   "quants": [
+    "K"
+   ]
   }
  ],
  "rows": [
@@ -4584,7 +4592,8 @@
     "GLM-4.7-Flash-UD-Q8_K_XL.gguf",
     "GLM-4.7-Flash-UD-TQ1_0.gguf"
    ],
-   "expect": "arch"
+   "expect": "accepted",
+   "메모": "조사(main bb673cb)는 arch 였으나 0.24.0 24-2 부터 deepseek2 구조를 받는다 — Q4_K_M 파일을 엔진의 모델 확인(--머리만)이 받음"
   },
   {
    "id": "ponpoke/flux2-klein-9b-uncensored-text-encoder",
