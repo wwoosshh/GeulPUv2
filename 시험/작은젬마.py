@@ -3,7 +3,7 @@
 기본은 층 0 … 5(새 번호의 규칙 l mod 6 < 5 가 원래 층의 종류와 같다 — 윈도 층 다섯 · 전체 어텐션 층 하나). 남긴 층의 종류가 새 번호의
 규칙과 다르면(예: --층 0,5,6) attention.sliding_window_pattern 을 층마다의 불 배열로 적는다(계약 4.14 의 1 — 배열이면 그 값).
 
-  python -I 시험/작은젬마.py <gemma4 gguf> <출력.gguf> [--층 0,5,6] [--Q8] [--헤드 128]
+  python -I 시험/작은젬마.py <gemma4 gguf> <출력.gguf> [--층 0,5,6] [--Q8] [--W16 F16|BF16] [--헤드 128]
 
 - 메타데이터는 바이트 그대로 옮기고 gemma4.block_count · 층마다의 배열(attention.head_count_kv · attention.sliding_window_pattern — 남긴
   층의 칸만) · general.name 만 바꾼다(토크나이저 · 헤드 · 창 · RoPE 그대로).
@@ -11,6 +11,8 @@
   12B 에서 윈도 · 전체 · 윈도 층이고, v · down 이 Q6_K 인 층(0 — qkv 의 구간 둘)과 모두 Q4_K 인 층(6 — 구간 하나)이 함께 든다.
 - --Q8: 행렬(층의 attn_* · ffn_*, 낱말표 · 출력)을 Q8_0 로 다시 양자화한다 — k-양자화를 풀어(계약/정수계약.py 의 풀기K) 32 칸마다
   d = max|x| / 127, q = 반올림(x / d)(llama.cpp 의 quantize_row_q8_0_ref 와 같은 식). Q8_0 의 길(커널생성 gemma4큰 Q8_0)을 시험하는 파일이다.
+- --W16 F16|BF16(0.24.0): 행렬(k-양자화 · Q8_0)을 풀어 F16(가까운 fp16) · BF16(fp32 의 위 16 비트 — 가까운 값)으로 적는다 — 16비트
+  블록 가중치의 실행 경로(계약 1.3 — 커널생성 … W16)를 시험하는 파일이다. 값은 원본 파일의 F16 · BF16 과 다르다(양자화된 값을 푼 것).
 - --헤드 128(0.24.0 — Gemma 3 의 헤드 256 파일만): 같은 텐서를 헤드 128 로 읽는 파일 — 헤드 수 · KV 헤드 수를 두 배로,
   attention.key_length · value_length(있으면 _swa · rope.dimension_count 도)를 128 로 적고, attn_q_norm · attn_k_norm 은 앞 128 값만
   남긴다(q · k · v · o 행렬의 모양은 그대로 맞는다). 헤드 128 의 실행 경로(27B 와 같은 헤드 크기)를 이 PC 에 드는 파일로 시험하려는 것이다.
@@ -86,11 +88,33 @@ def Q8로(x):
     return out
 
 
+def Q8풀기(raw, K, r0, r1):
+    """Q8_0 행렬의 행 [r0, r1) 을 fp32 [행][K] 로 — 값 32 개의 블록마다 q · d(d 는 fp16)"""
+    줄 = K // 32 * 34
+    b = np.frombuffer(raw[r0 * 줄:r1 * 줄], np.uint8).reshape(r1 - r0, K // 32, 34)
+    d = np.ascontiguousarray(b[:, :, :2]).view(np.float16).astype(np.float32)
+    q = np.ascontiguousarray(b[:, :, 2:]).view(np.int8).astype(np.float32)
+    return (q * d).reshape(r1 - r0, K)
+
+
+def W16로(x, 형식):
+    """[행][K] fp32 → F16(fp16 — 가까운 값) 또는 BF16(fp32 의 위 16 비트 — 가까운 값, 같으면 짝수)의 바이트"""
+    x = np.ascontiguousarray(x, np.float32)
+    if 형식 == "F16":
+        h = x.astype(np.float16)
+        assert np.isfinite(h).all(), "F16 에 들지 않는 값"
+        return h.tobytes()
+    u = x.view(np.uint32).astype(np.uint64)
+    return ((u + 0x7FFF + ((u >> 16) & 1)) >> 16).astype(np.uint16).tobytes()
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    위치 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] not in ("--층", "--헤드")]
+    위치 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] not in ("--층", "--헤드", "--W16")]
     원본, 출력 = 위치[:2]
     Q8 = "--Q8" in sys.argv
+    W16 = sys.argv[sys.argv.index("--W16") + 1] if "--W16" in sys.argv else None      # 0.24.0 — 행렬을 F16 · BF16 으로(계약 1.3 의 실행 경로를 시험)
+    assert W16 in (None, "F16", "BF16") and not (Q8 and W16), "--W16 뒤에는 F16 · BF16, --Q8 과 함께 쓰지 않는다"
     g = GR.GGUF(원본)
     구조 = g.meta.get("general.architecture")
     assert 구조 in ("gemma4", "gemma3"), 구조
@@ -122,7 +146,8 @@ def main():
             return P == 0 or l % P < P - 1
         if [윈도층(l) for l in 층들] != [윈도층(i) for i in range(len(층들))]:
             윈도배열 = struct.pack("<IQ", 7, len(층들)) + bytes(int(윈도층(l)) for l in 층들)       # 불(타입 7)의 배열
-    이름글 = f"{g.meta.get('general.name', 구조)} — 층 {','.join(map(str, 층들))}{' · Q8_0' if Q8 else ''} (시험/작은젬마.py)"
+    덧글 = " · Q8_0" if Q8 else (f" · {W16}" if W16 else "")
+    이름글 = f"{g.meta.get('general.name', 구조)} — 층 {','.join(map(str, 층들))}{덧글} (시험/작은젬마.py)"
     kv = []
     for _ in range(nkv):
         n = struct.unpack_from("<Q", b, o)[0]
@@ -152,6 +177,8 @@ def main():
             raw = struct.pack(정수꼴[t], 128)
         elif k == "general.file_type" and Q8:
             raw = struct.pack({4: "<I", 5: "<i"}[t], 7)                 # LLAMA_FTYPE_MOSTLY_Q8_0
+        elif k == "general.file_type" and W16:
+            raw = struct.pack({4: "<I", 5: "<i"}[t], 1 if W16 == "F16" else 32)       # LLAMA_FTYPE_MOSTLY_F16 · MOSTLY_BF16
         kv.append((k, t, raw))
         o = e
     if 윈도배열 is not None:
@@ -165,8 +192,14 @@ def main():
                 continue
             새 = f"blk.{번호[l]}." + ".".join(이름.split(".")[2:])
         꼬리 = ".".join(이름.split(".")[2:]) if 이름.startswith("blk.") else 이름
-        다시 = Q8 and t in K블록 and (꼬리 in 행렬 or 이름 in ("token_embd.weight", "output.weight"))
-        if 다시:
+        큰행렬 = 꼬리 in 행렬 or 이름 in ("token_embd.weight", "output.weight")
+        다시 = Q8 and t in K블록 and 큰행렬
+        if W16 and 큰행렬:                                    # 0.24.0 — k-양자화 · Q8_0 의 행렬을 풀어 F16 · BF16 으로
+            assert t in K블록 or t == GR.Q8_0, f"{이름}: {W16} 로 바꾸지 않는 형식 {t}"
+            다시 = W16
+            n = dims[0] * dims[1] * 2
+            t2 = GR.F16 if W16 == "F16" else GR.BF16
+        elif 다시:
             n = dims[0] * dims[1] // 32 * 34
             t2 = GR.Q8_0
         else:
@@ -190,14 +223,19 @@ def main():
         f.write(머리)
         for 새, t2, dims, 이름, n, 다시 in 텐서:
             t, _, raw = g.원(이름)
-            if 다시:
+            if 다시 in ("F16", "BF16"):
+                K, N = dims[0], dims[1]
+                for r0 in range(0, N, 4096):
+                    r1 = min(N, r0 + 4096)
+                    f.write(W16로(풀기행렬(raw, t, K, r0, r1) if t in K블록 else Q8풀기(raw, K, r0, r1), 다시))
+            elif 다시:
                 K, N = dims[0], dims[1]
                 for r0 in range(0, N, 4096):
                     f.write(Q8로(풀기행렬(raw, t, K, r0, min(N, r0 + 4096))).tobytes())
             else:
                 f.write(raw.tobytes()[:n])                    # --헤드 128 의 정규화 가중치는 앞 n 바이트만(그 밖은 전부)
             f.write(b"\0" * ((-n) % 정렬))
-    print(f"{출력}: 층 {층들} → {len(층들)} 층{' · Q8_0' if Q8 else ''} · 텐서 {len(텐서)} · {os.path.getsize(출력) / 2 ** 20:.0f} MiB", flush=True)
+    print(f"{출력}: 층 {층들} → {len(층들)} 층{덧글} · 텐서 {len(텐서)} · {os.path.getsize(출력) / 2 ** 20:.0f} MiB", flush=True)
 
 
 if __name__ == "__main__":
