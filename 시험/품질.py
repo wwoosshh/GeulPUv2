@@ -49,7 +49,7 @@ class 라마어휘:
         L.llama_model_default_params.restype = c_p
         L.llama_model_default_params.argtypes = [c_p]
         L.llama_model_load_from_file.restype = c_p
-        L.llama_model_load_from_file.argtypes = [ctypes.c_char_p, c_p]
+        L.llama_model_load_from_file.argtypes = [ctypes.c_char_p, c_p if LM.윈도 else LM._판256]      # 리눅스는 구조체를 값으로(재기/라마.py)
         L.llama_model_get_vocab.restype = c_p
         L.llama_model_get_vocab.argtypes = [c_p]
         mp = ctypes.create_string_buffer(256)
@@ -57,7 +57,7 @@ class 라마어휘:
         assert mp.raw[72:78] == bytes([0, 0, 1, 0, 0, 0]), f"llama_model_params 의 참거짓 칸이 예상과 다르다: {mp.raw[64:80].hex()}"
         struct.pack_into("<B", mp, 72, 1)
         self.L = L
-        self.model = L.llama_model_load_from_file(gguf.encode("utf-8"), mp)
+        self.model = L.llama_model_load_from_file(gguf.encode("utf-8"), LM._값(LM._판256, mp))
         assert self.model, "llama.cpp 가 어휘를 읽지 못했다"
         self.vocab = L.llama_model_get_vocab(self.model)
         L.llama_tokenize.restype = ctypes.c_int32

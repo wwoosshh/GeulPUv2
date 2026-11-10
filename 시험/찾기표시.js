@@ -41,7 +41,6 @@ const ALLOWED = {
   'gemma4-PLE': ['variant'],
   'gemma4-MoE': ['variant'],
   'gemma4-31B-unverified': ['check'],
-  'gemma3-size': ['variant'],      // 0.24.0 — Gemma 3 의 27B(엔진이 아직 받지 않는 크기)
   'no-arch': ['unknown'],
   'clip-arch': ['check', 'unknown', 'arch', 'quant'],
   nonllm: ['arch', 'task', 'unknown', 'quant', 'check'],      // check: Hugging Face 가 구조를 clip 으로 읽은 저장소에 모델 파일이 따로 있을 때

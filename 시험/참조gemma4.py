@@ -2,7 +2,8 @@
 """0.12.0 12-3h-1 — Gemma 4(GGUF 구조 gemma4)의 계약 CPU 참조: 지금의 계약(정수 블록 행렬곱 · 어텐션 · RMSNorm · RoPE)에 계약 4.12(Gemma 4 —
 GeGLU · 소프트캡 · 슬라이딩 윈도 · 가중치 없는 v 정규화 · 배율 1 의 어텐션 · 임베딩 × √너비 · 층 배율 — 계약/정수계약.py)를 더한 순전파. 층의 뜻은
 시험/gemma4수학.py(llama.cpp 의 src/models/gemma4.cpp 와 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다. 지금은 dense(12B · 31B)만.
-0.24.0 — Gemma 3(GGUF 구조 gemma3 — 계약 4.14: 헤드 256 의 4B · 12B)도 읽는다(아래 설정 — 4.12 에서 다른 것만).
+0.24.0 — Gemma 3(GGUF 구조 gemma3 — 계약 4.14: 헤드 256 의 270M · 1B · 4B · 12B 와 헤드 128 의 27B)도 읽는다(아래 설정 — 4.12 에서 다른
+것만).
 
   python -I 시험/참조gemma4.py <gemma4 gguf> --수학 <폴더> <출력.json> [--빠른] [--저장된]
   python -I 시험/참조gemma4.py <gemma4 gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--입력 <시험_7B 의 입력 파일>]
@@ -38,7 +39,7 @@ f32 = np.float32
 
 def 설정(g):
     """구조 gemma4(계약 4.12)와 gemma3(계약 4.14 — 4.12 에서 다른 것: 층의 모양이 모두 같다 · 윈도 층은 l mod P < P − 1 · 전체 층의 RoPE 는
-    선형 스케일링 s 로 나눈다 · v 는 정규화하지 않는다 · 점수 스케일 fp32(1/√헤드 크기))."""
+    선형 스케일링 s 로 나눈다 · v 는 정규화하지 않는다 · 점수 스케일 fp32(1/√헤드 크기) — 층이 62 개인 파일(27B)은 fp32(1/√(너비 ÷ 헤드 수)))."""
     m = g.meta
     구조 = m["general.architecture"]
     assert 구조 in ("gemma4", "gemma3"), 구조
@@ -63,11 +64,13 @@ def 설정(g):
         assert s["돌림"][w] == s["헤드"][w], "Gemma 의 RoPE 는 헤드 전체(Gemma 4 의 부분 회전은 rope_freqs 로)"
     if 구조 == "gemma3":
         assert s["인자"] is None, "Gemma 3 의 rope_freqs 는 받지 않는다"
-        assert hd == 256 and s["헤드"][True] == 256 and L != 62, "Gemma 3 는 헤드 256(4B · 12B 의 꼴)만 — 27B(헤드 128 · 스케일 1/√(너비/헤드 수))는 아직"
+        assert hd in (128, 256) and s["헤드"][True] == hd, "Gemma 3 는 모든 층이 같은 헤드(256, 27B 는 128)"
         if not s["창"]:                                              # sliding_window 가 없으면 모든 층이 전체 어텐션 층
             s["윈도층"] = [False] * L
         s["v정규화"] = False
-        s["눈금"] = C.점수눈금(hd)                                    # fp32(1/√헤드 크기) — 256 이면 1/16(정확)
+        # 점수 스케일(계약 4.14 의 4): fp32(1/√헤드 크기) — 256 이면 1/16(정확). 층이 62 개인 파일(27B)은 llama.cpp 를 따라
+        # fp32(1/√(너비 ÷ 헤드 수)) — 5,376 ÷ 32 = 168
+        s["눈금"] = C.점수눈금(s["너비"] // s["머리"] if L == 62 else hd)
         스케일 = GM.선형스케일(k)                                         # 전체 층: θ′_i = θ_i / s(계약 4.7 의 2 의 식에 f_i = s)
         s["인자"] = np.full(hd // 2, 스케일, f32) if 스케일 != 1.0 else None
     return s

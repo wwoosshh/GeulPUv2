@@ -90,6 +90,9 @@ EXE = ".exe" if os.name == "nt" else ""
     # Gemma 3 270M 의 실제 파일(291 MB) — 너비 640(256 의 배수가 아닌 Q8_0), 윈도 512, KV 헤드 하나
     ("gemma3-270m-Q8", "구조회귀/gemma-3-270m-it-Q8_0.gguf", "gemma3Q8_640x4x1x2048x262144",
      "gemma3큰 Q8_0 640 4 1 2048 262144"),
+    # 0.24.0 — 헤드 128 의 실행 경로(27B 와 같은 헤드 크기): 4B 의 층 0 … 5 를 헤드 128 로 읽는 파일(시험/작은젬마.py --헤드 128 — 헤드 16 · KV 8)
+    ("gemma3-작은-h128", "구조회귀/작은gemma3K_h128.gguf", "gemma3K_2560x16x8x10240x262208_h128",
+     "gemma3큰 K 2560 16 8 10240 262208 --헤드 128"),
     ("deepseek2-작은", "구조회귀/작은deepseek2.gguf", "deepseek2KW16_2048x20x1x10240x154880_MLA768e5",
      "deepseek2큰 K 2048 20 1 10240 154880 --W16 --MoE K --MLA 768 --eps5"),
     ("deepseek2-작은-kanana", "구조회귀/작은kanana2.gguf", "deepseek2KW16_2048x32x1x6144x128256_MLA0K",
