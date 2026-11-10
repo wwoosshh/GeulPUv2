@@ -11,7 +11,7 @@
 행들을 덩이씩 넣어 고리를 몇 번 돈 프롬프트 · 끝의 생성 · 고리에 남은 캐시, 그리고 고리가 아직 가진 창 안으로 되감아 다른 행으로 이은 것.
 프롬프트 어텐션의 엔진 꼴(창이 있으면 묶음 칸 몇 개 — 묶음 g 의 칸 g mod 칸 수, 창이 없으면 행 64 개씩 나눠 띄움)도 같은 참값과.
 
-  python -I 시험/젬마판.py <ptx> <출력.json> [--행 300] [--gemma3]
+  python -I 시험/젬마판.py <ptx> <출력.json> [--행 300] [--gemma3 [--shape 너비,확장폭,헤드 수,KV 헤드 수]]
 
 --gemma3(0.24.0 — 커널생성 gemma3큰 2560 8 4 10240 의 모듈, 계약 4.14): 머리정규화젬마256 이 v 를 그대로 두고, 점수 스케일이 1/16 이고,
 전체 어텐션 층도 헤드 256(RoPE 표는 θ 10⁶ · 선형 스케일링 8). 나머지 시험은 같다(헤드 512 의 커널은 이 모듈에 없다).
@@ -332,15 +332,18 @@ def main():
     ptx, 출력 = [a for a in sys.argv[1:] if not a.startswith("--")][:2]
     T = int(sys.argv[sys.argv.index("--행") + 1]) if "--행" in sys.argv else 300
     젬마3 = "--gemma3" in sys.argv
+    # --shape <너비>,<확장폭>,<헤드 수>,<KV 헤드 수> — 모듈의 모양(--gemma3 의 기본은 4B: 2560,10240,8,4. 270M 은 640,2048,4,1)
+    모양 = [int(x) for x in sys.argv[sys.argv.index("--shape") + 1].split(",")] if "--shape" in sys.argv else [2560, 10240, 8, 4]
+    assert len(모양) == 4 and (젬마3 or "--shape" not in sys.argv), "--shape 은 --gemma3 과 함께, 값 넷"
     dv = 장치(ptx)
     r = np.random.default_rng(4)
     결과 = {"행": T, "경우": {}}
     if 젬마3:
         # ---- 0.24.0 — Gemma 3 의 모듈(커널생성 gemma3큰 — 계약 4.14): v 는 그대로 · 점수 스케일 1/16. 헤드 256 · 질의 8 · KV 4(4B 의 꼴)의
         #      슬라이딩 윈도 층(θ 10⁴)과 전체 어텐션 층(θ 10⁶ · 선형 스케일링 8 — RoPE 표의 일) ----
-        V정규화, 눈금, H = False, float(C.점수눈금(256)), 8
-        결과["경우"].update(층시험(dv, 256, 4, 10000.0, None, T, T // 2, [창없음, 130], r))
-        다 = 층시험(dv, 256, 4, 1e6, np.full(128, 8.0, f32), T, T // 2, [창없음], r)
+        V정규화, 눈금, H = False, float(C.점수눈금(256)), 모양[2]
+        결과["경우"].update(층시험(dv, 256, 모양[3], 10000.0, None, T, T // 2, [창없음, 130], r))
+        다 = 층시험(dv, 256, 모양[3], 1e6, np.full(128, 8.0, f32), T, T // 2, [창없음], r)
         결과["경우"].update({f"전체 층(선형 스케일링 8) {k}": v for k, v in 다.items()})
     else:
         인자 = np.where(np.arange(256) < 64, 1.0, 1e30).astype(f32)  # Gemma 4 12B 의 rope_freqs 꼴(앞 64 짝만 돈다)
@@ -357,7 +360,7 @@ def main():
     결과["경우"].update(고리시험(dv, 256, 1, 10000.0, 1000, 256, 100, 130, r, (1000 - 120, 300)))
     H = 16
     # ---- 크기와 상관없는 판 ----
-    D, F, n = (2560, 10240, 37) if 젬마3 else (3840, 15360, 37)     # 모듈의 너비 · 확장폭(Gemma 3 4B · Gemma 4 12B)
+    D, F, n = (모양[0], 모양[1], 37) if 젬마3 else (3840, 15360, 37)     # 모듈의 너비 · 확장폭(Gemma 3 — --shape, 기본 4B · Gemma 4 12B)
     h = r.standard_normal((n, D)).astype(f32)
     y = (r.standard_normal((n, D)) * 3).astype(f32)
     w = (1.0 + 0.1 * r.standard_normal(D)).astype(f32)
