@@ -2,6 +2,7 @@
 """0.12.0 12-3h-1 — Gemma 4(GGUF 구조 gemma4)의 계약 CPU 참조: 지금의 계약(정수 블록 행렬곱 · 어텐션 · RMSNorm · RoPE)에 계약 4.12(Gemma 4 —
 GeGLU · 소프트캡 · 슬라이딩 윈도 · 가중치 없는 v 정규화 · 배율 1 의 어텐션 · 임베딩 × √너비 · 층 배율 — 계약/정수계약.py)를 더한 순전파. 층의 뜻은
 시험/gemma4수학.py(llama.cpp 의 src/models/gemma4.cpp 와 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다. 지금은 dense(12B · 31B)만.
+0.24.0 — Gemma 3(GGUF 구조 gemma3 — 계약 4.14: 헤드 256 의 4B · 12B)도 읽는다(아래 설정 — 4.12 에서 다른 것만).
 
   python -I 시험/참조gemma4.py <gemma4 gguf> --수학 <폴더> <출력.json> [--빠른] [--저장된]
   python -I 시험/참조gemma4.py <gemma4 gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--입력 <시험_7B 의 입력 파일>]
@@ -30,27 +31,45 @@ import gguf읽기 as GR       # noqa: E402
 import 정수계약 as C        # noqa: E402
 import 참조7B as R7         # noqa: E402
 import 참조35 as R35        # noqa: E402 — 임베딩
+import gemma4수학 as GM     # noqa: E402 — 윈도층들 · 선형스케일(메타데이터의 뜻)
 
 f32 = np.float32
 
 
 def 설정(g):
+    """구조 gemma4(계약 4.12)와 gemma3(계약 4.14 — 4.12 에서 다른 것: 층의 모양이 모두 같다 · 윈도 층은 l mod P < P − 1 · 전체 층의 RoPE 는
+    선형 스케일링 s 로 나눈다 · v 는 정규화하지 않는다 · 점수 스케일 fp32(1/√헤드 크기))."""
     m = g.meta
-    assert m["general.architecture"] == "gemma4", m["general.architecture"]
-    k = lambda x, d=None: m.get("gemma4." + x, d)                   # noqa: E731
+    구조 = m["general.architecture"]
+    assert 구조 in ("gemma4", "gemma3"), 구조
+    k = lambda x, d=None: m.get(구조 + "." + x, d)                   # noqa: E731
     assert not k("embedding_length_per_layer_input", 0) and not k("attention.shared_kv_layers", 0), "PLE · KV 공유는 아직"
     assert "blk.0.ffn_gate_inp.weight" not in g.tensors, "MoE 는 아직"
     L = k("block_count")
     hkv = k("attention.head_count_kv")
-    s = {"층": L, "너비": k("embedding_length"), "머리": k("attention.head_count"),
-         "KV머리": list(hkv) if isinstance(hkv, (list, tuple)) else [hkv] * L, "윈도층": list(k("attention.sliding_window_pattern")),
-         "헤드": {True: k("attention.key_length_swa"), False: k("attention.key_length")},
-         "돌림": {True: k("rope.dimension_count_swa"), False: k("rope.dimension_count")},
-         "θ": {True: float(k("rope.freq_base_swa")), False: float(k("rope.freq_base"))},
+    hd = k("attention.key_length")
+    무늬 = k("attention.sliding_window_pattern")
+    assert 구조 == "gemma3" or isinstance(무늬, (list, tuple)), "Gemma 4 의 sliding_window_pattern 은 층마다의 배열"
+    s = {"구조": 구조, "층": L, "너비": k("embedding_length"), "머리": k("attention.head_count"),
+         "KV머리": list(hkv) if isinstance(hkv, (list, tuple)) else [hkv] * L, "윈도층": GM.윈도층들(무늬, L),
+         "헤드": {True: k("attention.key_length_swa", hd), False: hd},
+         "돌림": {True: k("rope.dimension_count_swa", k("attention.key_length_swa", hd)), False: k("rope.dimension_count", hd)},
+         "θ": {True: float(k("rope.freq_base_swa", 10000.0)), False: float(k("rope.freq_base", 10000.0))},
          "창": k("attention.sliding_window"), "eps": float(k("attention.layer_norm_rms_epsilon")),
-         "캡": float(k("final_logit_softcapping", 0.0) or 0.0)}
+         "캡": float(k("final_logit_softcapping", 0.0) or 0.0),
+         "v정규화": True, "눈금": 1.0,                                # Gemma 4 — v 도 정규화(가중치 없이) · 점수 배율 1
+         "인자": g.풀기("rope_freqs.weight") if "rope_freqs.weight" in g.tensors else None}
     for w in (True, False):
-        assert s["돌림"][w] == s["헤드"][w], "Gemma 4 의 RoPE 는 헤드 전체(부분 회전은 rope_freqs 로)"
+        assert s["돌림"][w] == s["헤드"][w], "Gemma 의 RoPE 는 헤드 전체(Gemma 4 의 부분 회전은 rope_freqs 로)"
+    if 구조 == "gemma3":
+        assert s["인자"] is None, "Gemma 3 의 rope_freqs 는 받지 않는다"
+        assert hd == 256 and s["헤드"][True] == 256 and L != 62, "Gemma 3 는 헤드 256(4B · 12B 의 꼴)만 — 27B(헤드 128 · 스케일 1/√(너비/헤드 수))는 아직"
+        if not s["창"]:                                              # sliding_window 가 없으면 모든 층이 전체 어텐션 층
+            s["윈도층"] = [False] * L
+        s["v정규화"] = False
+        s["눈금"] = C.점수눈금(hd)                                    # fp32(1/√헤드 크기) — 256 이면 1/16(정확)
+        스케일 = GM.선형스케일(k)                                         # 전체 층: θ′_i = θ_i / s(계약 4.7 의 2 의 식에 f_i = s)
+        s["인자"] = np.full(hd // 2, 스케일, f32) if 스케일 != 1.0 else None
     return s
 
 
@@ -79,9 +98,8 @@ def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
     x = C.곱(R35.임베딩(g, 경우), C.제곱근(f32(D)))               # 계약 4.12 — 임베딩 × fp32(√너비)(√ 는 IEEE 바른 반올림)
     시작 = np.cumsum([0] + [len(S) for S in 경우])
     최대 = max(64, int(max(len(S) for S in 경우)))
-    인자 = g.풀기("rope_freqs.weight") if "rope_freqs.weight" in g.tensors else None
     표 = {True: C.rope표(최대, s["θ"][True], hd=s["돌림"][True]),
-         False: C.rope표(최대, s["θ"][False], hd=s["돌림"][False], 인자=인자)}
+         False: C.rope표(최대, s["θ"][False], hd=s["돌림"][False], 인자=s["인자"])}
 
     def z0(n):
         return np.zeros(n, f32)
@@ -99,7 +117,7 @@ def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
         v0 = R7.곱(h, R7.가중(g, p + "attn_v.weight"), z0(Hkv * hd)) if p + "attn_v.weight" in g.tensors else k0
         q = C.머리정규화(q, g.풀기(p + "attn_q_norm.weight"), eps, hd)
         kk = C.머리정규화(k0, g.풀기(p + "attn_k_norm.weight"), eps, hd)
-        vv = C.머리정규화(v0, np.ones(hd, f32), eps, hd)             # 계약 4.12 — v 는 가중치 없이(× 1 은 정확)
+        vv = C.머리정규화(v0, np.ones(hd, f32), eps, hd) if s["v정규화"] else v0      # 계약 4.12 — v 는 가중치 없이(× 1 은 정확). 4.14 — 그대로
         ys = []
         for si in range(len(경우)):
             a0, a1 = 시작[si], 시작[si + 1]
@@ -107,7 +125,7 @@ def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
             qh = [C.rope(q[a0:a1, hd * a:hd * a + hd], cos, sin, 위치) for a in range(H)]
             kh = [C.rope(kk[a0:a1, hd * a:hd * a + hd], cos, sin, 위치) for a in range(Hkv)]
             vh = [np.ascontiguousarray(vv[a0:a1, hd * a:hd * a + hd]) for a in range(Hkv)]
-            ys.append(np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=1.0, 창=s["창"] if w else None)
+            ys.append(np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=s["눈금"], 창=s["창"] if w else None)
                                       for a in range(H)], 1))
         o = R7.곱(np.concatenate(ys, 0), R7.가중(g, p + "attn_output.weight"), z0(D))
         x = C.더(x, C.rms정규화(o, g.풀기(p + "post_attention_norm.weight"), eps))
