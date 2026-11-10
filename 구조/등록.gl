@@ -4,11 +4,13 @@
 포함 "표준.gl"
 포함 "qwen35/엔진.gl"
 포함 "gemma4/엔진.gl"
+포함 "gemma3/엔진.gl"
 포함 "deepseek2/엔진.gl"
 
 [구조들등록]는 {
     표준구조들등록().
     qwen35구조들등록().
     gemma4구조들등록().
+    gemma3구조들등록().
     deepseek2구조들등록().
 }

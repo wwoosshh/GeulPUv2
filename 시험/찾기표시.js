@@ -41,13 +41,15 @@ const ALLOWED = {
   'gemma4-PLE': ['variant'],
   'gemma4-MoE': ['variant'],
   'gemma4-31B-unverified': ['check'],
+  'gemma3-size': ['variant'],      // 0.24.0 — Gemma 3 의 27B · 1B · 270M(엔진이 아직 받지 않는 크기)
   'no-arch': ['unknown'],
   'clip-arch': ['check', 'unknown', 'arch', 'quant'],
   nonllm: ['arch', 'task', 'unknown', 'quant', 'check'],      // check: Hugging Face 가 구조를 clip 으로 읽은 저장소에 모델 파일이 따로 있을 때
 };
 const counts = {}, bad = [];
 let shown = 0, falseOk = 0;
-for (const r of fx.rows) {
+const rows = fx.rows.concat(fx.added || []);      // added: 조사 뒤에 더한 저장소(0.24.0 — Gemma 3)
+for (const r of rows) {
   const m = { id: r.id, gguf: r.gguf, cardData: { pipeline_tag: r.pipeline_tag || null }, tags: r.tags || [], siblings: (r.files || []).map(f => ({ rfilename: f })) };
   const sup = lib.fdSupport(m);
   const c = counts[r.expect] || (counts[r.expect] = {});
@@ -59,7 +61,7 @@ for (const r of fx.rows) {
   if (!allow.includes(sup.k)) bad.push(`${r.id}: 판정 ${r.expect} → 표시 ${sup.k} (${sup.t})`);
 }
 for (const [e, c] of Object.entries(counts)) console.log(`${e.padEnd(28)} ${Object.entries(c).map(([k, n]) => `${k} ${n}`).join(' · ')}`);
-console.log(`기본 목록(ok · check)에 보이는 저장소 ${shown} / ${fx.rows.length}, 받지 못하는 저장소의 거짓 '실행 가능' ${falseOk}`);
+console.log(`기본 목록(ok · check)에 보이는 저장소 ${shown} / ${rows.length}, 받지 못하는 저장소의 거짓 '실행 가능' ${falseOk}`);
 for (const b of bad) console.log('틀림  ' + b);
 if (bad.length) { console.log(`찾기 표시: 틀림 ${bad.length}`); process.exit(1); }
-console.log(`찾기 표시: 모두 통과 (${fx.rows.length} 저장소)`);
+console.log(`찾기 표시: 모두 통과 (${rows.length} 저장소)`);

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""0.13.0 12-3h-4 — 실제 Gemma 4 GGUF(gemma4)에서 층 몇 개만 남긴 작은 GGUF(엔진 시험용 — VRAM 에 다 든다).
+"""0.13.0 12-3h-4 — 실제 Gemma 4 GGUF(gemma4)에서 층 몇 개만 남긴 작은 GGUF(엔진 시험용 — VRAM 에 다 든다). 0.24.0 — Gemma 3(gemma3)도:
+기본은 층 0 … 5(새 번호의 규칙 l mod 6 < 5 가 원래 층의 종류와 같다 — 윈도 층 다섯 · 전체 어텐션 층 하나). 남긴 층의 종류가 새 번호의
+규칙과 다르면(예: --층 0,5,6) attention.sliding_window_pattern 을 층마다의 불 배열로 적는다(계약 4.14 의 1 — 배열이면 그 값).
 
   python -I 시험/작은젬마.py <gemma4 gguf> <출력.gguf> [--층 0,5,6] [--Q8]
 
@@ -23,7 +25,7 @@ import gguf읽기 as GR        # noqa: E402
 import 정수계약 as C         # noqa: E402
 
 고정 = {0: 1, 1: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 7: 1, 10: 8, 11: 8, 12: 8}
-층배열 = ("gemma4.attention.head_count_kv", "gemma4.attention.sliding_window_pattern")
+층배열끝 = (".attention.head_count_kv", ".attention.sliding_window_pattern")        # 구조 이름 뒤 — 층마다의 배열이면 남긴 층의 칸만
 행렬 = ("attn_q.weight", "attn_k.weight", "attn_v.weight", "attn_output.weight", "ffn_gate.weight", "ffn_up.weight", "ffn_down.weight")
 K블록 = {GR.Q4_K: 144, GR.Q5_K: 176, GR.Q6_K: 210}
 
@@ -85,18 +87,31 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     위치 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and not sys.argv[i - 1].startswith("--층")]
     원본, 출력 = 위치[:2]
-    층들 = [int(x) for x in sys.argv[sys.argv.index("--층") + 1].split(",")] if "--층" in sys.argv else [0, 5, 6]
     Q8 = "--Q8" in sys.argv
     g = GR.GGUF(원본)
-    assert g.meta.get("general.architecture") == "gemma4", g.meta.get("general.architecture")
-    L = g.meta["gemma4.block_count"]
+    구조 = g.meta.get("general.architecture")
+    assert 구조 in ("gemma4", "gemma3"), 구조
+    기본층 = [0, 5, 6] if 구조 == "gemma4" else [0, 1, 2, 3, 4, 5]
+    층들 = [int(x) for x in sys.argv[sys.argv.index("--층") + 1].split(",")] if "--층" in sys.argv else 기본층
+    L = g.meta[구조 + ".block_count"]
     assert 층들 and len(set(층들)) == len(층들) and all(0 <= l < L for l in 층들), (층들, L)
     번호 = {l: i for i, l in enumerate(층들)}
     정렬 = g.meta.get("general.alignment", 32)
     b = g.b
     _, nkv = struct.unpack_from("<QQ", b, 8)
     o = 24
-    이름글 = f"{g.meta.get('general.name', 'gemma4')} — 층 {','.join(map(str, 층들))}{' · Q8_0' if Q8 else ''} (시험/작은젬마.py)"
+    층배열 = tuple(구조 + x for x in 층배열끝)
+    윈도열쇠 = 구조 + ".attention.sliding_window_pattern"
+    윈도배열 = None                                          # Gemma 3 — 남긴 층의 종류가 새 번호의 규칙과 다르면 층마다의 배열로 적는다
+    규칙 = g.meta.get(윈도열쇠)
+    if 구조 == "gemma3" and not isinstance(규칙, (list, tuple)):
+        P = 6 if 규칙 is None else int(규칙)
+
+        def 윈도층(l):
+            return P == 0 or l % P < P - 1
+        if [윈도층(l) for l in 층들] != [윈도층(i) for i in range(len(층들))]:
+            윈도배열 = struct.pack("<IQ", 7, len(층들)) + bytes(int(윈도층(l)) for l in 층들)       # 불(타입 7)의 배열
+    이름글 = f"{g.meta.get('general.name', 구조)} — 층 {','.join(map(str, 층들))}{' · Q8_0' if Q8 else ''} (시험/작은젬마.py)"
     kv = []
     for _ in range(nkv):
         n = struct.unpack_from("<Q", b, o)[0]
@@ -105,7 +120,10 @@ def main():
         t = struct.unpack_from("<I", b, o)[0]
         e = 값건너기(b, o + 4, t)
         raw = bytes(b[o + 4:e])
-        if k == "gemma4.block_count":
+        if k == 윈도열쇠 and 윈도배열 is not None:              # 정수 P 의 칸은 버린다 — 아래에서 배열로
+            o = e
+            continue
+        if k == 구조 + ".block_count":
             raw = struct.pack({4: "<I", 5: "<i", 10: "<Q", 11: "<q"}[t], len(층들))
         elif k == "general.name":
             raw = 문자열(이름글)
@@ -115,6 +133,8 @@ def main():
             raw = struct.pack({4: "<I", 5: "<i"}[t], 7)                 # LLAMA_FTYPE_MOSTLY_Q8_0
         kv.append((k, t, raw))
         o = e
+    if 윈도배열 is not None:
+        kv.append((윈도열쇠, 9, 윈도배열))
     텐서 = []                                               # (새 이름, 타입, dims, 원본 이름, 바이트 수, 다시 양자화)
     for 이름, (t, dims, off) in g.tensors.items():
         새 = 이름

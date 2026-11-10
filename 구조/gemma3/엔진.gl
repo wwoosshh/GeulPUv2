@@ -1,0 +1,164 @@
+(* 구조 gemma3(Gemma 3 — 계약 4.14, 0.24.0)의 엔진 몫. 블록이 Gemma 4 와 같아 가중치 · 버퍼 · 층의 띄움은 구조/gemma4 의 함수를 그대로 쓰고
+   (구조/등록.gl 이 gemma4/엔진.gl 을 먼저 포함한다), 여기에는 다른 것만 있다 — 설정과 모듈:
+     · 모든 층이 헤드 256 · 같은 KV 헤드 수(젬마헤드전체 = 젬마헤드윈도, 젬마KV전체 = 젬마KV윈도). 전체 어텐션 층도 헤드 256 의 커널로,
+       KV 는 Gemma 4 처럼 공통 KV 캐시(윈도 층은 링 버퍼)
+     · 슬라이딩 윈도 층: l mod P < P − 1(P = attention.sliding_window_pattern — 없으면 6. 배열이면 층마다 그 값)
+     · RoPE: 윈도 층 θ = rope.freq_base_swa(없으면 10⁴), 전체 어텐션 층 θ = rope.freq_base 에 선형 스케일링 s(rope.scaling.factor) —
+       공통 RoPE 표의 로프인자를 칸마다 s 로(θ′_i = θ_i / s — 계약 4.7 의 2 의 식)
+     · 점수 스케일 fp32(1/√256) = 1/16(젬마눈금비트 — 어텐션 커널의 인자), 층 배율 없음, 소프트캡은 메타데이터에 있을 때만
+     · 모듈은 커널생성 gemma3큰(커널/생성젬마.gl 의 젬마3판 — 헤드 256 의 커널만, 머리정규화젬마256 이 v 를 정규화하지 않는다, 표시 젬마3표시)
+   받는 범위: 헤드 256 의 꼴(4B · 12B). 27B(헤드 128 · 점수 스케일 1/√(너비 / 헤드 수))와 너비가 256 의 배수가 아닌 270M · 1B 는 아직.
+   할 수 없는 것은 Gemma 4 와 같다(생성 그래프 · 표 스텝 · 추측 디코딩 · 슬롯 사이 복사 · 프롬프트 캐시 · 층 나누기 · 빠른 모드 · 8비트 KV ·
+   Vulkan). 로짓 렌즈(logit lens)도 아직 *)
+
+(* 설정 — 구조표의 설정읽기. 받지 않는 파일은 까닭을 알리고 끝낸다 *)
+[GGUF 참조 g를 설정읽기젬마3]는 -> 정수 {
+    qwen3모델 = 거짓.
+    llama모델 = 거짓.
+    eps5모델 = 거짓.
+    eps6모델 = 거짓.
+    젬마이름 = "Gemma 3".
+    층수 = 메타정수(g, "gemma3.block_count").
+    너비 = 메타정수(g, "gemma3.embedding_length").
+    머리수 = 메타정수(g, "gemma3.attention.head_count").
+    확장폭 = 메타정수(g, "gemma3.feed_forward_length").
+    모델위치 = 메타정수(g, "gemma3.context_length").
+    (층수 < 1 또는 층수 > 1024 또는 너비 > 65536 또는 확장폭 > 262144 또는 머리수 < 1)이면 {
+        파일에_쓰기(표준오류(), "받지 않는 크기: 층 %lld · 너비 %lld · 확장폭 %lld · 헤드 %lld (층 1 ~ 1,024 · 너비 65,536 · 확장폭 262,144 까지)\n", 층수, 너비, 확장폭, 머리수).
+        1로 종료하다.
+    }
+    (* 헤드 — 모든 층이 같다(계약 4.14 의 1). 없는 값은 llama.cpp 의 기본값: key_length · value_length = 너비 / 헤드 수, RoPE 차원 = key_length,
+       윈도 층의 것(_swa)은 전체 어텐션 층의 것 *)
+    정수 헤드 = 너비 / 머리수.
+    메타있음(g, "gemma3.attention.key_length")이면 { 헤드 = 메타정수(g, "gemma3.attention.key_length"). }
+    정수 값폭 = 너비 / 머리수.
+    메타있음(g, "gemma3.attention.value_length")이면 { 값폭 = 메타정수(g, "gemma3.attention.value_length"). }
+    정수 돌림수 = 헤드.
+    메타있음(g, "gemma3.rope.dimension_count")이면 { 돌림수 = 메타정수(g, "gemma3.rope.dimension_count"). }
+    정수 헤드윈 = 헤드.
+    메타있음(g, "gemma3.attention.key_length_swa")이면 { 헤드윈 = 메타정수(g, "gemma3.attention.key_length_swa"). }
+    정수 값윈 = 값폭.
+    메타있음(g, "gemma3.attention.value_length_swa")이면 { 값윈 = 메타정수(g, "gemma3.attention.value_length_swa"). }
+    정수 돌림윈 = 돌림수.
+    메타있음(g, "gemma3.rope.dimension_count_swa")이면 { 돌림윈 = 메타정수(g, "gemma3.rope.dimension_count_swa"). }
+    (헤드 != 256 또는 값폭 != 256 또는 돌림수 != 256 또는 헤드윈 != 256 또는 값윈 != 256 또는 돌림윈 != 256)이면 {
+        파일에_쓰기(표준오류(), "Gemma 3: 헤드 %lld(값 %lld · RoPE %lld — 윈도 층 %lld · %lld · %lld)는 아직 받지 않는다 — 헤드 256 의 꼴(4B · 12B)만. 27B 는 헤드 128 이다\n",
+            헤드, 값폭, 돌림수, 헤드윈, 값윈, 돌림윈).
+        1로 종료하다.
+    }
+    층수 == 62이면 {                               (* llama.cpp 는 층이 62 인 gemma3(27B)의 점수 스케일을 1/√(너비 / 헤드 수)로 한다 *)
+        파일에_쓰기(표준오류(), "Gemma 3: 층이 62 개인 파일(27B — 점수 스케일이 다르다)은 아직 받지 않는다\n"). 1로 종료하다.
+    }
+    젬마헤드전체 = 256.
+    젬마헤드윈도 = 256.
+    젬마눈금비트 = 젬마비트(0.0625).               (* 계약 4.14 의 4 — fp32(1/√256) = 1/16(정확) *)
+    실수 eps = 메타실수(g, "gemma3.attention.layer_norm_rms_epsilon").
+    (eps < 0.00000099999 또는 eps > 0.00000100001)이면 { 파일에_쓰기(표준오류(), "Gemma 3: RMSNorm eps %g 은 받지 않는다(모듈의 상수 10⁻⁶)\n", eps). 1로 종료하다. }
+    (* RoPE 의 θ — 없으면 llama.cpp 의 기본값 10⁴ *)
+    젬마밑전체 = 10000.0.
+    메타있음(g, "gemma3.rope.freq_base")이면 { 젬마밑전체 = 메타실수(g, "gemma3.rope.freq_base"). }
+    젬마밑윈도 = 10000.0.
+    메타있음(g, "gemma3.rope.freq_base_swa")이면 { 젬마밑윈도 = 메타실수(g, "gemma3.rope.freq_base_swa"). }
+    젬마밑확인(젬마밑전체, "gemma3.rope.freq_base").
+    젬마밑확인(젬마밑윈도, "gemma3.rope.freq_base_swa").
+    (* 전체 어텐션 층의 선형 스케일링 s(계약 4.14 의 2): rope.scaling.type 이 linear 이거나 없고 rope.scaling.factor(없으면 옛 이름
+       rope.scale_linear)가 0 이 아닐 때. none 이면 1. 그 밖의 종류(yarn …)와 rope_freqs 는 받지 않는다 *)
+    참거짓 선형 = 참.
+    메타있음(g, "gemma3.rope.scaling.type")이면 {
+        문자열 종류 = 메타글(g, "gemma3.rope.scaling.type").
+        문자열_같은가(종류, "none")이면 { 선형 = 거짓. }
+        아니면 {
+            아닌 문자열_같은가(종류, "linear")이면 {
+                파일에_쓰기(표준오류(), "Gemma 3: RoPE 스케일링 %s 은 받지 않는다(linear · none 만)\n", 종류). 1로 종료하다.
+            }
+        }
+    }
+    실수 s = 1.0.
+    선형이면 {
+        실수 f = 0.0.
+        메타있음(g, "gemma3.rope.scaling.factor")이면 { f = 메타실수(g, "gemma3.rope.scaling.factor"). }
+        아니면 메타있음(g, "gemma3.rope.scale_linear")이면 { f = 메타실수(g, "gemma3.rope.scale_linear"). }
+        f != 0.0이면 { s = f. }
+    }
+    아닌 (s > 0.0 그리고 s < 1.0e30)이면 { 파일에_쓰기(표준오류(), "Gemma 3: rope.scaling.factor %g 는 받지 않는다\n", s). 1로 종료하다. }
+    텐서있음(g, "rope_freqs.weight")이면 { 파일에_쓰기(표준오류(), "Gemma 3: rope_freqs 가 있는 파일은 받지 않는다\n"). 1로 종료하다. }
+    (* 슬라이딩 윈도 — 없으면(모든 층이 전체 어텐션 층) 아직 받지 않는다 *)
+    젬마창 = 0.
+    메타있음(g, "gemma3.attention.sliding_window")이면 { 젬마창 = 메타정수(g, "gemma3.attention.sliding_window"). }
+    젬마창 < 1이면 { 파일에_쓰기(표준오류(), "Gemma 3: 슬라이딩 윈도가 없는 파일(sliding_window %lld)은 아직 받지 않는다\n", 젬마창). 1로 종료하다. }
+    젬마캡 = 0.0.
+    메타있음(g, "gemma3.final_logit_softcapping")이면 { 젬마캡 = 메타실수(g, "gemma3.final_logit_softcapping"). }
+    아닌 (젬마캡 >= 0.0 그리고 젬마캡 < 1.0e30)이면 { 파일에_쓰기(표준오류(), "Gemma 3: final_logit_softcapping %g 는 받지 않는다\n", 젬마캡). 1로 종료하다. }
+    (* 층마다 — 슬라이딩 윈도 층인가(계약 4.14 의 1)와 KV 헤드 수(모든 층이 같아야 한다) *)
+    정수 P = 6.
+    참거짓 배열 = 거짓.
+    메타있음(g, "gemma3.attention.sliding_window_pattern")이면 {
+        정수목록_값(g→메타형식, 메타찾기(g, "gemma3.attention.sliding_window_pattern")) == 9이면 { 배열 = 참. }
+        아니면 { P = 메타정수(g, "gemma3.attention.sliding_window_pattern"). }
+    }
+    P < 0이면 { 파일에_쓰기(표준오류(), "Gemma 3: sliding_window_pattern %lld 는 받지 않는다\n", P). 1로 종료하다. }
+    젬마윈도 = 초기할당(층수 을, 8).
+    정수 kv = 0.
+    정수 윈도층수 = 0.
+    반복 (정수 l는 0부터 층수 전까지) {
+        배열이면 {
+            층메타정수(g, "gemma3.attention.sliding_window_pattern", l) != 0이면 { 젬마윈도[l] = 1. }
+        }
+        아니면 {
+            P == 0이면 { 젬마윈도[l] = 1. }               (* llama.cpp 의 set_swa_pattern — P 가 0 이면 모든 층이 윈도 층 *)
+            아니면 {
+                l % P < P - 1이면 { 젬마윈도[l] = 1. }
+            }
+        }
+        윈도층수 += 젬마윈도[l].
+        정수 kvl = 층메타정수(g, "gemma3.attention.head_count_kv", l).
+        l == 0이면 { kv = kvl. }
+        kvl != kv이면 { 파일에_쓰기(표준오류(), "Gemma 3: 층마다 KV 헤드 수가 다르다(층 %lld: %lld · %lld)\n", l, kvl, kv). 1로 종료하다. }
+    }
+    윈도층수 == 0이면 { 파일에_쓰기(표준오류(), "Gemma 3: 슬라이딩 윈도 층이 없는 파일은 아직 받지 않는다\n"). 1로 종료하다. }
+    kv < 1이면 { 파일에_쓰기(표준오류(), "Gemma 3: KV 헤드 수 %lld 는 받지 않는다\n", kv). 1로 종료하다. }
+    젬마KV윈도 = kv.
+    젬마KV전체 = kv.
+    젬마설정공통(g).
+    (* 선형 스케일링 — 공통 RoPE 표(전체 어텐션 층)의 로프인자. 새 칸을 다 채운 뒤 한 번에 바꾼다(RoPE 워커가 공통 표를 미리 짓는다 —
+       구조/gemma4/가중치.gl 의 젬마로프읽기 와 같은 까닭) *)
+    실수 참조 새인자 = 없음.
+    s != 1.0이면 {
+        새인자 = 할당(128 * 8).
+        반복 (정수 i는 0부터 128 전까지) { 새인자[i] = s. }
+    }
+    젬마로프인자 = 새인자.
+    로프인자 = 새인자.
+    반환 0.
+}
+
+(* 커널 — 모듈이 gemma3큰 인지는 엔진만들기가 본다(표시 커널 젬마3표시). 헤드 512 의 커널은 이 모듈에 없다(쓰지 않는다) *)
+[모듈준비젬마3]는 -> 정수 {
+    k머리정규화젬마256 = 함수얻기(엔모듈, "머리정규화젬마256").
+    kRoPEKV젬마256 = 함수얻기(엔모듈, "RoPEKV젬마256").
+    k타일어텐션젬마256 = 함수얻기(엔모듈, "타일어텐션젬마256").
+    k조각어텐션젬마256 = 함수얻기(엔모듈, "조각어텐션젬마256").
+    k접기자리로젬마256 = 함수얻기(엔모듈, "접기자리로젬마256").
+    k조각접기자리로젬마256 = 함수얻기(엔모듈, "조각접기자리로젬마256").
+    kRMS더하기정수줄젬마 = 함수얻기(엔모듈, "RMS더하기정수줄젬마").
+    kGeGLU자리로젬마 = 함수얻기(엔모듈, "GeGLU자리로젬마").
+    kRMS더하기젬마 = 함수얻기(엔모듈, "RMS더하기젬마").
+    k곱하기젬마 = 함수얻기(엔모듈, "곱하기젬마").
+    k소프트캡젬마 = 함수얻기(엔모듈, "소프트캡젬마").
+    반환 0.
+}
+
+[모듈구조젬마3]는 -> 문자열 { 반환 "gemma3". }          (* 커널생성 gemma3큰 *)
+
+[gemma3구조들등록]는 {
+    구조표 참조 d = 기본구조표("gemma3").
+    젬마구조칸들(d).
+    d→설정읽기 = 설정읽기젬마3.
+    d→모듈구조 = 모듈구조젬마3.
+    d→표시판 = "젬마3표시".
+    d→모듈준비 = 모듈준비젬마3.
+    d→렌즈됨 = 거짓.                                  (* 로짓 렌즈는 아직(Gemma 4 의 코드를 그대로 쓸 수 있다 — 확인한 뒤에) *)
+    d→알림글 = "Gemma 3: 생성 스텝은 행마다 · 추측 디코딩 · 프롬프트 캐시 · 슬롯 사이 복사는 아직 없다(0.24.0)".
+    d→벌칸까닭 = "Gemma 3는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.".
+    구조넣기(d).
+}
