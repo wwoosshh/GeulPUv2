@@ -379,7 +379,8 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
       (C + R)/32 blocks, the weighted sum over the value's C/32 blocks, score scale c = fp32(1/√(N + R)) (the place of item 1 of "Head size
       and RoPE dimensions" — exact 1/16 for GLM, fp32(1/√192) = 0x3D93CD3A for Kanana-2). Output o_i = O_i / L_i (C elements).
    7. **Value expansion**: o′_i = `attn_v_b`[i] · o_i — section 1 (input o_i in the 16-bit format, weight head i's V × C matrix). Output =
-      `attn_output` · [o′_0 | … | o′_(H−1)], x ← x + output (one addition).
+      `attn_output` · [o′_0 | … | o′_(H−1)], x ← x + output (one addition). When the per-head matrices of items 4 and 7 are k-quantized
+      (Kanana-2's `attn_v_b` — Q4_K), section 1.1's formulas apply as they are.
    8. **FFN**: h₂ = RMSNorm(x; `ffn_norm`). Layers l < `leading_dense_block_count` use item 3's SwiGLU. The later layers are MoE — only the
       differences from item 11:
       1. Router l_e = `ffn_gate_inp`_e · h₂ (item 11.1 — no shared-gate column). p_e = σ(l_e) (the σ of item 9).

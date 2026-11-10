@@ -6,9 +6,11 @@
   4. 타일어텐션MLA · 접기MLA(프롬프트 — 한 번에 · 행 64 개씩 · 덩이 둘)와 조각어텐션MLA · 조각접기MLA(생성 — 행 1 · 2 · 4, 슬롯걸음 둘)
      — 헤드마다 정수계약.어텐션(키 576 · 값 512 — 값은 키의 앞 512) 과. 행 1,100 은 그룹 둘(1,024 를 넘는다)
   5. 머리행렬곱MLA — attn_k_b 꼴(입력걸음 N + 64 · 깊이 N · 열 512)과 attn_v_b 꼴(입력걸음 512 · 깊이 512 · 열 V): 헤드마다 행렬곱블라스 와
+  5b. --K(모듈이 --MLAK) — 머리행렬곱MLAK: attn_v_b 꼴(입력걸음 512 · 깊이 512 · 열 V)의 Q4_K · Q5_K · Q6_K 무작위 블록(--gguf 면 그 파일의 층 0
+     attn_v_b 도)을 엔진과 같은 배치(K헤드깔기)로 — 헤드마다 행렬곱K블라스(정수계약.풀기K 가 따로 푼 가중치) 와
   6. MoE라우팅시그 — 고른 번호 · 가중치(정규화 · 배율, 그리고 정규화 없이 · 배율 1) · 공유 게이트 1 · 개수 · 순번의 순열(같은 점수는 작은 번호 먼저)
 
-  python -I 시험/MLA판.py <ptx> <출력.json> [--머리 20] [--nope 192] [--값 256] [--qlora 768] [--eps 1e-5] [--행 1100] [--배율 1.8]
+  python -I 시험/MLA판.py <ptx> <출력.json> [--머리 20] [--nope 192] [--값 256] [--qlora 768] [--eps 1e-5] [--행 1100] [--배율 1.8] [--K [--gguf <파일>]]
 마지막 줄 "모두 0: True|False".
 """
 import json
@@ -29,11 +31,55 @@ from 젬마판 import 장치, 비트, 다른칸    # noqa: E402
 
 f32 = np.float32
 창없음 = 1 << 40
-값깃발 = ("--머리", "--nope", "--값", "--qlora", "--eps", "--행", "--배율")
+값깃발 = ("--머리", "--nope", "--값", "--qlora", "--eps", "--행", "--배율", "--gguf")
 
 
 def 인자값(n, a):
     return type(a)(sys.argv[sys.argv.index(n) + 1]) if n in sys.argv else a
+
+
+def GR이름(t):
+    return {12: "Q4_K", 13: "Q5_K", 14: "Q6_K"}[t]
+
+
+def K헤드깔기(t, 블):
+    """엔진(구조/deepseek2/가중치.gl 의 딥머리행렬올리기K)과 같은 배치 — 블 [줄][K/256][bb] → 값 int8 [줄][K](칸 차례 그대로 — Q4_K · Q5_K 는 q,
+    Q6_K 는 q − 32) · 척도 fp32 [줄][K/32][2](Q4_K · Q5_K: a = d · s, b = m · t / Q6_K: 블록의 두 아래블록 a = d · s). 참조는 정수계약.풀기K 가 따로 푼다."""
+    줄, KS, _ = 블.shape
+    q = np.zeros((줄, KS * 256), np.int8)
+    s = np.zeros((줄, KS * 8, 2), f32)
+    for r_ in range(줄):
+        for k in range(KS):
+            b = 블[r_, k].astype(np.int64)
+            o = k * 256
+            if t == 14:
+                d = f32(np.frombuffer(블[r_, k, 208:210].tobytes(), np.float16)[0])
+                sc = 블[r_, k, 192:208].view(np.int8).astype(np.int64)
+                s[r_, k * 8:k * 8 + 8] = (d * sc.astype(f32)).reshape(8, 2)
+                for 반 in range(2):
+                    ql, qh = b[64 * 반:64 * 반 + 64], b[128 + 32 * 반:128 + 32 * 반 + 32]
+                    q[r_, o + 128 * 반:o + 128 * 반 + 32] = ((ql[:32] & 15) | ((qh & 3) << 4)) - 32
+                    q[r_, o + 128 * 반 + 32:o + 128 * 반 + 64] = ((ql[32:] & 15) | (((qh >> 2) & 3) << 4)) - 32
+                    q[r_, o + 128 * 반 + 64:o + 128 * 반 + 96] = ((ql[:32] >> 4) | (((qh >> 4) & 3) << 4)) - 32
+                    q[r_, o + 128 * 반 + 96:o + 128 * 반 + 128] = ((ql[32:] >> 4) | (((qh >> 6) & 3) << 4)) - 32
+                continue
+            d, m = (f32(x) for x in np.frombuffer(블[r_, k, 0:4].tobytes(), np.float16))
+            sc = b[4:16]
+            for j in range(8):
+                if j < 4:
+                    sj, tj = sc[j] & 63, sc[j + 4] & 63
+                else:
+                    sj, tj = (sc[j + 4] & 15) | ((sc[j - 4] >> 6) << 4), (sc[j + 4] >> 4) | ((sc[j] >> 6) << 4)
+                s[r_, k * 8 + j] = (d * f32(sj), m * f32(tj))
+            qs = b[48:176] if t == 13 else b[16:144]
+            for c in range(4):
+                lo, hi = qs[32 * c:32 * c + 32] & 15, qs[32 * c:32 * c + 32] >> 4
+                if t == 13:
+                    qh = b[16:48]
+                    lo, hi = lo + ((qh >> (2 * c)) & 1) * 16, hi + ((qh >> (2 * c + 1)) & 1) * 16
+                q[r_, o + 64 * c:o + 64 * c + 32] = lo
+                q[r_, o + 64 * c + 32:o + 64 * c + 64] = hi
+    return q, s
 
 
 def 무작위(r, 모양, 폭=1.0):
@@ -190,6 +236,41 @@ def main():
                 [(1, dv.up(바이트)), (1, dv.up(정보)), (1, dv.up(wq)), (1, dv.up(wd)), (1, po), (0, M), (0, H), (0, H * 걸음), (0, 걸음), (0, 깊이), (0, 열)])
         dv.dr.맞추기()
         적기(f"머리행렬곱 {이름}", 다른칸(dv.down(po, (M, H * 열)), 참))
+
+    # ---- 5b. 헤드마다의 k-양자화 행렬곱(--MLAK 모듈 — Kanana-2 의 attn_v_b) ----
+    if "--K" in sys.argv:
+        진짜 = None
+        if "--gguf" in sys.argv:                                       # 실제 attn_v_b(층 0)도
+            import gguf읽기 as GR                                     # noqa: E402
+            g = GR.GGUF(sys.argv[sys.argv.index("--gguf") + 1])
+            t, dims, raw = g.원("blk.0.attn_v_b.weight")
+            assert (dims[0], dims[1], dims[2]) == (512, V, H), dims
+            진짜 = (t, np.asarray(raw).reshape(H, -1))
+        경우들 = [(t, None) for t in (12, 13, 14)] + ([진짜] if 진짜 else [])
+        for t, raw in 경우들:
+            bb = {12: 144, 13: 176, 14: 210}[t]
+            if raw is None:
+                raw = r.integers(0, 256, (H, V * 2, bb), dtype=np.uint8)
+                hh = (np.abs(r.standard_normal((H, V * 2, 2))) * 0.01).astype(np.float16).view(np.uint8).reshape(H, V * 2, 4)
+                if t == 14:
+                    raw[:, :, 208:210] = hh[:, :, :2]
+                else:
+                    raw[:, :, 0:4] = hh
+                raw = raw.reshape(H, -1)
+            M = 37
+            X = 무작위(r, (M, H * 512))
+            바이트, M0 = 자리바이트(X, 2)
+            폭 = (M + 63) // 64 * 64
+            정보 = 정보판(M0, 자리행합(X, 2), 폭)
+            참 = np.concatenate([C.행렬곱K블라스(np.ascontiguousarray(X[:, 512 * h:512 * h + 512]), C.풀기K(t, raw[h], V, 512), np.zeros(V, f32))
+                                for h in range(H)], 1)
+            q, s = K헤드깔기(t, raw.reshape(H * V, 2, bb))
+            po = dv.dr.할당(M * H * V * 4)
+            dv.띄우기("머리행렬곱MLAK", (H * ((V + 31) // 32), M), 32,
+                    [(1, dv.up(바이트)), (1, dv.up(정보)), (1, dv.up(q)), (1, dv.up(s)), (1, po), (0, M), (0, H), (0, H * 512), (0, 512), (0, 512),
+                     (0, V), (0, 6 if t == 14 else 4)])
+            dv.dr.맞추기()
+            적기(f"머리행렬곱K {GR이름(t)}{' (실제 attn_v_b)' if raw is not None and 진짜 and raw is 진짜[1] else ''}", 다른칸(dv.down(po, (M, H * V)), 참))
 
     # ---- 6. 시그모이드 라우팅 ----
     M, E, k = 300, 64, 4

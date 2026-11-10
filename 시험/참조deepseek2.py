@@ -5,6 +5,7 @@
 
   python -I 시험/참조deepseek2.py <gguf> --수학 <폴더> <출력.json> [--저장된]
   python -I 시험/참조deepseek2.py <gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--입력 <시험_7B 의 입력 파일>]
+  [--일꾼 N] — 리눅스(fork)에서 MoE 의 전문가를 프로세스 N 개로 나눠 셈(값은 같다 — 전문가마다 따로인 계산). 윈도는 늘 하나씩
 
 --수학 <폴더>: 시험/deepseek2수학.py 가 남긴 토큰.json · 수학{i}.npy(fp64 의 이상적인 모델 — 로그 확률) · 라마{i}.npy(llama.cpp 로짓) ·
 라우팅.npz 와 비교한다 — 계약의 손실 KL(수학 ‖ 계약) · 1위 일치, 같은 자리의 KL(수학 ‖ llama.cpp), 층마다 고른 전문가가 수학 참조와 같은 행의
@@ -26,6 +27,28 @@ import 정수계약 as C        # noqa: E402
 import 참조7B as R7         # noqa: E402
 import 참조35 as R35        # noqa: E402 — 임베딩 · 라우터로짓 · 가중전문가
 import deepseek2수학 as M   # noqa: E402 — 설정
+
+_g = None                   # 전문가 일꾼(fork)이 물려받는 GGUF
+_풀 = None                  # --일꾼 N 의 프로세스 풀(리눅스만)
+
+
+def _풀열기(g):
+    """--일꾼 N(리눅스)이면 GGUF 를 연 뒤에 fork 풀을 연다 — 일꾼은 _g 를 물려받는다"""
+    global _g, _풀
+    _g = g
+    if "--일꾼" in sys.argv and os.name == "posix":
+        import multiprocessing
+        _풀 = multiprocessing.get_context("fork").Pool(int(sys.argv[sys.argv.index("--일꾼") + 1]))
+
+
+def _전문가하나(일):
+    """전문가 e 의 SwiGLU(4.11 5) — 그 전문가를 고른 행들 he 만"""
+    p, e, he = 일
+    wg = 가중헤드(_g, p + "ffn_gate_exps.weight", e)
+    Fe = wg[1].shape[0]
+    gg = R7.곱(he, wg, np.zeros(Fe, f32))
+    uu = R7.곱(he, 가중헤드(_g, p + "ffn_up_exps.weight", e), np.zeros(Fe, f32))
+    return R7.곱(C.swiglu(gg, uu), 가중헤드(_g, p + "ffn_down_exps.weight", e), np.zeros(he.shape[1], f32))
 
 f32 = np.float32
 라우팅기록 = {}             # 층 → [Σ 행][k] 고른 전문가(계약)
@@ -57,14 +80,15 @@ def MoE(g, p, h, s):
     고른, w = C.시그모이드전문가(l, b, s["고름"], s["정규화"], s["배율"])
     라우팅기록[int(p.split(".")[1])] = 고른.astype(np.int16)
     ys = np.zeros((s["고름"], T, D), f32)
+    global _g
+    _g = g
+    일들 = []
     for e in np.unique(고른):
         행, 순위 = np.nonzero(고른 == e)
-        he = np.ascontiguousarray(h[행])
-        wg = 가중헤드(g, p + "ffn_gate_exps.weight", e)
-        Fe = wg[1].shape[0]
-        gg = R7.곱(he, wg, np.zeros(Fe, f32))
-        uu = R7.곱(he, 가중헤드(g, p + "ffn_up_exps.weight", e), np.zeros(Fe, f32))
-        ys[순위, 행] = R7.곱(C.swiglu(gg, uu), 가중헤드(g, p + "ffn_down_exps.weight", e), np.zeros(D, f32))
+        일들.append((행, 순위, (p, int(e), np.ascontiguousarray(h[행]))))
+    결과들 = _풀.imap(_전문가하나, [x[2] for x in 일들]) if _풀 is not None else map(_전문가하나, [x[2] for x in 일들])
+    for (행, 순위, _), y in zip(일들, 결과들):
+        ys[순위, 행] = y
     o = C.전문가합(w, ys)
     wg = R7.가중(g, p + "ffn_gate_shexp.weight")
     Fs = wg[1].shape[0]
@@ -148,6 +172,7 @@ def 엔진대조(gguf, 폴더, 출력, 입력=None):
     경우는 --입력 의 프롬프트와 요약.txt 의 생성 토큰으로 토큰열을 다시 짓고 행 [잡기시작, 끝) 만)."""
     import 참조gemma4 as RG                                       # noqa: E402 — 입력경우들
     g = GR.GGUF(gguf)
+    _풀열기(g)
     입력경우 = RG.입력경우들(입력) if 입력 else None
     생성 = {}
     요약 = os.path.join(폴더, "요약.txt")
@@ -194,7 +219,7 @@ def 엔진대조(gguf, 폴더, 출력, 입력=None):
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     저장된 = "--저장된" in sys.argv
-    인자 = [a for a in sys.argv[1:] if not a.startswith("--")]
+    인자 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] != "--일꾼"]
     gguf = 인자[0]
     if "--엔진" in sys.argv:
         폴더e = sys.argv[sys.argv.index("--엔진") + 1]
@@ -204,6 +229,7 @@ def main():
     폴더 = sys.argv[sys.argv.index("--수학") + 1]
     출력 = [a for a in 인자[1:] if a != 폴더][0]
     g = GR.GGUF(gguf)
+    _풀열기(g)
     토큰들 = json.load(open(os.path.join(폴더, "토큰.json"), encoding="utf-8"))["토큰"]
     파일 = [os.path.join(폴더, f"계약{i}.npy") for i in range(len(토큰들))]
     t0 = time.time()
