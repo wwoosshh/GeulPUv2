@@ -394,17 +394,17 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
    The layers are x ← x + attention (1 – 7), x ← x + FFN (8). This is llama.cpp's `src/models/deepseek2.cpp` and `build_moe_ffn` (b12224) with
    its order fixed. CPU reference: [`시험/참조deepseek2.py`](../시험/참조deepseek2.py) (`rope이웃`, `시그모이드전문가` and `어텐션` with a value
    width different from the key in `계약/정수계약.py`), math reference: [`시험/deepseek2수학.py`](../시험/deepseek2수학.py).
-14. **Gemma 3** (0.24.0 — architecture `gemma3`: Gemma 3 4B · 12B, [`구조/gemma3/기록.md`](../구조/gemma3/기록.md)): only what differs from
+14. **Gemma 3** (0.24.0 — architecture `gemma3`: Gemma 3 270M · 1B · 4B · 12B, [`구조/gemma3/기록.md`](../구조/gemma3/기록.md)): only what differs from
    the Gemma 4 of item 12. The input (embedding × sqrt(fp32(width)) — 0x424A62C2 for width 2,560), RMSNorm, GeGLU, the normalizations after
    attention and after the FFN, the sliding-window mask and merge, and the end (the softcap only when `final_logit_softcapping` is
    present — Gemma 3 files do not have it) are item 12 as it is.
    1. **Layer shapes**: the head size `attention.key_length` (256) and the KV head count `attention.head_count_kv` are the same in every
-      layer. Layer l is a sliding-window layer (window W = `attention.sliding_window` — 1,024 in the 4B and 12B) when l mod P < P − 1 and a
+      layer. Layer l is a sliding-window layer (window W = `attention.sliding_window` — 1,024 in the 4B and 12B, 512 in the 270M and 1B) when l mod P < P − 1 and a
       full-attention layer otherwise — P = `attention.sliding_window_pattern` (6 when absent: layers 5, 11, 17, … are full-attention
       layers). Without `attention.sliding_window` every layer is a full-attention layer.
    2. **RoPE**: the whole head (n_rot = head size, pairs (i, i + h/2)). Sliding-window layers use θ = `rope.freq_base_swa` (10⁴ when
       absent) as it is. Full-attention layers use θ = `rope.freq_base` (10⁶) with linear RoPE scaling s = `rope.scaling.factor`:
-      θ′_i = θ_i / s (the rule of 7.2 with f_i = s — one fp64 division; exact for the s = 8 of the 4B and 12B). s applies only when
+      θ′_i = θ_i / s (the rule of 7.2 with f_i = s — one fp64 division; exact for the s = 8 of the 4B and 12B; the 270M and 1B have none). s applies only when
       `rope.scaling.type` is linear or absent and `rope.scaling.factor` (or, without it, the old name `rope.scale_linear`) is not 0
       (with none, or without a factor, θ′_i = θ_i). Other
       values of `rope.scaling.type` and a `rope_freqs.weight` tensor are not accepted.
@@ -415,7 +415,9 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
    5. **Absent**: the layer scale (item 12.5), PLE and KV sharing.
    The layers are x ← x + RMSNorm(attention(RMSNorm(x; `attn_norm`)); `post_attention_norm`), x ← x + RMSNorm(GeGLU(RMSNorm(x; `ffn_norm`));
    `post_ffw_norm`). This is llama.cpp's `src/models/gemma3.cpp` (b12224) with its order fixed (the 27B — head size 128 and score scale
-   1/√(width / head count) — and the 270M and 1B, whose widths are not multiples of 256, are not covered yet). CPU reference:
+   1/√(width / head count) — is not covered yet. The 270M and 1B, whose widths 640 and 1,152 are not multiples of 256, are accepted
+   as Q8_0 files only — their Q4_K_M files are mixed: the matrices that do not fit 256-element k-quant blocks are stored as Q5_0 and
+   Q8_0). CPU reference:
    [`시험/참조gemma4.py`](../시험/참조gemma4.py), math reference: [`시험/gemma4수학.py`](../시험/gemma4수학.py) — both also read the
    `gemma3` architecture.
 
