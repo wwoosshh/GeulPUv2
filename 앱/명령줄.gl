@@ -427,6 +427,17 @@
     (상태 == 409 그리고 문자열_찾기(말 에서, "model load") != 없음)이면 {
         반환 "load the model the message names (GeulPU model load --model <id> --wait), then run this again".
     }
+    (* 앱이 시작 직후 하드웨어를 확인하는 동안(몇 초)에 온 모델 불러오기 · 진단 · 속도 측정 — 요청은 맞다. 잠시 뒤 다시 *)
+    (상태 == 503 그리고 문자열_찾기(말 에서, "하드웨어를 확인하는 중") != 없음)이면 {
+        반환 "the app is still checking the GPU (a few seconds after it starts): run this again once GeulPU system state --select device.checked gives true".
+    }
+    (* experiment update 의 판정 기준 — 까닭(message)이 한국어뿐이라 바깥 에이전트가 읽지 못했다(2026-11-10): 꼴을 영어로 *)
+    (상태 == 409 그리고 문자열_찾기(말 에서, "첫 실행 뒤") != 없음)이면 {
+        반환 "after the first run the title, question, plan and the criteria's id and text are fixed: leave them out, and record verdicts as criteria [\{\"id\", \"result\", \"note\"\}] without \"text\"".
+    }
+    (상태 == 400 그리고 (문자열_찾기(말 에서, "판정 기준") != 없음 또는 문자열_찾기(말 에서, "criteria 의 항목") != 없음))이면 {
+        반환 "criteria is an array of \{\"id\", \"text\", \"result\": pending | pass | fail, \"note\"\}: give \"text\" only to write the list (before the first run); to record a verdict give an existing \"id\" with \"result\" and \"note\" (ids: GeulPU experiment show --path <id> --select experiment.criteria)".
+    }
     (* 앱리디자인 E3 — 다른 409(이미 있는 실험 · 첫 실행 뒤의 계획 고치기)는 작업과 상관없다 — 까닭(message)을 읽고 명령의 도움말로 *)
     (상태 == 400 또는 상태 == 404 또는 상태 == 409)이면 { 반환 잇기("check the parameters: GeulPU help ", 명령이름). }
     반환 잇기("GeulPU help ", 명령이름).

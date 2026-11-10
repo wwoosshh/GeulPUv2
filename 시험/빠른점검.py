@@ -240,6 +240,20 @@ def 파이썬API앱(출력):
     알림("파이썬 API — 앱 띄우고 끄기(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
 
 
+def 실험수정(출력):
+    """바깥 에이전트의 시험(2026-11-10)에서 막힌 곳 — 빌드한 앱을 띄워 experiment update 의 판정 기준(text 가 없는 항목은 판정만 · 틀린
+    요청의 400/409 와 CLI 의 영어 next)과 --wait 로 기다린 작업의 답({"job": {...}})을 본다(임시 자료 · GPU 없이 — 윈도만)"""
+    if 리눅스:
+        return
+    exe = os.path.join(출력, "GeulPU" + EXE)
+    if not os.path.exists(exe):
+        알림("실험 수정 — 판정 기준 · 작업의 답(GPU 없이)", False, "GeulPU 가 없다(빌드 실패)")
+        return
+    t0 = time.time()
+    rc, 꼬리 = 돌리기([sys.executable, "-I", "-X", "utf8", os.path.join(ROOT, "시험", "실험수정점검.py"), exe], os.path.join(출력, "실험수정.txt"))
+    알림("실험 수정 — 판정 기준 · 작업의 답(GPU 없이)", rc == 0, f"{꼬리.split(' / ')[-1]} ({time.time() - t0:.1f} 초)")
+
+
 def 기능목록(출력):
     """앱리디자인 B1(문서/기능목록.md) — 기능 목록(앱/data/operations.json)과 앱 · 웹 · 서버 코드의 대조, 그리고 잘못 일곱을 잡는 자체 시험(GPU 없이)"""
     t0 = time.time()
@@ -772,6 +786,7 @@ def main():
             모델해시(출력)
             파이썬API앱(출력)
             명령줄(출력)
+            실험수정(출력)
             모델모양(출력)
             찾기표시(출력)
             명령줄별칭(출력)

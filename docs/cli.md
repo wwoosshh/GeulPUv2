@@ -6,9 +6,11 @@ the original random numbers, read what each layer predicted, and record it all a
 
 ## Start
 
+- Install: `pipx install geulpu` or `pip install geulpu` (Windows, Linux). That gives the `geulpu` command: where this guide writes
+  `GeulPU <command> [--<param> <value> ...]`, type `geulpu <command> ...` (the release package has `GeulPU.exe` or `./GeulPU` itself).
 - The GeulPU app must be running (the GUI, or `GeulPU --no-open`). The CLI calls that app; it never starts one. Default address
-  127.0.0.1:44544 — another port with `--app-port <port>` or `GEULPU_PORT`.
-- A command is `GeulPU <command> [--<param> <value> ...]`. If GeulPU came from pip, `geulpu <command> ...` is the same.
+  127.0.0.1:44544 — another port with `--app-port <port>` or `GEULPU_PORT`. For a few seconds after it starts, the app checks the GPU;
+  a `model load` sent then answers 503 — run it again once `GeulPU system state --select device.checked` gives true.
 - `GeulPU ops` lists every command with its parameters (JSON). `GeulPU help <command>` explains one, with a usage line. A command has
   three names: English (`run branch`), Korean (`실행 분기`) and the operation id (`run.branch`).
 - Add `--session <your-name>` (or set `GEULPU_SESSION`) so the user's screen shows your calls under your name.
@@ -25,25 +27,24 @@ the original random numbers, read what each layer predicted, and record it all a
   finished job's JSON) to a file.
 - `--select <path>[,<path>...]` prints only those values of the JSON answer: one dotted path (`min_margin.step`, `choices.0.text` —
   arrays by index) gives that value, several give an object of path → value, a missing path gives null. It also picks from
-  `--dry-run`, `ops`, `help` and a waited job's JSON; error answers come whole.
+  `--dry-run`, `ops`, `help` and a waited job (`--select job.state`); error answers come whole.
 
 ## Results, errors, exit codes
 
-- Every answer is UTF-8 JSON on stdout (read it as UTF-8 — app messages can be Korean). Exit codes: 0 ok · 1 the operation failed ·
-  2 usage error · 3 the app is not reachable.
+- Every answer is UTF-8 JSON on stdout and comes whole — the CLI does not stream (read it as UTF-8: app messages can be Korean).
+  Exit codes: 0 ok · 1 the operation failed · 2 usage error · 3 the app is not reachable.
 - Errors: `{"error": {"message", "status", "op", "next", "exit"}}`. `message` comes from the app and is often Korean; `next` (English)
   says what to do. A common one: `geulpu.top_logprobs` needs `logprobs` in the same request.
-- Long jobs answer `{"ok": true, "job": N}`. Add `--wait` to wait for the end and get the job's JSON (`state` done · failed · cancelled,
-  `summary`, `reason`). Only one job runs at a time (409 otherwise). The app's console and jobs screen follow that job, so the user
-  sees its progress while you wait.
-- The CLI does not stream; answers come whole.
+- Long jobs answer `{"ok": true, "job": N}`. Add `--wait` to wait for the end: the answer is then `{"job": {...}}` — the job is inside,
+  so read `job.state` (done · failed · cancelled), `job.summary` and `job.reason`; the exit code is 0 only for done. Only one job runs
+  at a time (409 otherwise). The app's console and jobs screen follow that job, so the user sees its progress while you wait.
 
 ## Models
 
 ```
 GeulPU system state --select server,settings.precision  # app state (long — pick parts); "models" lists the models it knows
 GeulPU model add --path C:\models\Qwen3-0.6B-Q8_0.gguf  # → {"id": "qwen3-0.6b-q8_0", ...}
-GeulPU model load --model qwen3-0.6b-q8_0 --wait     # loads it on the GPU; ends with the job JSON
+GeulPU model load --model qwen3-0.6b-q8_0 --wait     # loads it on the GPU; answers {"job": {"state": "done", ...}}
 GeulPU model unload
 ```
 
@@ -65,9 +66,10 @@ The answer is OpenAI-shaped (`choices[0].text`, `choices[0].logprobs`) plus a `g
 | `geulpu.entropy` | per step, the entropy of the distribution |
 | `geulpu.seed` | the seed used (give it back to repeat or branch the run) |
 
-`run chat --messages '[{"role":"user","content":"..."}]'` takes the same fields (for chat, `--logprobs true`). Log-probabilities and
-logit hashes describe the model's own distribution, before temperature and the other sampling settings. Token ids to text: `GeulPU
-run detokenize --tokens '[785, 40]'` (the text comes back under `prompt`); text to ids: `GeulPU run tokenize --prompt "..."`.
+`run chat --messages '[{"role":"user","content":"..."}]'` takes the same fields (for chat, `--logprobs true`). A model that thinks first
+(Qwen3 …) spends `max_tokens` on its thinking block before the answer: give it room, or add `--chat_template_kwargs.enable_thinking false`.
+Log-probabilities and logit hashes describe the model's own distribution, before temperature and the other sampling settings. Token ids
+to text: `GeulPU run detokenize --tokens '[785, 40]'` (the text comes back under `prompt`); text to ids: `GeulPU run tokenize --prompt "..."`.
 `geulpu.first_token_ms` is in microseconds despite its name; `generate_us` too.
 
 **Same bits.** Both computation modes — fast (the default) and exact — repeat bit for bit: the same request gives the same tokens and
@@ -117,7 +119,7 @@ GeulPU experiment create --name lighthouse --title "Where the keeper hesitated" 
 GeulPU experiment update --json @plan.json             # {"path", "plan": "<plan.md text>", "criteria": [{"id", "text"}]} — before any run
 GeulPU run complete ... --experiment <id or path>      # the app records the run: records/runs/r1.json and an entry in "runs"
 GeulPU experiment show --path <id>                     # experiment.json, documents, number of recorded commands
-GeulPU experiment update --json @verdicts.json         # {"path", "criteria": [... "result" (pending · pass · fail), "note"], "results": "<results.md>", "status": "done"}
+GeulPU experiment update --json @verdicts.json         # {"path", "criteria": [{"id", "result": "pass" | "fail", "note"}], "results": "<results.md text>", "status": "done"}
 GeulPU experiment update --json @files.json            # {"path", "add_files": ["expected.json"]} — the app lists them with SHA-256 and size
 GeulPU experiment check --path <id> --wait             # the experiment checker (Python 3.10+); exit 0 = it passes; warnings in "summary"
 GeulPU job log                                         # the last job's log — for a check, what it looked at and each warning
@@ -144,8 +146,8 @@ event it got (`events`), where the answer text and the per-token log-probabiliti
 `experiment update` `add_files` (relative paths with `/`) or the check fails. `--lang ko` on `experiment create` uses the Korean template.
 Prefer `experiment update` to editing experiment.json (it also takes `authors`, `devices` and `reproduce`, and refuses fields it does not
 know); if you edit it yourself (runs of other kinds: compare · replay · evaluate), read it again just before writing — the app rewrites it
-with each recorded call. Title, question, plan and criteria (id, text) change only before the first run; verdicts, notes, results.md,
-status, authors, devices, reproduce and files any time. A recorded entry:
+with each recorded call. Title, question, plan and the criteria's `id` and `text` change only before the first run, the rest any time:
+a criteria entry without `text` sets that id's `result` and `note` and leaves the other criteria as they are. A recorded entry:
 
 ```
 {"id": "r2", "kind": "branch", "operation": "run.branch", "record": "records/runs/r2.json",
@@ -153,10 +155,9 @@ status, authors, devices, reproduce and files any time. A recorded entry:
  "seed": 7, "base": "r1", "intervention": {"type": "token", "step": 3, "value": 40}}
 ```
 
-`expected.json` is optional — `{"runs": {"<run id>": {...}}}` with what each run must give again (for example its logit hashes); the
-inside is yours to choose for now. The check warns (and still passes) while the template's question, criteria text, authors or
-plan.md are left as they are. Commit `plan.md` before running if the folder is in a git repository, so the history shows the
-criteria came first; the check does not require it.
+`expected.json` is optional — `{"runs": {"<run id>": {...}}}` with what each run must give again (the inside is yours: for example its
+logit hashes). The check warns (and still passes) while the template's question, criteria text, authors or plan.md are left as they are.
+Commit `plan.md` before running if the folder is in a git repository, so the history shows the criteria came first.
 
 **Reproducing a run.** Send the `request` from its record (`records/runs/<id>.json`) again with `--experiment`: an identical request is
 recorded as kind `check` with `base`, and its `geulpu.tokens` and `geulpu.logit_hashes` must equal the original's. To hand a run to
@@ -196,5 +197,4 @@ recorded prompt tokens cannot be compared (409).
 
 - Fix the seed and settings, and keep `geulpu.logit_hash` on: any result can then be re-run and checked bit for bit.
 - Prefer token ids over text when you feed an answer back (`prompt` as an id array), so nothing is re-tokenized differently.
-- Read `GeulPU help <command>` before guessing a parameter; unknown `--parameters` are refused rather than ignored. Fields inside a
-  `--json` body go to the app as they are, and the app ignores the ones it does not use (`help` lists what each command takes).
+- Read `GeulPU help <command>` before guessing a parameter: unknown `--parameters` are refused; a `--json` body goes to the app as it is.
