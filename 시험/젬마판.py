@@ -11,7 +11,10 @@
 행들을 덩이씩 넣어 고리를 몇 번 돈 프롬프트 · 끝의 생성 · 고리에 남은 캐시, 그리고 고리가 아직 가진 창 안으로 되감아 다른 행으로 이은 것.
 프롬프트 어텐션의 엔진 꼴(창이 있으면 묶음 칸 몇 개 — 묶음 g 의 칸 g mod 칸 수, 창이 없으면 행 64 개씩 나눠 띄움)도 같은 참값과.
 
-  python -I 시험/젬마판.py <ptx> <출력.json> [--행 300]
+  python -I 시험/젬마판.py <ptx> <출력.json> [--행 300] [--gemma3]
+
+--gemma3(0.24.0 — 커널생성 gemma3큰 2560 8 4 10240 의 모듈, 계약 4.14): 머리정규화젬마256 이 v 를 그대로 두고, 점수 스케일이 1/16 이고,
+전체 어텐션 층도 헤드 256(RoPE 표는 θ 10⁶ · 선형 스케일링 8). 나머지 시험은 같다(헤드 512 의 커널은 이 모듈에 없다).
 
 마지막 줄 "모두 0: True|False".
 """
@@ -37,6 +40,8 @@ u64, i64 = G.c_u64, G.c_i64
 EPS = 1e-6
 H = 16
 창없음 = 1 << 40
+V정규화 = True               # v 도 헤드마다 정규화(가중치 없이 — 계약 4.12). Gemma 3 의 모듈(--gemma3 — 계약 4.14 의 3)은 하지 않는다
+눈금 = 1.0                   # 점수 스케일 — Gemma 4 는 1, Gemma 3 는 fp32(1/√256) = 1/16(계약 4.14 의 4)
 
 
 def 비트(x):
@@ -95,13 +100,14 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
     qn[:, :H * D] = C.머리정규화(qkv[:, :H * D], qw, EPS, D)
     kb, vb = H * D, H * D + HKV * D
     qn[:, kb:kb + HKV * D] = C.머리정규화(qkv[:, kb:kb + HKV * D], kw, EPS, D)
-    qn[:, vb:vb + HKV * D] = C.머리정규화(qkv[:, vb:vb + HKV * D], np.ones(D, f32), EPS, D)
+    if V정규화:
+        qn[:, vb:vb + HKV * D] = C.머리정규화(qkv[:, vb:vb + HKV * D], np.ones(D, f32), EPS, D)
     위치 = np.arange(T)
     qh = [C.rope(qn[:, a * D:(a + 1) * D], cos, sin, 위치) for a in range(H)]
     kh = [C.rope(qn[:, kb + a * D:kb + (a + 1) * D], cos, sin, 위치) for a in range(HKV)]
     vh = [np.ascontiguousarray(qn[:, vb + a * D:vb + (a + 1) * D]) for a in range(HKV)]
     G_ = H // HKV
-    o참 = {W: np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=1.0, 창=(W if W < T else None)) for a in range(H)], 1)
+    o참 = {W: np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=눈금, 창=(W if W < T else None)) for a in range(H)], 1)
           for W in 창들}
     print(f"  D {D}: CPU 참조 {time.time() - t0:.1f} 초", flush=True)
 
@@ -143,7 +149,7 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
             nb_ = min(블록, n - r0)
             dv.띄우기(f"타일어텐션젬마{D}", (-(-nb_ * (H // HKV) // 16) * 묶음수, HKV), 128,       # 0.13.0 12-3h-7 — (질의 벡터 16 개 × 묶음, KV 헤드)
                     [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, 시작), (0, 최대길이),
-                     (0, 최대길이), (0, W), (0, 비트(1.0)), (0, r0), (0, nb_), (0, 칸수)])
+                     (0, 최대길이), (0, W), (0, 비트(눈금)), (0, r0), (0, nb_), (0, 칸수)])
             덧 = [(0, n), (0, H), (0, 시작), (0, 최대길이), (0, W), (0, r0), (0, 칸수)]
             dv.띄우기(f"접기젬마{D}", (H, nb_), D, [(1, p묶), (1, po)] + 덧)
             dv.띄우기(f"접기자리로젬마{D}", (H, nb_), D, [(1, p묶), (1, za), (1, ia)] + 덧)
@@ -159,7 +165,7 @@ def 층시험(dv, D, HKV, θ, 인자, T, T1, 창들, r, 생성들=None):
         p조 = dv.dr.할당(n * H * 슬롯 * (D + 4) * 4)
         dv.띄우기(f"조각어텐션젬마{D}", (걸음 * HKV, n), 256,
                 [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p조), (0, n), (0, H), (0, HKV), (0, 시작), (0, 최대길이), (0, W),
-                 (0, 비트(1.0)), (0, 슬롯), (0, 걸음)])
+                 (0, 비트(눈금)), (0, 슬롯), (0, 걸음)])
         dv.띄우기(f"조각접기젬마{D}", (H, n), D, [(1, p조), (1, po), (0, n), (0, H), (0, 시작), (0, 최대길이), (0, W), (0, 슬롯)])
         자리대조("조각", n, po, f"조각접기자리로젬마{D}", p조, [(0, n), (0, H), (0, 시작), (0, 최대길이), (0, W), (0, 슬롯)])
 
@@ -249,12 +255,13 @@ def 고리시험(dv, D, HKV, θ, T, 고리, 덩이, W, r, 되감기):
         qn = qkv.copy()
         qn[:, :H * D] = C.머리정규화(qkv[:, :H * D], qw, EPS, D)
         qn[:, kb:kb + HKV * D] = C.머리정규화(qkv[:, kb:kb + HKV * D], kw, EPS, D)
-        qn[:, vb:vb + HKV * D] = C.머리정규화(qkv[:, vb:vb + HKV * D], np.ones(D, f32), EPS, D)
+        if V정규화:
+            qn[:, vb:vb + HKV * D] = C.머리정규화(qkv[:, vb:vb + HKV * D], np.ones(D, f32), EPS, D)
         위치 = np.arange(len(qkv))
         qh = [C.rope(qn[:, a * D:(a + 1) * D], cos, sin, 위치) for a in range(H)]
         kh = [C.rope(qn[:, kb + a * D:kb + (a + 1) * D], cos, sin, 위치) for a in range(HKV)]
         vh = [np.ascontiguousarray(qn[:, vb + a * D:vb + (a + 1) * D]) for a in range(HKV)]
-        return kh, vh, np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=1.0, 창=W) for a in range(H)], 1)
+        return kh, vh, np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=눈금, 창=W) for a in range(H)], 1)
     t0 = time.time()
     khA, vhA, oA = 참(qkvA)
     oB = 참(qkvB)[2]
@@ -281,7 +288,7 @@ def 고리시험(dv, D, HKV, θ, T, 고리, 덩이, W, r, 되감기):
             p묶, po = dv.dr.할당(n * H * 칸수 * (D + 4) * 4), dv.dr.할당(n * H * D * 4)
             dv.띄우기(f"타일어텐션젬마{D}", (-(-n * G_ // 16) * 묶음수, HKV), 128,
                     [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, a), (0, 최대길이),
-                     (0, 고리), (0, W), (0, 비트(1.0)), (0, 0), (0, n), (0, 칸수)])
+                     (0, 고리), (0, W), (0, 비트(눈금)), (0, 0), (0, n), (0, 칸수)])
             dv.띄우기(f"접기젬마{D}", (H, n), D, [(1, p묶), (1, po), (0, n), (0, H), (0, a), (0, 최대길이), (0, W), (0, 0), (0, 칸수)])
             dv.dr.맞추기()
             다름 += 다른칸(dv.down(po, (n, H * D)), o참[a:a + n])
@@ -294,7 +301,7 @@ def 고리시험(dv, D, HKV, θ, T, 고리, 덩이, W, r, 되감기):
         걸음 = min(슬롯, 5)                        # 블록이 타일 여럿(엔진의 전체 층 꼴) — 고리의 칸에서
         dv.띄우기(f"조각어텐션젬마{D}", (걸음 * HKV, n), 256,
                 [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p조), (0, n), (0, H), (0, HKV), (0, s0), (0, 고리), (0, W),
-                 (0, 비트(1.0)), (0, 슬롯), (0, 걸음)])
+                 (0, 비트(눈금)), (0, 슬롯), (0, 걸음)])
         dv.띄우기(f"조각접기젬마{D}", (H, n), D, [(1, p조), (1, po), (0, n), (0, H), (0, s0), (0, 최대길이), (0, W), (0, 슬롯)])
         dv.dr.맞추기()
         return 다른칸(dv.down(po, (n, H * D)), o참[s0:s0 + n])
@@ -321,16 +328,25 @@ def 고리시험(dv, D, HKV, θ, T, 고리, 덩이, W, r, 되감기):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    global H
+    global H, V정규화, 눈금
     ptx, 출력 = [a for a in sys.argv[1:] if not a.startswith("--")][:2]
     T = int(sys.argv[sys.argv.index("--행") + 1]) if "--행" in sys.argv else 300
+    젬마3 = "--gemma3" in sys.argv
     dv = 장치(ptx)
     r = np.random.default_rng(4)
     결과 = {"행": T, "경우": {}}
-    인자 = np.where(np.arange(256) < 64, 1.0, 1e30).astype(f32)      # Gemma 4 12B 의 rope_freqs 꼴(앞 64 짝만 돈다)
-    # ---- 슬라이딩 윈도 층(헤드 256 · KV 8)과 전체 층(헤드 512 · KV 1, rope_freqs) ----
-    결과["경우"].update(층시험(dv, 256, 8, 10000.0, None, T, T // 2, [창없음, 130], r))
-    결과["경우"].update(층시험(dv, 512, 1, 1e6, 인자, T, T // 2, [창없음], r))
+    if 젬마3:
+        # ---- 0.24.0 — Gemma 3 의 모듈(커널생성 gemma3큰 — 계약 4.14): v 는 그대로 · 점수 스케일 1/16. 헤드 256 · 질의 8 · KV 4(4B 의 꼴)의
+        #      슬라이딩 윈도 층(θ 10⁴)과 전체 어텐션 층(θ 10⁶ · 선형 스케일링 8 — RoPE 표의 일) ----
+        V정규화, 눈금, H = False, float(C.점수눈금(256)), 8
+        결과["경우"].update(층시험(dv, 256, 4, 10000.0, None, T, T // 2, [창없음, 130], r))
+        다 = 층시험(dv, 256, 4, 1e6, np.full(128, 8.0, f32), T, T // 2, [창없음], r)
+        결과["경우"].update({f"전체 층(선형 스케일링 8) {k}": v for k, v in 다.items()})
+    else:
+        인자 = np.where(np.arange(256) < 64, 1.0, 1e30).astype(f32)  # Gemma 4 12B 의 rope_freqs 꼴(앞 64 짝만 돈다)
+        # ---- 슬라이딩 윈도 층(헤드 256 · KV 8)과 전체 층(헤드 512 · KV 1, rope_freqs) ----
+        결과["경우"].update(층시험(dv, 256, 8, 10000.0, None, T, T // 2, [창없음, 130], r))
+        결과["경우"].update(층시험(dv, 512, 1, 1e6, 인자, T, T // 2, [창없음], r))
     # ---- 묶음 둘에 걸친 창(행 1,100 — 질의 둘 · KV 하나로 줄여) ----
     H = 2
     다 = 층시험(dv, 256, 1, 10000.0, None, 1100, 1030, [130, 1024, 창없음], r,
@@ -341,7 +357,7 @@ def main():
     결과["경우"].update(고리시험(dv, 256, 1, 10000.0, 1000, 256, 100, 130, r, (1000 - 120, 300)))
     H = 16
     # ---- 크기와 상관없는 판 ----
-    D, F, n = 3840, 15360, 37
+    D, F, n = (2560, 10240, 37) if 젬마3 else (3840, 15360, 37)     # 모듈의 너비 · 확장폭(Gemma 3 4B · Gemma 4 12B)
     h = r.standard_normal((n, D)).astype(f32)
     y = (r.standard_normal((n, D)) * 3).astype(f32)
     w = (1.0 + 0.1 * r.standard_normal(D)).astype(f32)

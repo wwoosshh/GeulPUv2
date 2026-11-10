@@ -20,6 +20,7 @@
      비정규수 · −0 · 65504, 차례가 값을 바꾸는 상쇄, 2⁻¹²⁶ 문턱 둘레), J 파일(safetensors)의 쓰기 · 읽기와 명세대로 손으로 만든 파일, 거절
   12. deepseek2 의 계약 4.13 과 1 절의 Q5_0(0.24.0 24-2): 상수, Q5_0 풀기 대 llama.cpp 의 식, NORM RoPE 대 계약 문장 · NeoX 식, 시그모이드
      라우팅 대 계약 문장, 값의 폭이 키와 다른 어텐션
+  13. Gemma 3 의 계약 4.14(0.24.0): 상수, 슬라이딩 윈도 층의 규칙, 선형 스케일링의 RoPE 표, 점수 스케일 1/16 의 어텐션
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
@@ -38,6 +39,8 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "계약"))
 import 정수계약 as C        # noqa: E402
 import jlens읽기 as JL      # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gemma4수학 as GM     # noqa: E402 — 윈도층들(계약 4.14 의 1)
 
 f32 = np.float32
 실패 = []
@@ -830,6 +833,30 @@ def 시험_gemma4(r):
     확인("계약 4.12 — 슬라이딩 윈도의 행 = 계약 문장대로 따로 접은 것(보는 조각 · 묶음만, 첫 것이 처음 값)", 같음)
 
 
+def 시험_gemma3(r):
+    """0.24.0 — 계약 4.14(Gemma 3 — 4.12 에서 다른 것): 상수의 비트, 슬라이딩 윈도 층의 규칙(P 가 없음 · 6 · 0 · 배열), 선형 스케일링 8 의 RoPE
+    표 = 위치를 8 로 나눈 표(위치 8k 의 값이 스케일링 없는 표의 위치 k 와 같은 비트), 점수 스케일 1/16 의 어텐션 = q 에 1/16 을 곱하고 스케일 1 로
+    계산한 어텐션(llama.cpp 의 식 — 2 의 거듭제곱이라 같은 비트)."""
+    확인("계약 4.14 — 상수 fp32(1/√256) · √2560 · √3840 의 비트",
+         int(C.점수눈금(256).view(np.int32)) == 0x3D800000 and int(C.제곱근(f32(2560)).view(np.int32)) == 0x424A62C2 and
+         int(C.제곱근(f32(3840)).view(np.int32)) == 0x4277DEF6)
+
+    def 전체(규칙, L):
+        return [l for l, w in enumerate(GM.윈도층들(규칙, L)) if not w]
+    확인("계약 4.14 — 슬라이딩 윈도 층: P 가 없으면 6(층 5 · 11 · … 이 전체 어텐션 층), 0 이면 모두 윈도 층, 배열이면 그대로",
+         전체(None, 34) == [5, 11, 17, 23, 29] and 전체(6, 48) == list(range(5, 48, 6)) and 전체(0, 7) == [] and 전체(4, 9) == [3, 7] and
+         GM.윈도층들([True, False, True], 3) == [True, False, True])
+    cos8, sin8 = C.rope표(1024, 1e6, hd=256, 인자=np.full(128, 8.0, f32))
+    cos1, sin1 = C.rope표(128, 1e6, hd=256)
+    확인("계약 4.14 — 선형 스케일링 8 의 RoPE 표: 위치 8k 의 값 = 스케일링 없는 표의 위치 k(같은 비트)",
+         다른칸(cos8[::8], cos1) == 0 and 다른칸(sin8[::8], sin1) == 0 and 다른칸(sin8[1::8], sin1) > 0)
+    n, hd = 300, 256
+    q, k, v = (r.standard_normal((n, hd)).astype(f32) for _ in range(3))
+    a = C.어텐션(q, k, v, 눈금=C.점수눈금(hd), 창=130)
+    확인("계약 4.14 — 점수 스케일 1/16 = q 에 1/16 을 곱한 스케일 1 의 어텐션(같은 비트)",
+         다른칸(a, C.어텐션(C.곱(q, f32(0.0625)), k, v, 눈금=1.0, 창=130)) == 0 and 다른칸(a, C.어텐션(q, k, v, 눈금=1.0, 창=130)) > 0)
+
+
 def 시험_deepseek2(r):
     """0.24.0 24-2 — 계약 4.13(deepseek2)과 1 절의 Q5_0: 상수의 비트, Q5_0 풀기 대 llama.cpp 의 식을 칸 하나씩, NORM RoPE 대 계약 문장(스칼라)과
     차원을 바꾼 NeoX 식, 시그모이드 라우팅 대 계약 문장(스칼라 — 같은 점수는 작은 번호 먼저), 값의 폭이 키와 다른 어텐션 = 값을 키 전체로
@@ -985,6 +1012,7 @@ def main():
     시험_GDN(r)
     시험_MoE(r)
     시험_gemma4(r)
+    시험_gemma3(r)
     시험_deepseek2(r)
     시험_J곱(r)
     시험_J파일(r)
