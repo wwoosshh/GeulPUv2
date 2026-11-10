@@ -840,6 +840,16 @@ def 시험_gemma3(r):
     확인("계약 4.14 — 상수 fp32(1/√256) · √2560 · √3840 의 비트",
          int(C.점수눈금(256).view(np.int32)) == 0x3D800000 and int(C.제곱근(f32(2560)).view(np.int32)) == 0x424A62C2 and
          int(C.제곱근(f32(3840)).view(np.int32)) == 0x4277DEF6)
+    # 27B(층 62 개): 점수 스케일은 fp32(1/√(너비 ÷ 헤드 수)) = fp32(1/√168) — llama.cpp 의 1.0f / sqrtf(168.0f) 와 같은 비트여야 한다
+    확인("계약 4.14 — 27B 의 점수 스케일 fp32(1/√168) 의 비트(= fp32 의 1 / √168 — llama.cpp 의 식), 헤드 128 의 것과 다르다",
+         int(C.점수눈금(5376 // 32).view(np.int32)) == 0x3D9E01B3 and
+         int((f32(1.0) / np.sqrt(f32(168.0))).view(np.int32)) == 0x3D9E01B3 and int(C.점수눈금(128).view(np.int32)) == 0x3DB504F3)
+    n8, h8 = 70, 128
+    q8, k8, v8 = (r.standard_normal((n8, h8)).astype(f32) for _ in range(3))
+    w8 = (1.0 + 0.1 * r.standard_normal(h8)).astype(f32)
+    확인("계약 4.14 — 헤드 128 의 q · k 정규화 = 4.6 의 정규화(행 하나씩 RMSNorm 을 D = 128 로)",
+         다른칸(C.머리정규화(np.concatenate([q8, k8], 1), w8, 1e-6, h8),
+              np.concatenate([C.rms정규화(q8, w8, 1e-6), C.rms정규화(k8, w8, 1e-6)], 1)) == 0)
 
     def 전체(규칙, L):
         return [l for l, w in enumerate(GM.윈도층들(규칙, L)) if not w]

@@ -41,7 +41,7 @@ the file is executed as it is).
 | `qwen35` | Qwen3.5 · Qwen3.8 (full-attention and linear-attention layers mixed) | Q8_0 · k-quants · IQ4_XS · F16 · BF16 · F32 | ✓ | — | — | exact · fast | — | — | — | — |
 | `qwen35moe` | Qwen3.5 · 3.6 MoE | same | ✓ | — | — | exact | — | — | — | — |
 | `gemma4` | Gemma 4 12B | all matrices Q8_0 or all k-quants | ✓ | — | — | exact | — | — | — | ✓ |
-| `gemma3` | Gemma 3 270M · 1B · 4B · 12B (0.24.0 — fine-tunes of those sizes too) | same ³ | ✓ | — | — | exact | — | — | — | — |
+| `gemma3` | Gemma 3 270M · 1B · 4B · 12B · 27B (0.24.0 — fine-tunes of those sizes too) | same ³ | ✓ | — | — | exact | — | — | — | — |
 | `deepseek2` | GLM-4.7-Flash · Kanana-2-30B-A3B (0.24.0 — MLA attention + MoE) | k-quants (per-head matrices also Q8_0 · Q5_0 · k-quants) | ✓ | — | — | exact | — | — | — | — |
 
 1. Vulkan with 32 KB of shared memory takes Q8_0, Q4_0 and k-quant files of models with head size 128 and RoPE over the whole head
@@ -138,6 +138,7 @@ the experts that do not fit in RAM (that much RAM must be free as well).
 | 8 GB | 7B · 8B · 9B Q4_K_M (Qwen3-8B · Qwen3.5-9B · Qwen2.5-7B · R1-Distill-Qwen-7B · R1-Distill-Llama-8B · Llama-3.1-8B · Mistral-7B · A.X 4.0 Light · Kanana 1.5) · Qwen3-4B Q8_0 | — |
 | 12 GB | 7B · 8B Q8_0 · Mi:dm 2.0 Q4_K_M · Gemma-4-12B Q4_K_M · Gemma-3-12B Q4_K_M · 14B Q4_K_M (with a shorter context) | Qwen3.6-35B-A3B (about 10.5 GB of RAM) · GLM-4.7-Flash (about 10 GB) · Kanana-2-30B-A3B (about 11 GB) |
 | 16 GB and more | Qwen2.5-14B · Qwen2.5-Coder-14B · R1-Distill-Qwen-14B Q4_K_M | as above, with less RAM |
+| 24 GB and more | Gemma-3-27B Q4_K_M (16.5 GB — the app's estimate; it does not fit on this PC and was checked on the remote H100 server, 47 GB) | — |
 
 ## 6. Not yet supported
 
@@ -150,7 +151,7 @@ the experts that do not fit in RAM (that much RAM must be free as well).
 | `qwen3moe` · `mixtral` · `phi3` and others | Qwen3-30B-A3B · Qwen3-235B-A22B · Mixtral · Phi | no such architecture yet |
 | `raon1` | Raon-1 mini (Krafton) | stage 24-3 of the 0.24.0 plan |
 | `gemma4` variants · `exaone4` | Gemma 4 E2B · E4B · 26B-A4B (MoE) · 31B, EXAONE 4.0 · 4.5 | stage 24-5 of the 0.24.0 plan |
-| other `gemma3` sizes and files | Gemma 3 27B; the files of the 270M and 1B with k-quant names | the 27B has head size 128 and a different score scale (the Gemma stage of the 0.24.0 plan). The Q4_K_M and similar files of the 270M and 1B mix in Q5_0 and Q8_0 matrices — use the Q8_0 file |
+| some `gemma3` files | the files of the Gemma 3 270M and 1B with k-quant names | the Q4_K_M and similar files mix in Q5_0 and Q8_0 matrices — use the Q8_0 file |
 | Image and audio input | vision and audio parts of multimodal models | text only |
 
 Formats: Q2_K · Q3_K · IQ1–IQ3 · IQ4_NL · MXFP4 · Q4_1 · Q5_1 (stage 24-4 of the 0.24.0 plan). Features: Vulkan for `qwen35`, `qwen35moe`,
@@ -167,7 +168,7 @@ prompt processing at about 0.6–1.05 times — [구조/gemma3/기록.md](../구
 | RTX 3080 Ti · RTX 5070 | Ampere · Blackwell | Windows · CUDA | the reproducibility check (DeepSeek-R1-Distill-Qwen-7B Q8_0 — 32 math problems, 82,673 steps): outputs and logits bit-identical to the 4070 Ti |
 | Radeon RX 9060 XT | RDNA4 | Windows · Vulkan (two PCs, two drivers) | the same check equal to the CUDA reference in all 82,673 steps (exact mode) |
 | Intel UHD Graphics 770 | integrated GPU | Windows · Vulkan (32 KB shared memory) | five requests · 240 steps of Qwen2.5-1.5B Q4_K_M with logits equal to CUDA (0.12.0) |
-| H100 NVL — MIG 3g.47gb | Hopper (sm_90) | Linux · CUDA (remote server) | 0.12.1's reproducibility test 24/24; 0.24.0's GLM-4.7-Flash, Kanana-2 and Gemma 3 4B · 12B modules and test outputs byte-identical to the 4070 Ti |
+| H100 NVL — MIG 3g.47gb | Hopper (sm_90) | Linux · CUDA (remote server) | 0.12.1's reproducibility test 24/24; 0.24.0's GLM-4.7-Flash, Kanana-2 and Gemma 3 4B · 12B modules and test outputs byte-identical to the 4070 Ti. The Gemma 3 27B, which does not fit on the 4070 Ti, is verified here (its module is byte-identical) |
 | RTX 6000 Ada · H100 NVL MIG · A100 MIG 7g.40gb | Ada · Hopper · Ampere | Linux · CUDA — independent test by UPM GING (0.21.0) | reproducibility kit 144/144, reproducibility check 32/32, all of their own suites passed ([repro-kit/independent](../repro-kit/independent/upm-ging-2026-11/README.md)) |
 
 This page is updated in every release that changes the architectures, formats or model list. Changes are listed in

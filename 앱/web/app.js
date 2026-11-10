@@ -384,7 +384,7 @@ const DICT = {
   "토큰 표 CSV": "Token table CSV",
   "모델 폴더 고르기": "Choose the model folder",
   "받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.": "Choose where downloaded models go. Applies from the next start.",
-  "GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 270M · 1B · 4B · 12B · GLM-4.7-Flash 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the architectures the engine accepts (qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 270M · 1B · 4B · 12B · GLM-4.7-Flash and others). Support is checked as soon as you add a file.",
+  "GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 · GLM-4.7-Flash 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.": "GeulPU runs GGUF files of the architectures the engine accepts (qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 · GLM-4.7-Flash and others). Support is checked as soon as you add a file.",
   "이동": "Go",
   "이 폴더 선택": "Choose this folder",
   "구조 정보 없음": "No architecture info",
@@ -400,11 +400,9 @@ const DICT = {
   "Gemma 4 26B-A4B(MoE) — 아직 미지원": "Gemma 4 26B-A4B (MoE) — not supported yet",
   "전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.": "Mixture-of-experts Gemma 4 files are not accepted by the engine yet.",
   "Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Gemma 4 31B has not been run in GeulPU yet. GeulPU fetches the start of the file to check that it runs before downloading.",
-  "Gemma 3 27B — 아직 미지원": "Gemma 3 27B — not supported yet",
-  "Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 270M · 1B · 4B · 12B는 실행됩니다.": "Gemma 3 27B files are not accepted by the engine yet. The 270M, 1B, 4B and 12B run.",
   "Gemma 3 270M · 1B는 Q8_0 파일만 실행됩니다. 이 저장소에는 Q8_0 파일이 없습니다.": "Gemma 3 270M and 1B run from Q8_0 files only. This repository has no Q8_0 file.",
   "Gemma 3 270M · 1B는 Q8_0 파일만 받습니다": "Gemma 3 270M and 1B: Q8_0 files only",
-  "흔한 Gemma 3 크기(270M · 1B · 4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Not a common Gemma 3 size (270M · 1B · 4B · 12B). GeulPU fetches the start of the file to check that it runs before downloading.",
+  "흔한 Gemma 3 크기(270M · 1B · 4B · 12B · 27B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.": "Not a common Gemma 3 size (270M · 1B · 4B · 12B · 27B). GeulPU fetches the start of the file to check that it runs before downloading.",
   "분할 파일만 있음": "Split files only",
   "여러 조각으로 나뉜 파일만 있습니다. llama.cpp의 llama-gguf-split --merge로 합친 파일만 받습니다.": "Only files split into several parts. GeulPU takes a single file merged with llama.cpp's llama-gguf-split --merge.",
   "받는 형식의 파일 없음": "No file in a supported format",
@@ -4853,7 +4851,7 @@ async function browse(path, pick, text) {
   };
   inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
   modal(h('div', null, h('h2', null, pick ? ((text && text.title) || T('모델 폴더 고르기')) : T('GGUF 파일 추가')),
-    h('p', { class: 'small muted m0 mb12' }, pick ? ((text && text.lead) || T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.')) : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 270M · 1B · 4B · 12B · GLM-4.7-Flash 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
+    h('p', { class: 'small muted m0 mb12' }, pick ? ((text && text.lead) || T('받은 모델을 둘 폴더를 고르세요. 다음 실행부터 적용됩니다.')) : T('GeulPU는 엔진이 받는 구조(qwen2 · qwen3 · llama · qwen35 · qwen35moe · gemma4 · gemma3 · deepseek2 — Qwen2.5 · Qwen3 · Qwen3.5 · Qwen3.6 MoE · Llama 3 · Mistral · DeepSeek-R1-Distill · Gemma 4 12B · Gemma 3 · GLM-4.7-Flash 등)의 GGUF를 실행합니다. 추가하면 지원 여부를 바로 확인합니다.')),
     h('div', { class: 'fs-path' }, inp, h('button', { class: 'btn', onclick: go }, T('이동'))), list),
     [h('button', { class: 'btn ghost', onclick: () => closeModal() }, T('닫기')),
       pick ? h('button', { class: 'btn primary', disabled: j.path ? null : true, onclick: () => { closeModal(); pick(j.path); } }, T('이 폴더 선택')) : null].filter(Boolean), false, '.fs-item');
@@ -4894,9 +4892,9 @@ const Q3OK = [[0.55e9, 0.8e9], [1.6e9, 2.1e9], [3.9e9, 4.5e9], [7.9e9, 8.4e9], [
 // 0.12.0 12-2 — 1.4B ~ 2.5B 에는 머리 128 인 것(HyperCLOVAX-SEED 1.5B · MiniCPM5 2B)도 있어 받기 전 확인, 앱 목록에서 돌려 본 저장소는 실행
 const L3OK = [[3.1e9, 3.3e9], [7.1e9, 7.4e9], [7.9e9, 8.1e9], [70.4e9, 70.7e9]];
 const inRange = (p, rs) => rs.some(([lo, hi]) => p >= lo && p <= hi);
-// 0.24.0 — Gemma 3: 4B · 12B(같은 크기의 미세조정도)와 270M · 1B 는 실행, 27B(헤드 128)는 엔진이 받지 않는다(구조/gemma3/엔진.gl 의 설정읽기).
+// 0.24.0 — Gemma 3: 270M · 1B · 4B · 12B · 27B(같은 크기의 미세조정도)가 실행된다(구조/gemma3/엔진.gl 의 설정읽기 — 헤드 256, 27B 는 128).
 // 270M · 1B 는 너비(640 · 1,152)가 256 의 배수가 아니어서 k-양자화 파일이 Q5_0 · Q8_0 을 섞어 쓴다(형식이 섞인 파일) → Q8_0 파일만 실행된다
-const G3OK = [[3.7e9, 4.4e9], [11.5e9, 12.5e9]];
+const G3OK = [[3.7e9, 4.4e9], [11.5e9, 12.5e9], [26.5e9, 27.6e9]];
 const G3Q8 = [[0.25e9, 0.29e9], [0.95e9, 1.05e9]];
 const fdQ8Only = m => fdArch(m) === 'gemma3' && inRange((m && m.gguf && m.gguf.total) || 0, G3Q8);
 // 그 저장소에서 이 형식의 파일이 실행되는가 — 구조가 받는 형식(quantOkFor) 가운데, 위의 두 크기는 Q8_0 만
@@ -4935,8 +4933,7 @@ function fdSupport(m) {
     if (p < 10e9) return { k: 'variant', t: T('Gemma 4 E2B · E4B — 아직 미지원'), why: T('층마다 따로 쓰는 임베딩(PLE)이 있는 Gemma 4 E2B · E4B 파일은 엔진이 아직 받지 않습니다.') };
     if (p > 20e9 && p < 28e9) return { k: 'variant', t: T('Gemma 4 26B-A4B(MoE) — 아직 미지원'), why: T('전문가 섞기(MoE) Gemma 4 파일은 엔진이 아직 받지 않습니다.') };
   }
-  // 0.24.0 — Gemma 3 27B(헤드 128)는 엔진이 받지 않는다. 270M · 1B 는 아래에서 Q8_0 파일만, 그 밖의 크기(같은 구조를 쓰는 다른 모델)는 받기 전 확인으로
-  if (a === 'gemma3' && p > 20e9) return { k: 'variant', t: T('Gemma 3 27B — 아직 미지원'), why: T('Gemma 3 27B 파일은 엔진이 아직 받지 않습니다. 270M · 1B · 4B · 12B는 실행됩니다.') };
+  // 0.24.0 — Gemma 3 270M · 1B 는 아래에서 Q8_0 파일만, 흔한 크기가 아닌 것(같은 구조를 쓰는 다른 모델)은 받기 전 확인으로
   // 파일 이름 — 받는 형식의 파일이 하나는 있어야 한다(분할 파일 · IQ2 · Q3_K · 독자 형식만 있는 저장소는 받을 것이 없다)
   if (files.length) {
     const whole = files.filter(f => !fdSplit(f));
@@ -4953,7 +4950,7 @@ function fdSupport(m) {
   }
   if (a === 'gemma4' && p >= 28e9) return { k: 'check', t: T('확인 필요'), why: T('Gemma 4 31B는 아직 GeulPU에서 돌려 보지 않았습니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   if (a === 'gemma3' && !(inRange(p, G3OK) || fdQ8Only(m))) {
-    return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Gemma 3 크기(270M · 1B · 4B · 12B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
+    return { k: 'check', t: T('크기 확인 필요'), why: T('흔한 Gemma 3 크기(270M · 1B · 4B · 12B · 27B)가 아닙니다. 받기 전에 파일 앞부분을 받아 실행되는지 확인합니다.') };
   }
   if (a === 'llama') {
     if (inRange(p, L3OK) || fdChecked(m.id)) return { k: 'ok', t: T('실행 가능') };

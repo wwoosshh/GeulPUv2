@@ -3,7 +3,7 @@
 기본은 층 0 … 5(새 번호의 규칙 l mod 6 < 5 가 원래 층의 종류와 같다 — 윈도 층 다섯 · 전체 어텐션 층 하나). 남긴 층의 종류가 새 번호의
 규칙과 다르면(예: --층 0,5,6) attention.sliding_window_pattern 을 층마다의 불 배열로 적는다(계약 4.14 의 1 — 배열이면 그 값).
 
-  python -I 시험/작은젬마.py <gemma4 gguf> <출력.gguf> [--층 0,5,6] [--Q8]
+  python -I 시험/작은젬마.py <gemma4 gguf> <출력.gguf> [--층 0,5,6] [--Q8] [--헤드 128]
 
 - 메타데이터는 바이트 그대로 옮기고 gemma4.block_count · 층마다의 배열(attention.head_count_kv · attention.sliding_window_pattern — 남긴
   층의 칸만) · general.name 만 바꾼다(토크나이저 · 헤드 · 창 · RoPE 그대로).
@@ -11,6 +11,9 @@
   12B 에서 윈도 · 전체 · 윈도 층이고, v · down 이 Q6_K 인 층(0 — qkv 의 구간 둘)과 모두 Q4_K 인 층(6 — 구간 하나)이 함께 든다.
 - --Q8: 행렬(층의 attn_* · ffn_*, 낱말표 · 출력)을 Q8_0 로 다시 양자화한다 — k-양자화를 풀어(계약/정수계약.py 의 풀기K) 32 칸마다
   d = max|x| / 127, q = 반올림(x / d)(llama.cpp 의 quantize_row_q8_0_ref 와 같은 식). Q8_0 의 길(커널생성 gemma4큰 Q8_0)을 시험하는 파일이다.
+- --헤드 128(0.24.0 — Gemma 3 의 헤드 256 파일만): 같은 텐서를 헤드 128 로 읽는 파일 — 헤드 수 · KV 헤드 수를 두 배로,
+  attention.key_length · value_length(있으면 _swa · rope.dimension_count 도)를 128 로 적고, attn_q_norm · attn_k_norm 은 앞 128 값만
+  남긴다(q · k · v · o 행렬의 모양은 그대로 맞는다). 헤드 128 의 실행 경로(27B 와 같은 헤드 크기)를 이 PC 에 드는 파일로 시험하려는 것이다.
 값은 실제 모델의 것이지만 층을 줄여 말이 되지 않는다 — 엔진 · CPU 참조의 비트 비교에만 쓴다.
 """
 import os
@@ -85,12 +88,20 @@ def Q8로(x):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    위치 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and not sys.argv[i - 1].startswith("--층")]
+    위치 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] not in ("--층", "--헤드")]
     원본, 출력 = 위치[:2]
     Q8 = "--Q8" in sys.argv
     g = GR.GGUF(원본)
     구조 = g.meta.get("general.architecture")
     assert 구조 in ("gemma4", "gemma3"), 구조
+    반헤드 = "--헤드" in sys.argv                            # 0.24.0 — 헤드 256 의 Gemma 3 파일을 헤드 128 로 읽는 파일
+    if 반헤드:
+        assert sys.argv[sys.argv.index("--헤드") + 1] == "128" and 구조 == "gemma3" and g.meta[구조 + ".attention.key_length"] == 256, \
+            "--헤드 는 128, 헤드 256 의 Gemma 3 파일에만"
+    정수꼴 = {4: "<I", 5: "<i", 10: "<Q", 11: "<q"}
+    헤드열쇠 = tuple(구조 + x for x in (".attention.key_length", ".attention.value_length", ".attention.key_length_swa",
+                                    ".attention.value_length_swa", ".rope.dimension_count", ".rope.dimension_count_swa"))
+    수열쇠 = tuple(구조 + x for x in (".attention.head_count", ".attention.head_count_kv"))
     기본층 = [0, 5, 6] if 구조 == "gemma4" else [0, 1, 2, 3, 4, 5]
     층들 = [int(x) for x in sys.argv[sys.argv.index("--층") + 1].split(",")] if "--층" in sys.argv else 기본층
     L = g.meta[구조 + ".block_count"]
@@ -129,6 +140,16 @@ def main():
             raw = 문자열(이름글)
         elif k in 층배열 and t == 9:
             raw = 배열자르기(b, o + 4, 층들)
+            if 반헤드 and k == 구조 + ".attention.head_count_kv":       # 층마다의 KV 헤드 수 — 두 배로
+                et, n배 = struct.unpack_from("<IQ", raw, 0)
+                w = 고정[et]
+                값들 = [int.from_bytes(raw[12 + w * i:12 + w * (i + 1)], "little") * 2 for i in range(n배)]
+                raw = raw[:12] + b"".join(v.to_bytes(w, "little") for v in 값들)
+        elif 반헤드 and k in 수열쇠 and t in 정수꼴:
+            raw = struct.pack(정수꼴[t], struct.unpack(정수꼴[t], raw)[0] * 2)
+        elif 반헤드 and k in 헤드열쇠 and t in 정수꼴:
+            assert struct.unpack(정수꼴[t], raw)[0] == 256, (k, raw)
+            raw = struct.pack(정수꼴[t], 128)
         elif k == "general.file_type" and Q8:
             raw = struct.pack({4: "<I", 5: "<i"}[t], 7)                 # LLAMA_FTYPE_MOSTLY_Q8_0
         kv.append((k, t, raw))
@@ -151,6 +172,9 @@ def main():
         else:
             assert not (Q8 and t in K블록), f"{이름}: Q8_0 로 바꾸지 않는 k-양자화 텐서"
             vb, bb = GR.블록[t]
+            if 반헤드 and 꼬리 in ("attn_q_norm.weight", "attn_k_norm.weight"):      # 헤드마다의 정규화 가중치 — 앞 128 값만
+                assert tuple(dims) == (256,) and (vb, bb) == (1, 4), (이름, dims, t)
+                dims = (128,)
             n = int(np.prod(dims)) // vb * bb
             t2 = t
         텐서.append((새, t2, list(dims), 이름, n, 다시))
@@ -171,7 +195,7 @@ def main():
                 for r0 in range(0, N, 4096):
                     f.write(Q8로(풀기행렬(raw, t, K, r0, min(N, r0 + 4096))).tobytes())
             else:
-                f.write(raw.tobytes())
+                f.write(raw.tobytes()[:n])                    # --헤드 128 의 정규화 가중치는 앞 n 바이트만(그 밖은 전부)
             f.write(b"\0" * ((-n) % 정렬))
     print(f"{출력}: 층 {층들} → {len(층들)} 층{' · Q8_0' if Q8 else ''} · 텐서 {len(텐서)} · {os.path.getsize(출력) / 2 ** 20:.0f} MiB", flush=True)
 

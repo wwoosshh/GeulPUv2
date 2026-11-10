@@ -11,6 +11,10 @@
 
 윈도우 x64 호출 규약: 8 바이트보다 큰 구조체를 값으로 넘기면 복사본의 주소가, 돌려받으면 호출하는 쪽이 준 자리의 주소가 넘어간다 —
 그래서 구조체는 바이트 판으로 들고 주소를 넘긴다.
+리눅스(0.24.0 — 원격 서버에서 이 PC 에 들지 않는 모델을 볼 때): 라이브러리는 libllama.so · libggml.so · libggml-base.so. System V 호출
+규약은 큰 구조체를 값으로 전달할 때 스택에 복사하므로(돌려받는 것은 윈도우처럼 호출하는 쪽이 준 주소), 값으로 전달하는 셋
+(llama_model_load_from_file · llama_init_from_model · llama_decode — 모두 마지막 인자)은 같은 바이트 버퍼를 값으로 전달한다. 버퍼가 실제
+구조체보다 커도 마지막 인자라 남는 바이트는 읽히지 않는다. 구조체 필드의 오프셋은 두 운영체제에서 같다.
 """
 import ctypes
 import os
@@ -25,23 +29,52 @@ V = 50257                # GPT-2 — 모델마다의 어휘 수는 라마.V(모�
 c_p = ctypes.c_void_p
 로그 = []            # llama.cpp 의 로그 줄 (조용히 = 참이면 화면 대신 여기에 — 플래시 어텐션이 켜졌는지 같은 것을 읽는다)
 _불러옴 = None       # (llama.dll, ggml.dll, 로그 콜백) — 프로세스에 한 번 (콜백이 먼저 사라지면 llama.cpp 가 죽은 함수를 부른다)
+윈도 = os.name == "nt"
+
+
+def _파일(이름):
+    """라이브러리 파일 — 윈도우 llama.dll, 리눅스 libllama.so"""
+    return os.path.join(DLL, 이름 + ".dll" if 윈도 else "lib" + 이름 + ".so")
+
+
+class _판256(ctypes.Structure):      # 리눅스에서 값으로 전달하는 구조체의 바이트 버퍼(llama_model_params · llama_context_params · llama_batch)
+    _fields_ = [("b", ctypes.c_ubyte * 256)]
+
+
+class _판512(ctypes.Structure):
+    _fields_ = [("b", ctypes.c_ubyte * 512)]
+
+
+class _판56(ctypes.Structure):
+    _fields_ = [("b", ctypes.c_ubyte * 56)]
+
+
+def _값(판형, 버퍼):
+    """값으로 전달할 인자 — 윈도우는 버퍼의 주소 그대로, 리눅스는 같은 바이트의 구조체(호출할 때 스택에 복사된다)"""
+    return 버퍼 if 윈도 else 판형.from_buffer(버퍼)
 
 
 def _불러오기(조용히):
     global _불러옴
     if _불러옴 is None:
-        os.add_dll_directory(DLL)
-        # ggml 이 백엔드 DLL(ggml-cuda.dll)을 LoadLibraryW 로 부르면 그 의존 DLL(cuBLAS·cudart)은 PATH 에서 찾는다 — 없으면 조용히
-        # CPU 만 남는다(모델이 CPU 에 올라도 "offloaded 13/13 layers to GPU" 라고 적힌다). 그래서 PATH 앞에 둔다.
-        if DLL not in os.environ.get("PATH", ""):
-            os.environ["PATH"] = DLL + os.pathsep + os.environ.get("PATH", "")
-        L = ctypes.CDLL(os.path.join(DLL, "llama.dll"))
+        if 윈도:
+            os.add_dll_directory(DLL)
+            # ggml 이 백엔드 DLL(ggml-cuda.dll)을 LoadLibraryW 로 부르면 그 의존 DLL(cuBLAS·cudart)은 PATH 에서 찾는다 — 없으면 조용히
+            # CPU 만 남는다(모델이 CPU 에 올라도 "offloaded 13/13 layers to GPU" 라고 적힌다). 그래서 PATH 앞에 둔다.
+            if DLL not in os.environ.get("PATH", ""):
+                os.environ["PATH"] = DLL + os.pathsep + os.environ.get("PATH", "")
+            L = ctypes.CDLL(_파일("llama"))
+        else:
+            for 앞 in ("ggml-base", "ggml"):                        # libllama.so 가 기대는 것을 먼저, 전역 기호로
+                if os.path.exists(_파일(앞)):
+                    ctypes.CDLL(_파일(앞), mode=ctypes.RTLD_GLOBAL)
+            L = ctypes.CDLL(_파일("llama"), mode=ctypes.RTLD_GLOBAL)
         콜백 = None
         if 조용히:
             콜백 = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p, c_p)(
                 lambda lv, s, u: 로그.append(s.decode("utf-8", "replace") if s else ""))
             L.llama_log_set(콜백, None)
-        G = ctypes.CDLL(os.path.join(DLL, "ggml.dll"))
+        G = ctypes.CDLL(_파일("ggml"))
         G.ggml_backend_load_all_from_path.argtypes = [ctypes.c_char_p]
         G.ggml_backend_load_all_from_path(DLL.encode("utf-8"))      # CUDA·CPU 백엔드 DLL 을 불러온다 (장치: CUDA0, CPU)
         L.llama_backend_init()
@@ -53,7 +86,7 @@ def _전문가CPU덮개(G):
     """2026-10-25 — llama_model_params.tensor_buft_overrides(자리 8): {pattern, buft} 의 배열(pattern 이 NULL 인 칸으로 끝). pattern 은
     llama.cpp common 의 --cpu-moe 와 같은 정규식(LLM_FFN_EXPS_REGEX), buft 는 CPU 장치의 버퍼 형식(ggml_backend_dev_by_type(CPU = 0) →
     ggml_backend_dev_buffer_type — ggml.dll 이나 ggml-base.dll). 돌려준 둘을 모델이 살아 있는 동안 들고 있어야 한다"""
-    B = ctypes.CDLL(os.path.join(DLL, "ggml-base.dll")) if os.path.exists(os.path.join(DLL, "ggml-base.dll")) else G
+    B = ctypes.CDLL(_파일("ggml-base")) if os.path.exists(_파일("ggml-base")) else G
 
     def 함수(이름):
         for d in (G, B):
@@ -84,12 +117,12 @@ class 라마:
         L.llama_model_default_params.argtypes = [c_p]
         L.llama_context_default_params.argtypes = [c_p]
         L.llama_model_load_from_file.restype = c_p
-        L.llama_model_load_from_file.argtypes = [ctypes.c_char_p, c_p]
+        L.llama_model_load_from_file.argtypes = [ctypes.c_char_p, c_p if 윈도 else _판256]
         L.llama_init_from_model.restype = c_p
-        L.llama_init_from_model.argtypes = [c_p, c_p]
+        L.llama_init_from_model.argtypes = [c_p, c_p if 윈도 else _판512]
         L.llama_batch_init.argtypes = [c_p, ctypes.c_int32, ctypes.c_int32, ctypes.c_int32]
         L.llama_decode.restype = ctypes.c_int32
-        L.llama_decode.argtypes = [c_p, c_p]
+        L.llama_decode.argtypes = [c_p, c_p if 윈도 else _판56]
         L.llama_get_logits_ith.restype = ctypes.POINTER(ctypes.c_float)
         L.llama_get_logits_ith.argtypes = [c_p, ctypes.c_int32]
         L.llama_get_memory.restype = c_p
@@ -116,7 +149,7 @@ class 라마:
                 assert struct.unpack_from("<Q", mp.raw, 8)[0] == 0, "tensor_buft_overrides 의 기본값이 예상과 다르다"
                 self._덮개 = _전문가CPU덮개(G)
                 struct.pack_into("<Q", mp, 8, ctypes.addressof(self._덮개[1]))
-            self.model = L.llama_model_load_from_file(gguf.encode("utf-8"), mp)
+            self.model = L.llama_model_load_from_file(gguf.encode("utf-8"), _값(_판256, mp))
             assert self.model, "llama.cpp 가 모델을 읽지 못했다"
             self.내모델 = True
         else:
@@ -133,7 +166,7 @@ class 라마:
         if not 조용히:
             print("문맥 구조체 136..143:", cp.raw[136:144].hex())
         시작 = len(로그)
-        self.ctx = L.llama_init_from_model(self.model, cp)
+        self.ctx = L.llama_init_from_model(self.model, _값(_판512, cp))
         assert self.ctx, "llama.cpp 가 문맥을 만들지 못했다"
         self.문맥로그 = "".join(로그[시작:])          # 플래시 어텐션 자동의 결과, KV 캐시의 크기·형식 등
         got = (L.llama_n_ctx(self.ctx), L.llama_n_batch(self.ctx), L.llama_n_ubatch(self.ctx), L.llama_n_seq_max(self.ctx))
@@ -166,7 +199,7 @@ class 라마:
         for i, s in enumerate(시퀀스들):
             ctypes.cast(seqp[i], ctypes.POINTER(ctypes.c_int32))[0] = s
         struct.pack_into("<i", self.batch, 0, n)
-        r = self.L.llama_decode(self.ctx, self.batch)
+        r = self.L.llama_decode(self.ctx, _값(_판56, self.batch))
         assert r == 0, f"llama_decode 실패 {r}"
 
     def 모든로짓(self, n):
