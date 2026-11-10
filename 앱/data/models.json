@@ -350,6 +350,23 @@
       "note": "Google의 Gemma 4 12B 대화 모델입니다(4비트 k-양자화, 6.6 GB). 0.13.0부터 실행됩니다. 답하기 전에 생각 과정을 쓸 수 있고, 생성 설정에서 켜고 끕니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 12 GB GPU에서 문맥은 약 7,300 토큰까지입니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-10-25)."
     },
     {
+      "id": "glm-4.7-flash-q4_k_m",
+      "name": "GLM-4.7-Flash",
+      "params": "30B",
+      "quant": "Q4_K_M",
+      "file": "GLM-4.7-Flash-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/GLM-4.7-Flash-GGUF/resolve/main/GLM-4.7-Flash-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/GLM-4.7-Flash-GGUF",
+      "size": 18312339808,
+      "sha256": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174",
+      "license": "MIT",
+      "check": "tested",
+      "devices": "cuda",
+      "moe": true,
+      "expert_bytes": 16769875968,
+      "note": "zai-org의 MoE 모델 GLM-4.7-Flash입니다(30B — 전문가 64개 가운데 토큰마다 4개와 공유 전문가 하나를 써서, 한 토큰에 쓰는 가중치는 약 3B. 18.3 GB). 답하기 전에 생각 과정을 쓰며, 생성 설정에서 끌 수 있습니다. 그래픽 메모리에 들지 않는 전문가 가중치는 RAM(고정 메모리)에 두고 GPU가 PCIe로 바로 읽습니다 — 12 GB GPU에서는 RAM을 약 10 GB 씁니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 됩니다. zai-org의 저장소에는 GGUF가 없어 커뮤니티가 변환한 파일을 다운로드합니다(다운로드한 뒤 앱이 SHA-256을 확인합니다). 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-11-10)."
+    },
+    {
       "id": "llama-3.1-8b-instruct-q4_k_m",
       "name": "Llama-3.1-8B-Instruct",
       "params": "8B",
@@ -483,6 +500,23 @@
       "check": "tested",
       "devices": "k",
       "note": "카카오의 한국어 대화 모델 Kanana 1.5 8B입니다(4.9 GB). 카카오의 저장소에는 이 모델의 GGUF가 없어 커뮤니티가 변환한 파일을 다운로드합니다(다운로드한 뒤 앱이 SHA-256을 확인합니다). CUDA와 Vulkan GPU에서 실행됩니다(공유 메모리가 32 KB인 GPU 포함). 이 파일은 CUDA(RTX 4070 Ti)와 Vulkan에서 실행을, CUDA에서 도구 호출을 확인했습니다(2026-11-10)."
+    },
+    {
+      "id": "kanana-2-30b-a3b-thinking-2601-q4_k_m",
+      "name": "Kanana-2-30B-A3B-Thinking-2601",
+      "params": "30B",
+      "quant": "Q4_K_M",
+      "file": "kanana-2-30B-a3B-thinking-2601-Q4_K_M.gguf",
+      "url": "https://huggingface.co/mykor/kanana-2-30b-a3b-thinking-2601-GGUF/resolve/main/kanana-2-30B-a3B-thinking-2601-Q4_K_M.gguf",
+      "source": "huggingface.co/mykor/kanana-2-30b-a3b-thinking-2601-GGUF",
+      "size": 18596926752,
+      "sha256": "1ccc015964ca604edce9b2959435bfb57d7f19aae86b683196874f164e0351ff",
+      "license": "Kanana License Agreement",
+      "check": "tested",
+      "devices": "cuda",
+      "moe": true,
+      "expert_bytes": 17161519104,
+      "note": "카카오의 한국어 MoE 추론 모델 Kanana-2-30B-A3B Thinking입니다(30B — 전문가 128개 가운데 토큰마다 6개와 공유 전문가 둘을 써서, 한 토큰에 쓰는 가중치는 약 3B. 18.6 GB). 답하기 전에 늘 생각 과정을 씁니다. 그래픽 메모리에 들지 않는 전문가 가중치는 RAM(고정 메모리)에 두고 GPU가 PCIe로 바로 읽습니다 — 12 GB GPU에서는 RAM을 약 11 GB 씁니다. 아직 CUDA(NVIDIA GPU) · 정밀 모드만 됩니다. 카카오의 저장소에는 GGUF가 없어 커뮤니티가 변환한 파일을 다운로드합니다(다운로드한 뒤 앱이 SHA-256을 확인합니다). Kanana 라이선스를 따릅니다 — 금지된 사용 정책이 있고, 제3자에게 API · 클라우드로 제공하거나 SI · 온프레미스 · 온디바이스로 판매하는 것과 월 사용자가 1천만 명이 넘는 서비스는 카카오의 별도 상업 라이선스가 필요하며, 배포할 때는 'Powered by Kanana' 표시 등 라이선스의 조건을 따라야 합니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-11-10)."
     },
     {
       "id": "minicpm5-2b-q4_k_m",
