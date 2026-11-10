@@ -82,6 +82,9 @@ def 풀기바이트(t, r, N, K):
             qs = bl[:, 2:]
             q = np.concatenate([(qs & 15).astype(np.int8) - 8, (qs >> 4).astype(np.int8) - 8], 1).astype(np.float32)
         return (q * d).astype(np.float32).reshape(N, K)
+    if t == GR.Q5_0:                                                # 0.24.0 24-2 — llama.cpp 의 dequantize_row_q5_0(계약/정수계약.풀기Q5_0)
+        q, d = C.풀기Q5_0(r, N, K)
+        return (q.reshape(N, K // 32, 32).astype(np.float32) * d[..., None]).astype(np.float32).reshape(N, K)
     형식, q, a, b = C.풀기K(t, r, N, K)
     q = q.astype(np.float32)
     if 형식 == "Q6_K":

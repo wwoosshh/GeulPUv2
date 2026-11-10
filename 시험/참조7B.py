@@ -36,13 +36,21 @@ def q8(g, name):
     """GGUF Q8_0 · Q4_0 텐서 → (q [N][K] int8 — Q4_0 은 니블 − 8, d [N][K/32] 짧은실수) — GGUF 의 값 그대로(23단계에 Q4_0)."""
     t, dims, raw = g.원(name)
     K, N = dims
+    assert t in (GR.Q8_0, GR.Q4_0, GR.Q5_0), name
+    return q8바이트(t, raw, N, K)
+
+
+def q8바이트(t, raw, N, K):
+    """q8 의 바이트 판(0.24.0 24-2 — 3 차원 텐서의 한 조각 · 헤드마다의 행렬): 형식 t 의 블록 바이트(행 N · 깊이 K) → (q, d)."""
     if t == GR.Q4_0:
         bl = np.asarray(raw).reshape(N, K // 32, 18)
         d = np.ascontiguousarray(bl[:, :, :2]).view(np.float16).reshape(N, K // 32).astype(f32)
         qs = bl[:, :, 2:]
         q = (np.concatenate([qs & 15, qs >> 4], 2).astype(np.int16) - 8).astype(np.int8).reshape(N, K)
         return q, d
-    assert t == GR.Q8_0, name
+    if t == GR.Q5_0:                                                # 0.24.0 24-2 — 계약 1 절: Q8_0 식(q ∈ [−16, 15])
+        return C.풀기Q5_0(raw, N, K)
+    assert t == GR.Q8_0, t
     bl = np.asarray(raw).reshape(N, K // 32, 34)
     d = np.ascontiguousarray(bl[:, :, :2]).view(np.float16).reshape(N, K // 32).astype(f32)
     q = np.ascontiguousarray(bl[:, :, 2:]).view(np.int8).reshape(N, K)
@@ -54,9 +62,9 @@ def 가중(g, name):
     k-양자화(Q4_K · Q5_K · Q6_K)는 정수계약.풀기K. 0.12.0 12-3b — F16 · BF16 · F32 는 ("W16", n [N][K′], E [N][K′/32], None)(계약 1.3 —
     16비트 블록 가중치)."""
     t, dims, raw = g.원(name)
-    if t in (GR.Q8_0, GR.Q4_0):
+    if t in (GR.Q8_0, GR.Q4_0, GR.Q5_0):
         q, d = q8(g, name)
-        return ("Q8_0" if t == GR.Q8_0 else "Q4_0"), q, d, None
+        return ("Q4_0" if t == GR.Q4_0 else "Q8_0"), q, d, None            # Q5_0 은 Q8_0 의 식(0.24.0 24-2)
     if t in (GR.F16, GR.BF16, GR.F32):
         n, E = C.가중치16(g.풀기(name))
         return "W16", n, E, None

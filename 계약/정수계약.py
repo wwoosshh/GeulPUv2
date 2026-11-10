@@ -250,8 +250,10 @@ def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None, 창=None):
     가중합). 헤드 크기 hd = nq 의 열 수(64 · 128 — 블록 hd/32 개를 b 오름차순으로, 22단계). 8비트 KV(③b-2 — 계약 F1A′)면 nk · nv 가 8비트
     정수이고 Pk · Pv 가 fp32 스케일이라, 그 곱(점수의 곱 · FMA, e′)마다 반올림 하나 — 식과 차례는 같다.
     0.12.0 12-3b — 눈금: 점수 스케일(없으면 점수눈금(hd)). 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 스케일을 준다.
-    0.12.0 12-3h — 창: 슬라이딩 윈도(계약 4.12 — Gemma 4) — (행 위치 − 키 위치) ≥ 창 인 키도 가린다."""
+    0.12.0 12-3h — 창: 슬라이딩 윈도(계약 4.12 — Gemma 4) — (행 위치 − 키 위치) ≥ 창 인 키도 가린다.
+    0.24.0 24-2 — 값의 폭(nv 의 열 수)이 키와 다를 수 있다(계약 4.13 — MLA: 키 576 · 값 512). 점수는 키의 블록, 가중합은 값의 블록."""
     hd = nq.shape[1]
+    hv = nv.shape[1]
     keys = np.arange(시작, min(시작 + 64, n))
     valid = keys[None, :] <= Rr[:, None]                         # [R][keys]
     if 창:
@@ -271,8 +273,8 @@ def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None, 창=None):
     # 3. 합 — 2⁻²³ 눈금의 정수 합, 반올림 하나
     l = (np.rint((e * f32(8388608.0)).astype(f32)).astype(np.int64).sum(1).astype(f32) * f32(2.0 ** -23)).astype(f32)
     # 4. 가중합 — 값의 블록 b 마다 e′ = e · 2^(E_v − 13), 키 32 개 블록 j 마다 자리 둘
-    o = np.zeros((len(Rr), hd), f32)
-    for b in range(hd // 32):
+    o = np.zeros((len(Rr), hv), f32)
+    for b in range(hv // 32):
         ep = 곱(e, Pv[keys, b][None, :])                            # 정확(2⁻¹²⁶ 아래로 작아지면 규칙 R 로 0) — 8비트 KV 는 반올림 하나
         uj = []
         for j in range(0, len(keys), 32):
@@ -317,7 +319,7 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None, 창=None):
     Pq, Pk, Pv = 거듭제곱(Eq), 거듭제곱(Ek), 거듭제곱(Ev)              # [n][hd/32]
     if KV8:                                                          # ③b-2 — 키 · 값은 8비트 정수, fp32 스케일이 2^(E − 13) 자리에(계약 F1A′)
         (nk, Pk), (nv, Pv) = 팔비트KV(k), 팔비트KV(v)
-    hd = q.shape[1]
+    hd = v.shape[1]                                                 # 출력의 폭 = 값의 폭(0.24.0 24-2 — MLA 는 키 576 · 값 512)
     R_ = np.arange(첫행, n)
     M = np.zeros(len(R_), f32)
     L = np.zeros(len(R_), f32)
@@ -758,6 +760,20 @@ def rope(x, cos, sin, 위치):
     return np.concatenate([fma32(a, c, -곱(b, s)), fma32(b, c, 곱(a, s))], 1).astype(f32)
 
 
+def rope이웃(x, cos, sin, 위치):
+    """0.24.0 24-2 — RoPE(NORM — 이웃 짝 (2i, 2i + 1), 계약 4.13 3)를 [n][R] 에: x′_(2i) = 곱해더하기(x_(2i), cos, −(x_(2i+1) · sin)),
+    x′_(2i+1) = 곱해더하기(x_(2i+1), cos, x_(2i) · sin) — rope 와 같은 FMA 식에서 짝만 다르다. cos · sin 은 표의 [위치][i](표의 폭 = R/2)."""
+    x = np.asarray(x, f32)
+    반 = x.shape[1] // 2
+    c, s = cos[위치], sin[위치]
+    assert c.shape[1] == 반, "RoPE 표의 폭이 RoPE 차원의 반과 다르다"
+    a, b = x[:, 0::2], x[:, 1::2]
+    y = np.empty_like(x)
+    y[:, 0::2] = fma32(a, c, -곱(b, s))
+    y[:, 1::2] = fma32(b, c, 곱(a, s))
+    return y
+
+
 def 머리정규화(x, w, eps=1e-6, hd=128):
     """37단계 — 머리마다 Q · K 정규화(Qwen3 — 계약 4.6): x [n][머리 수 · hd] 의 머리마다(행 하나의 hd 칸) rms정규화 를 D = hd 로 —
     가닥 t < 128 에 칸 하나씩, 128 접기는 +0 이라 p_t = x_t · x_t 를 64 부터 반씩 접은 S, r = 1 / 제곱근(S / hd + eps), y = (x · r) · w.
@@ -942,6 +958,20 @@ def _척최소K(sc):
 
 
 IQ4코드북 = np.array([-127, -104, -83, -65, -49, -35, -22, -10, 1, 13, 25, 38, 53, 69, 89, 113], np.int8)   # llama.cpp 의 kvalues_iq4nl
+
+
+def 풀기Q5_0(raw, N, K):
+    """0.24.0 24-2 — Q5_0(계약 1 절의 Q5_0): 블록 32 = fp16 스케일 d · 높은 비트 32 개(4 바이트, 작은 끝) · 니블 16 바이트 →
+    q [N][K] int8 = (니블 | 높은 비트 · 16) − 16 ∈ [−16, 15](칸 j < 16 은 니블의 아래 4 비트와 높은 비트 j, j ≥ 16 은 위 4 비트와 높은 비트 j —
+    llama.cpp 의 dequantize_row_q5_0), d [N][K/32] fp32. 값 q · d 는 Q8_0 의 식 그대로."""
+    bl = np.asarray(raw, np.uint8).reshape(N, K // 32, 22)
+    d = np.ascontiguousarray(bl[:, :, :2]).view(np.float16).reshape(N, K // 32).astype(f32)
+    qh = np.ascontiguousarray(bl[:, :, 2:6]).view("<u4").reshape(N, K // 32, 1).astype(np.int64)
+    qs = bl[:, :, 6:].astype(np.int64)
+    j = np.arange(16)
+    lo = (qs & 15) | (((qh >> j) & 1) << 4)
+    hi = (qs >> 4) | (((qh >> (j + 16)) & 1) << 4)
+    return (np.concatenate([lo, hi], 2) - 16).astype(np.int8).reshape(N, K), d
 
 
 def 풀기K(t, raw, N, K):
@@ -1293,6 +1323,19 @@ def 전문가무게(p, 고른):
     for r in range(1, pr.shape[1]):
         s = 더(s, pr[:, r])
     return 나눔(pr, np.maximum(s, 무게하한)[:, None])
+
+
+def 시그모이드전문가(l, b, k, 정규화=True, 배율=1.0):
+    """0.24.0 24-2 — 계약 4.13 8(deepseek2 의 라우팅): p = σ(l)(4.9), 고르는 점수 s = p + b(덧셈 하나 — b 는 exp_probs_b, 없으면 0),
+    상위 k 는 s 로(4.11 3), 가중치는 고른 전문가의 p — 정규화가 참이면 4.11 4(순위 차례의 합 · max(합, 2⁻¹⁴) · 나눗셈 하나), 배율이 1 이
+    아니면 그다음 곱 하나(fp32(배율)). → (고른 [행][k], 가중치 [행][k])."""
+    p = 시그모이드(l)
+    s = 더(p, np.asarray(b, f32)[None, :]) if b is not None else p
+    고른 = 상위k(s, k)
+    w = 전문가무게(p, 고른) if 정규화 else np.take_along_axis(p, 고른, -1).astype(f32)
+    if f32(배율) != f32(1):
+        w = 곱(w, f32(배율))
+    return 고른, w
 
 
 def 전문가합(w, ys):
