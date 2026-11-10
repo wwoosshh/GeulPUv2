@@ -147,7 +147,8 @@ the experts that do not fit in RAM (that much RAM must be free as well).
 
 Formats: Q2_K · Q3_K · IQ1–IQ3 · IQ4_NL · MXFP4 · Q4_1 · Q5_1 (stage 24-4 of the 0.24.0 plan). Features: Vulkan for `qwen35`, `qwen35moe`,
 `gemma4` and `deepseek2`; fast mode for `qwen35moe`, `gemma4` and `deepseek2`; speculative decoding and the prompt cache for the newer
-architectures. Speed: `deepseek2` is still slower than llama.cpp (decode about 2.5–2.9 times — [문서/0.24.0.md](../문서/0.24.0.md)).
+architectures. Speed: `deepseek2` decoding is still slower than llama.cpp's fastest configuration (about 0.6–0.85 times; long prompts are processed
+1.5–1.75 times faster — [문서/MoE전문가캐시.md](../문서/MoE전문가캐시.md)).
 
 ## 7. Checked hardware
 

@@ -5,8 +5,9 @@
   3. Q조립MLA — Q = [q_abs | q_pe 의 NORM RoPE] 의 자리 · 지수
   4. 타일어텐션MLA · 접기MLA(프롬프트 — 한 번에 · 행 64 개씩 · 덩이 둘)와 조각어텐션MLA · 조각접기MLA(생성 — 행 1 · 2 · 4, 슬롯걸음 둘)
      — 헤드마다 정수계약.어텐션(키 576 · 값 512 — 값은 키의 앞 512) 과. 행 1,100 은 그룹 둘(1,024 를 넘는다)
-  5. 머리행렬곱MLA — attn_k_b 꼴(입력걸음 N + 64 · 깊이 N · 열 512)과 attn_v_b 꼴(입력걸음 512 · 깊이 512 · 열 V): 헤드마다 행렬곱블라스 와
-  5b. --K(모듈이 --MLAK) — 머리행렬곱MLAK: attn_v_b 꼴(입력걸음 512 · 깊이 512 · 열 V)의 Q4_K · Q5_K · Q6_K 무작위 블록(--gguf 면 그 파일의 층 0
+  5. 머리행렬곱MLA(타일 판 — 행 37 · 1 · 3) · 머리행렬곱MLA줄(줄 판 — 행 1 · 3) — attn_k_b 꼴(입력걸음 N + 64 · 깊이 N · 열 512), attn_v_b 꼴
+     (입력걸음 512 · 깊이 512 · 열 V), attn_kv_a 꼴(헤드 하나 · 깊이 2,048 · 열 576), 헤드 셋 · 깊이 2,048 · 열 70: 헤드마다 행렬곱블라스 와
+  5b. --K(모듈이 --MLAK) — 머리행렬곱MLAK · 머리행렬곱MLAK줄(행 37 · 1 · 3): attn_v_b 꼴(입력걸음 512 · 깊이 512 · 열 V)의 Q4_K · Q5_K · Q6_K 무작위 블록(--gguf 면 그 파일의 층 0
      attn_v_b 도)을 엔진과 같은 배치(K헤드깔기)로 — 헤드마다 행렬곱K블라스(정수계약.풀기K 가 따로 푼 가중치) 와
   6. MoE라우팅시그 — 고른 번호 · 가중치(정규화 · 배율, 그리고 정규화 없이 · 배율 1) · 공유 게이트 1 · 개수 · 순번의 순열(같은 점수는 작은 번호 먼저)
 
@@ -219,23 +220,33 @@ def main():
             합 += 다른칸(dv.down(po3, (n, H * 512)), o참[s0:s0 + n])
         적기(f"어텐션 생성(행 1 · 2 · 4 — 슬롯걸음 {걸음})", 합)
 
-    # ---- 5. 헤드마다의 행렬곱 ----
-    for 이름, 걸음, 깊이, 열 in (("attn_k_b 꼴", S, N, 512), ("attn_v_b 꼴", 512, 512, V)):
-        M = 37
-        X = 무작위(r, (M, H * 걸음))
-        바이트, M0 = 자리바이트(X, 2)
-        폭 = (M + 63) // 64 * 64
-        정보 = 정보판(M0, 자리행합(X, 2), 폭)
-        wq = r.integers(-127, 128, (H, 열, 깊이), dtype=np.int8)
+    # ---- 5. 헤드마다의 행렬곱 — 타일 판(블록 = 헤드 · 열 32 · 행 8)과 줄 판(행 넷까지 — 블록 = 행 · 헤드 · 열 w) ----
+    def 머리격자(판, M_, 깊이_, 열_, H_):
+        if 판 == "줄":
+            w_ = min(256, 800 // (깊이_ // 32))
+            return (H_ * ((열_ + w_ - 1) // w_), M_)
+        return (H_ * ((열_ + 31) // 32), (M_ + 7) // 8)
+
+    for 이름, H5, 걸음, 깊이, 열 in (("attn_k_b 꼴", H, S, N, 512), ("attn_v_b 꼴", H, 512, 512, V), ("attn_kv_a 꼴(헤드 하나 · 깊이 2,048)", 1, 2048, 2048, 576),
+                                    ("헤드 셋 · 깊이 2,048 · 열 70", 3, 2048 + 64, 2048, 70)):
+        wq = r.integers(-127, 128, (H5, 열, 깊이), dtype=np.int8)
         wq[0, 0, :] = 0                                               # 0 인 행
-        wd = (np.abs(r.standard_normal((H, 열, 깊이 // 32))) * 0.002 + 1e-5).astype(np.float16).astype(f32)
-        참 = np.concatenate([C.행렬곱블라스(np.ascontiguousarray(X[:, 걸음 * h:걸음 * h + 깊이]), wq[h], wd[h], np.zeros(열, f32))
-                            for h in range(H)], 1)
-        po = dv.dr.할당(M * H * 열 * 4)
-        dv.띄우기("머리행렬곱MLA", (H * ((열 + 31) // 32), M), 32,
-                [(1, dv.up(바이트)), (1, dv.up(정보)), (1, dv.up(wq)), (1, dv.up(wd)), (1, po), (0, M), (0, H), (0, H * 걸음), (0, 걸음), (0, 깊이), (0, 열)])
-        dv.dr.맞추기()
-        적기(f"머리행렬곱 {이름}", 다른칸(dv.down(po, (M, H * 열)), 참))
+        wd = (np.abs(r.standard_normal((H5, 열, 깊이 // 32))) * 0.002 + 1e-5).astype(np.float16).astype(f32)
+        pwq, pwd = dv.up(wq), dv.up(wd)
+        for M in (37, 1, 3):
+            X = 무작위(r, (M, H5 * 걸음))
+            바이트, M0 = 자리바이트(X, 2)
+            폭 = (M + 63) // 64 * 64
+            정보 = 정보판(M0, 자리행합(X, 2), 폭)
+            참 = np.concatenate([C.행렬곱블라스(np.ascontiguousarray(X[:, 걸음 * h:걸음 * h + 깊이]), wq[h], wd[h], np.zeros(열, f32))
+                                for h in range(H5)], 1)
+            p자, p정 = dv.up(바이트), dv.up(정보)
+            for 판 in (("타일", "줄") if M <= 4 else ("타일",)):
+                po = dv.dr.할당(M * H5 * 열 * 4)
+                dv.띄우기("머리행렬곱MLA" + ("줄" if 판 == "줄" else ""), 머리격자(판, M, 깊이, 열, H5), 256,
+                        [(1, p자), (1, p정), (1, pwq), (1, pwd), (1, po), (0, M), (0, H5), (0, H5 * 걸음), (0, 걸음), (0, 깊이), (0, 열)])
+                dv.dr.맞추기()
+                적기(f"머리행렬곱 {이름} · 행 {M} · {판} 판", 다른칸(dv.down(po, (M, H5 * 열)), 참))
 
     # ---- 5b. 헤드마다의 k-양자화 행렬곱(--MLAK 모듈 — Kanana-2 의 attn_v_b) ----
     if "--K" in sys.argv:
@@ -257,20 +268,24 @@ def main():
                 else:
                     raw[:, :, 0:4] = hh
                 raw = raw.reshape(H, -1)
-            M = 37
-            X = 무작위(r, (M, H * 512))
-            바이트, M0 = 자리바이트(X, 2)
-            폭 = (M + 63) // 64 * 64
-            정보 = 정보판(M0, 자리행합(X, 2), 폭)
-            참 = np.concatenate([C.행렬곱K블라스(np.ascontiguousarray(X[:, 512 * h:512 * h + 512]), C.풀기K(t, raw[h], V, 512), np.zeros(V, f32))
-                                for h in range(H)], 1)
+            푼 = [C.풀기K(t, raw[h], V, 512) for h in range(H)]
             q, s = K헤드깔기(t, raw.reshape(H * V, 2, bb))
-            po = dv.dr.할당(M * H * V * 4)
-            dv.띄우기("머리행렬곱MLAK", (H * ((V + 31) // 32), M), 32,
-                    [(1, dv.up(바이트)), (1, dv.up(정보)), (1, dv.up(q)), (1, dv.up(s)), (1, po), (0, M), (0, H), (0, H * 512), (0, 512), (0, 512),
-                     (0, V), (0, 6 if t == 14 else 4)])
-            dv.dr.맞추기()
-            적기(f"머리행렬곱K {GR이름(t)}{' (실제 attn_v_b)' if raw is not None and 진짜 and raw is 진짜[1] else ''}", 다른칸(dv.down(po, (M, H * V)), 참))
+            pq, ps = dv.up(q), dv.up(s)
+            덧 = " (실제 attn_v_b)" if raw is not None and 진짜 and raw is 진짜[1] else ""
+            for M in (37, 1, 3):
+                X = 무작위(r, (M, H * 512))
+                바이트, M0 = 자리바이트(X, 2)
+                폭 = (M + 63) // 64 * 64
+                정보 = 정보판(M0, 자리행합(X, 2), 폭)
+                참 = np.concatenate([C.행렬곱K블라스(np.ascontiguousarray(X[:, 512 * h:512 * h + 512]), 푼[h], np.zeros(V, f32)) for h in range(H)], 1)
+                p자, p정 = dv.up(바이트), dv.up(정보)
+                for 판 in (("타일", "줄") if M <= 4 else ("타일",)):
+                    po = dv.dr.할당(M * H * V * 4)
+                    dv.띄우기("머리행렬곱MLAK" + ("줄" if 판 == "줄" else ""), 머리격자(판, M, 512, V, H), 256,
+                            [(1, p자), (1, p정), (1, pq), (1, ps), (1, po), (0, M), (0, H), (0, H * 512), (0, 512), (0, 512),
+                             (0, V), (0, 6 if t == 14 else 4)])
+                    dv.dr.맞추기()
+                    적기(f"머리행렬곱K {GR이름(t)}{덧} · 행 {M} · {판} 판", 다른칸(dv.down(po, (M, H * V)), 참))
 
     # ---- 6. 시그모이드 라우팅 ----
     M, E, k = 300, 64, 4
