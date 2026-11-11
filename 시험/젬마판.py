@@ -433,10 +433,141 @@ def 층입력시험(dv, r, L, N, n=256, T=37):
     return 결과
 
 
+def MoE시험(dv, r, D=2816, F=704, Fd=2112, E=128, k=8, M=150):
+    """0.24.0 의 24-5 — 26B-A4B 의 MoE(계약 4.12 의 10 — 커널생성 gemma4큰 K 2816 16 8 2112 262144 --W16 --MoE K8 의 모듈): 공통의 MoE라우팅을
+    로짓폭 = 전문가(공유 게이트의 열 없음)로 + MoE배율젬마 → MoE배치 → MoE모으기(h₃ 의 자리) → 전문가의 gate · up(Q4_K 의 그룹 판 "" — 실수
+    [묶음 행][2F], gate · up 이 32 열마다 번갈아) → GeGLU자리로젬마(묶음 행 모두) → 전문가의 down(Q8_0 의 그룹 판 "") → MoE합둘젬마 를 차례로
+    GPU 출력에서 이어 CPU 참조(정수계약 — 상위k · 전문가무게 · 전문가배율 · 행렬곱K블라스 · 겔루 · 행렬곱블라스 · 전문가합 · rms정규화 · 더)와
+    비트까지. 그리고 dense 가지의 down(깊이 Fd)의 고전 Q8_0 타일 판(끝손질 없음) 모두 대 행렬곱블라스."""
+    import 판MoE as PM
+    from 머리128 import 자리바이트
+    from 판23 import 깔기
+    from 판26 import 자리행합, 정보판, 타일판들
+    dr = dv.dr
+    결과 = {}
+
+    def 비우기(p, n):
+        dr.확인(dr.cu.cuMemsetD8_v2(p, 0, n))
+
+    def 영(n):
+        p = dr.할당(n)
+        비우기(p, n)
+        return p
+
+    # ---- 1. 라우팅(로짓폭 = 전문가) · 무게의 전문가 배율 ----
+    l = np.ascontiguousarray(PM.로짓들(r, M, E)[:, :E])
+    s = r.uniform(0.25, 4.0, E).astype(f32)
+    참고른 = C.상위k(l, k)
+    참무게 = C.전문가배율(C.전문가무게(C.소프트맥스전문가(l), 참고른), s, 참고른)
+    게이트 = np.full(M, 7.0, f32)
+    p로짓, p고른, p무게, p개수, p순번, p게이트 = dv.up(l), 영(M * k * 8), 영(M * k * 4), 영(E * 8), 영(M * k * 8), dv.up(게이트)
+    dv.띄우기("MoE라우팅", ((M + 3) // 4, 1), 128, [(1, p로짓), (1, p고른), (1, p무게), (1, p개수), (1, p순번), (1, p게이트), (0, M), (0, E), (0, k), (0, E)])
+    dv.띄우기("MoE배율젬마", ((M * k + 255) // 256, 1), 256, [(1, p무게), (1, p고른), (1, dv.up(s)), (0, M * k)])
+    dr.맞추기()
+    결과["라우팅(로짓폭 = 전문가 — 공유 게이트의 칸은 손대지 않는다) · 무게의 전문가 배율(MoE배율젬마)"] = (
+        다른칸(dv.down(p고른, (M, k), np.int64), 참고른) + 다른칸(dv.down(p무게, (M, k)), 참무게) + 다른칸(dv.down(p게이트, (M,)), 게이트))
+    # ---- 2. 배치 · 3. 모으기(공통 판 — 판MoE.py 가 따로 본다. 여기서는 이어서 쓴다) ----
+    표폭 = 2 * E + 1 + 4 * (E + 1)
+    p표 = 영(표폭 * 8)
+    dv.띄우기("MoE배치", (1, 1), 32, [(1, p개수), (1, p표), (1, 영(E * 8)), (0, E)])
+    dr.맞추기()
+    표참, _ = PM.배치참조(참고른, E)
+    글순번 = dv.down(p순번, (M, k), np.int64)
+    pp = (표참[:E][참고른] + 글순번).reshape(-1)                      # (행, 순위) 평 번호 → 묶음 행
+    묶행수 = M * k + 3 * E + 128
+    묶폭 = (묶행수 + 63) // 64 * 64
+    X = (r.standard_normal((M, D)) * 10.0 ** r.uniform(-1, 1, (M, 1))).astype(f32)
+    바이트, M0 = 자리바이트(X, 2)
+    p묶자, p묶정 = 영(2 * 묶행수 * D), 영(2 * (D // 32) * 묶폭 * 4)
+    dv.띄우기("MoE모으기", (M * k, 1), 128, [(1, dv.up(바이트)), (1, dv.up(정보판(M0, 자리행합(X, 2), (M + 63) // 64 * 64))), (1, p고른),
+                                         (1, p순번), (1, p표), (1, p묶자), (1, p묶정), (0, M), (0, 묶행수), (0, D), (0, k)])
+    # ---- 4. 전문가: gate · up(Q4_K — 32 열마다 번갈아), down(Q8_0) ----
+    guV, guS, gu표, gu_w = PM.전문가행렬(r, "Q4_K", E, 2 * F, D, True)
+    dnV, dnS, dn표, dn_w = PM.전문가행렬(r, "Q8_0", E, D, F, False)
+    gcol = np.concatenate([np.arange(64 * j, 64 * j + 32) for j in range(F // 32)])
+    gu참, h참, y참 = np.zeros((M * k, 2 * F), f32), np.zeros((M * k, F), f32), np.zeros((M * k, D), f32)
+    for e in range(E):
+        ix = np.nonzero(참고른.reshape(-1) == e)[0]
+        if len(ix):
+            gu참[ix] = PM.행렬곱(X[ix // k], gu_w[e], 2 * F, 2)
+            h참[ix] = C.겔루(gu참[ix][:, gcol], gu참[ix][:, gcol + 32])
+            y참[ix] = PM.행렬곱(h참[ix], dn_w[e], D, 2)
+    del gu_w, dn_w
+    참자리, 참정보 = 자리바이트(h참, 2)
+    pgV, pgS, pgT, pdV, pdS, pdT = (dv.up(np.frombuffer(b, np.uint8)) if isinstance(b, bytes) else dv.up(b) for b in (guV, guS, gu표, dnV, dnS, dn표))
+    p치2F, p치D = dv.up(np.zeros(2 * F, f32)), dv.up(np.zeros(D, f32))
+    다gu = 다down = 0
+    판들 = [t for t in 타일판들]
+    for 판, BM, BN, T, NT in 판들:
+        pgu = 영(묶행수 * 2 * F * 4)
+        dv.띄우기(f"{판}_그룹_Q4_K", ((M * k + BM - 1) // BM + E, (2 * F + BN - 1) // BN), T,
+                [(1, p묶자), (1, p묶정), (1, pgV), (1, pgS), (1, p치2F), (1, pgu), (0, 묶행수), (0, D), (0, 2 * F), (0, (2 * F + 63) // 64 * 64),
+                 (0, 0), (0, 0), (0, 2 * F), (1, p표), (1, pgT), (0, E)])
+        dr.맞추기()
+        글gu = dv.down(pgu, (묶행수, 2 * F))
+        밖 = np.ones(묶행수, bool)
+        밖[pp] = False
+        다gu += 다른칸(글gu[pp], gu참) + int(np.count_nonzero(글gu[밖]))
+    결과[f"전문가 gate · up — Q4_K 의 그룹 판 \"\" {len(판들)} 개(실수 [묶음 행][2F], 구간 밖의 행은 0 그대로)"] = 다gu
+    p다자, p다정 = 영(2 * 묶행수 * F), 영(2 * (F // 32) * 묶폭 * 4)
+    dv.띄우기("GeGLU자리로젬마", (-(-(F // 32) // 32), 묶행수), 256, [(1, pgu), (1, p다자), (1, p다정), (0, 묶행수), (0, F)])
+    dr.맞추기()
+    글자 = dv.down(p다자, (2, 묶행수, F), np.int8)
+    글정 = dv.down(p다정, (2 * (F // 32), 묶폭), np.int32)
+    결과["GeGLU자리로젬마(묶음 행 모두) = 겔루(g, u)(CPU 참조)의 down 입력 자리 · 정보"] = 다른칸(글자[:, pp, :], 참자리) + 다른칸(글정[:F // 32, pp], 참정보.T)
+    for 판, BM, BN, T, NT in 판들:
+        p출 = 영(묶행수 * D * 4)
+        dv.띄우기(f"{판}_그룹_Q8_0", ((M * k + BM - 1) // BM + E, (D + BN - 1) // BN), T,
+                [(1, p다자), (1, p다정), (1, pdV), (1, pdS), (1, p치D), (1, p출), (0, 묶행수), (0, F), (0, D), (0, (D + 63) // 64 * 64),
+                 (0, 0), (0, 0), (1, p표), (1, pdT), (0, E)])
+        dr.맞추기()
+        다down += 다른칸(dv.down(p출, (묶행수, D))[pp], y참)
+    결과[f"전문가 down — Q8_0 의 그룹 판 \"\" {len(판들)} 개(입력은 GeGLU자리로젬마 의 출력)"] = 다down
+    # ---- 5. 합 · 정규화 둘 ----
+    dd = (r.standard_normal((M, D)) * 10.0 ** r.uniform(-1, 1, (M, 1))).astype(f32)
+    dd[0, :6] = [0.0, -0.0, 1e-30, -1e-30, 1e4, -1e4]
+    w1 = (1.0 + 0.3 * r.standard_normal(D)).astype(f32)
+    w2 = (1.0 + 0.3 * r.standard_normal(D)).astype(f32)
+    o참 = C.전문가합(참무게, np.ascontiguousarray(y참.reshape(M, k, D).transpose(1, 0, 2)))
+    f참 = C.더(C.rms정규화(dd, w1, EPS), C.rms정규화(o참, w2, EPS))
+    pd = dv.up(dd)
+    dv.띄우기("MoE합둘젬마", (M, 1), 256, [(1, p출), (1, p무게), (1, p고른), (1, p순번), (1, p표), (1, pd), (1, dv.up(w1)), (1, dv.up(w2)),
+                                    (0, M), (0, D), (0, k)])
+    dr.맞추기()
+    결과["MoE합둘젬마 — f = RMSNorm(d; w1) + RMSNorm(o; w2), o = 순위 차례의 FMA 합(전문가 출력은 GPU 의 것)"] = 다른칸(dv.down(pd, (M, D)), f참)
+    # ---- 6. dense 가지의 down — 고전 Q8_0 타일 판(끝손질 없음) ----
+    q = r.integers(-127, 128, (D, Fd), dtype=np.int8)
+    d = (np.abs(r.standard_normal((D, Fd // 32))) * 0.002 + 1e-5).astype(np.float16).astype(f32)
+    값, 척 = 깔기(q, d, "Q8_0")
+    Xd = (r.standard_normal((M, Fd)) * 10.0 ** r.uniform(-1, 1, (M, 1))).astype(f32)
+    바이트d, M0d = 자리바이트(Xd, 2)
+    pxd, pid = dv.up(바이트d), dv.up(정보판(M0d, 자리행합(Xd, 2), (M + 63) // 64 * 64))
+    pv, ps = dv.up(np.frombuffer(값, np.uint8)), dv.up(np.frombuffer(척, np.uint8))
+    참d = C.행렬곱블라스(Xd, q, d, np.zeros(D, f32), 자리수=2)
+    다고전 = 0
+    for 판, BM, BN, T, NT in 판들:
+        p출 = 영(M * D * 4)
+        dv.띄우기(판, ((M + BM - 1) // BM, (D + BN - 1) // BN), T,
+                [(1, pxd), (1, pid), (1, pv), (1, ps), (1, p치D), (1, p출), (0, M), (0, Fd), (0, D), (0, (D + 63) // 64 * 64), (0, 0), (0, 0)])
+        dr.맞추기()
+        다고전 += 다른칸(dv.down(p출, (M, D)), 참d)
+    결과[f"dense 가지의 down(깊이 {Fd}) — 고전 Q8_0 타일 판 \"\" {len(판들)} 개 대 행렬곱블라스"] = 다고전
+    return 결과
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     global H, V정규화, 눈금
     ptx, 출력 = [a for a in sys.argv[1:] if not a.startswith("--")][:2]
+    if "--MoE" in sys.argv:                                          # 0.24.0 의 24-5 — Gemma 4 26B-A4B 의 모듈: MoE 의 커널과 고전 Q8_0 판만
+        dv, r = 장치(ptx), np.random.default_rng(26)
+        결과 = {"경우": MoE시험(dv, r)}
+        for k, v in 결과["경우"].items():
+            print(f"  {k}: 불일치 {v}", flush=True)
+        결과["모두 0"] = all(v == 0 for v in 결과["경우"].values())
+        print("모두 0:", 결과["모두 0"], flush=True)
+        json.dump(결과, open(출력, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return
     if "--층입력" in sys.argv:                                       # 0.24.0 의 24-5 — Gemma 4 E2B · E4B 의 모듈: 층마다의 입력의 커널만
         L = int(sys.argv[sys.argv.index("--층입력") + 1])
         N = int(sys.argv[sys.argv.index("--어휘") + 1]) if "--어휘" in sys.argv else 262144
