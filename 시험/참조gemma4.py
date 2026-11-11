@@ -2,7 +2,8 @@
 """0.12.0 12-3h-1 — Gemma 4(GGUF 구조 gemma4)의 계약 CPU 참조: 지금의 계약(정수 블록 행렬곱 · 어텐션 · RMSNorm · RoPE)에 계약 4.12(Gemma 4 —
 GeGLU · 소프트캡 · 슬라이딩 윈도 · 가중치 없는 v 정규화 · 배율 1 의 어텐션 · 임베딩 × √너비 · 층 배율 — 계약/정수계약.py)를 더한 순전파. 층의 뜻은
 시험/gemma4수학.py(llama.cpp 의 src/models/gemma4.cpp 와 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다. dense(12B · 31B)와 E2B · E4B
-(0.24.0 의 24-5 — 계약 4.12 의 7 ~ 9: 층마다의 FFN 폭 · KV 공유 · 층마다의 입력(PLE)). MoE(26B-A4B)는 아직.
+(0.24.0 의 24-5 — 계약 4.12 의 7 ~ 9: 층마다의 FFN 폭 · KV 공유 · 층마다의 입력(PLE)), 26B-A4B(계약 4.12 의 10 — MoE: dense 가지 +
+전문가 128 개 가운데 8 개. --수학 의 {채팅}라우팅{i}.npy 가 있으면 고른 전문가 집합이 수학 참조와 같은 비율도 낸다).
 0.24.0 — Gemma 3(GGUF 구조 gemma3 — 계약 4.14: 헤드 256 의 270M · 1B · 4B · 12B 와 헤드 128 의 27B)도 읽는다(아래 설정 — 4.12 에서 다른
 것만).
 
@@ -45,7 +46,6 @@ def 설정(g):
     구조 = m["general.architecture"]
     assert 구조 in ("gemma4", "gemma3"), 구조
     k = lambda x, d=None: m.get(구조 + "." + x, d)                   # noqa: E731
-    assert "blk.0.ffn_gate_inp.weight" not in g.tensors, "MoE 는 아직"
     L = k("block_count")
     hkv = k("attention.head_count_kv")
     hd = k("attention.key_length")
@@ -61,7 +61,12 @@ def 설정(g):
          "v정규화": True, "눈금": 1.0,                                # Gemma 4 — v 도 정규화(가중치 없이) · 점수 배율 1
          "층입력": int(k("embedding_length_per_layer_input", 0) or 0),  # 계약 4.12 의 9 — 층마다의 입력(PLE)의 너비 n(0 이면 없다)
          "자기KV": L - int(k("attention.shared_kv_layers", 0) or 0),    # 계약 4.12 의 8 — L₀: 그 뒤의 층은 KV 공유
+         "전문가": int(k("expert_count", 0) or 0), "고름": int(k("expert_used_count", 0) or 0),    # 계약 4.12 의 10 — MoE(26B-A4B)
+         "전문가폭": int(k("expert_feed_forward_length", 0) or 0),
          "인자": g.풀기("rope_freqs.weight") if "rope_freqs.weight" in g.tensors else None}
+    if any(f"blk.{l}.ffn_gate_inp.weight" in g.tensors for l in range(L)):
+        assert 구조 == "gemma4" and s["전문가"] > 0 and 0 < s["고름"] <= s["전문가"] and s["전문가폭"] % 32 == 0, (
+            "MoE: expert_count · expert_used_count · expert_feed_forward_length(32 의 배수)가 있어야 한다")
     for w in (True, False):
         assert s["돌림"][w] == s["헤드"][w], "Gemma 의 RoPE 는 헤드 전체(Gemma 4 의 부분 회전은 rope_freqs 로)"
     L0 = s["자기KV"]
@@ -93,6 +98,54 @@ def 행임베딩K(g, 이름, 경우):
     쓰인, 자리 = np.unique(np.concatenate([np.asarray(S, np.int64) for S in 경우]), return_inverse=True)
     w = C.풀기K(t, np.ascontiguousarray(raw.reshape(N, 줄)[쓰인]).reshape(-1), len(쓰인), K)
     return C.임베딩K(w, 자리)
+
+
+라우팅기록 = {}             # 계약 4.12 의 10 — MoE 층 → [Σ 행][k] 고른 전문가(수학 참조의 라우팅과 비교)
+
+
+def 가중전문가(g, name, e):
+    """3 차원 전문가 텐서 [전문가][N][K] 의 전문가 e 하나를 참조7B.가중 의 꼴로 — Q8_0 · Q5_0(계약 1 절 — Q8_0 의 식)은 (형식, q, d, None),
+    k-양자화는 풀기K."""
+    t, dims, raw = g.원(name)
+    K, N = dims[0], dims[1]
+    vb, bb = GR.블록[t]
+    한 = N * (K // vb * bb)
+    r = np.asarray(raw)[e * 한:(e + 1) * 한]
+    if t in (GR.Q8_0, GR.Q5_0):
+        q, d = R7.q8바이트(t, r, N, K)
+        return "Q8_0", q, d, None
+    return C.풀기K(t, r, N, K)
+
+
+def MoE(g, p, x, s):
+    """계약 4.12 의 10 — 어텐션 잔차 뒤의 x 에서: dense 가지 y₁ = RMSNorm(GeGLU FFN; post_ffw_norm_1), 라우터(입력의 RMSNorm 가중치에 접은
+    배율 — 라우터가중) → softmax · 상위 k · 무게(4.11 의 2 ~ 4) × 전문가 배율 → 전문가 GeGLU(합친 gate_up 의 앞 F 행 · 뒤 F 행) → 순위 차례의
+    합(4.11 의 6) → y₂ = RMSNorm(·; post_ffw_norm_2). 돌려주는 값은 x 에 더할 RMSNorm(y₁ + y₂; post_ffw_norm)."""
+    T, D = x.shape
+    eps, F = s["eps"], s["전문가폭"]
+
+    def z0(n):
+        return np.zeros(n, f32)
+    h = C.rms정규화(x, g.풀기(p + "ffn_norm.weight"), eps)
+    wg = R7.가중(g, p + "ffn_gate.weight")
+    Fd = wg[1].shape[0]
+    gg = R7.곱(h, wg, z0(Fd))
+    del wg
+    uu = R7.곱(h, R7.가중(g, p + "ffn_up.weight"), z0(Fd))
+    y1 = C.rms정규화(R7.곱(C.겔루(gg, uu), R7.가중(g, p + "ffn_down.weight"), z0(D)), g.풀기(p + "post_ffw_norm_1.weight"), eps)
+    hr = C.rms정규화(x, C.라우터가중(g.풀기(p + "ffn_gate_inp.scale"), D), eps)
+    l = R35.라우터로짓(hr, g, p + "ffn_gate_inp.weight", s["전문가"])
+    고른 = C.상위k(l, s["고름"])
+    라우팅기록[int(p.split(".")[1])] = 고른.astype(np.int16)
+    w = C.전문가배율(C.전문가무게(C.소프트맥스전문가(l), 고른), g.풀기(p + "ffn_down_exps.scale"), 고른)
+    h3 = C.rms정규화(x, g.풀기(p + "pre_ffw_norm_2.weight"), eps)
+    ys = np.zeros((s["고름"], T, D), f32)
+    for e in np.unique(고른):
+        행, 순위 = np.nonzero(고른 == e)
+        gu = R7.곱(np.ascontiguousarray(h3[행]), 가중전문가(g, p + "ffn_gate_up_exps.weight", e), z0(2 * F))
+        ys[순위, 행] = R7.곱(C.겔루(gu[:, :F], gu[:, F:]), 가중전문가(g, p + "ffn_down_exps.weight", e), z0(D))
+    y2 = C.rms정규화(C.전문가합(w, ys), g.풀기(p + "post_ffw_norm_2.weight"), eps)
+    return C.rms정규화(C.더(y1, y2), g.풀기(p + "post_ffw_norm.weight"), eps)
 
 
 def 층로짓(g, 잔차):
@@ -170,14 +223,17 @@ def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
                                       for a in range(H)], 1))
         o = R7.곱(np.concatenate(ys, 0), R7.가중(g, p + "attn_output.weight"), z0(D))
         x = C.더(x, C.rms정규화(o, g.풀기(p + "post_attention_norm.weight"), eps))
-        h = C.rms정규화(x, g.풀기(p + "ffn_norm.weight"), eps)
-        wg = R7.가중(g, p + "ffn_gate.weight")
-        F = wg[1].shape[0]
-        gg = R7.곱(h, wg, z0(F))
-        del wg
-        uu = R7.곱(h, R7.가중(g, p + "ffn_up.weight"), z0(F))
-        f = R7.곱(C.겔루(gg, uu), R7.가중(g, p + "ffn_down.weight"), z0(D))
-        x = C.더(x, C.rms정규화(f, g.풀기(p + "post_ffw_norm.weight"), eps))
+        if p + "ffn_gate_inp.weight" in g.tensors:                  # 계약 4.12 의 10 — MoE: dense 가지 + 전문가
+            x = C.더(x, MoE(g, p, x, s))
+        else:
+            h = C.rms정규화(x, g.풀기(p + "ffn_norm.weight"), eps)
+            wg = R7.가중(g, p + "ffn_gate.weight")
+            F = wg[1].shape[0]
+            gg = R7.곱(h, wg, z0(F))
+            del wg
+            uu = R7.곱(h, R7.가중(g, p + "ffn_up.weight"), z0(F))
+            f = R7.곱(C.겔루(gg, uu), R7.가중(g, p + "ffn_down.weight"), z0(D))
+            x = C.더(x, C.rms정규화(f, g.풀기(p + "post_ffw_norm.weight"), eps))
         if 층입 is not None:                                         # 계약 4.12 의 9 — PLE: FFN 의 잔차 뒤, 층 배율 앞
             gp = R7.곱(x, R7.가중(g, p + "inp_gate.weight"), z0(n))
             o = R7.곱(C.겔루(gp, 층입[:, l * n:(l + 1) * n]), R7.가중(g, p + "proj.weight"), z0(D))
@@ -260,6 +316,29 @@ def 엔진대조(gguf, 폴더, 출력, 입력=None):
     json.dump(결과, open(출력, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 
+def 라우팅비교(폴더, 앞머리, 시작, n):
+    """계약 4.12 의 10 — 층마다 고른 전문가의 집합이 수학 참조(시험/gemma4수학.py 의 {앞머리}{i}.npy — [MoE 층][행][k])와 같은 (층, 행)의
+    비율과 겹치는 전문가의 비율(모든 행). 라우팅기록 이 비었거나 파일이 없으면 None."""
+    if not 라우팅기록:
+        return None
+    우리 = np.stack([라우팅기록[l] for l in sorted(라우팅기록)])          # [MoE 층][Σ 행][k]
+    같은집합, 겹침, 칸 = 0, 0, 0
+    for i in range(n):
+        경로 = os.path.join(폴더, f"{앞머리}{i}.npy")
+        if not os.path.exists(경로):
+            continue
+        수 = np.sort(np.load(경로).astype(np.int64), -1)
+        우 = np.sort(우리[:, 시작[i]:시작[i + 1]].astype(np.int64), -1)
+        같은집합 += int((수 == 우).all(-1).sum())
+        겹침 += int(sum(np.isin(우[a, b], 수[a, b]).sum() for a in range(수.shape[0]) for b in range(수.shape[1])))
+        칸 += 수.shape[0] * 수.shape[1]
+    if not 칸:
+        return None
+    r = {"같은 집합 %": 100 * 같은집합 / 칸, "겹침 %": 100 * 겹침 / (칸 * 우리.shape[2]), "(층, 행)": 칸}
+    print("라우팅:", r, flush=True)
+    return r
+
+
 def 로그소프트맥스(x):
     x = np.asarray(x, np.float64)
     x = x - x.max(-1, keepdims=True)
@@ -292,13 +371,16 @@ def main():
     for 이름, 토큰열들, 수학, 라마, 구간들 in 묶음들:
         t0 = time.time()
         파일 = [os.path.join(폴더, f"{이름}계약{i}.npy") for i in range(len(토큰열들))]
+        라우팅 = None
         if 저장된:
             로짓들 = [np.load(p) for p in 파일]
         else:
+            라우팅기록.clear()
             로짓, 시작 = 앞으로(g, [np.asarray(t, np.int64) for t in 토큰열들])
             로짓들 = [로짓[시작[i]:시작[i + 1]] for i in range(len(토큰열들))]
             for p, z in zip(파일, 로짓들):
                 np.save(p, z)
+            라우팅 = 라우팅비교(폴더, 수학.replace("수학", "라우팅"), 시작, len(토큰열들))
         모든 = {"계약": [], "라마": [], "같음계약": 0, "같음라마": 0, "행": 0}
         글들 = []
         for i in range(len(토큰열들)):
@@ -324,6 +406,8 @@ def main():
                           "모두": {"KL(수학‖계약)": float(kc.mean()), "1위 일치(계약) %": 100 * 모든["같음계약"] / 모든["행"],
                                  "KL(수학‖llama.cpp)": float(kr.mean()), "1위 일치(llama.cpp) %": 100 * 모든["같음라마"] / 모든["행"],
                                  "비(계약 / llama.cpp)": float(kc.mean() / kr.mean())}}
+        if 라우팅:
+            결과["묶음"][이름]["라우팅"] = 라우팅
         print(f"{이름} 모두:", 결과["묶음"][이름]["모두"], flush=True)
         json.dump(결과, open(출력, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 

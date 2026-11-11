@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """0.12.0 12-3h-1 — Gemma 4(GGUF 구조 gemma4)의 수학 참조: 파일의 가중치를 풀어(양자화 값 그대로) 활성값을 fp64 로 계산한 순전파.
 qwen35수학.py 와 같은 쓰임 — GGUF 의 뜻(텐서의 배치 · 층의 차례 · 두 어텐션 모양)을 llama.cpp 와 맞춰 본다(문서/블록조합.md 의 'Gemma 4 (12-3h)').
-dense(12B · 31B)와 E2B · E4B(층마다의 임베딩(PLE) · KV 공유 · 층마다의 FFN 폭 — 0.24.0 의 24-5). MoE(26B-A4B)는 아직.
+dense(12B · 31B)와 E2B · E4B(층마다의 임베딩(PLE) · KV 공유 · 층마다의 FFN 폭 — 0.24.0 의 24-5), 26B-A4B(MoE — 아래).
 
   python -I 시험/gemma4수학.py <gemma4 gguf> <llama.cpp 폴더> <작업 폴더> [--text <경로[@바이트]> …] [--length 256] [--no-llama]
   python -I 시험/gemma4수학.py <gemma4 gguf> <llama.cpp 폴더> <작업 폴더> --채팅 [--n 100]
@@ -43,6 +43,16 @@ dense(12B · 31B)와 E2B · E4B(층마다의 임베딩(PLE) · KV 공유 · 층�
     슬라이딩 윈도 층은 층 L − N − 2, 전체 어텐션 층은 층 L − N − 1 의 k · v(정규화 · RoPE 뒤의 것 그대로). q 는 자기 attn_q · attn_q_norm.
     (llama.cpp 는 KV 를 쓰지 않는 그 층들에서 출력에 필요한 행만 계산한다 — 값은 같다.)
   FFN 폭은 층마다(feed_forward_length 가 배열 — E2B 는 KV 공유 층이 두 배).
+
+0.24.0 의 24-5 — 26B-A4B(llama.cpp b12224 의 gemma4.cpp · build_moe_ffn): ffn_gate_inp 가 있는 층은 FFN 자리가 셋이다(a = 어텐션 잔차 뒤의 x):
+  dense 가지 y₁ = RMSNorm(ffn_down · (GELU(ffn_gate · h₂) ⊙ ffn_up · h₂); post_ffw_norm_1),  h₂ = RMSNorm(a; ffn_norm)
+  라우터: 로짓 = ffn_gate_inp · (RMSNorm0(a) / √너비 ⊙ ffn_gate_inp.scale), p = softmax(로짓), 상위 k(expert_used_count — 로짓의 내림차순,
+    같으면 작은 번호), w_r = p_(e_r) / max(Σ p, 2⁻¹⁴) · ffn_down_exps.scale[e_r]
+  전문가: [g | u] = ffn_gate_up_exps[e] · h₃(앞 F 행이 gate · 뒤 F 행이 up — F = expert_feed_forward_length),  h₃ = RMSNorm(a; pre_ffw_norm_2),
+    y_e = ffn_down_exps[e] · (GELU(g) ⊙ u),  y₂ = RMSNorm(Σ_r w_r y_(e_r); post_ffw_norm_2)
+  x = a + RMSNorm(y₁ + y₂; post_ffw_norm) — 그다음 층 배율. 고른 전문가를 {채팅}라우팅{i}.npy([층][행][k])로 남긴다.
+  llama.cpp 는 전문가 배율을 down 의 출력에 곱한다(실수로는 같은 값). 파일이 이 PC 의 그래픽 메모리보다 커서 llama.cpp 는 전문가 행렬을
+  호스트 메모리에 둔다(라마.py 의 전문가CPU — llama-server 의 --cpu-moe).
 
 0.24.0 — Gemma 3(GGUF 구조 gemma3 — 계약 4.14)도 읽는다. llama.cpp 의 src/models/gemma3.cpp(b12224)와 같은 식 — 위에서 다른 것만:
   층의 모양이 모두 같다(헤드 크기 key_length · KV 헤드 head_count_kv). 층 l 은 l mod P < P − 1 이면 슬라이딩 윈도 층(P =
@@ -113,8 +123,9 @@ class 모델:
         구조 = self.구조 = m["general.architecture"]
         assert 구조 in ("gemma4", "gemma3"), 구조
         k = lambda x, d=None: m.get(구조 + "." + x, d)               # noqa: E731
-        assert "blk.0.ffn_gate_inp.weight" not in g.tensors, "MoE(26B-A4B)는 아직"
         self.L, self.D = k("block_count"), k("embedding_length")
+        self.고름수, self.전문가폭 = int(k("expert_used_count", 0) or 0), int(k("expert_feed_forward_length", 0) or 0)   # 26B-A4B — MoE
+        self.라우팅 = []                                            # MoE 층마다 고른 전문가 [행][k]
         self.H = k("attention.head_count")
         hkv = k("attention.head_count_kv")
         self.Hkv = list(hkv) if isinstance(hkv, (list, tuple)) else [hkv] * self.L
@@ -201,6 +212,31 @@ class 모델:
         y = y * (g.풀기("per_layer_proj_norm.weight").astype(f64) / math.sqrt(2.0))
         return np.ascontiguousarray((y + p).transpose(1, 0, 2))
 
+    def MoE(self, l, a):
+        """26B-A4B — 위 설명의 FFN 자리 셋(dense 가지 · 라우터 · 전문가)의 합 RMSNorm(y₁ + y₂; post_ffw_norm)(a 에 더할 값)."""
+        g, T, p = self.g, a.shape[0], f"blk.{l}."
+        h = Q.rms(a, g.풀기(p + "ffn_norm.weight"), self.eps)
+        y1 = Q.rms(Q.선형(gelu(Q.선형(h, g, p + "ffn_gate.weight")) * Q.선형(h, g, p + "ffn_up.weight"), g, p + "ffn_down.weight"),
+                   g.풀기(p + "post_ffw_norm_1.weight"), self.eps)
+        r = rms0(a, self.eps) / math.sqrt(self.D) * g.풀기(p + "ffn_gate_inp.scale").astype(f64)
+        로짓 = Q.선형(r, g, p + "ffn_gate_inp.weight")                 # (T, 전문가)
+        pr = np.exp(로짓 - 로짓.max(-1, keepdims=True))
+        pr /= pr.sum(-1, keepdims=True)
+        고른 = np.argsort(-로짓, axis=-1, kind="stable")[:, :self.고름수]
+        self.라우팅.append(고른.astype(np.int16))
+        w = np.take_along_axis(pr, 고른, -1)
+        w = w / np.maximum(w.sum(-1, keepdims=True), 2.0 ** -14) * g.풀기(p + "ffn_down_exps.scale").astype(f64)[고른]
+        h3 = Q.rms(a, g.풀기(p + "pre_ffw_norm_2.weight"), self.eps)
+        F = self.전문가폭
+        o = np.zeros((T, self.D))
+        for e in np.unique(고른):
+            행, 순위 = np.nonzero(고른 == e)
+            gu = h3[행] @ Q.풀어전문가(g, p + "ffn_gate_up_exps.weight", e).astype(f64).T
+            y = (gelu(gu[:, :F]) * gu[:, F:]) @ Q.풀어전문가(g, p + "ffn_down_exps.weight", e).astype(f64).T
+            o[행] += w[행, 순위][:, None] * y
+        y2 = Q.rms(o, g.풀기(p + "post_ffw_norm_2.weight"), self.eps)
+        return Q.rms(y1 + y2, g.풀기(p + "post_ffw_norm.weight"), self.eps)
+
     def 앞으로(self, ids):
         g, T = self.g, len(ids)
         x = Q.풀어(g, "token_embd.weight", ids).astype(f64) * math.sqrt(self.D)
@@ -209,9 +245,13 @@ class 모델:
         for l in range(self.L):
             h = Q.rms(x, g.풀기(f"blk.{l}.attn_norm.weight"), self.eps)
             x = x + Q.rms(self.어텐션(l, h, T, kv), g.풀기(f"blk.{l}.post_attention_norm.weight"), self.eps)
-            h = Q.rms(x, g.풀기(f"blk.{l}.ffn_norm.weight"), self.eps)
-            f = Q.선형(gelu(Q.선형(h, g, f"blk.{l}.ffn_gate.weight")) * Q.선형(h, g, f"blk.{l}.ffn_up.weight"), g, f"blk.{l}.ffn_down.weight")
-            x = x + Q.rms(f, g.풀기(f"blk.{l}.post_ffw_norm.weight"), self.eps)
+            if f"blk.{l}.ffn_gate_inp.weight" in g.tensors:             # 26B-A4B — MoE(dense 가지 + 전문가)
+                x = x + self.MoE(l, x)
+            else:
+                h = Q.rms(x, g.풀기(f"blk.{l}.ffn_norm.weight"), self.eps)
+                f = Q.선형(gelu(Q.선형(h, g, f"blk.{l}.ffn_gate.weight")) * Q.선형(h, g, f"blk.{l}.ffn_up.weight"), g,
+                          f"blk.{l}.ffn_down.weight")
+                x = x + Q.rms(f, g.풀기(f"blk.{l}.post_ffw_norm.weight"), self.eps)
             if 층입 is not None:                                     # PLE — FFN 의 잔차 뒤, 층 배율 앞
                 y = Q.선형(gelu(Q.선형(x, g, f"blk.{l}.inp_gate.weight")) * 층입[l], g, f"blk.{l}.proj.weight")
                 x = x + Q.rms(y, g.풀기(f"blk.{l}.post_norm.weight"), self.eps)
@@ -243,6 +283,11 @@ def 라마부르기(판):
     return LM
 
 
+def 전문가CPU인가(gguf):
+    """MoE 파일(26B-A4B — 16.8 GB)이면 llama.cpp 는 전문가 행렬을 호스트 메모리에 둔다(이 PC 의 그래픽 메모리 12 GB 에 들지 않는다)."""
+    return any(n.endswith("_exps.weight") for n in GR.GGUF(gguf).tensors)
+
+
 def 라마로짓(lm, ids):
     """llama.cpp 의 모든 행 로짓 — 위치 0 부터."""
     lm.지우기()
@@ -266,8 +311,11 @@ def 채팅(gguf, 판, 작업, N):
     kls, 맞음, 행수 = [], 0, 0
     for i, (ids, P, z) in enumerate(경우):
         t0 = time.time()
+        m.라우팅 = []
         p = Q.로그소프트맥스(m.앞으로(ids))
         np.save(os.path.join(작업, f"채팅수학{i}.npy"), p.astype(np.float32))
+        if m.라우팅:
+            np.save(os.path.join(작업, f"채팅라우팅{i}.npy"), np.stack(m.라우팅))   # [MoE 층][행][k]
         r = Q.로그소프트맥스(z)
         kl = (np.exp(p) * (p - r)).sum(-1)
         답 = slice(P - 1, len(ids) - 1)                              # 행 P − 1 … 끝 − 2 가 답 토큰을 예측
@@ -288,7 +336,7 @@ def 채팅라마(gguf, 판, N):
     """llama.cpp(플래시 어텐션 끔 · KV f32)가 채팅 프롬프트 셋을 그리디로 N 토큰 이어 쓴 것 — [(토큰열, 프롬프트 길이, 모든 행의 로짓)]"""
     import ctypes
     LM = 라마부르기(판)
-    lm = LM.라마(gguf, n_ctx=512, n_batch=512, n_ubatch=512, n_seq_max=1, flash=0, kv형식=0)
+    lm = LM.라마(gguf, n_ctx=512, n_batch=512, n_ubatch=512, n_seq_max=1, flash=0, kv형식=0, 전문가CPU=전문가CPU인가(gguf))
     L = lm.L
     L.llama_model_get_vocab.restype = ctypes.c_void_p
     L.llama_model_get_vocab.argtypes = [ctypes.c_void_p]
@@ -334,7 +382,8 @@ def main():
     if "--no-llama" not in sys.argv and "--saved-llama" not in sys.argv:
         LM = 라마부르기(판)
         for 이름, flash, kv in (("라마", -1, 1), ("라마f32", 0, 0)):     # 기본 · 플래시 어텐션 끔 + KV f32
-            lm = LM.라마(gguf, n_ctx=길이, n_batch=길이, n_ubatch=min(512, 길이), n_seq_max=1, flash=flash, kv형식=kv)
+            lm = LM.라마(gguf, n_ctx=길이, n_batch=길이, n_ubatch=min(512, 길이), n_seq_max=1, flash=flash, kv형식=kv,
+                        전문가CPU=전문가CPU인가(gguf))
             for i, ids in enumerate(토큰들):
                 np.save(os.path.join(작업, f"{이름}{i}.npy"), 라마로짓(lm, ids))
             lm.닫기()
@@ -347,8 +396,11 @@ def main():
     kls, 끼리들, 같음, 같끼리, 행수 = [], [], 0, 0, 0
     for i, ids in enumerate(토큰들):
         t0 = time.time()
+        m.라우팅 = []
         p = Q.로그소프트맥스(m.앞으로(ids))
         np.save(os.path.join(작업, f"수학{i}.npy"), p.astype(np.float32))
+        if m.라우팅:
+            np.save(os.path.join(작업, f"라우팅{i}.npy"), np.stack(m.라우팅))       # [MoE 층][행][k]
         if "--no-llama" in sys.argv:
             print(f"텍스트 {i}: {len(ids)} 토큰 · {time.time() - t0:.0f} 초 — 1위(앞 8 행) {p[:8].argmax(1).tolist()}", flush=True)
             continue

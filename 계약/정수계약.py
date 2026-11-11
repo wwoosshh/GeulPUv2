@@ -1366,6 +1366,22 @@ def 전문가합(w, ys):
     return o
 
 
+def 라우터배율(D):
+    """0.24.0 24-5 — 계약 4.12 의 10(Gemma 4 26B-A4B): c_r = 1 ÷ 제곱근(짧은실수(너비))(연산마다 IEEE 바른 반올림 — llama.cpp 의
+    1.0f / sqrtf(너비) 와 같은 식. 너비 2,816 이면 0x3C9A5FB2 — 1/√너비 의 바른 반올림과도 같다)."""
+    return 나눔(f32(1), 제곱근(f32(D)))
+
+
+def 라우터가중(s, D):
+    """계약 4.12 의 10 — 라우터 입력 h_r = RMSNorm(x; w′) 의 가중치 w′_c = s_c · c_r(곱 하나 — s 는 ffn_gate_inp.scale)."""
+    return 곱(np.asarray(s, f32), 라우터배율(D))
+
+
+def 전문가배율(w, s, 고른):
+    """계약 4.12 의 10 — 무게 w_r ← w_r · s_(e_r)(곱 하나 — s 는 ffn_down_exps.scale, 전문가마다 짧은실수 하나). w · 고른 [행][k]."""
+    return 곱(np.asarray(w, f32), np.asarray(s, f32)[np.asarray(고른)])
+
+
 # ── #96 2단계 — Jacobian lens(계약 5.4): u = J x 를 배정밀도의 차례 합으로 ───────────────────────────────────────────────────────
 
 def J곱(J, x):

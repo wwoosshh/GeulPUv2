@@ -332,7 +332,7 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
    8. **Residual**: x ← x + o (one addition).
    This is llama.cpp's `build_moe_ffn` (softmax → top k → weights divided by their sum → sum of expert outputs × weights, shared expert ×
    sigmoid gate) with its order fixed. The layers are items 9 and 10 as before; only the FFN is this one.
-12. **Gemma 4** (0.12.0 12-3h — architecture `gemma4`, dense: 12B · 31B; 0.24.0 — E2B · E4B: items 7 – 9, [`문서/블록조합.md`](../문서/블록조합.md)): sliding-window layers
+12. **Gemma 4** (0.12.0 12-3h — architecture `gemma4`, dense: 12B · 31B; 0.24.0 — E2B · E4B: items 7 – 9, 26B-A4B: item 10, [`문서/블록조합.md`](../문서/블록조합.md)): sliding-window layers
    (`attention.sliding_window_pattern` true) and full-attention layers have different shapes — head size `key_length_swa` · `key_length`
    (256 · 512 in the 12B), KV heads `attention.head_count_kv`[l] (8 · 1), RoPE θ `rope.freq_base_swa` · `rope.freq_base`. The other blocks are
    items 1 – 5 as they are (no biases — 0 is added).
@@ -381,10 +381,31 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
       projection to the scaled embedding x₀ = e₀ · c_e and multiplies the normalization's eps by the width (an RMSNorm without weights
       of M x₀ with eps · width) — in real numbers the same value as that of M e₀ with eps, so the contract uses the latter, which has
       one product less.
+   10. **MoE** (0.24.0, stage 24-5 — 26B-A4B: layers with `ffn_gate_inp` — every layer in the 26B-A4B): item 4's FFN slot holds a dense branch
+      and an expert branch side by side. a is x after item 3 (after the attention residual).
+      1. **Dense branch**: y₁ = RMSNorm(`ffn_down` · h; `post_ffw_norm_1`) — h is item 4's GeGLU (h₂ = RMSNorm(a; `ffn_norm`)). Only the
+         weights of the last normalization differ from item 4.
+      2. **Router**: h_r = RMSNorm(a; w′) (item 1 — two digits), w′_c = `ffn_gate_inp.scale`_c · c_r (one product), c_r = 1 ÷ sqrt(fp32(width))
+         (IEEE correct rounding at each operation — 0x3C9A5FB2 for width 2,816: the same as the correctly rounded 1/√width).
+         l_e = `ffn_gate_inp`_e · h_r — item 11's step 1 (F32 weights per 1.3, no shared-gate column). llama.cpp multiplies the RMSNorm
+         without weights by 1/√width and then by `ffn_gate_inp.scale` — the contract folds both into the normalization's weights (one product
+         less).
+      3. **Softmax, top k, weights**: item 11's steps 2 – 4 (k = `expert_used_count` — 8 of 128 in the 26B-A4B), then w_r ← w_r · s_(e_r) (one
+         product — s = `ffn_down_exps.scale`, one fp32 per expert). llama.cpp multiplies the expert's down output by s element by element — the
+         same value in real numbers; the contract multiplies the weight (k products per row — the place of Hugging Face's per_expert_scale).
+      4. **Experts**: h₃ = RMSNorm(a; `pre_ffw_norm_2`), [g | u] = `ffn_gate_up_exps`_(e_r) · h₃ — output rows [0, F) are gate and [F, 2F) up
+         (F = `expert_feed_forward_length` — 704 in the 26B-A4B), y_r = `ffn_down_exps`_(e_r) · GeGLU(g, u) (item 4's GeGLU — two digits into
+         down). As in item 11's step 5, a row's y_r depends only on that row and that expert's weights.
+      5. **Sum**: o = w_0 · y_0 (one product), then o ← fma(w_r, y_r, o) for r = 1 … k − 1 in order (item 11's step 6),
+         y₂ = RMSNorm(o; `post_ffw_norm_2`).
+      6. **Residual**: f = y₁ + y₂ (one addition), x ← a + RMSNorm(f; `post_ffw_norm`) (one addition). Then item 5's layer scale.
+
+      Matrices whose depth is not a multiple of 256 (`ffn_down` 2,112 and `ffn_down_exps` 704 in the 26B-A4B) are stored by the file as
+      Q8_0 or Q5_0 — section 1 (Q5_0 in the Q8_0 form).
 
    The layers are x ← x + RMSNorm(attention(RMSNorm(x; `attn_norm`)); `post_attention_norm`), x ← x + RMSNorm(GeGLU(RMSNorm(x; `ffn_norm`));
-   `post_ffw_norm`), (with item 9: x ← x + RMSNorm(`proj` · …; `post_norm`),) x ← x · s_l. This is llama.cpp's `src/models/gemma4.cpp`
-   (master 7894e8b — items 7 – 9 from b12224) with its order fixed (MoE — 26B-A4B — is not covered yet).
+   `post_ffw_norm`) (item 10's step 6 in layers with item 10), (with item 9: x ← x + RMSNorm(`proj` · …; `post_norm`),) x ← x · s_l. This is
+   llama.cpp's `src/models/gemma4.cpp` (master 7894e8b — items 7 – 10 from b12224, item 10 with `build_moe_ffn`) with its order fixed.
 13. **deepseek2 — MLA attention and sigmoid-routed MoE** (0.24.0 24-2 — architecture `deepseek2`: GLM-4.7-Flash · Kanana-2-30B-A3B,
    [`구조/deepseek2/기록.md`](../구조/deepseek2/기록.md)): H heads, kv compression C = `attention.kv_lora_rank`, RoPE dimension
    R = `rope.dimension_count`, per-head nope N = `attention.key_length_mla` − R, value V = `attention.value_length_mla` (GLM: 20 · 512 · 64 ·
@@ -651,6 +672,7 @@ steps of `--layer-lens`.
 | Gemma 4 — 0.12.0 12-3h-1 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants c_a, c_b and fp32(2/30); GeGLU and the softcap against scalar computations copied from the contract text, and their error bounds against the exact values; the sliding window (a window ≥ the length gives the same bits as attention without a window, keys outside the window cannot change the result, every row equals a hand fold of its tiles and groups); the CPU reference (gemma-4-12b-it Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions on chat answers and on text |
 | Gemma 3 — 0.24.0 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants fp32(1/√256), fp32(1/√168) and sqrt(fp32(2,560)); the sliding-window layer rule (P absent, 6, 0, an array); the RoPE table with linear scaling 8 equals the table with positions divided by 8 (same bits); attention with score scale 1/16 equals attention on q multiplied by 1/16 (same bits); the CPU reference (gemma-3-4b-it Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions on chat answers and on text |
 | Gemma 4 E2B · E4B — 0.24.0, stage 24-5 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants c_h, c_p (n = 256) and sqrt(fp32(1,536)) (the values of llama.cpp's fp32 expressions); the per-layer input (PLE) against a computation copied from the contract text; the contract's formula equals llama.cpp's folded one (double precision); the layer a KV-sharing layer reads (the layer patterns of the E2B and E4B); the math reference (gemma-4-E2B-it and E4B-it Q4_K_M) against llama.cpp — next-token distributions on chat answers and on text; the CPU reference (E2B) against the math reference |
+| Gemma 4 26B-A4B — 0.24.0, stage 24-5 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constant c_r (width 2,816 — the value of llama.cpp's fp32 expression and the correctly rounded 1/√width); the router input's weights and the per-expert scale of the weights against a computation copied from the contract text; the math reference (gemma-4-26B-A4B-it Q4_K_M) against llama.cpp — next-token distributions on chat answers and on text; the CPU reference against the math reference, and the experts picked in each layer |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
 | Layer lens (#96 — [`시험/렌즈.py`](../시험/렌즈.py) · [`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens`) | the server's per-layer (all L layers) logit hash, target logprob, entropy, top k and rank against the CPU reference (5.3); the last layer against the echo values of the same response; the echo of the lens path (the plan path, also for four rows or fewer) against the echo of the whole answer without the lens; CUDA against Vulkan (exact); refusals (no echo, echo_from at the end, top_k 21, wrong type); inside the CPU reference, the last layer against the final logits |
 | Jacobian lens (#96 phase 2 — [`시험/계약자체.py`](../시험/계약자체.py) · [`시험/렌즈.py`](../시험/렌즈.py) `--jlens` · [`도구/repro_check.py`](../도구/repro_check.py) `--jlens`) | the server's per-layer jacobian_lens (logit hash, 5.2 values, rank) against the CPU reference (5.4 — the same J file), the layer_lens of a response that asked for J against one that did not (bits), the last layer against the logit lens's last layer, CUDA against Vulkan (exact), refusal (wrong type of jacobian); J곱 (item 2 of 5.4) against the contract's sentences carried out element by element — the ordered double sum and the rule-R rounding of the exact rational (subnormal halves, −0, 65504, a cancellation whose result depends on the order, values around the 2⁻¹²⁶ threshold), one row at a time against all rows at once, u = x (bits) when J is the identity; the J file (safetensors): write and read, a file built by hand from the specification, refusal of wrong files; in repro_check, the last layer against the final logits |
