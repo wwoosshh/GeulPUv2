@@ -16,6 +16,11 @@
 - --헤드 128(0.24.0 — Gemma 3 의 헤드 256 파일만): 같은 텐서를 헤드 128 로 읽는 파일 — 헤드 수 · KV 헤드 수를 두 배로,
   attention.key_length · value_length(있으면 _swa · rope.dimension_count 도)를 128 로 적고, attn_q_norm · attn_k_norm 은 앞 128 값만
   남긴다(q · k · v · o 행렬의 모양은 그대로 맞는다). 헤드 128 의 실행 경로(27B 와 같은 헤드 크기)를 이 PC 에 드는 파일로 시험하려는 것이다.
+- 0.24.0 의 24-5 — E2B · E4B(층마다의 입력 · KV 공유 — 계약 4.12 의 7 ~ 9): --층 을 꼭 준다(오름차순). 층마다의 FFN 폭
+  (feed_forward_length 가 배열이면)은 남긴 층의 값만, attention.shared_kv_layers 는 남긴 층 가운데 KV 를 나눠 쓰는 층의 수로 적는다 — 자기
+  KV 가 있는 층의 마지막 둘이 슬라이딩 윈도 층 · 전체 어텐션 층이어야 한다(나눠 쓰는 층이 보는 층). per_layer_token_embd(토큰마다 층 수 ×
+  n 값 — n 은 슈퍼블록 256 의 배수)와 per_layer_model_proj(출력 행 층 수 × n)는 남긴 층의 구간만 옮긴다. 예: E2B 의 --층 0,13,14,15,19
+  (FFN 폭 6,144 의 층 · 층 13 · 14 의 KV 를 보는 윈도 층 15 · 전체 어텐션 층 19). --Q8 · --W16 · --헤드 와 함께 쓰지 않는다.
 값은 실제 모델의 것이지만 층을 줄여 말이 되지 않는다 — 엔진 · CPU 참조의 비트 비교에만 쓴다.
 """
 import os
@@ -30,7 +35,7 @@ import gguf읽기 as GR        # noqa: E402
 import 정수계약 as C         # noqa: E402
 
 고정 = {0: 1, 1: 1, 2: 2, 3: 2, 4: 4, 5: 4, 6: 4, 7: 1, 10: 8, 11: 8, 12: 8}
-층배열끝 = (".attention.head_count_kv", ".attention.sliding_window_pattern")        # 구조 이름 뒤 — 층마다의 배열이면 남긴 층의 칸만
+층배열끝 = (".attention.head_count_kv", ".attention.sliding_window_pattern", ".feed_forward_length")    # 구조 이름 뒤 — 층마다의 배열이면 남긴 층의 값만
 행렬 = ("attn_q.weight", "attn_k.weight", "attn_v.weight", "attn_output.weight", "ffn_gate.weight", "ffn_up.weight", "ffn_down.weight")
 K블록 = {GR.Q4_K: 144, GR.Q5_K: 176, GR.Q6_K: 210}
 
@@ -131,6 +136,22 @@ def main():
     L = g.meta[구조 + ".block_count"]
     assert 층들 and len(set(층들)) == len(층들) and all(0 <= l < L for l in 층들), (층들, L)
     번호 = {l: i for i, l in enumerate(층들)}
+    # 0.24.0 의 24-5 — 층마다의 입력(PLE) · KV 공유(E2B · E4B)
+    층입 = int(g.meta.get(구조 + ".embedding_length_per_layer_input", 0) or 0)
+    공유열쇠 = 구조 + ".attention.shared_kv_layers"
+    공유 = int(g.meta.get(공유열쇠, 0) or 0)
+    새공유 = 0
+    if 층입 or 공유:
+        assert "--층" in sys.argv and 층들 == sorted(층들), "층마다의 입력 · KV 공유가 있는 파일은 --층 을 오름차순으로 준다"
+        assert not (Q8 or W16 or 반헤드), "층마다의 입력 · KV 공유가 있는 파일은 --Q8 · --W16 · --헤드 없이"
+    if 공유:
+        L0 = L - 공유
+        무늬 = g.meta[구조 + ".attention.sliding_window_pattern"]
+        assert isinstance(무늬, (list, tuple)) and len(무늬) == L, "sliding_window_pattern 이 층마다의 배열이어야 한다"
+        자기 = [l for l in 층들 if l < L0]
+        새공유 = len(층들) - len(자기)
+        assert len(자기) >= 2 and bool(무늬[자기[-2]]) and not bool(무늬[자기[-1]]), (
+            f"자기 KV 가 있는 층({자기})의 마지막 둘이 슬라이딩 윈도 층 · 전체 어텐션 층이어야 한다")
     정렬 = g.meta.get("general.alignment", 32)
     b = g.b
     _, nkv = struct.unpack_from("<QQ", b, 8)
@@ -163,6 +184,8 @@ def main():
             raw = struct.pack({4: "<I", 5: "<i", 10: "<Q", 11: "<q"}[t], len(층들))
         elif k == "general.name":
             raw = 문자열(이름글)
+        elif k == 공유열쇠 and 공유:
+            raw = struct.pack(정수꼴[t], 새공유)
         elif k in 층배열 and t == 9:
             raw = 배열자르기(b, o + 4, 층들)
             if 반헤드 and k == 구조 + ".attention.head_count_kv":       # 층마다의 KV 헤드 수 — 두 배로
@@ -194,7 +217,17 @@ def main():
         꼬리 = ".".join(이름.split(".")[2:]) if 이름.startswith("blk.") else 이름
         큰행렬 = 꼬리 in 행렬 or 이름 in ("token_embd.weight", "output.weight")
         다시 = Q8 and t in K블록 and 큰행렬
-        if W16 and 큰행렬:                                    # 0.24.0 — k-양자화 · Q8_0 의 행렬을 풀어 F16 · BF16 으로
+        if 층입 and 이름 in ("per_layer_token_embd.weight", "per_layer_model_proj.weight"):
+            # 0.24.0 의 24-5 — 남긴 층의 구간만: 표는 [토큰][층][n 값], 투영은 [층][출력 행 n][너비 값](파일의 차례)
+            vb, bb = GR.블록[t]
+            표 = 이름 == "per_layer_token_embd.weight"
+            assert tuple(dims)[0 if 표 else 1] == 층입 * L and (층입 if 표 else dims[0]) % vb == 0, (이름, dims, 층입, L)
+            단위 = 층입 // vb * bb if 표 else 층입 * (dims[0] // vb * bb)          # 층 하나의 바이트(표는 토큰마다)
+            dims = (층입 * len(층들), dims[1]) if 표 else (dims[0], 층입 * len(층들))
+            n = 단위 * len(층들) * (dims[1] if 표 else 1)
+            t2 = t
+            다시 = ("표" if 표 else "투영", 단위)
+        elif W16 and 큰행렬:                                  # 0.24.0 — k-양자화 · Q8_0 의 행렬을 풀어 F16 · BF16 으로
             assert t in K블록 or t == GR.Q8_0, f"{이름}: {W16} 로 바꾸지 않는 형식 {t}"
             다시 = W16
             n = dims[0] * dims[1] * 2
@@ -223,7 +256,15 @@ def main():
         f.write(머리)
         for 새, t2, dims, 이름, n, 다시 in 텐서:
             t, _, raw = g.원(이름)
-            if 다시 in ("F16", "BF16"):
+            if isinstance(다시, tuple):                        # 0.24.0 의 24-5 — 층마다의 입력의 텐서: 남긴 층의 구간만
+                종류, 단위 = 다시
+                if 종류 == "표":
+                    for r0 in range(0, dims[1], 8192):
+                        r1 = min(dims[1], r0 + 8192)
+                        f.write(np.ascontiguousarray(raw[r0 * L * 단위:r1 * L * 단위].reshape(r1 - r0, L, 단위)[:, 층들, :]).tobytes())
+                else:
+                    f.write(np.ascontiguousarray(raw[:L * 단위].reshape(L, 단위)[층들]).tobytes())
+            elif 다시 in ("F16", "BF16"):
                 K, N = dims[0], dims[1]
                 for r0 in range(0, N, 4096):
                     r1 = min(N, r0 + 4096)

@@ -21,6 +21,7 @@
     eps5모델 = 거짓.
     eps6모델 = 거짓.
     젬마이름 = "Gemma 3".
+    젬마덧없음().                                     (* 0.24.0 의 24-5 — Gemma 4 E2B · E4B 의 것(층마다의 FFN 폭 · KV 공유 · 층마다의 입력)은 없다 *)
     층수 = 메타정수(g, "gemma3.block_count").
     너비 = 메타정수(g, "gemma3.embedding_length").
     머리수 = 메타정수(g, "gemma3.attention.head_count").
