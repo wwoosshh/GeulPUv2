@@ -169,8 +169,8 @@ Formats: Q2_K · Q3_K · IQ1–IQ3 · IQ4_NL · MXFP4 · Q4_1 · Q5_1 (stage 24-
 architectures. Speed: `deepseek2` decoding is still slower than llama.cpp's fastest configuration (about 0.6–0.85 times; long prompts are processed
 1.5–1.75 times faster — [문서/MoE전문가캐시.md](../문서/MoE전문가캐시.md)). `gemma3` is slower than llama.cpp as well (decoding at about 0.65–0.9 times,
 prompt processing at about 0.6–1.05 times — [구조/gemma3/기록.md](../구조/gemma3/기록.md)). So are Gemma 4 E2B · E4B (decoding at
-about 0.8 times, prompt processing at about 0.7–1.03 times — [구조/gemma4/기록.md](../구조/gemma4/기록.md)). Gemma 4 26B-A4B decodes
-more slowly still (about 0.5 times on an H100 NVL MIG slice; prompt processing at about 0.72 times for 2,048 tokens and 1.43 times
+about 0.8 times, prompt processing at about 0.7–1.03 times — [구조/gemma4/기록.md](../구조/gemma4/기록.md)). So is Gemma 4 26B-A4B
+(decoding at about 0.7–0.8 times on an H100 NVL MIG slice; prompt processing at about 0.72 times for 2,048 tokens and 1.43 times
 for 512 — same record).
 
 ## 7. Checked hardware
