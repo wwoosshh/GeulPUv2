@@ -108,6 +108,10 @@ EXE = ".exe" if os.name == "nt" else ""
     # E4B: Q4_K_M 의 층 0 · 22 · 23 · 24 · 29(KV 헤드 둘 · FFN 폭이 모든 층에서 같다 — 자기 KV 가 있는 마지막 두 층과 그 KV 를 보는 두 층)
     ("gemma4-E4B-작은", "구조회귀/작은젬마E4B.gguf", "gemma4KW16_2560x8x2x10240x262144_ple",
      "gemma4큰 K 2560 8 2 10240 262144 --W16 --층입력"),
+    # 0.24.0 의 24-5 — Gemma 4 26B-A4B(MoE — dense 가지 + 전문가 128 개 가운데 8 개): lmstudio-community 의 Q4_K_M 의 층 0 · 3 · 5(시험/작은젬마.py —
+    # dense · 전문가의 down 이 Q8_0 인 층과 Q5_0 인 층, 윈도 층 둘 · 전체 어텐션 층 하나). 전문가는 모두 VRAM(1.67 GB)
+    ("gemma4-26B-작은", "구조회귀/작은젬마26B.gguf", "gemma4KW16_2816x16x8x2112x262144_MoEK8",
+     "gemma4큰 K 2816 16 8 2112 262144 --W16 --MoE K8"),
     ("deepseek2-작은", "구조회귀/작은deepseek2.gguf", "deepseek2KW16_2048x20x1x10240x154880_MLA768e5",
      "deepseek2큰 K 2048 20 1 10240 154880 --W16 --MoE K --MLA 768 --eps5"),
     ("deepseek2-작은-kanana", "구조회귀/작은kanana2.gguf", "deepseek2KW16_2048x32x1x6144x128256_MLA0K",
