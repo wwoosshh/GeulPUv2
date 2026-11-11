@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """0.12.0 12-3h-1 — Gemma 4(GGUF 구조 gemma4)의 수학 참조: 파일의 가중치를 풀어(양자화 값 그대로) 활성값을 fp64 로 계산한 순전파.
 qwen35수학.py 와 같은 쓰임 — GGUF 의 뜻(텐서의 배치 · 층의 차례 · 두 어텐션 모양)을 llama.cpp 와 맞춰 본다(문서/블록조합.md 의 'Gemma 4 (12-3h)').
-지금은 dense(PLE · KV 공유 · MoE 없음 — 12B · 31B)만.
+dense(12B · 31B)와 E2B · E4B(층마다의 임베딩(PLE) · KV 공유 · 층마다의 FFN 폭 — 0.24.0 의 24-5). MoE(26B-A4B)는 아직.
 
   python -I 시험/gemma4수학.py <gemma4 gguf> <llama.cpp 폴더> <작업 폴더> [--text <경로[@바이트]> …] [--length 256] [--no-llama]
   python -I 시험/gemma4수학.py <gemma4 gguf> <llama.cpp 폴더> <작업 폴더> --채팅 [--n 100]
@@ -29,9 +29,20 @@ qwen35수학.py 와 같은 쓰임 — GGUF 의 뜻(텐서의 배치 · 층의 �
     x ← x + RMSNorm(어텐션; post_attention_norm)
     x ← x + RMSNorm(ffn_down · (GELU(ffn_gate · h₂) ⊙ ffn_up · h₂); post_ffw_norm),  h₂ = RMSNorm(x; ffn_norm),
       GELU(z) = ½ z (1 + tanh(√(2/π) (z + 0.044715 z³)))(tanh 근사 — gelu_pytorch_tanh)
+    (PLE — 아래) x ← x + RMSNorm(proj · (GELU(inp_gate · x) ⊙ p_l); post_norm)
     x ← x · layer_output_scale[l]
   끝: RMSNorm(x; output_norm), 로짓 = token_embd · x(출력은 임베딩과 묶임 — output.weight 가 있으면 그것), 소프트캡 c · tanh(로짓 / c)
   (c = final_logit_softcapping — 없으면 소프트캡 없음)
+
+0.24.0 의 24-5 — E2B · E4B(llama.cpp b12224 의 gemma4.cpp):
+  층마다의 입력(PLE — n = embedding_length_per_layer_input): 토큰마다 p_l = RMSNorm0(M_l · x₀; eps · 너비) ⊙ (per_layer_proj_norm / √2)
+    + per_layer_token_embd[토큰][l n … (l + 1) n) · (√n / √2). x₀ 는 위의 입력(임베딩 · √너비), M_l 은 per_layer_model_proj 의 출력 행
+    l n … (l + 1) n, RMSNorm0 은 가중치 없는 RMSNorm(그 n 칸에서). llama.cpp 는 원래 식의 곱 1/√너비(투영) · 1/√2(합)를 eps 와 가중치 ·
+    임베딩의 스케일에 접어 넣었다 — 같은 값이다.
+  KV 공유(shared_kv_layers = N): 뒤의 N 층(l ≥ L − N)은 자기 k · v 를 만들지 않고, 자기 KV 가 있는 마지막 층 가운데 같은 종류의 것을 본다 —
+    슬라이딩 윈도 층은 층 L − N − 2, 전체 어텐션 층은 층 L − N − 1 의 k · v(정규화 · RoPE 뒤의 것 그대로). q 는 자기 attn_q · attn_q_norm.
+    (llama.cpp 는 KV 를 쓰지 않는 그 층들에서 출력에 필요한 행만 계산한다 — 값은 같다.)
+  FFN 폭은 층마다(feed_forward_length 가 배열 — E2B 는 KV 공유 층이 두 배).
 
 0.24.0 — Gemma 3(GGUF 구조 gemma3 — 계약 4.14)도 읽는다. llama.cpp 의 src/models/gemma3.cpp(b12224)와 같은 식 — 위에서 다른 것만:
   층의 모양이 모두 같다(헤드 크기 key_length · KV 헤드 head_count_kv). 층 l 은 l mod P < P − 1 이면 슬라이딩 윈도 층(P =
@@ -77,6 +88,12 @@ def 윈도층들(무늬, L):
     return [P == 0 or l % P < P - 1 for l in range(L)]
 
 
+def KV원층(l, n0, 윈도):
+    """층 l 이 보는 키 · 값의 층(Gemma 4 의 KV 공유 — 계약 4.12 의 8, llama.cpp b12224 의 kv_source): 자기 KV 가 있는 층(l < n0)은 자기,
+    그 뒤의 층은 같은 종류의 마지막 것 — 슬라이딩 윈도 층은 n0 − 2, 전체 어텐션 층은 n0 − 1."""
+    return l if l < n0 else n0 - (2 if 윈도 else 1)
+
+
 def 선형스케일(k):
     """Gemma 3 의 전체 층 RoPE 의 선형 스케일링 s(각 = 위치 · θ_i / s) — rope.scaling.type 이 linear(없으면 linear)이고 rope.scaling.factor 가
     0 이 아닐 때(llama.cpp: rope_freq_scale_train = 1 / factor, 종류가 none 이면 늘 1). 그 밖의 종류(yarn 등)는 받지 않는다."""
@@ -96,8 +113,6 @@ class 모델:
         구조 = self.구조 = m["general.architecture"]
         assert 구조 in ("gemma4", "gemma3"), 구조
         k = lambda x, d=None: m.get(구조 + "." + x, d)               # noqa: E731
-        assert not k("embedding_length_per_layer_input", 0), "PLE(E2B · E4B)는 아직"
-        assert not k("attention.shared_kv_layers", 0), "KV 공유는 아직"
         assert "blk.0.ffn_gate_inp.weight" not in g.tensors, "MoE(26B-A4B)는 아직"
         self.L, self.D = k("block_count"), k("embedding_length")
         self.H = k("attention.head_count")
@@ -116,6 +131,10 @@ class 모델:
         self.캡 = float(k("final_logit_softcapping", 0.0) or 0.0)
         self.인자 = g.풀기("rope_freqs.weight").astype(f64) if "rope_freqs.weight" in g.tensors else None
         self.묶인출력 = "output.weight" not in g.tensors
+        self.npl = int(k("embedding_length_per_layer_input", 0) or 0)   # 0.24.0 24-5 — 층마다의 입력(PLE)의 너비(0 이면 없다)
+        self.n0 = self.L - int(k("attention.shared_kv_layers", 0) or 0)  # 자기 KV 가 있는 층 수(그 뒤의 층은 KV 공유)
+        assert self.n0 == self.L or (self.n0 >= 2 and not self.swa[self.n0 - 1] and self.swa[self.n0 - 2]), (
+            "KV 공유: 자기 KV 가 있는 마지막 두 층이 윈도 층 · 전체 어텐션 층의 차례여야 한다")
         self.v정규화, self.눈금, self.스케일 = True, 1.0, 1.0            # Gemma 4 — v 도 정규화(가중치 없이) · 점수 배율 1 · 스케일링 없음
         if 구조 == "gemma3":                                         # 계약 4.14 — llama.cpp 의 gemma3.cpp(b12224)
             assert self.인자 is None, "Gemma 3 의 rope_freqs 는 받지 않는다"
@@ -142,17 +161,23 @@ class 모델:
         y[..., n:2 * n] = b * cos + a * sin
         return y
 
-    def 어텐션(self, l, h, T):
+    def 어텐션(self, l, h, T, kv):
         g, H = self.g, self.H
         s = self.swa[l]
-        hd, Hk = self.hd[s], self.Hkv[l]
+        원 = KV원층(l, self.n0, s)                                    # KV 공유 층은 같은 종류의, 자기 KV 가 있는 마지막 층의 것을 본다
+        hd, Hk = self.hd[s], self.Hkv[원]
         q = Q.선형(h, g, f"blk.{l}.attn_q.weight").reshape(T, H, hd)
-        k0 = Q.선형(h, g, f"blk.{l}.attn_k.weight").reshape(T, Hk, hd)
-        이름v = f"blk.{l}.attn_v.weight"
-        v0 = Q.선형(h, g, 이름v).reshape(T, Hk, hd) if 이름v in g.tensors else k0
         q = self.돌리기(Q.rms(q, g.풀기(f"blk.{l}.attn_q_norm.weight"), self.eps), l, T)
-        kk = self.돌리기(Q.rms(k0, g.풀기(f"blk.{l}.attn_k_norm.weight"), self.eps), l, T)
-        vv = rms0(v0, self.eps) if self.v정규화 else v0               # Gemma 3 는 v 를 정규화하지 않는다
+        if 원 == l:
+            k0 = Q.선형(h, g, f"blk.{l}.attn_k.weight").reshape(T, Hk, hd)
+            이름v = f"blk.{l}.attn_v.weight"
+            v0 = Q.선형(h, g, 이름v).reshape(T, Hk, hd) if 이름v in g.tensors else k0
+            kk = self.돌리기(Q.rms(k0, g.풀기(f"blk.{l}.attn_k_norm.weight"), self.eps), l, T)
+            vv = rms0(v0, self.eps) if self.v정규화 else v0           # Gemma 3 는 v 를 정규화하지 않는다
+            if l >= self.n0 - 2:
+                kv[l] = (kk, vv)                                     # 뒤의 KV 공유 층이 본다
+        else:
+            kk, vv = kv[원]
         묶 = H // Hk
         kk, vv = np.repeat(kk, 묶, 1), np.repeat(vv, 묶, 1)          # 질의 헤드 j → KV 헤드 j // 묶
         sc = np.einsum("thd,shd->hts", q, kk)                        # 배율 1(Gemma 4)
@@ -168,15 +193,28 @@ class 모델:
         o = np.einsum("hts,shd->thd", sc, vv)
         return Q.선형(o.reshape(T, H * hd), g, f"blk.{l}.attn_output.weight")
 
+    def 층입력(self, ids, x0):
+        """층마다의 입력(PLE) [층][행][n] — 위 설명의 p_l."""
+        g, T, L, n = self.g, len(ids), self.L, self.npl
+        p = Q.풀어(g, "per_layer_token_embd.weight", ids).astype(f64).reshape(T, L, n) * (math.sqrt(n) / math.sqrt(2.0))
+        y = rms0(Q.선형(x0, g, "per_layer_model_proj.weight").reshape(T, L, n), self.eps * self.D)
+        y = y * (g.풀기("per_layer_proj_norm.weight").astype(f64) / math.sqrt(2.0))
+        return np.ascontiguousarray((y + p).transpose(1, 0, 2))
+
     def 앞으로(self, ids):
         g, T = self.g, len(ids)
         x = Q.풀어(g, "token_embd.weight", ids).astype(f64) * math.sqrt(self.D)
+        층입 = self.층입력(ids, x) if self.npl else None
+        kv = {}
         for l in range(self.L):
             h = Q.rms(x, g.풀기(f"blk.{l}.attn_norm.weight"), self.eps)
-            x = x + Q.rms(self.어텐션(l, h, T), g.풀기(f"blk.{l}.post_attention_norm.weight"), self.eps)
+            x = x + Q.rms(self.어텐션(l, h, T, kv), g.풀기(f"blk.{l}.post_attention_norm.weight"), self.eps)
             h = Q.rms(x, g.풀기(f"blk.{l}.ffn_norm.weight"), self.eps)
             f = Q.선형(gelu(Q.선형(h, g, f"blk.{l}.ffn_gate.weight")) * Q.선형(h, g, f"blk.{l}.ffn_up.weight"), g, f"blk.{l}.ffn_down.weight")
             x = x + Q.rms(f, g.풀기(f"blk.{l}.post_ffw_norm.weight"), self.eps)
+            if 층입 is not None:                                     # PLE — FFN 의 잔차 뒤, 층 배율 앞
+                y = Q.선형(gelu(Q.선형(x, g, f"blk.{l}.inp_gate.weight")) * 층입[l], g, f"blk.{l}.proj.weight")
+                x = x + Q.rms(y, g.풀기(f"blk.{l}.post_norm.weight"), self.eps)
             이름s = f"blk.{l}.layer_output_scale.weight"
             if 이름s in g.tensors:
                 x = x * float(g.풀기(이름s)[0])
