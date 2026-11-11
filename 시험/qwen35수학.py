@@ -45,7 +45,7 @@ f64 = np.float64
 def 풀어(g, name, 행=None):
     """텐서 → fp32 배열 (N, K) (1 차원은 (K,)) — 양자화 값 그대로(k-양자화는 계약의 풀기K 와 같은 a · q − b). 행: 행 번호 배열(임베딩의 일부)."""
     t, dims, raw = g.원(name)
-    if len(dims) == 1 or t in (GR.F32, GR.F16):
+    if len(dims) == 1 or t in (GR.F32, GR.F16, GR.BF16):              # BF16 — Gemma 4 E2B · E4B 의 per_layer_model_proj(0.24.0)
         x = g.풀기(name)
         return x if 행 is None else x[행]
     K, N = dims[0], dims[1]

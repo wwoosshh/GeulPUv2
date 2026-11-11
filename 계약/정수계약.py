@@ -1141,6 +1141,25 @@ def 겔루(g, u):
     return 곱(곱(g, 시그모이드(y)), u)
 
 
+층입력c_h = f32(0.707106769084930419921875)               # fp32(√½) — 0x3F3504F3
+
+
+def 층입력스케일(n):
+    """계약 4.12 의 9 — c_p = 제곱근(짧은실수(n / 2))(IEEE 바른 반올림 — n 256 이면 0x413504F3)."""
+    assert n % 2 == 0, n
+    return 제곱근(f32(n // 2))
+
+
+def 층입력(e, u, w, n, eps=1e-6):
+    """계약 4.12 의 9 — Gemma 4 E2B · E4B 의 층마다의 입력(PLE) p [토큰][층 수 · n]: e 는 per_layer_token_embd 의 행(파일의 값 그대로),
+    u = per_layer_model_proj · e₀(1 절의 행렬곱 — e₀ 는 √너비를 곱하기 전의 임베딩), w 는 per_layer_proj_norm(n 칸).
+    y = u 를 n 칸씩 머리정규화(D = n)로 — 가중치 w′ = w · c_h(곱 하나), p = y + e · c_p(곱 하나 · 더하기 하나)."""
+    e, u = np.asarray(e, f32), np.asarray(u, f32)
+    assert e.shape == u.shape and e.shape[1] % n == 0, (e.shape, u.shape, n)
+    y = 머리정규화(u, 곱(np.asarray(w, f32), 층입력c_h), eps, n)
+    return 더(y, 곱(e, 층입력스케일(n)))
+
+
 def 소프트캡(z, c):
     """계약 4.12 — 로짓의 소프트캡 c · tanh(z / c) = 2c · σ(2z / c) − c 를 4.9 의 σ 로: y = z · fp32(2 / c), 결과 = 곱해더하기(2c, σ(y), −c)
     (2c · −c 는 짧은실수로 정확해야 한다 — Gemma 4 는 c = 30)."""

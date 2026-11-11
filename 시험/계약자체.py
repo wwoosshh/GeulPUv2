@@ -21,6 +21,7 @@
   12. deepseek2 의 계약 4.13 과 1 절의 Q5_0(0.24.0 24-2): 상수, Q5_0 풀기 대 llama.cpp 의 식, NORM RoPE 대 계약 문장 · NeoX 식, 시그모이드
      라우팅 대 계약 문장, 값의 폭이 키와 다른 어텐션
   13. Gemma 3 의 계약 4.14(0.24.0): 상수, 슬라이딩 윈도 층의 규칙, 선형 스케일링의 RoPE 표, 점수 스케일 1/16 의 어텐션
+  14. Gemma 4 E2B · E4B 의 계약 4.12 의 7 ~ 9(0.24.0 의 24-5): 상수, 층마다의 입력(PLE) 대 계약 문장 · llama.cpp 의 접은 식, KV 공유 층이 보는 층
 활성값은 블록마다 크기가 다르게(2^−20 … 2^20) 하고, 0 인 블록 · 최댓값이 2 의 거듭제곱인 블록을 섞는다.
 
   python -I -X utf8 시험/계약자체.py
@@ -867,6 +868,40 @@ def 시험_gemma3(r):
          다른칸(a, C.어텐션(C.곱(q, f32(0.0625)), k, v, 눈금=1.0, 창=130)) == 0 and 다른칸(a, C.어텐션(q, k, v, 눈금=1.0, 창=130)) > 0)
 
 
+def 시험_gemma4e(r):
+    """0.24.0 의 24-5 — 계약 4.12 의 7 ~ 9(Gemma 4 E2B · E4B): 상수의 비트(llama.cpp 의 fp32 식과 같은 값), 층마다의 입력(PLE) 대 계약 문장을
+    그대로 옮긴 차례(층 하나씩 RMSNorm 을 D = n 으로 · 곱 하나 · 더하기 하나), 계약의 식(M e₀ 에 eps) = llama.cpp 의 접은 식(M x₀ 에
+    eps · 너비)(배정밀도), KV 공유 층이 보는 층."""
+    두 = f32(2.0)
+    확인("계약 4.12 의 9 — 상수 c_h = fp32(√½) · c_p(n 256) = 제곱근(fp32(128)) · √1536 의 비트, llama.cpp 의 fp32 식과 같다",
+         int(C.층입력c_h.view(np.int32)) == 0x3F3504F3 and int((f32(1.0) / np.sqrt(두)).view(np.int32)) == 0x3F3504F3 and
+         int(C.층입력스케일(256).view(np.int32)) == 0x413504F3 and int((np.sqrt(f32(256.0)) / np.sqrt(두)).view(np.int32)) == 0x413504F3 and
+         int(C.제곱근(f32(1536)).view(np.int32)) == 0x421CC471)
+    T, L, n = 6, 3, 256
+    e = (r.standard_normal((T, L * n)) * 10.0 ** r.uniform(-2, 1, (T, 1))).astype(f32)
+    u = (r.standard_normal((T, L * n)) * 10.0 ** r.uniform(-3, 2, (T, 1))).astype(f32)
+    w = (1.0 + 0.2 * r.standard_normal(n)).astype(f32)
+    w1 = C.곱(w, C.층입력c_h)
+    문장 = np.concatenate([C.더(C.rms정규화(u[:, l * n:(l + 1) * n], w1, 1e-6), C.곱(e[:, l * n:(l + 1) * n], C.층입력스케일(n)))
+                         for l in range(L)], 1)
+    확인("계약 4.12 의 9 — 층마다의 입력 대 계약 문장의 차례(층 하나씩 RMSNorm 을 D = n 으로, e · c_p 를 더함)", 다른칸(C.층입력(e, u, w, n), 문장) == 0)
+    D, eps = 1536, 1e-6                                              # llama.cpp: 가중치 없는 RMSNorm 을 M x₀(= √D · M e₀)에 eps · D 로
+    m = u.astype(np.float64).reshape(T, L, n)
+    계약식 = m / np.sqrt((m * m).mean(-1, keepdims=True) + eps)
+    라마식 = (m * math.sqrt(D)) / np.sqrt((m * m * D).mean(-1, keepdims=True) + eps * D)
+    차 = float(np.abs(계약식 - 라마식).max() / np.abs(계약식).max())
+    확인("계약 4.12 의 9 — 계약의 식 = llama.cpp 의 접은 식(배정밀도 — 상대 차 < 10⁻¹²)", 차 < 1e-12, f"최대 {차:.1e}")
+    # KV 공유: E2B(35 층 · 뒤 20 층 공유 · 전체 어텐션 층 4 · 9 · …) · E4B(42 층 · 뒤 18 층 · 전체 어텐션 층 5 · 11 · …)
+    e2 = [l % 5 != 4 for l in range(35)]
+    e4 = [l % 6 != 5 for l in range(42)]
+    원2 = [GM.KV원층(l, 15, e2[l]) for l in range(35)]
+    원4 = [GM.KV원층(l, 24, e4[l]) for l in range(42)]
+    확인("계약 4.12 의 8 — KV 공유 층이 보는 층: 자기 KV 가 있는 층은 자기, 그 뒤는 슬라이딩 윈도 층 L₀ − 2 · 전체 어텐션 층 L₀ − 1",
+         원2[:15] == list(range(15)) and all(원2[l] == (13 if e2[l] else 14) for l in range(15, 35)) and e2[13] and not e2[14] and
+         원4[:24] == list(range(24)) and all(원4[l] == (22 if e4[l] else 23) for l in range(24, 42)) and e4[22] and not e4[23] and
+         원2[19] == 14 and 원2[15] == 13 and 원4[29] == 23 and 원4[24] == 22)
+
+
 def 시험_deepseek2(r):
     """0.24.0 24-2 — 계약 4.13(deepseek2)과 1 절의 Q5_0: 상수의 비트, Q5_0 풀기 대 llama.cpp 의 식을 칸 하나씩, NORM RoPE 대 계약 문장(스칼라)과
     차원을 바꾼 NeoX 식, 시그모이드 라우팅 대 계약 문장(스칼라 — 같은 점수는 작은 번호 먼저), 값의 폭이 키와 다른 어텐션 = 값을 키 전체로
@@ -1023,6 +1058,7 @@ def main():
     시험_MoE(r)
     시험_gemma4(r)
     시험_gemma3(r)
+    시험_gemma4e(r)
     시험_deepseek2(r)
     시험_J곱(r)
     시험_J파일(r)

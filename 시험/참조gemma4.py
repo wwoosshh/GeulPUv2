@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """0.12.0 12-3h-1 — Gemma 4(GGUF 구조 gemma4)의 계약 CPU 참조: 지금의 계약(정수 블록 행렬곱 · 어텐션 · RMSNorm · RoPE)에 계약 4.12(Gemma 4 —
 GeGLU · 소프트캡 · 슬라이딩 윈도 · 가중치 없는 v 정규화 · 배율 1 의 어텐션 · 임베딩 × √너비 · 층 배율 — 계약/정수계약.py)를 더한 순전파. 층의 뜻은
-시험/gemma4수학.py(llama.cpp 의 src/models/gemma4.cpp 와 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다. 지금은 dense(12B · 31B)만.
+시험/gemma4수학.py(llama.cpp 의 src/models/gemma4.cpp 와 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다. dense(12B · 31B)와 E2B · E4B
+(0.24.0 의 24-5 — 계약 4.12 의 7 ~ 9: 층마다의 FFN 폭 · KV 공유 · 층마다의 입력(PLE)). MoE(26B-A4B)는 아직.
 0.24.0 — Gemma 3(GGUF 구조 gemma3 — 계약 4.14: 헤드 256 의 270M · 1B · 4B · 12B 와 헤드 128 의 27B)도 읽는다(아래 설정 — 4.12 에서 다른
 것만).
 
@@ -44,7 +45,6 @@ def 설정(g):
     구조 = m["general.architecture"]
     assert 구조 in ("gemma4", "gemma3"), 구조
     k = lambda x, d=None: m.get(구조 + "." + x, d)                   # noqa: E731
-    assert not k("embedding_length_per_layer_input", 0) and not k("attention.shared_kv_layers", 0), "PLE · KV 공유는 아직"
     assert "blk.0.ffn_gate_inp.weight" not in g.tensors, "MoE 는 아직"
     L = k("block_count")
     hkv = k("attention.head_count_kv")
@@ -59,9 +59,15 @@ def 설정(g):
          "창": k("attention.sliding_window"), "eps": float(k("attention.layer_norm_rms_epsilon")),
          "캡": float(k("final_logit_softcapping", 0.0) or 0.0),
          "v정규화": True, "눈금": 1.0,                                # Gemma 4 — v 도 정규화(가중치 없이) · 점수 배율 1
+         "층입력": int(k("embedding_length_per_layer_input", 0) or 0),  # 계약 4.12 의 9 — 층마다의 입력(PLE)의 너비 n(0 이면 없다)
+         "자기KV": L - int(k("attention.shared_kv_layers", 0) or 0),    # 계약 4.12 의 8 — L₀: 그 뒤의 층은 KV 공유
          "인자": g.풀기("rope_freqs.weight") if "rope_freqs.weight" in g.tensors else None}
     for w in (True, False):
         assert s["돌림"][w] == s["헤드"][w], "Gemma 의 RoPE 는 헤드 전체(Gemma 4 의 부분 회전은 rope_freqs 로)"
+    L0 = s["자기KV"]
+    assert L0 == L or (L0 >= 2 and s["윈도층"][L0 - 2] and not s["윈도층"][L0 - 1]), (
+        "KV 공유: 층 L₀ − 2 는 슬라이딩 윈도 층, L₀ − 1 은 전체 어텐션 층이어야 한다(계약 4.12 의 8)")
+    assert s["층입력"] % 32 == 0, "층마다의 입력의 너비는 32 의 배수"
     if 구조 == "gemma3":
         assert s["인자"] is None, "Gemma 3 의 rope_freqs 는 받지 않는다"
         assert hd in (128, 256) and s["헤드"][True] == hd, "Gemma 3 는 모든 층이 같은 헤드(256, 27B 는 128)"
@@ -74,6 +80,19 @@ def 설정(g):
         스케일 = GM.선형스케일(k)                                         # 전체 층: θ′_i = θ_i / s(계약 4.7 의 2 의 식에 f_i = s)
         s["인자"] = np.full(hd // 2, 스케일, f32) if 스케일 != 1.0 else None
     return s
+
+
+def 행임베딩K(g, 이름, 경우):
+    """k-양자화 표의 행(토큰마다) → 값 [Σ 행][K](정수계약.임베딩K — 파일의 값 그대로). 표 전체를 풀지 않고 나오는 토큰의 행만 푼다
+    (Gemma 4 E2B · E4B 의 per_layer_token_embd 는 262,144 행 × 8,960 ~ 10,752 칸이다)."""
+    t, dims, raw = g.원(이름)
+    K, N = dims
+    assert t in (GR.Q4_K, GR.Q5_K, GR.Q6_K), (이름, t)
+    vb, bb = GR.블록[t]
+    줄 = K // vb * bb
+    쓰인, 자리 = np.unique(np.concatenate([np.asarray(S, np.int64) for S in 경우]), return_inverse=True)
+    w = C.풀기K(t, np.ascontiguousarray(raw.reshape(N, 줄)[쓰인]).reshape(-1), len(쓰인), K)
+    return C.임베딩K(w, 자리)
 
 
 def 층로짓(g, 잔차):
@@ -98,7 +117,17 @@ def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
     읽는다 — 참조7B.py 의 앞으로 와 같은 꼴)."""
     s = 설정(g)
     NL, D, H, eps = s["층"], s["너비"], s["머리"], s["eps"]
-    x = C.곱(R35.임베딩(g, 경우), C.제곱근(f32(D)))               # 계약 4.12 — 임베딩 × fp32(√너비)(√ 는 IEEE 바른 반올림)
+    e0 = R35.임베딩(g, 경우)
+    x = C.곱(e0, C.제곱근(f32(D)))                                # 계약 4.12 — 임베딩 × fp32(√너비)(√ 는 IEEE 바른 반올림)
+    층입, n = None, s["층입력"]
+    if n:                                                        # 계약 4.12 의 9 — 층마다의 입력 p [Σ 행][층 · n](토큰 번호만의 함수)
+        wp = R7.가중(g, "per_layer_model_proj.weight")
+        assert wp[1].shape[0] == NL * n, (wp[1].shape, NL, n)
+        층입 = C.층입력(행임베딩K(g, "per_layer_token_embd.weight", 경우), R7.곱(e0, wp, np.zeros(NL * n, f32)),
+                      g.풀기("per_layer_proj_norm.weight"), n, eps)
+        del wp
+    del e0
+    kv = {}                                                      # 계약 4.12 의 8 — KV 공유 층이 보는 층의 키 · 값(경우마다 헤드마다)
     시작 = np.cumsum([0] + [len(S) for S in 경우])
     최대 = max(64, int(max(len(S) for S in 경우)))
     표 = {True: C.rope표(최대, s["θ"][True], hd=s["돌림"][True]),
@@ -111,23 +140,32 @@ def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
         tl = time.time()
         p = f"blk.{l}."
         w = s["윈도층"][l]
-        hd, Hkv = s["헤드"][w], s["KV머리"][l]
+        원 = GM.KV원층(l, s["자기KV"], w)                             # 계약 4.12 의 8 — 키 · 값을 만든 층(자기이거나 같은 종류의 마지막 것)
+        hd, Hkv = s["헤드"][w], s["KV머리"][원]
         G_ = H // Hkv
         cos, sin = 표[w]
         h = C.rms정규화(x, g.풀기(p + "attn_norm.weight"), eps)
         q = R7.곱(h, R7.가중(g, p + "attn_q.weight"), z0(H * hd))
-        k0 = R7.곱(h, R7.가중(g, p + "attn_k.weight"), z0(Hkv * hd))
-        v0 = R7.곱(h, R7.가중(g, p + "attn_v.weight"), z0(Hkv * hd)) if p + "attn_v.weight" in g.tensors else k0
         q = C.머리정규화(q, g.풀기(p + "attn_q_norm.weight"), eps, hd)
-        kk = C.머리정규화(k0, g.풀기(p + "attn_k_norm.weight"), eps, hd)
-        vv = C.머리정규화(v0, np.ones(hd, f32), eps, hd) if s["v정규화"] else v0      # 계약 4.12 — v 는 가중치 없이(× 1 은 정확). 4.14 — 그대로
+        if 원 == l:
+            k0 = R7.곱(h, R7.가중(g, p + "attn_k.weight"), z0(Hkv * hd))
+            v0 = R7.곱(h, R7.가중(g, p + "attn_v.weight"), z0(Hkv * hd)) if p + "attn_v.weight" in g.tensors else k0
+            kk = C.머리정규화(k0, g.풀기(p + "attn_k_norm.weight"), eps, hd)
+            vv = C.머리정규화(v0, np.ones(hd, f32), eps, hd) if s["v정규화"] else v0  # 계약 4.12 — v 는 가중치 없이(× 1 은 정확). 4.14 — 그대로
+            if l >= s["자기KV"] - 2 and s["자기KV"] < NL:
+                kv[l] = []
         ys = []
         for si in range(len(경우)):
             a0, a1 = 시작[si], 시작[si + 1]
             위치 = np.arange(a1 - a0)
             qh = [C.rope(q[a0:a1, hd * a:hd * a + hd], cos, sin, 위치) for a in range(H)]
-            kh = [C.rope(kk[a0:a1, hd * a:hd * a + hd], cos, sin, 위치) for a in range(Hkv)]
-            vh = [np.ascontiguousarray(vv[a0:a1, hd * a:hd * a + hd]) for a in range(Hkv)]
+            if 원 == l:
+                kh = [C.rope(kk[a0:a1, hd * a:hd * a + hd], cos, sin, 위치) for a in range(Hkv)]
+                vh = [np.ascontiguousarray(vv[a0:a1, hd * a:hd * a + hd]) for a in range(Hkv)]
+                if l in kv:
+                    kv[l].append((kh, vh))
+            else:
+                kh, vh = kv[원][si]
             ys.append(np.concatenate([C.어텐션(qh[a], kh[a // G_], vh[a // G_], 눈금=s["눈금"], 창=s["창"] if w else None)
                                       for a in range(H)], 1))
         o = R7.곱(np.concatenate(ys, 0), R7.가중(g, p + "attn_output.weight"), z0(D))
@@ -140,6 +178,10 @@ def 앞으로(g, 경우, 말=True, 행=None, 렌즈행=None, 잔차=False):
         uu = R7.곱(h, R7.가중(g, p + "ffn_up.weight"), z0(F))
         f = R7.곱(C.겔루(gg, uu), R7.가중(g, p + "ffn_down.weight"), z0(D))
         x = C.더(x, C.rms정규화(f, g.풀기(p + "post_ffw_norm.weight"), eps))
+        if 층입 is not None:                                         # 계약 4.12 의 9 — PLE: FFN 의 잔차 뒤, 층 배율 앞
+            gp = R7.곱(x, R7.가중(g, p + "inp_gate.weight"), z0(n))
+            o = R7.곱(C.겔루(gp, 층입[:, l * n:(l + 1) * n]), R7.가중(g, p + "proj.weight"), z0(D))
+            x = C.더(x, C.rms정규화(o, g.풀기(p + "post_norm.weight"), eps))
         if p + "layer_output_scale.weight" in g.tensors:             # 계약 4.12 — 층 배율(잔차 전체에 곱 하나)
             x = C.곱(x, f32(g.풀기(p + "layer_output_scale.weight")[0]))
         if 렌즈행 is not None:
