@@ -12,6 +12,13 @@
 프롬프트 어텐션의 엔진 꼴(창이 있으면 묶음 칸 몇 개 — 묶음 g 의 칸 g mod 칸 수, 창이 없으면 행 64 개씩 나눠 띄움)도 같은 참값과.
 
   python -I 시험/젬마판.py <ptx> <출력.json> [--행 300] [--gemma3 [--shape 너비,확장폭,헤드 수,KV 헤드 수] [--헤드 128]]
+  python -I 시험/젬마판.py <ptx> <출력.json> --층입력 <층 수> [--어휘 262144]
+
+--층입력 <층 수>(0.24.0 의 24-5 — 커널생성 gemma4큰 K … --W16 --층입력 의 모듈, 계약 4.12 의 9): 층마다의 입력(PLE)의 커널만 본다 —
+투영의 정규화(머리정규화젬마256 을 헤드 = 층 수 · KV 헤드 0 으로), 표를 읽어 더하기 p = y + e · c_p(층입력표_Q4_K · _Q5_K · _Q6_K — 무작위 표
+[어휘 수][2n], 어휘 수는 모듈의 것 --어휘), PLE 블록(층GeGLU자리로젬마 = CPU 참조의 겔루(g, p_l) + 실수자리로). 그리고 KV 를 나눠 쓰는
+층(계약 4.12 의 8)의 띄움 — 머리정규화젬마D · RoPEKV젬마D 를 KV 헤드 0 으로: q 의 8비트 자리 둘 · 블록 지수가 KV 헤드와 함께 띄운 것과 같고
+버퍼의 k · v 열과 캐시는 그대로인가. 나머지 커널은 gemma4큰 K 의 모듈과 같은 소스라 다시 보지 않는다. 표 하나를 푸는 동안 메모리를 1.5 GB 쯤 쓴다.
 
 --gemma3(0.24.0 — 커널생성 gemma3큰 2560 8 4 10240 의 모듈, 계약 4.14): 머리정규화젬마256 이 v 를 그대로 두고, 점수 스케일이 1/16 이고,
 전체 어텐션 층도 헤드 256(RoPE 표는 θ 10⁶ · 선형 스케일링 8). 나머지 시험은 같다(헤드 512 의 커널은 이 모듈에 없다).
@@ -328,10 +335,122 @@ def 고리시험(dv, D, HKV, θ, T, 고리, 덩이, W, r, 되감기):
     return 다
 
 
+def 표날(t, N, KS, r):
+    """무작위 k-양자화 표의 날 바이트(GGUF 의 블록 그대로 — 행 N · 슈퍼블록 KS): 값 · 척도의 바이트는 무작위, fp16 척도(d · dmin — Q6_K 는 d)는
+    유한한 값으로."""
+    bb = {12: 144, 13: 176, 14: 210}[t]
+    bl = r.integers(0, 256, (N, KS, bb), dtype=np.uint8)
+    for a in ((0, 2) if t in (12, 13) else (208,)):
+        h = (r.uniform(1e-4, 5e-3, (N, KS)) * r.choice([-1.0, 1.0], (N, KS))).astype(np.float16)
+        bl[:, :, a:a + 2] = np.ascontiguousarray(h).view(np.uint8).reshape(N, KS, 2)
+    return bl.reshape(-1)
+
+
+def 공유시험(dv, r, D, HH, HKV, θ, T=37):
+    """0.24.0 의 24-5 — KV 를 나눠 쓰는 층(계약 4.12 의 8 — 자기 k · v 가 없다): 머리정규화젬마D · RoPEKV젬마D 를 KV 헤드 0 으로 띄우면 q 의
+    8비트 자리 둘 · 블록 지수가 KV 헤드와 함께 띄운 것과 같고, 버퍼의 k · v 열과 캐시(키 · 값 · 지수)는 그대로인가."""
+    폭 = HH * D + 2 * HKV * D
+    nb = D // 32
+    고리 = 64
+    qkv = (r.standard_normal((T, 폭)) * 10.0 ** r.uniform(-0.5, 0.5, (1, 폭))).astype(f32)
+    pqw = dv.up((1.0 + 0.1 * r.standard_normal(D)).astype(f32))
+    pkw = dv.up((1.0 + 0.1 * r.standard_normal(D)).astype(f32))
+    cos, sin = C.rope표(1024, θ, hd=D, 인자=None)
+    pcos, psin = dv.up(cos), dv.up(sin)
+    나온 = []
+    for kv in (HKV, 0):
+        pq = dv.up(qkv)
+        pqd, pqE = dv.up(np.zeros(2 * T * HH * D, np.int8)), dv.up(np.zeros(T * HH * nb, np.int64))
+        pkd, pvd = (dv.up(np.zeros(2 * HKV * 고리 * D, np.int8)) for _ in range(2))
+        pkE, pvE = (dv.up(np.zeros(HKV * 고리 * nb, np.int64)) for _ in range(2))
+        dv.띄우기(f"머리정규화젬마{D}", ((T * (HH + kv) + 3) // 4, 1), 128, [(1, pq), (1, pqw), (1, pkw), (0, T), (0, HH), (0, kv), (0, 폭)])
+        dv.띄우기(f"RoPEKV젬마{D}", (((HH + 2 * kv) * nb + 31) // 32, T), 256,
+                [(1, pq), (1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, pcos), (1, psin), (0, T), (0, HH), (0, kv), (0, 폭),
+                 (0, 5), (0, 고리)])
+        dv.dr.맞추기()
+        나온.append((dv.down(pq, (T, 폭)), dv.down(pqd, (2 * T * HH * D,), np.int8), dv.down(pqE, (T * HH * nb,), np.int64),
+                    [dv.down(p, (2 * HKV * 고리 * D,), np.int8) for p in (pkd, pvd)],
+                    [dv.down(p, (HKV * 고리 * nb,), np.int64) for p in (pkE, pvE)]))
+    (_, qdA, qEA, kvA, _), (버B, qdB, qEB, kvB, EB) = 나온
+    assert sum(int(np.count_nonzero(x)) for x in kvA) > 0            # 비교하는 쪽(KV 헤드와 함께)은 캐시를 썼다
+    다 = 다른칸(qdA, qdB) + 다른칸(qEA, qEB)                         # q 의 8비트 자리 둘 · 블록 지수
+    다 += 다른칸(버B[:, HH * D:], qkv[:, HH * D:])                   # 버퍼의 k · v 열은 그대로
+    다 += sum(int(np.count_nonzero(x)) for x in kvB + EB)            # 캐시는 그대로(0)
+    return 다
+
+
+def 층입력시험(dv, r, L, N, n=256, T=37):
+    """0.24.0 의 24-5 — 층마다의 입력(PLE — 계약 4.12 의 9)의 커널(커널생성 gemma4큰 K … --W16 --층입력): 투영의 정규화(머리정규화젬마256 을
+    헤드 = 층 수 · KV 헤드 0 으로)를 정수계약.머리정규화 와, 표를 읽어 더하는 커널(층입력표_Q4_K · _Q5_K · _Q6_K — p = y + e · c_p)을
+    정수계약.층입력 과(표는 무작위 — 어휘 수 N 은 모듈의 것 · 폭은 층 둘의 2n 으로: 폭은 띄울 때 받는다), PLE 블록(층GeGLU자리로젬마 — g 와 p_l
+    에서 proj 의 입력(8비트 자리 둘)까지)을 CPU 참조의 겔루(g, p_l)를 실수자리로 에 넣은 것과 바이트까지."""
+    from 판26 import 엔진배치K
+    결과 = {}
+    u = (r.standard_normal((T, L * n)) * 10.0 ** r.uniform(-2, 2, (T, 1))).astype(f32)
+    e = (r.standard_normal((T, L * n)) * 0.05).astype(f32)
+    w = (1.0 + 0.2 * r.standard_normal(n)).astype(f32)
+    wp = C.곱(w, C.층입력c_h)
+    pu, pw = dv.up(u), dv.up(wp)
+    dv.띄우기("머리정규화젬마256", (-(-(T * L) // 4), 1), 128, [(1, pu), (1, pw), (1, pw), (0, T), (0, L), (0, 0), (0, L * n)])
+    dv.dr.맞추기()
+    결과["층마다의 입력 — 정규화(머리정규화젬마256 을 헤드 = 층 수 · KV 헤드 0 으로)"] = 다른칸(dv.down(pu, (T, L * n)), C.머리정규화(u, wp, EPS, n))
+    # 표를 읽어 더하기 — 형식마다: 폭 2n(층 둘)의 표 [N][2n], 토큰은 처음 · 끝 · 무작위. 정규화까지 커널로 한 뒤 표 커널
+    KS, 폭 = 2, 2 * n
+    토큰 = r.integers(0, N, T).astype(np.int64)
+    토큰[:2] = [0, N - 1]
+    p토큰 = dv.up(토큰)
+    for t, 이름 in ((12, "Q4_K"), (13, "Q5_K"), (14, "Q6_K")):
+        값, 척, 풀린 = 엔진배치K(t, 표날(t, N, KS, r), N, 폭)
+        e2 = C.임베딩K(풀린, 토큰)
+        del 풀린
+        u2 = (r.standard_normal((T, 폭)) * 10.0 ** r.uniform(-2, 2, (T, 1))).astype(f32)
+        pu2 = dv.up(u2)
+        p값 = dv.up(np.frombuffer(값, np.uint8))
+        p척 = dv.up(np.frombuffer(척, np.uint8))
+        del 값, 척
+        dv.띄우기("머리정규화젬마256", (-(-(T * 2) // 4), 1), 128, [(1, pu2), (1, pw), (1, pw), (0, T), (0, 2), (0, 0), (0, 폭)])
+        dv.띄우기("층입력표_" + 이름, ((T * 폭 + 255) // 256, 1), 256,
+                [(1, p토큰), (1, p값), (1, p척), (1, pu2), (0, T), (0, 폭), (0, 비트(C.층입력스케일(n)))])
+        dv.dr.맞추기()
+        결과[f"층마다의 입력 — p = y + e · c_p(층입력표_{이름} — 표 [{N}][{폭}])"] = 다른칸(dv.down(pu2, (T, 폭)), C.층입력(e2, u2, w, n))
+    p = C.층입력(e, u, w, n)
+    g = (r.standard_normal((T, n)) * 4).astype(f32)
+    g[0, :8] = [0.0, -0.0, 1e-30, -1e-30, 30.0, -30.0, 1e4, -1e4]
+    정보폭 = (T + 63) // 64 * 64
+    nz, ni = 2 * T * n // 4, 2 * (n // 32) * 정보폭
+    pg, pp = dv.up(g), dv.up(p)
+    다 = 0
+    for l in (0, L // 2, L - 1):
+        h = C.겔루(g, p[:, l * n:(l + 1) * n])
+        z1, i1, z2, i2 = (dv.up(np.zeros(k, np.int32)) for k in (nz, ni, nz, ni))
+        dv.띄우기("실수자리로", (-(-(n // 32) // 32), T), 256, [(1, dv.up(h)), (1, z1), (1, i1), (0, T), (0, n)])
+        dv.띄우기("층GeGLU자리로젬마", (-(-(n // 32) // 32), T), 256,
+                [(1, pg), (1, pp), (1, z2), (1, i2), (0, T), (0, n), (0, L * n), (0, l * n)])
+        dv.dr.맞추기()
+        다 += (다른칸(dv.down(z1, (nz,), np.int32), dv.down(z2, (nz,), np.int32))
+              + 다른칸(dv.down(i1, (ni,), np.int32), dv.down(i2, (ni,), np.int32)))
+    결과["PLE 블록 — 층GeGLU자리로 = 겔루(g, p_l)(CPU 참조) + 실수자리로(바이트 — 층 처음 · 가운데 · 끝)"] = 다
+    return 결과
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     global H, V정규화, 눈금
     ptx, 출력 = [a for a in sys.argv[1:] if not a.startswith("--")][:2]
+    if "--층입력" in sys.argv:                                       # 0.24.0 의 24-5 — Gemma 4 E2B · E4B 의 모듈: 층마다의 입력의 커널만
+        L = int(sys.argv[sys.argv.index("--층입력") + 1])
+        N = int(sys.argv[sys.argv.index("--어휘") + 1]) if "--어휘" in sys.argv else 262144
+        dv, r = 장치(ptx), np.random.default_rng(4)
+        결과 = {"층 수": L, "어휘 수": N, "경우": 층입력시험(dv, r, L, N)}
+        for D, θ in ((256, 1e4), (512, 1e6)):                          # KV 를 나눠 쓰는 층 — 질의 헤드 8 · KV 헤드 2(E4B 의 모양)
+            결과["경우"][f"KV 를 나눠 쓰는 층 — 헤드 {D}: KV 헤드 0 으로 띄운 q 의 8비트 자리 둘 · 블록 지수 = KV 헤드와 함께 띄운 것, 버퍼의 k · v 열 · 캐시는 그대로"] = (
+                공유시험(dv, r, D, 8, 2, θ))
+        for k, v in 결과["경우"].items():
+            print(f"  {k}: 불일치 {v}", flush=True)
+        결과["모두 0"] = all(v == 0 for v in 결과["경우"].values())
+        print("모두 0:", 결과["모두 0"], flush=True)
+        json.dump(결과, open(출력, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return
     T = int(sys.argv[sys.argv.index("--행") + 1]) if "--행" in sys.argv else 300
     젬마3 = "--gemma3" in sys.argv
     # --shape <너비>,<확장폭>,<헤드 수>,<KV 헤드 수> — 모듈의 모양(--gemma3 의 기본은 4B: 2560,10240,8,4. 270M 은 640,2048,4,1)
