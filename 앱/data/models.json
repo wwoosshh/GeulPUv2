@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "GeulPU 앱이 다운로드할 수 있는 모델 목록. check: crosscheck = 재현성 검증의 기준 모델(출력이 기준 PC와 비트 단위로 같은지 확인할 수 있음) · tested = 이 파일로 GeulPU에서 실행해 확인함(어느 백엔드에서 확인했는지는 note) · untested = 엔진이 지원하는 형식이지만 이 파일로는 아직 실행해 보지 않음(다운로드가 끝나면 앱이 GGUF 헤더를 보고 지원 여부를 알린다). size · sha256은 Hugging Face의 값(2026-10-15 · Llama · Mistral은 2026-10-16 · 0.12.0 에 넣은 아홉은 2026-10-23 · Qwen3.6-35B-A3B는 2026-10-24 · Qwen3.5 셋 · Gemma 4 12B는 2026-10-25 · A.X 4.0 Light는 2026-11-09 · Mi:dm 2.0 · Kanana 1.5 · Gemma 3 넷은 2026-11-10 · Gemma 3 27B · Gemma 4 31B는 2026-11-11).",
+  "note": "GeulPU 앱이 다운로드할 수 있는 모델 목록. check: crosscheck = 재현성 검증의 기준 모델(출력이 기준 PC와 비트 단위로 같은지 확인할 수 있음) · tested = 이 파일로 GeulPU에서 실행해 확인함(어느 백엔드에서 확인했는지는 note) · untested = 엔진이 지원하는 형식이지만 이 파일로는 아직 실행해 보지 않음(다운로드가 끝나면 앱이 GGUF 헤더를 보고 지원 여부를 알린다). size · sha256은 Hugging Face의 값(2026-10-15 · Llama · Mistral은 2026-10-16 · 0.12.0 에 넣은 아홉은 2026-10-23 · Qwen3.6-35B-A3B는 2026-10-24 · Qwen3.5 셋 · Gemma 4 12B는 2026-10-25 · A.X 4.0 Light는 2026-11-09 · Mi:dm 2.0 · Kanana 1.5 · Gemma 3 넷은 2026-11-10 · Gemma 3 27B · Gemma 4 31B · Gemma 4 E2B · E4B는 2026-11-11).",
   "models": [
     {
       "id": "deepseek-r1-distill-qwen-7b-q8_0",
@@ -333,6 +333,36 @@
       "check": "tested",
       "devices": "cuda",
       "note": "가장 작은 Qwen3.5 모델입니다(0.8 GB). 그래픽 메모리가 아주 적은 PC에서도 실행되지만, 답의 질은 큰 모델보다 낮습니다. 아직 CUDA(NVIDIA GPU)에서만 실행되고, 추측 디코딩 · 문맥 저장소는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행을 확인했습니다(2026-10-24)."
+    },
+    {
+      "id": "gemma-4-e2b-it-q4_k_m",
+      "name": "Gemma-4-E2B-it",
+      "params": "4.6B",
+      "quant": "Q4_K_M",
+      "file": "gemma-4-E2B-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/gemma-4-E2B-it-GGUF",
+      "size": 3106738272,
+      "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
+      "license": "Apache-2.0",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "Google의 Gemma 4 E2B 대화 모델입니다(4비트 k-양자화, 3.1 GB). 층마다의 임베딩(PLE)이 있는 작은 Gemma 4이고, 0.24.0부터 실행됩니다. 답하기 전에 생각 과정을 쓸 수 있고, 생성 설정에서 켜고 끕니다. 텍스트만 씁니다(그림 입력은 아직 쓰지 않습니다). 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-11-11)."
+    },
+    {
+      "id": "gemma-4-e4b-it-q4_k_m",
+      "name": "Gemma-4-E4B-it",
+      "params": "7.5B",
+      "quant": "Q4_K_M",
+      "file": "gemma-4-E4B-it-Q4_K_M.gguf",
+      "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
+      "source": "huggingface.co/unsloth/gemma-4-E4B-it-GGUF",
+      "size": 4977171584,
+      "sha256": "85a896a047553e842f25297ee5b031d64ff30147d9c4af17b1e4b394cd1fab87",
+      "license": "Apache-2.0",
+      "check": "tested",
+      "devices": "cuda",
+      "note": "Google의 Gemma 4 E4B 대화 모델입니다(4비트 k-양자화, 5.0 GB). 층마다의 임베딩(PLE)이 있는 작은 Gemma 4이고, 0.24.0부터 실행됩니다. 답하기 전에 생각 과정을 쓸 수 있고, 생성 설정에서 켜고 끕니다. 텍스트만 씁니다(그림 입력은 아직 쓰지 않습니다). 아직 CUDA(NVIDIA GPU) · 정밀 모드만 되고, 추측 디코딩 · 프롬프트 캐시는 쓰지 않습니다. 이 파일은 CUDA(RTX 4070 Ti)에서 실행과 도구 호출을 확인했습니다(2026-11-11)."
     },
     {
       "id": "gemma-4-12b-it-q4_k_m",
