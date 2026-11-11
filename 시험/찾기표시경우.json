@@ -1,5 +1,5 @@
 {
- "출처": "2026-10-30 조사(E:/geulpu-work/compat — fetch_trend.py 가 받은 Hugging Face 트렌딩 상위 200 GGUF 저장소, t1030_rows.json 의 판정 block). expect: accepted(받는 파일 있음) · check(크기 규칙으로 모름) · arch(미지원 구조) · quant(받는 형식 없음) · quant(UD-only, unverified) · split-only · gemma4-MoE · no-arch · clip-arch · nonllm(텍스트 LLM 아님). 조사 때 gemma4-31B-unverified 였던 둘은 0.24.0 에서 accepted 로 바꿨다(Gemma 4 31B 를 원격 서버의 H100 에서 확인 — 2026-11-11). archs: 서버 --구조들 의 archs(시험/찾기표시.py --엔진 이 엔진과 견준다) added: 조사 뒤에 더한 저장소 — 0.24.0 의 Gemma 3 여섯(2026-11-10 의 Hugging Face 메타데이터. 4B · 12B · 27B · 같은 크기의 미세조정과 1B · 270M(Q8_0 파일만 실행) — 모두 accepted) 0.24.0 의 24-5 — 조사 때 gemma4-PLE(E2B · E4B — 엔진이 받지 않던 변형)였던 일곱은 accepted 여섯 · quant(UD-only, unverified) 하나로 바꿨다(E2B · E4B 의 k-양자화 파일을 엔진이 받는다 — 2026-11-11, unsloth 의 Q4_K_M 둘로 확인. 그 밖의 저장소는 같은 크기 · 파일 이름의 규칙으로). added 에 unsloth/gemma-4-E2B-it-GGUF(2026-11-11 의 Hugging Face 메타데이터).",
+ "출처": "2026-10-30 조사(E:/geulpu-work/compat — fetch_trend.py 가 받은 Hugging Face 트렌딩 상위 200 GGUF 저장소, t1030_rows.json 의 판정 block). expect: accepted(받는 파일 있음) · check(크기 규칙으로 모름) · arch(미지원 구조) · quant(받는 형식 없음) · quant(UD-only, unverified) · split-only · no-arch · clip-arch · nonllm(텍스트 LLM 아님). 조사 때 gemma4-31B-unverified 였던 둘은 0.24.0 에서 accepted 로 바꿨다(Gemma 4 31B 를 원격 서버의 H100 에서 확인 — 2026-11-11). archs: 서버 --구조들 의 archs(시험/찾기표시.py --엔진 이 엔진과 견준다) added: 조사 뒤에 더한 저장소 — 0.24.0 의 Gemma 3 여섯(2026-11-10 의 Hugging Face 메타데이터. 4B · 12B · 27B · 같은 크기의 미세조정과 1B · 270M(Q8_0 파일만 실행) — 모두 accepted) 0.24.0 의 24-5 — 조사 때 gemma4-PLE(E2B · E4B — 엔진이 받지 않던 변형)였던 일곱은 accepted 여섯 · quant(UD-only, unverified) 하나로 바꿨다(E2B · E4B 의 k-양자화 파일을 엔진이 받는다 — 2026-11-11, unsloth 의 Q4_K_M 둘로 확인. 그 밖의 저장소는 같은 크기 · 파일 이름의 규칙으로). added 에 unsloth/gemma-4-E2B-it-GGUF(2026-11-11 의 Hugging Face 메타데이터). 0.24.0 의 24-5 — 조사 때 gemma4-MoE(26B-A4B — 엔진이 받지 않던 변형)였던 넷은 accepted 둘 · quant(UD-only, unverified) 둘로 바꿨다(26B-A4B 의 k-양자화 파일을 엔진이 받는다 — 2026-11-11, lmstudio-community 의 Q4_K_M 으로 확인). added 에 lmstudio-community/gemma-4-26B-A4B-it-GGUF(2026-11-11 의 Hugging Face 메타데이터).",
  "archs": [
   {
    "name": "qwen2",
@@ -3583,7 +3583,7 @@
     "mmproj-Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced-BF16.gguf",
     "mtp-gemma-4-26B-A4B-it.gguf"
    ],
-   "expect": "gemma4-MoE"
+   "expect": "accepted"
   },
   {
    "id": "empero-ai/Qwythos-9B-v2-GGUF",
@@ -3890,7 +3890,7 @@
     "mmproj-F32.gguf",
     "mtp-gemma-4-26B-A4B-it.gguf"
    ],
-   "expect": "gemma4-MoE"
+   "expect": "quant(UD-only, unverified)"
   },
   {
    "id": "unsloth/GLM-5.3-Flash-GGUF",
@@ -4512,7 +4512,7 @@
     "ThinkingCap-gemma-4-26B-A4B-it-imatrix.gguf",
     "mmproj-ThinkingCap-gemma-4-26B-A4B-it-f16.gguf"
    ],
-   "expect": "gemma4-MoE"
+   "expect": "accepted"
   },
   {
    "id": "Jackrong/Kestrel-4B-Coder-GGUF",
@@ -5153,7 +5153,7 @@
     "mmproj-F32.gguf",
     "mtp-gemma-4-26B-A4B-it.gguf"
    ],
-   "expect": "gemma4-MoE"
+   "expect": "quant(UD-only, unverified)"
   },
   {
    "id": "yuxinlu1/gemma-4-12B-coder-fable5-composer2.5-v1-GGUF",
@@ -5935,6 +5935,22 @@
     "mmproj-F16.gguf",
     "mmproj-F32.gguf",
     "mtp-gemma-4-E2B-it.gguf"
+   ],
+   "expect": "accepted"
+  },
+  {
+   "id": "lmstudio-community/gemma-4-26B-A4B-it-GGUF",
+   "gguf": {
+    "architecture": "gemma4",
+    "total": 25233142046
+   },
+   "pipeline_tag": null,
+   "tags": [],
+   "files": [
+    "gemma-4-26B-A4B-it-Q4_K_M.gguf",
+    "gemma-4-26B-A4B-it-Q6_K.gguf",
+    "gemma-4-26B-A4B-it-Q8_0.gguf",
+    "mmproj-gemma-4-26B-A4B-it-BF16.gguf"
    ],
    "expect": "accepted"
   }
