@@ -27,6 +27,7 @@
   python -I -X utf8 시험/계약자체.py
 마지막 줄 "계약 자체 시험: 모두 통과"(종료 0) 또는 "못 미침"(종료 1).
 """
+import decimal
 import json
 import math
 import os
@@ -902,6 +903,33 @@ def 시험_gemma4e(r):
          원2[19] == 14 and 원2[15] == 13 and 원4[29] == 23 and 원4[24] == 22)
 
 
+def 시험_gemma4moe(r):
+    """0.24.0 의 24-5 — 계약 4.12 의 10(Gemma 4 26B-A4B 의 MoE): 상수 c_r(너비 2,816)의 비트 — llama.cpp 의 fp32 식 1.0f / sqrtf(너비) 와
+    같고 1/√너비 의 바른 반올림이다, 라우터 입력의 가중치 w′ = s · c_r 과 무게의 전문가 배율 w · s_e 대 계약 문장을 그대로 옮긴 차례(곱
+    하나씩), 한 행의 무게는 다른 행과 상관없다."""
+    D = 2816
+    c = C.라우터배율(D)
+    decimal.getcontext().prec = 60
+    참 = decimal.Decimal(1) / decimal.Decimal(D).sqrt()
+    반ulp = (decimal.Decimal(float(np.nextafter(c, f32(1)))) - decimal.Decimal(float(c))) / 2
+    확인("계약 4.12 의 10 — 상수 c_r = 1 ÷ 제곱근(fp32(2,816)) = 0x3C9A5FB2, llama.cpp 의 fp32 식과 같고 1/√2,816 의 바른 반올림",
+         int(c.view(np.int32)) == 0x3C9A5FB2 and int((f32(1.0) / np.sqrt(f32(D))).view(np.int32)) == 0x3C9A5FB2 and
+         abs(decimal.Decimal(float(c)) - 참) <= 반ulp)
+    s = (r.standard_normal(D) * 10.0 ** r.uniform(-1, 1, D)).astype(f32)
+    w1 = C.라우터가중(s, D)
+    확인("계약 4.12 의 10 — 라우터 입력의 가중치 w′_c = s_c · c_r 대 계약 문장(칸마다 곱 하나)",
+         다른칸(w1, np.array([C.곱(s[i], c) for i in range(D)], f32)) == 0)
+    T, E, k = 9, 128, 8
+    lg = (r.standard_normal((T, E)) * 3).astype(f32)
+    고른 = C.상위k(lg, k)
+    w = C.전문가무게(C.소프트맥스전문가(lg), 고른)
+    se = (r.uniform(0.2, 3.0, E)).astype(f32)
+    w2 = C.전문가배율(w, se, 고른)
+    문장 = np.array([[C.곱(w[t, j], se[고른[t, j]]) for j in range(k)] for t in range(T)], f32)
+    확인("계약 4.12 의 10 — 무게의 전문가 배율 w_r · s_(e_r) 대 계약 문장(곱 하나), 한 행의 무게는 다른 행과 상관없다",
+         다른칸(w2, 문장) == 0 and 다른칸(C.전문가배율(w[[5, 2]], se, 고른[[5, 2]]), w2[[5, 2]]) == 0)
+
+
 def 시험_deepseek2(r):
     """0.24.0 24-2 — 계약 4.13(deepseek2)과 1 절의 Q5_0: 상수의 비트, Q5_0 풀기 대 llama.cpp 의 식을 칸 하나씩, NORM RoPE 대 계약 문장(스칼라)과
     차원을 바꾼 NeoX 식, 시그모이드 라우팅 대 계약 문장(스칼라 — 같은 점수는 작은 번호 먼저), 값의 폭이 키와 다른 어텐션 = 값을 키 전체로
@@ -1059,6 +1087,7 @@ def main():
     시험_gemma4(r)
     시험_gemma3(r)
     시험_gemma4e(r)
+    시험_gemma4moe(r)
     시험_deepseek2(r)
     시험_J곱(r)
     시험_J파일(r)
