@@ -4,6 +4,9 @@
   2. KV쓰기MLA — 키 캐시(c′ = RMSNorm · k_pe 의 NORM RoPE — 블록 18)의 자리 · 지수, 값 캐시(c′ — 블록 16, 키 32 개 블록마다 [차원][키])
   3. Q조립MLA — Q = [q_abs | q_pe 의 NORM RoPE] 의 자리 · 지수
   4. 타일어텐션MLA · 접기MLA(프롬프트 — 한 번에 · 행 64 개씩 · 덩이 둘)와 조각어텐션MLA · 조각접기MLA(생성 — 행 1 · 2 · 4, 슬롯걸음 둘)
+     2026-11-12 — 모듈에 둘째 판(타일어텐션MLA둘 — 같은 식 · 같은 순서)이 있으면 프롬프트 경우를 그 판으로도 같은 참값과, 그리고 긴
+     프롬프트의 청크(최대길이 32,768 의 무작위 캐시 — 위치 16,000 의 300 행 · 16,384 · 32,256 의 512 행, 청크의 마지막 키 뒤의 지수는 범위를
+     넘는 값)에서 옛 판과 바이트까지(헤드 20 · KV 하나 — GLM-4.7-Flash 의 모양, 엔진의 띄움 꼴 — 행 64 개씩)
      — 헤드마다 정수계약.어텐션(키 576 · 값 512 — 값은 키의 앞 512) 과. 행 1,100 은 그룹 둘(1,024 를 넘는다)
   5. 머리행렬곱MLA(타일 판 — 행 37 · 1 · 3) · 머리행렬곱MLA줄(줄 판 — 행 1 · 3) — attn_k_b 꼴(입력걸음 N + 64 · 깊이 N · 열 512), attn_v_b 꼴
      (입력걸음 512 · 깊이 512 · 열 V), attn_kv_a 꼴(헤드 하나 · 깊이 2,048 · 열 576), 헤드 셋 · 깊이 2,048 · 열 70: 헤드마다 행렬곱블라스 와
@@ -175,37 +178,76 @@ def main():
     print(f"  CPU 참조(어텐션 헤드 {H}): {time.time() - t0:.0f} 초", flush=True)
     묶음수 = L // 1024
 
-    def 프롬프트(n, 시작, pqd_, pqE_, 캐시들, po, 블록=None):
+    def 둘있나():
+        try:
+            dv.fn.setdefault("타일어텐션MLA둘", dv.dr.함수(dv.mod, "타일어텐션MLA둘"))
+            return True
+        except RuntimeError:
+            return False
+    꼬리들 = [""] + (["둘"] if 둘있나() else [])              # 2026-11-12 — 옛 판과 둘째 판
+
+    def 프롬프트(n, 시작, pqd_, pqE_, 캐시들, po, 블록=None, 꼬리=""):
         pkd_, pkE_, pvd_, pvE_ = 캐시들
         블록 = 블록 or n
         p묶 = dv.dr.할당(블록 * H * 묶음수 * 516 * 4)
         for r0 in range(0, n, 블록):
             nb_ = min(블록, n - r0)
-            dv.띄우기("타일어텐션MLA", (-(-nb_ * H // 16) * 묶음수, 1), 128,
+            dv.띄우기(f"타일어텐션MLA{꼬리}", (-(-nb_ * H // 16) * 묶음수, 1), 128,
                     [(1, pqd_), (1, pqE_), (1, pkd_), (1, pkE_), (1, pvd_), (1, pvE_), (1, p묶), (0, n), (0, H), (0, 1), (0, 시작), (0, L), (0, L),
                      (0, 창없음), (0, 비트(눈금)), (0, r0), (0, nb_), (0, 묶음수)])
             dv.띄우기("접기MLA", (H, nb_), 512, [(1, p묶), (1, po), (0, n), (0, H), (0, 시작), (0, L), (0, 창없음), (0, r0), (0, 묶음수)])
 
-    po = dv.dr.할당(T * H * 512 * 4)
-    프롬프트(T, 0, pqd, pqE, 캐, po)
-    dv.dr.맞추기()
-    적기("어텐션 프롬프트 한 번에", 다른칸(dv.down(po, (T, H * 512)), o참))
-    po = dv.dr.할당(T * H * 512 * 4)
-    프롬프트(T, 0, pqd, pqE, 캐, po, 블록=64)
-    dv.dr.맞추기()
-    적기("어텐션 프롬프트 행 64 개씩", 다른칸(dv.down(po, (T, H * 512)), o참))
-    T1 = 600
-    캐2 = 캐시()
-    os_ = []
-    for s0, s1 in ((0, T1), (T1, T)):
-        n = s1 - s0
-        KV쓰기(dv.up(kv[s0:s1]), n, s0, 캐2)
-        pqd2, pqE2 = Q조립(dv.up(qabs[s0:s1]), dv.up(q[s0:s1]), n, s0)
-        po2 = dv.dr.할당(n * H * 512 * 4)
-        프롬프트(n, s0, pqd2, pqE2, 캐2, po2)
+    for 꼬리 in 꼬리들:
+        접미 = " — 둘째 판" if 꼬리 else ""
+        po = dv.dr.할당(T * H * 512 * 4)
+        프롬프트(T, 0, pqd, pqE, 캐, po, 꼬리=꼬리)
         dv.dr.맞추기()
-        os_.append(dv.down(po2, (n, H * 512)))
-    적기("어텐션 프롬프트 덩이 둘", 다른칸(np.concatenate(os_), o참))
+        적기(f"어텐션 프롬프트 한 번에{접미}", 다른칸(dv.down(po, (T, H * 512)), o참))
+        po = dv.dr.할당(T * H * 512 * 4)
+        프롬프트(T, 0, pqd, pqE, 캐, po, 블록=64, 꼬리=꼬리)
+        dv.dr.맞추기()
+        적기(f"어텐션 프롬프트 행 64 개씩{접미}", 다른칸(dv.down(po, (T, H * 512)), o참))
+        T1 = 600
+        캐2 = 캐시()
+        os_ = []
+        for s0, s1 in ((0, T1), (T1, T)):
+            n = s1 - s0
+            KV쓰기(dv.up(kv[s0:s1]), n, s0, 캐2)
+            pqd2, pqE2 = Q조립(dv.up(qabs[s0:s1]), dv.up(q[s0:s1]), n, s0)
+            po2 = dv.dr.할당(n * H * 512 * 4)
+            프롬프트(n, s0, pqd2, pqE2, 캐2, po2, 꼬리=꼬리)
+            dv.dr.맞추기()
+            os_.append(dv.down(po2, (n, H * 512)))
+        적기(f"어텐션 프롬프트 덩이 둘{접미}", 다른칸(np.concatenate(os_), o참))
+    if "둘" in 꼬리들:
+        # ---- 2026-11-12 — 긴 프롬프트의 청크(최대길이 32,768 — 무작위 캐시): 둘째 판 ↔ 옛 판(행 64 개씩 — 엔진의 띄움 꼴) ----
+        L4 = 32768
+        r4 = np.random.default_rng(1112)
+        묶4 = L4 // 1024
+        kd4 = dv.up(r4.integers(-128, 128, (2, L4, 576), dtype=np.int8))
+        vd4 = dv.up(r4.integers(-128, 128, (2, L4 // 32, 512, 32), dtype=np.int8))
+        kE4 = r4.integers(-3, 4, (L4, 18)).astype(np.int64)
+        vE4 = r4.integers(-3, 4, (L4, 16)).astype(np.int64)
+        for s0, n in ((16000, 300), (16384, 512), (L4 - 512, 512)):
+            kE5, vE5 = kE4.copy(), vE4.copy()
+            kE5[s0 + n:] = r4.integers(-(1 << 40), 1 << 40, kE5[s0 + n:].shape)
+            vE5[s0 + n:] = r4.integers(-(1 << 40), 1 << 40, vE5[s0 + n:].shape)
+            pkE5, pvE5 = dv.up(kE5), dv.up(vE5)
+            pqd5 = dv.up(r4.integers(-128, 128, (2, n, H * 576), dtype=np.int8))
+            pqE5 = dv.up(r4.integers(-3, 4, (n, H * 18)).astype(np.int64))
+            outs = []
+            for 꼬리 in ("", "둘"):
+                po5 = dv.dr.할당(n * H * 512 * 4)
+                p묶 = dv.dr.할당(64 * H * 묶4 * 516 * 4)
+                for r0 in range(0, n, 64):
+                    nb_ = min(64, n - r0)
+                    dv.띄우기(f"타일어텐션MLA{꼬리}", (-(-nb_ * H // 16) * 묶4, 1), 128,
+                            [(1, pqd5), (1, pqE5), (1, kd4), (1, pkE5), (1, vd4), (1, pvE5), (1, p묶), (0, n), (0, H), (0, 1), (0, s0), (0, L4),
+                             (0, L4), (0, 창없음), (0, 비트(눈금)), (0, r0), (0, nb_), (0, 묶4)])
+                    dv.띄우기("접기MLA", (H, nb_), 512, [(1, p묶), (1, po5), (0, n), (0, H), (0, s0), (0, L4), (0, 창없음), (0, r0), (0, 묶4)])
+                dv.dr.맞추기()
+                outs.append(dv.down(po5, (n, H * 512)))
+            적기(f"긴 프롬프트의 청크(최대길이 {L4}) 위치 {s0} · 행 {n} — 둘째 판 ↔ 옛 판", 다른칸(outs[1], outs[0]))
     슬롯 = L // 64
     for 걸음 in (슬롯, 7):
         합 = 0
