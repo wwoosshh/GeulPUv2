@@ -2,8 +2,8 @@
 
 **Run language models on your own GPU — and get the same bits every time.**
 
-GeulPU is a local LLM engine and debugger for GGUF models — Qwen3, Qwen2.5 / Coder, DeepSeek-R1-Distill-Qwen, Llama 3.1 / 3.2 and
-Mistral 7B — with a chat screen in the browser and an OpenAI-compatible API. Its arithmetic is fixed by a written precision contract,
+GeulPU is a local LLM engine and debugger for GGUF models — Qwen3.6-35B-A3B (MoE), Qwen3.5, Qwen3, Qwen2.5 / Coder, DeepSeek-R1-Distill,
+Llama 3.1 / 3.2, Mistral 7B, Gemma 4 and Gemma 3, GLM-4.7-Flash and Kanana-2 — with a chat screen in the browser and an OpenAI-compatible API. Its arithmetic is fixed by a written precision contract,
 so the same request gives bit-identical tokens and logits whatever the batch, the slot, the prompt cache or speculative decoding — and,
 in exact mode, on NVIDIA (CUDA) and AMD or other GPUs (Vulkan) alike. The debugger records runs (agent sessions, test sets), replays
 them bit for bit, branches from any token or edited request, and compares models and quantizations request by request. From 0.22.0 it
@@ -11,7 +11,9 @@ also checks runs of an unmodified llama-server: it recomputes them with kernels 
 tokens and log-probabilities bit for bit. From 0.23.0 a study is an experiment folder (question, criteria, plan, run records,
 results) with run, step and layer screens — per-token probabilities, branching, the logit lens — and reproduction files that another PC
 checks bit for bit; every screen operation is also a `geulpu <command>` for people and AI agents, and `import geulpu` drives it from
-Python. The engine is written in the 글(geul) programming language.
+Python. 0.24.0 adds models — Gemma 3, Gemma 4 E2B · E4B · 26B-A4B · 31B, GLM-4.7-Flash, Kanana-2 and three Korean 7–12B models — and
+a request field that returns the full logit row of every step (`geulpu.logits`) for outside tools. The engine is written in the
+글(geul) programming language.
 
 This package ships the app from the GitHub release — Windows x64 and Linux x86-64 — so one install command is enough: no archive to
 download and extract.
@@ -41,7 +43,8 @@ geulpu                     # prints http://127.0.0.1:44544 — open it in a brow
 ```
 
 - Needs an NVIDIA GPU and its driver (the app uses `libcuda.so.1`; no CUDA toolkit) and glibc 2.34 or later (Ubuntu 22.04,
-  Debian 12, RHEL 9 or newer). Vulkan (AMD, Intel) is Windows-only for now.
+  Debian 12, RHEL 9 or newer). GPUs outside the CUDA path go through Vulkan 1.3 (`libvulkan.so.1`) — under Linux this has been
+  checked on one GPU so far (a Tesla V100, with 0.24.0).
 - On a remote machine, open the screen through SSH port forwarding: `ssh -L 44544:127.0.0.1:44544 <host>`.
 - Data lives in `~/GeulPU` (set `GEULPU_HOME` to move it). Downloads inside the app and `geulpu --hf` use the system's `curl`.
 - One check without the screen: `geulpu --check pair --quick` (exit code 0 when every problem matches the reference PC).

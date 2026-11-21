@@ -6,7 +6,9 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
-## Unreleased
+## 0.24.0 — More models: Gemma 3 · Gemma 4 E2B · E4B · 26B-A4B · 31B · GLM-4.7-Flash · Kanana-2 · Korean 7–12B models; MoE expert cache; full logit rows (2026-11-21)
+
+GeulPU runs more models: two new architectures (gemma3 — Gemma 3 from 270M to 27B; deepseek2 — GLM-4.7-Flash and Kanana-2-30B-A3B), the rest of the Gemma 4 family (E2B · E4B · 26B-A4B · 31B) and three Korean models (A.X 4.0 Light, Mi:dm 2.0, Kanana 1.5). MoE models that do not fit in graphics memory get an expert cache, and long prompts and MoE decoding are faster on the newer architectures. The server can return the full logit row of every step (`geulpu.logits`) for outside tools. Models that earlier versions accept give the same output bits as before.
 
 ### Added
 
