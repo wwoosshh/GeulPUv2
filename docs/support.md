@@ -3,8 +3,7 @@
 **[한국어](../지원범위.md)** · [README](../README.md) · [User guide](user-guide.md) · [Glossary](glossary.md)
 
 This page lists, in tables, **which environments** (OS and GPU) GeulPU runs on and **which model architectures, weight formats and
-model files** it runs there. It describes main as of 2026-11-10 — release 0.23.0 plus the 0.24.0 work in progress (the deepseek2
-architecture: GLM-4.7-Flash and Kanana-2). The tables come from the engine's architecture registry ([구조/등록.gl](../구조/등록.gl) and
+model files** it runs there. It describes release 0.24.0 (2026-11-21). The tables come from the engine's architecture registry ([구조/등록.gl](../구조/등록.gl) and
 each architecture's `엔진.gl`), the app's model list ([앱/data/models.json](../앱/data/models.json)) and the check records
 ([문서/0.24.0.md](../문서/0.24.0.md) and others).
 
@@ -22,7 +21,7 @@ each architecture's `엔진.gl`), the app's model list ([앱/data/models.json](.
 | Windows x64 | Vulkan 1.3 — 48 KB or more of shared memory | AMD, Intel, NVIDIA RTX 20 and older — GPUs not on the CUDA path | Radeon RX 9060 XT (two PCs) · RTX 4070 Ti (Vulkan) |
 | Windows x64 | Vulkan 1.3 — 32 KB of shared memory | GPUs with 32 KB of shared memory, such as AMD's Windows driver and Intel integrated GPUs (some formats and models only — sections 2 and 3) | Intel UHD Graphics 770 · the 32 KB limit emulated on an RTX 4070 Ti |
 | Linux x86-64 (glibc 2.34 or newer) | CUDA | NVIDIA, driver only | H100 NVL (MIG 3g.47gb — remote server) · WSL2. Independent test (UPM GING, 0.21.0): RTX 6000 Ada · H100 NVL MIG · A100 MIG |
-| Linux x86-64 | Vulkan | In the package, but not yet checked on a real Linux GPU (software Vulkan only) | — |
+| Linux x86-64 | Vulkan 1.3 | GPUs not on the CUDA path — the architectures and formats of the Vulkan columns in sections 2 and 3 | Tesla V100 16 GB (Ubuntu 24.04, NVIDIA driver 580 — 0.24.0) |
 | macOS | — | Not supported | — |
 
 On first start the app checks the GPU and picks CUDA for NVIDIA RTX 30 and newer, Vulkan otherwise (changeable in the settings). With the same
@@ -70,7 +69,7 @@ Qwen3-Coder XML, MiniCPM XML, Gemma 4's `<|tool_call>call:`, `<tool_call>` JSON 
 | IQ4_XS | ✓ | — | — | `qwen2` · `qwen3` · `llama` · `qwen35` · `qwen35moe` |
 | F16 · BF16 · F32 (unquantized files — converted at load to the precision contract's 16-bit block format) | ✓ | ✓ | — | `qwen2` · `qwen3` · `llama` · `qwen35` · `qwen35moe` |
 | Q5_0 | ✓ | — | — | only `deepseek2`'s per-head matrices (Kanana-2's `attn_k_b`) |
-| Q2_K · Q3_K · IQ1–IQ3 · IQ4_NL · MXFP4 · Q4_1 · Q5_1 | — | — | — | not yet (stage 24-4 of the 0.24.0 plan) |
+| Q2_K · Q3_K · IQ1–IQ3 · IQ4_NL · MXFP4 · Q4_1 · Q5_1 | — | — | — | not yet (planned — stage 24-4 of the 0.24.0 plan, moved to a later release) |
 | Split GGUF (`-00001-of-…`) | merge into one file with llama.cpp's `llama-gguf-split --merge`, then as above | | | |
 
 What a file whose matrices use different formats may mix is in [문서/형식섞임.md](../문서/형식섞임.md). The app's **Find models** shows,
@@ -159,12 +158,12 @@ the experts that do not fit in RAM (that much RAM must be free as well).
 | `glm5-next` | GLM-5.3-Flash (321B) | no such architecture yet — linear-attention layers, DSA layers, mHC and image input. About 190 GB at 4 bits |
 | other `deepseek2` models | DeepSeek-V3 · R1 · Kimi-K2 · DeepSeek-V2 (-Lite) | files with expert group selection, softmax routing or MTP layers are not taken yet |
 | `qwen3moe` · `mixtral` · `phi3` and others | Qwen3-30B-A3B · Qwen3-235B-A22B · Mixtral · Phi | no such architecture yet |
-| `raon1` | Raon-1 mini (Krafton) | stage 24-3 of the 0.24.0 plan |
-| `gemma4` variants · `exaone4` | the Q8_0 · F16 · BF16 files of Gemma 4 E2B · E4B · 26B-A4B, EXAONE 4.0 · 4.5 | stage 24-5 of the 0.24.0 plan |
+| `raon1` | Raon-1 mini (Krafton) | planned — stage 24-3 of the 0.24.0 plan, moved to a later release |
+| `gemma4` variants · `exaone4` | the Q8_0 · F16 · BF16 files of Gemma 4 E2B · E4B · 26B-A4B, EXAONE 4.0 · 4.5 | planned — the rest of stage 24-5 of the 0.24.0 plan, moved to a later release |
 | some `gemma3` files | the files of the Gemma 3 270M and 1B with k-quant names | the Q4_K_M and similar files mix in Q5_0 and Q8_0 matrices — use the Q8_0 file |
 | Image and audio input | vision and audio parts of multimodal models | text only |
 
-Formats: Q2_K · Q3_K · IQ1–IQ3 · IQ4_NL · MXFP4 · Q4_1 · Q5_1 (stage 24-4 of the 0.24.0 plan). Features: Vulkan for `qwen35`, `qwen35moe`,
+Formats: Q2_K · Q3_K · IQ1–IQ3 · IQ4_NL · MXFP4 · Q4_1 · Q5_1 (planned — moved from the 0.24.0 plan to a later release). Features: Vulkan for `qwen35`, `qwen35moe`,
 `gemma4`, `gemma3` and `deepseek2`; fast mode for `qwen35moe`, `gemma4`, `gemma3` and `deepseek2`; speculative decoding and the prompt cache for the newer
 architectures. Speed: `deepseek2` decoding is still slower than llama.cpp's fastest configuration (about 0.6–0.85 times; long prompts are processed
 1.5–1.75 times faster — [문서/MoE전문가캐시.md](../문서/MoE전문가캐시.md)). `gemma3` is slower than llama.cpp as well (decoding at about 0.65–0.9 times,
@@ -181,7 +180,8 @@ for 512 — same record).
 | RTX 3080 Ti · RTX 5070 | Ampere · Blackwell | Windows · CUDA | the reproducibility check (DeepSeek-R1-Distill-Qwen-7B Q8_0 — 32 math problems, 82,673 steps): outputs and logits bit-identical to the 4070 Ti |
 | Radeon RX 9060 XT | RDNA4 | Windows · Vulkan (two PCs, two drivers) | the same check equal to the CUDA reference in all 82,673 steps (exact mode) |
 | Intel UHD Graphics 770 | integrated GPU | Windows · Vulkan (32 KB shared memory) | five requests · 240 steps of Qwen2.5-1.5B Q4_K_M with logits equal to CUDA (0.12.0) |
-| H100 NVL — MIG 3g.47gb | Hopper (sm_90) | Linux · CUDA (remote server) | 0.12.1's reproducibility test 24/24; 0.24.0's GLM-4.7-Flash, Kanana-2, Gemma 3 4B · 12B and Gemma 4 26B-A4B modules and test outputs byte-identical to the 4070 Ti (for the 26B-A4B, between the 4070 Ti's expert cache and all experts in VRAM here). The Gemma 3 27B and Gemma 4 31B, which do not fit on the 4070 Ti, are verified here (their modules are byte-identical; chat checked with the server) |
+| H100 NVL — MIG 3g.47gb | Hopper (sm_90) | Linux · CUDA (remote server) | 0.12.1's reproducibility test 24/24; 0.24.0's GLM-4.7-Flash, Kanana-2, Gemma 3 4B · 12B and Gemma 4 26B-A4B modules and test outputs byte-identical to the 4070 Ti (for the 26B-A4B, between the 4070 Ti's expert cache and all experts in VRAM here). The Gemma 3 27B and Gemma 4 31B, which do not fit on the 4070 Ti, are verified here (their modules are byte-identical; chat checked with the server). The 0.24.0 release package's reproducibility check gives 32/32 equal to the reference outputs (2026-11-21) |
+| Tesla V100-SXM2 16 GB | Volta (sm_70 — not on the CUDA path) | Linux · Vulkan (Ubuntu 24.04, NVIDIA driver 580) | 0.24.0: Qwen2.5-7B-Instruct Q4_K_M and Q8_0 in exact mode — tokens, all logits of 48 steps and logit-lens values bit-identical to the H100 on CUDA; the Linux package installed fresh (add a model, load, chat, CLI) |
 | RTX 6000 Ada · H100 NVL MIG · A100 MIG 7g.40gb | Ada · Hopper · Ampere | Linux · CUDA — independent test by UPM GING (0.21.0) | reproducibility kit 144/144, reproducibility check 32/32, all of their own suites passed ([repro-kit/independent](../repro-kit/independent/upm-ging-2026-11/README.md)) |
 
 This page is updated in every release that changes the architectures, formats or model list. Changes are listed in

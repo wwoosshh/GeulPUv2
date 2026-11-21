@@ -212,8 +212,9 @@ jobs:
             "**Install** — with Python (Windows x64 or Linux x86-64): ``pipx install geulpu`` (or ``uv tool install geulpu`` · " +
             "``pip install geulpu``), then run ``geulpu``. Without Python: on Windows unzip GeulPU-$ver-windows-x64.zip and run " +
             "GeulPU.exe; on Linux extract GeulPU-$ver-linux-x64.tar.gz and run ``./GeulPU``, then open the address it prints (on a " +
-            "remote machine through SSH port forwarding). Linux needs an NVIDIA GPU with its driver and glibc 2.34 or later; the app " +
-            "downloads models there with the system's curl, and Vulkan is Windows-only. GeulPU.exe is not code-signed: installing " +
+            "remote machine through SSH port forwarding). Linux needs glibc 2.34 or later and an NVIDIA GPU with its driver; GPUs " +
+            "outside the CUDA path go through Vulkan 1.3, which under Linux has been checked on a Tesla V100 only. The app " +
+            "downloads models there with the system's curl. GeulPU.exe is not code-signed: installing " +
             "with pipx or uv avoids the Windows SmartScreen prompt. To upgrade a Python " +
             "install, quit the app and run ``pipx upgrade geulpu``. Guide: [user guide]($($blob)docs/user-guide.md). SHA-256: " +
             "SHA256SUMS.txt below, and version.json in the zip or tar.gz for every file. " +
@@ -222,8 +223,9 @@ jobs:
             "**설치** — 파이썬(Windows x64 · 리눅스 x86-64): ``pipx install geulpu``(또는 ``uv tool install geulpu`` · " +
             "``pip install geulpu``) 뒤 ``geulpu``. 파이썬 없이: Windows 는 GeulPU-$ver-windows-x64.zip 을 풀고 GeulPU.exe 를 실행, " +
             "리눅스는 GeulPU-$ver-linux-x64.tar.gz 를 풀고 ``./GeulPU`` 를 실행한 뒤 알리는 주소를 연다(원격이면 SSH 포트 포워딩). " +
-            "리눅스는 NVIDIA GPU · 드라이버와 glibc 2.34 이상이 필요하고, 앱 안의 내려받기는 시스템의 curl 로 한다(Vulkan 은 " +
-            "Windows 만). GeulPU.exe 는 코드 서명을 하지 않았다 — pipx · uv 로 깔면 Windows 의 SmartScreen 창이 뜨지 않는다. " +
+            "리눅스는 glibc 2.34 이상과 NVIDIA GPU · 드라이버가 필요하고(CUDA 로 실행하지 않는 GPU 는 Vulkan 1.3 으로 — 리눅스에서는 " +
+            "Tesla V100 하나로만 확인), 앱 안의 내려받기는 시스템의 curl 로 한다. " +
+            "GeulPU.exe 는 코드 서명을 하지 않았다 — pipx · uv 로 깔면 Windows 의 SmartScreen 창이 뜨지 않는다. " +
             "파이썬으로 깐 앱은 앱을 끈 뒤 ``pipx upgrade geulpu``. " +
             "안내: [사용안내.md]($($blob)사용안내.md). 개인정보: [PRIVACY.md]($($blob)PRIVACY.md).`n`n</details>`n"
           [IO.File]::WriteAllText("$env:RUNNER_TEMP/notes.md", $notes, (New-Object System.Text.UTF8Encoding($false)))

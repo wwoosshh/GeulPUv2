@@ -85,8 +85,10 @@ cd GeulPU-<version> && ./GeulPU
   (`ssh -L 44544:127.0.0.1:44544 <host>`) and open the address on your own computer.
 - Downloads inside the app (and `geulpu --hf`) use the system's `curl` — install it if your distribution lacks it. GGUF files you
   already have can be added with **Models › Files → Add a GGUF file**.
-- From 0.22.0 the Linux package also carries the Vulkan path (server-vulkan, device-vulkan, `libvulkan.so.1`) — the way to GPUs other
-  than NVIDIA (AMD, Intel …). It has only been exercised with a software Vulkan driver; a run on a real Linux GPU is still open.
+- From 0.22.0 the Linux package also carries the Vulkan path (server-vulkan, device-vulkan, `libvulkan.so.1`) — the way to GPUs
+  outside the CUDA path (AMD, Intel, older NVIDIA cards …). With 0.24.0 it was checked on one real Linux GPU, a Tesla V100 (Ubuntu
+  24.04): in exact mode its tokens and logits are bit-identical to an H100 on CUDA. AMD and Intel GPUs under Linux have not been
+  checked yet.
 - Models, settings and results live in `~/GeulPU` (or in the folder named by `GEULPU_HOME`).
 
 ## First steps
@@ -554,6 +556,10 @@ Contract 5.2 ([contract](../계약/contract.md)) defines the values, so they are
   Qwen3 and Llama architectures). With a J file (`<name>.jlens.safetensors`) next to the model file, `"layer_lens": {"jacobian": true}`
   also returns the same row's Jacobian lens as `geulpu.jacobian_lens` — see
   [experiment 8 of the research guide](research-guide.md#experiment-8-at-which-layer-does-the-answer-appear--the-logit-lens).
+- Full logit rows (from 0.24.0 — [precision contract 5.2](../계약/contract.md)): add `"geulpu": {"logits": true}` to get the logit row of
+  every step in `geulpu.logits` — one base64 string per row (float32, little-endian), the very row the logit hash covers — and, in an echo
+  request that scores tokens, the rows of the scored positions in `geulpu.prompt_logits`. At most 64 rows per request (`max_tokens` plus
+  the scored positions), so set `max_tokens`; tokens, log-probabilities and logit hashes are the same with or without the field.
 - `/tokenize` · `/detokenize` · `/tokenizer_info` — in the same shape as vLLM.
 - In `geulpu`, `tokens` and `logit_hashes` include the step that sampled the stop token (EOS), while the log-probability arrays
   (`logprobs`, `entropy`, `top_ids`, `top_logprobs`) cover only the answer's tokens, as in OpenAI — one shorter when the answer ends with
@@ -583,12 +589,13 @@ format and model file is also in one set of tables on [what GeulPU runs](support
 
 | Architecture | Models | Sizes |
 |---|---|---|
-| qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen and their fine-tunes | 0.5B and up (head size 64 · 96 · 128) — 0.5B · 1.5B · 3B · 7B · 14B run on this project's PC (head size 96 on a synthetic model) |
+| qwen2 | Qwen2.5-Instruct · Qwen2.5-Coder · DeepSeek-R1-Distill-Qwen, A.X 4.0 Light (from 0.24.0) and their fine-tunes | 0.5B and up (head size 64 · 96 · 128) — 0.5B · 1.5B · 3B · 7B · 14B run on this project's PC (head size 96 on a synthetic model) |
 | qwen3 | Qwen3 and its fine-tunes | 0.6B · 1.7B · 4B · 8B · 14B · 32B — 0.6B · 1.7B · 4B · 8B run on this project's PC (14B on a synthetic model) |
-| llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, and their fine-tunes | Head size 64 · 96 · 128, including RoPE on part of each head — 1.5B · 2B · 3B · 7B · 8B run on this project's PC; head size 96, partial RoPE and 70B checked as shapes with synthetic models |
+| llama | Llama 3.1 · 3.2 Instruct, Mistral 7B Instruct v0.3, DeepSeek-R1-Distill-Llama, HyperCLOVAX-SEED, MiniCPM5, Mi:dm 2.0 and Kanana 1.5 (the last two from 0.24.0), and their fine-tunes | Head size 64 · 96 · 128, including RoPE on part of each head — 1.5B · 2B · 3B · 7B · 8B · 11.5B run on this project's PC; head size 96, partial RoPE and 70B checked as shapes with synthetic models |
 | qwen35 | Qwen3.5 (full-attention and linear-attention layers mixed) · Qwen3.8-27B | 0.8B (Q8_0) · 4B · 9B (Q4_K_M) run on this project's PC. From 0.13.0: Fast mode, and Qwen3.8-27B (the ggml-org and lmstudio Q4_K_M files, which mix formats from matrix to matrix — too large for this PC, checked bit for bit with synthetic files of the same shape). CUDA only, without speculative decoding or the context store |
 | qwen35moe | Qwen3.5 · 3.6 MoE (Qwen3.5 layers with mixture-of-experts FFNs) | Qwen3.6-35B-A3B (Q4_K_M) runs on a 12 GB card — experts that do not fit in graphics memory stay in RAM (about 10.5 GB); CUDA and Exact mode for now |
-| gemma4 | Gemma 4 (sliding-window and full-attention layers mixed) — from 0.13.0 | 12B instruct (Q4_K_M) runs on this project's PC — files whose matrices are all k-quants or all Q8_0 (Q8_0 checked bit for bit on a file with fewer layers). CUDA and Exact mode only, without speculative decoding or the context store |
+| gemma4 | Gemma 4 (sliding-window and full-attention layers mixed) — 12B from 0.13.0; E2B · E4B (per-layer inputs), 26B-A4B (MoE) and 31B from 0.24.0 | E2B · E4B · 12B (Q4_K_M) run on this project's PC, and 26B-A4B (Q4_K_M) on a 12 GB card with about 10 GB of RAM for the experts that do not fit in graphics memory; 31B (Q4_K_M) does not fit on that PC (12 GB) and was checked on a remote H100 server. Files whose matrices are all k-quants or all Q8_0 (Q8_0 checked bit for bit on a file with fewer layers; E2B · E4B · 26B-A4B: k-quant files only). CUDA and Exact mode only, without speculative decoding or the prompt cache |
+| gemma3 | Gemma 3 — from 0.24.0, text only (image input is not used) | 270M · 1B (Q8_0 files only) · 4B · 12B (Q4_K_M) run on this project's PC; 27B (Q4_K_M — about 17 GB of graphics memory at a context of 4,096, so a 24 GB GPU is recommended) was checked on a remote H100 server. CUDA and Exact mode only, without speculative decoding or the prompt cache |
 | deepseek2 | GLM-4.7-Flash · Kanana-2-30B-A3B (MLA attention + MoE) — from 0.24.0 | 30B (about 3B per token) Q4_K_M files run on a 12 GB card — experts that do not fit in graphics memory stay in RAM (about 10 · 11 GB); k-quant files (per-head matrices may be Q8_0 · Q5_0). CUDA and Exact mode only, without speculative decoding or the prompt cache. Other deepseek2 models (DeepSeek-V3, R1, Kimi-K2 — expert group selection) are not taken yet |
 
 The chat template is run from the model file as it is, so fine-tunes may change it (only templates GeulPU's jinja interpreter cannot
@@ -601,17 +608,18 @@ parse are refused — it parsed all 228 templates of the 1,000 most-downloaded G
   Use Policy — services with more than 700 million monthly users need permission from Meta), the Mistral 7B v0.3, Qwen2.5 (except 3B),
   Qwen3 and MiniCPM5 files are Apache 2.0, Qwen2.5-3B has the Qwen Research License (research and evaluation only — commercial use needs a
   license from Alibaba Cloud), DeepSeek-R1-Distill-Qwen is MIT (R1-Distill-Llama also follows Llama 3.1's license), and HyperCLOVAX-SEED has NAVER's own
-  HyperCLOVA X SEED license; the Qwen3.5, Qwen3.6 and Gemma 4 files are Apache 2.0, GLM-4.7-Flash is MIT, and Kanana-2 has Kakao's
+  HyperCLOVA X SEED license; the Qwen3.5, Qwen3.6, Gemma 4, A.X 4.0 Light and Kanana 1.5 files are Apache 2.0, GLM-4.7-Flash and Mi:dm 2.0 are MIT, the Gemma 3 files
+  follow Google's Gemma Terms of Use, and Kanana-2 has Kakao's
   Kanana License Agreement (a prohibited-use policy; offering it to third parties through an API or cloud service, selling it as an SI,
   on-premise or on-device solution, and services with more than 10 million monthly users need a separate commercial license; redistribution
   must show "Powered by Kanana") — also shown in the app's model descriptions.
-- **Not yet**: other architectures (Phi, GLM-4.5 · 4.6 · 4.7 · 5.x — of the GLMs only GLM-4.7-Flash runs, …), Gemma 4's E2B · E4B (per-layer embeddings), 26B-A4B (MoE) and 31B and its Q4_0 files, Mistral
+- **Not yet**: other architectures (Phi, GLM-4.5 · 4.6 · 4.7 · 5.x — of the GLMs only GLM-4.7-Flash runs, …), the Q8_0 · F16 · BF16 files of Gemma 4 E2B · E4B · 26B-A4B and Gemma 4's Q4_0 files, the files of Gemma 3 270M · 1B with k-quant names (use their Q8_0 files), Mistral
   NeMo · Small (not run yet — their tekken tokenizer is accepted from 0.12.0), small models with head size 64 (Qwen2.5-0.5B, Llama 3.2 1B),
   other MoE models (Mixtral, Qwen3-30B-A3B, DeepSeek-V3, …), image input, Q2_K · Q3_K · IQ formats other than IQ4_XS · Q5_0. Find models hides such
   files by default.
 - **Depending on the GPU**: Q8_0 · Q4_0 and k-quants (Q4_K_M, …) run on CUDA and on every Vulkan GPU, including those with 32 KB of shared memory
   such as AMD's Windows driver (from 0.12.0 — checked with that limit emulated on an RTX 4070 Ti and on an Intel UHD Graphics 770). F16 · BF16 · F32
-  run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. IQ4_XS, Qwen3.5, Qwen3.6 MoE, Gemma 4 and the deepseek2 models
+  run on CUDA and on Vulkan GPUs with at least 48 KB of shared memory. IQ4_XS, Qwen3.5, Qwen3.6 MoE, Gemma 4, Gemma 3 and the deepseek2 models
   (GLM-4.7-Flash, Kanana-2) run only on CUDA (NVIDIA GPUs) for now.
 
 ### Which model fits your PC
@@ -620,14 +628,15 @@ Files GeulPU has run itself (**Verified by GeulPU** in the app). Sizes use 1024-
 
 | Graphics memory | Suggested files |
 |---|---|
-| 4 GB | Qwen3-0.6B Q8_0 (0.6 GB) · Qwen3.5-0.8B Q8_0 (0.8 GB) · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M (1.1 GB) · MiniCPM5-2B Q4_K_M (1.5 GB) |
-| 6 GB | Qwen3-1.7B Q8_0 (1.7 GB) · Qwen2.5-1.5B-Instruct Q8_0 (1.8 GB) · Qwen3-4B Q4_K_M (2.3 GB) · Qwen3.5-4B Q4_K_M (2.6 GB) · Llama-3.2-3B-Instruct Q8_0 (3.2 GB) · Qwen2.5-3B-Instruct Q8_0 (3.4 GB) |
-| 8 GB | Qwen3-8B Q4_K_M (4.7 GB) · Qwen3.5-9B Q4_K_M (5.3 GB) · Qwen2.5-7B-Instruct Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Qwen-7B Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Llama-8B Q4_K_M (4.6 GB) · Llama-3.1-8B-Instruct Q4_K_M (4.6 GB) · Mistral-7B-Instruct-v0.3 Q4_K_M (4.1 GB) · Qwen3-4B Q8_0 (4.0 GB) |
-| 12 GB | Qwen3-8B Q8_0 (8.1 GB) · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 (7.5 GB) · Llama-3.1-8B-Instruct Q8_0 (8.0 GB) · Mistral-7B-Instruct-v0.3 Q8_0 (7.2 GB) · Gemma-4-12B-it Q4_K_M (6.6 GB — from 0.13.0, context about 7,300) · Qwen3.6-35B-A3B Q4_K_M (19.0 GB — about 10.5 GB of RAM for the experts that do not fit in graphics memory) · GLM-4.7-Flash Q4_K_M (17.1 GB — from 0.24.0, about 10 GB of RAM) · Kanana-2-30B-A3B Q4_K_M (17.3 GB — from 0.24.0, about 11 GB of RAM) — 14B Q4_K_M also runs with a reduced context |
+| 4 GB | Qwen3-0.6B Q8_0 (0.6 GB) · Qwen3.5-0.8B Q8_0 (0.8 GB) · Gemma-3-270M-it Q8_0 (0.3 GB) · Gemma-3-1B-it Q8_0 (1.0 GB) · HyperCLOVAX-SEED-Text-Instruct-1.5B Q4_K_M (1.1 GB) · MiniCPM5-2B Q4_K_M (1.5 GB) |
+| 6 GB | Qwen3-1.7B Q8_0 (1.7 GB) · Qwen2.5-1.5B-Instruct Q8_0 (1.8 GB) · Qwen3-4B Q4_K_M (2.3 GB) · Qwen3.5-4B Q4_K_M (2.6 GB) · Gemma-3-4B-it Q4_K_M (2.3 GB) · Gemma-4-E2B-it Q4_K_M (2.9 GB) · Llama-3.2-3B-Instruct Q8_0 (3.2 GB) · Qwen2.5-3B-Instruct Q8_0 (3.4 GB) |
+| 8 GB | Qwen3-8B Q4_K_M (4.7 GB) · Qwen3.5-9B Q4_K_M (5.3 GB) · Qwen2.5-7B-Instruct Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Qwen-7B Q4_K_M (4.4 GB) · DeepSeek-R1-Distill-Llama-8B Q4_K_M (4.6 GB) · Llama-3.1-8B-Instruct Q4_K_M (4.6 GB) · Mistral-7B-Instruct-v0.3 Q4_K_M (4.1 GB) · A.X-4.0-Light Q4_K_M (4.1 GB) · kanana-1.5-8b-instruct Q4_K_M (4.6 GB) · Gemma-4-E4B-it Q4_K_M (4.6 GB) · Qwen3-4B Q8_0 (4.0 GB) |
+| 12 GB | Qwen3-8B Q8_0 (8.1 GB) · Qwen2.5-7B-Instruct Q8_0 · Qwen2.5-Coder-7B-Instruct Q8_0 · DeepSeek-R1-Distill-Qwen-7B Q8_0 (7.5 GB) · Llama-3.1-8B-Instruct Q8_0 (8.0 GB) · Mistral-7B-Instruct-v0.3 Q8_0 (7.2 GB) · Gemma-4-12B-it Q4_K_M (6.6 GB — from 0.13.0, context about 7,300) · Midm-2.0-Base-Instruct Q4_K_M (6.5 GB) · Gemma-3-12B-it Q4_K_M (6.8 GB) · Qwen3.6-35B-A3B Q4_K_M (19.0 GB — about 10.5 GB of RAM for the experts that do not fit in graphics memory) · GLM-4.7-Flash Q4_K_M (17.1 GB — from 0.24.0, about 10 GB of RAM) · Kanana-2-30B-A3B Q4_K_M (17.3 GB — from 0.24.0, about 11 GB of RAM) · Gemma-4-26B-A4B-it Q4_K_M (15.6 GB — from 0.24.0, about 10 GB of RAM) — 14B Q4_K_M also runs with a reduced context |
 | 16 GB or more | Qwen2.5-14B-Instruct Q4_K_M · Qwen2.5-Coder-14B-Instruct Q4_K_M · DeepSeek-R1-Distill-Qwen-14B Q4_K_M (8.4 GB) |
+| 24 GB or more | Gemma-3-27B-it Q4_K_M (15.4 GB) · Gemma-4-31B-it Q4_K_M (17.1 GB) — from 0.24.0, checked on a remote H100 server |
 
 Qwen3-14B Q4_K_M and Qwen3.8-27B have only been checked bit for bit on synthetic models of the same shape and have not been run yet.
-Qwen3.5, Gemma 4 and the deepseek2 models run only on CUDA. The app tells you for every file whether it fits your graphics memory.
+Qwen3.5, Gemma 4, Gemma 3 and the deepseek2 models run only on CUDA. The app tells you for every file whether it fits your graphics memory.
 
 ## How it runs
 

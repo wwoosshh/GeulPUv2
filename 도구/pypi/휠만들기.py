@@ -33,7 +33,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
     "linux-x64": ("py3-none-manylinux_2_34_x86_64", "GeulPU"),
 }
 요약 = ("A deterministic local LLM engine and debugger — bit-reproducible GGUF inference on your own GPU, written in the "
-        "geul language (Windows x64 app with CUDA or Vulkan, Linux x86-64 app with CUDA)")
+        "geul language (Windows x64 and Linux x86-64 apps, CUDA or Vulkan)")
 
 
 def 꾸러미파일들():
