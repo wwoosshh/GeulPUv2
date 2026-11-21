@@ -23,8 +23,8 @@ makes it different, with the measurements. The [README](../README.md) has the ov
 | Internet | Only to find and download models and to check for new versions |
 
 Keep the graphics driver up to date. NVIDIA cards with compute capability 7.x (RTX 20, GTX 16, Tesla V100 · T4) have no integer
-tensor-product instruction: the app builds their CUDA modules with replacement instructions — the same values, slower prompt
-processing (checked on a Tesla V100 under Linux only) — or uses Vulkan when the card's Vulkan driver offers cooperative matrices.
+tensor-product instruction: the app builds their CUDA modules with replacement instructions — the same values, with prompt
+processing slower than on cards that have the instruction (checked on a Tesla V100 under Linux only) — or uses Vulkan when the card's Vulkan driver offers cooperative matrices.
 Older cards (GTX 10 and earlier) cannot use the CUDA path; the app then checks by itself whether they can run on Vulkan. On AMD, a
 Radeon RX 9060 XT has been verified.
 
