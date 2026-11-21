@@ -6,6 +6,8 @@ Archived on Zenodo: [10.5281/zenodo.24184984](https://doi.org/10.5281/zenodo.241
 
 Korean version: [evidence.ko.md](evidence.ko.md) · The proposal: [proposal.md](proposal.md)
 
+> **Update, 2026-11-22.** Later measurements did not confirm this proposal. On memories from a public benchmark the advantage reported here did not carry over, and the design is not recommended in place of an index in the context. See [results.md](results.md). The text below is draft 1 of 2026-11-13, unchanged.
+
 This note states what the first test measured, what the numbers support, and what they do not.
 
 ## 1. Claim
