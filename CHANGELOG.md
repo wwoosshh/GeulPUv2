@@ -6,6 +6,148 @@ with more measurement detail, is [문서/바뀐것.md](문서/바뀐것.md).
 Versions up to 0.5.0 were released from the research repository [GeulPU](https://github.com/wwoosshh/GeulPU); this repository
 (GeulPUv2) continues the same app from 0.5.1 on.
 
+## Unreleased
+
+### Added
+
+- **Research record: memory index in the weights.** A proposal to keep an agent's memory contents in files and train only the index
+  into a LoRA adapter, with the evidence from a first test, is in
+  [docs/research/memory-index/](docs/research/memory-index/README.md) (English originals with aligned Korean versions, Zenodo DOI
+  10.5281/zenodo.24184984). It is an idea under test, not a feature of GeulPU.
+- **The server returns full logit rows (`geulpu.logits`).** A request with `geulpu.logits: true` gets the logit row of every step in
+  `geulpu.logits`, and an echo that scores tokens gets the rows of those positions in `geulpu.prompt_logits` — the very values the logit
+  hashes cover (float32, little-endian), base64 per row. At most 64 rows per request; tokens, log-probabilities and logit hashes are
+  unchanged by the field. External tools that need the whole distribution per token (divergence, visualization) can use it instead of the
+  top 128. Format: [contract 5.2](계약/contract.md).
+- **Tool calls in the GLM-4.5 · 4.7 format.** `<tool_call>name<arg_key>key</arg_key><arg_value>value</arg_value>…</tool_call>`, where
+  every marker is a special token. Argument values are read by the type in the tool definition (as is for string, otherwise as JSON).
+  Streaming and tool_choice required / a named function work as in the other formats. The engine's model check now reports the MoE
+  expert count and expert-weight size, so the app estimates pinned memory and shows exact mode only for MoE files of architectures whose
+  rules it does not know (deepseek2); the model search's memory estimate treats experts as RAM for every architecture the engine marks
+  as MoE.
+- **Tool calls whose markers are plain text.** Templates that write `<tool_call>` as text because the vocabulary has no such special
+  token (KT's Mi:dm 2.0 — llama.cpp's Hermes 2 Pro form), and functionary v3.1's `<function=name>{JSON}</function>` (Kakao's
+  Kanana 1.5). Before, the first kind answered requests with tools with 400 and the second was taken for Llama 3 JSON, so its calls
+  were not read. The markers are found in the generated text, and streaming holds back a trailing piece that could start an opening
+  marker until it is decided. The in-call special-token rule (0.15.0) and tool_choice required / a named function work the same way.
+  Templates that fail when an earlier call's arguments are an object (Kanana 1.5) get the arguments as the original string — decided
+  by rendering a probe conversation, as llama.cpp does. Models GeulPU already accepts keep their formats.
+- **SK Telecom's Korean model A.X 4.0 Light (7B, Q4_K_M) in the app's model list.** It passed every model check: five execution paths
+  bit-identical and all-row logits equal to the CPU reference (long context up to the model's maximum context length of 16,384), quality
+  against llama.cpp with KL ratio 1.03 and 98.3 % top-1 agreement, chat template and tokenizer equal to jinja2 and llama.cpp, chat on
+  CUDA and Vulkan, and tool calls on CUDA. KT's Mi:dm 2.0 and Kakao's Kanana 1.5, checked in the same stage, are not listed yet.
+- **KT's Mi:dm 2.0 Base (11.5B, Q4_K_M) and Kakao's Kanana 1.5 8B (Q4_K_M) in the app's model list.** After the fixes to the
+  template interpreter, odd-vocabulary alignment and plain-text tool-call markers, both pass every model check: five execution
+  paths bit-identical and all-row logits equal to the CPU reference, quality against llama.cpp with KL ratio 0.86 (Mi:dm) and 0.71
+  (Kanana), chat template and tokenizer equal to jinja2 and llama.cpp, chat on CUDA and Vulkan, and tool calls on CUDA.
+- **New model architecture deepseek2 — zai-org's GLM-4.7-Flash (30B) and Kakao's Kanana-2-30B-A3B Thinking (30B) run and are in
+  the app's model list.** MLA attention (attention over low-rank compressed keys and values) and sigmoid-routed MoE join the
+  contract (section 4.13). Expert weights that do not fit in graphics memory stay in RAM (pinned memory). For now only CUDA in
+  exact mode. Both models have five bit-identical execution paths and all-row logits equal to the CPU reference, chat template and
+  tokenizer equal to jinja2 and llama.cpp, and working chat and tool calls. On the remote H100 server the outputs were also
+  bit-identical to this PC (RTX 4070 Ti). Exact mode loses about 0.13 times what llama.cpp loses against an fp64 reference (GLM).
+  Speed is still behind llama.cpp (decode about 2.5–2.9 times slower).
+- **Gemma 4 and Gemma 3 take unquantized files (F16, BF16, F32).** Gemma files whose matrices are all F16, BF16 or F32 load as the
+  contract's 16-bit block weights (section 1.3), the way the other architectures already do. Checked with test files that store
+  the values of quantized files as F16 or BF16: five bit-identical execution paths, and all-row logits equal to the CPU reference.
+  Model verification with the published F16 and BF16 files has not been done yet, so the app's model search still offers only
+  the Q8_0 and k-quant files of Gemma. Files that mix F16, BF16 or F32 with k-quant or Q8_0 matrices are not accepted yet. Record:
+  [구조/gemma4/기록.md](구조/gemma4/기록.md).
+- **New model architecture gemma3 — Google's Gemma 3 270M, 1B, 4B, 12B and 27B run and are in the app's model list.** The contract gains the Gemma 3 form of the Gemma 4 block (section 4.14): values are not normalized, the score scale is 1/√(head size), and the
+  full-attention layers use linear RoPE scaling. Text only (image input is not used yet); for now only CUDA in exact mode. The 4B
+  and 12B take k-quant (Q4_K_M and others) and Q8_0 files; the 270M and 1B take Q8_0 files only (their files with k-quant names
+  mix in other formats — the app's model search offers only the Q8_0 file). The 27B (Q4_K_M, 16.5 GB) does not fit on this
+  PC, so it was checked on the remote H100 server (five bit-identical execution paths; the server's chat answers equal to
+  llama.cpp's token for token — it was not run in the app's screens). It uses about 17 GB of graphics memory at a context of
+  4,096, so a 24 GB GPU is recommended. Every size has five
+  bit-identical execution paths, and chat template and tokenizer equal to jinja2 and llama.cpp. Every size has all-row
+  logits of the full file equal to the CPU reference (the 27B on the remote server), and on the remote H100 server the outputs of the 4B and 12B were
+  bit-identical to this PC (RTX 4070 Ti). Exact mode loses less than 0.001 times what llama.cpp loses against an fp64 reference
+  (4B). Speed is still behind llama.cpp (decoding at about 0.65–0.9 times). The models are under the Gemma Terms of Use. Record:
+  [구조/gemma3/기록.md](구조/gemma3/기록.md).
+- **Gemma 4 31B is in the app's model list.** The Q4_K_M file (18.3 GB) does not fit on the development PC (12 GB), so it was
+  checked on the remote H100 server (Linux): five bit-identical execution paths, all-row logits of the full file equal to the
+  CPU reference, and chat and tool calls with the GeulPU server.
+  Two of three chat answers equal llama.cpp's token for token; the third parts from it at the 13th token, where the top token
+  of an fp64 math reference is the one the engine chose.
+  Its chat template and tokenizer are those of the 12B. It was not run in the app's screens, and the list entry says so. It uses
+  about 20 GB of graphics memory at a context of 4,096, so it needs a GPU with 24 GB or more. The model search now shows 31B
+  repositories as runnable instead of "needs a check". Record: [구조/gemma4/기록.md](구조/gemma4/기록.md).
+- **Gemma 4 E2B and E4B run and are in the app's model list.** On top of the 12B · 31B block the engine computes the per-layer
+  inputs (PLE), the KV sharing of the later layers and the per-layer FFN width (E2B) as items 7–9 of contract section 4.12 say.
+  Checked with unsloth's two Q4_K_M files: five bit-identical execution paths and chat and tool calls in the app; for E2B the
+  all-row logits of the full file equal the CPU reference. The per-layer embedding table (1.6 GB for E2B, 1.9 GB for E4B) is kept
+  in graphics memory. In prompt processing the layers that share a KV compute only the rows needed for the next token (as
+  llama.cpp does — the values are the same). Speed is about 0.7–1.03 times llama.cpp's (decoding about 0.8 times). The app's
+  model search now shows the k-quant files of these two sizes as runnable — Q8_0, F16 and BF16 files are not accepted yet.
+  Record: [구조/gemma4/기록.md](구조/gemma4/기록.md).
+- **Gemma 4 26B-A4B (MoE) runs and is in the app's model list.** Every layer's dense branch and 8 of 128 experts are computed as item 10
+  of contract section 4.12 says. On a 12 GB GPU part of the expert matrices (15.1 GB) stays in VRAM and the rest in pinned host memory
+  under the expert cache (about 10 GB of RAM in the app — the same path as GLM-4.7-Flash and Kanana-2). Files whose expert gate and up are
+  one tensor, and matrices stored as Q8_0 or Q5_0 because their depth is not a multiple of 256 (Q5_0 is converted to Q8_0 blocks at load —
+  the same values), are accepted. The app's model search shows the k-quant files of this size as runnable (Q8_0, F16 and BF16 files are
+  not accepted yet). Record: [구조/gemma4/기록.md](구조/gemma4/기록.md).
+
+### Changed
+
+- **Long prompts run faster on Gemma 4 and Gemma 3.** The prompt attention kernel now reads the query and the exponent scales into
+  shared memory once, no longer repeats the same softmax in every warp, and on sliding-window layers launches only the groups the rows
+  can see. On an H100 NVL MIG instance a 30,077-token prompt takes 59.4 s instead of 100.0 s on Gemma 4 31B, 12.2 s instead of 21.8 s
+  on 26B-A4B and 38.2 s instead of 48.9 s on Gemma 3 27B. Outputs are bit-identical. Record:
+  [구조/gemma4/기록.md](구조/gemma4/기록.md).
+- **Long prompts run faster on GLM-4.7-Flash and Kanana-2.** The prompt attention kernel now reads the query and the exponent scales
+  into shared memory once and no longer repeats the same softmax in every warp. On an H100 NVL MIG instance a 30,077-token prompt takes
+  79.6 s instead of 166.5 s on GLM-4.7-Flash and 120.7 s instead of 272.2 s on Kanana-2 30B-A3B. Outputs are bit-identical. Record:
+  [구조/deepseek2/기록.md](구조/deepseek2/기록.md).
+- **Long prompts run faster on Qwen3.5 · 3.6 · 3.8.** The prompt attention kernel no longer computes each score twice, and its loop
+  body now fits in the instruction cache. On an H100 NVL MIG instance a 30,077-token prompt takes 37.1 s instead of 55.0 s on
+  Qwen3.8-27B and 10.8 s instead of 18.3 s on Qwen3.6-35B-A3B. Outputs are bit-identical. Record:
+  [구조/qwen35/기록.md](구조/qwen35/기록.md).
+- **Gemma 4 26B-A4B decodes faster.** Decode steps compute the expert GeGLU only for the rows in use, and Gemma 4, Gemma 3, Qwen3.5,
+  Qwen3.5 · 3.6 MoE, GLM-4.7-Flash and Kanana-2 run each decode step as one CUDA graph when no expert cache is in use. On an H100 NVL
+  MIG instance the 26B-A4B decodes 70 tokens per second instead of 58, and the other models save about 1 ms per step. Outputs are
+  bit-identical. Record: [구조/gemma4/기록.md](구조/gemma4/기록.md).
+- **MoE models decode faster — expert matrix products in decode steps.** A decode step (one row) computes the expert matrix
+  products with one-row kernels (gate, up and down for Gemma 4 26B-A4B; down for Qwen3.5 · 3.6 MoE, GLM-4.7-Flash and Kanana-2).
+  The contract is the same, so outputs are bit-identical. On an H100 NVL MIG instance the 26B-A4B decodes 100 tokens per second
+  instead of 70, and Qwen3.6-35B-A3B and GLM-4.7-Flash save 0.8 and 2.9 ms per step. Record: [구조/gemma4/기록.md](구조/gemma4/기록.md).
+- **MoE models that do not fit in graphics memory are faster — an expert cache.** The set of experts kept in graphics memory now
+  changes during computation instead of only while the server is idle. During decoding, an expert that is not in graphics memory is
+  read straight from RAM without waiting, while frequently used experts are uploaded in the background; during prompt processing,
+  the missing experts are uploaded once per chunk into a staging buffer in graphics memory (chunks are now 1,024 rows). The per-head
+  matrix products of MLA attention have new kernels. In the app's speed test on an RTX 4070 Ti (12 GB), GLM-4.7-Flash goes from 490
+  to 1,942 tokens/s on a 2,048-token prompt and from 23.2 to 48.8 tokens/s in decoding; Kanana-2-30B-A3B from 476 to 1,593 and
+  from 28.3 to 41.5. Prompt processing of Qwen3.6-35B-A3B is about 1.4 times faster. Decoding speed is there right after loading a
+  model or after the topic changes (before, only after the server had rearranged experts while idle). Output bits are unchanged.
+  Against llama.cpp's fastest configuration, long prompts are 1.5–1.75 times faster and decoding is still at 0.6–0.85 times.
+  Measurements and design: [문서/MoE전문가캐시.md](문서/MoE전문가캐시.md).
+
+### Fixed
+
+- **Fixed the places where an outside agent, given only the one-page guide, got stuck** (tests by an outside lab, 2026-11-09 and
+  11-10). The guide ([docs/cli.md](docs/cli.md), `GeulPU guide`) now says how to install GeulPU and describes the answer
+  of a waited job correctly: `{"job": {...}}` with `job.state`, `job.summary` and `job.reason` — it used to promise the job's
+  JSON itself, so reading it literally made a successful model load look failed. `experiment update` takes
+  criteria entries without `text` (`{id, result, note}`) and sets only that id's verdict; before, recording a verdict meant
+  sending every criterion's id and full text again, which the guide's example left out. Requests accepted before are accepted
+  as before. For a wrong criteria request, or one that changes what is fixed after the first run, the CLI adds what to do in
+  English (`next`). A model load, diagnosis or speed measurement sent while the app is still checking the hardware right after it
+  starts is answered with 503 instead of 400, and the CLI says to run it again shortly. The guide also notes that a model that
+  thinks first (Qwen3 and others) spends `max_tokens` on thinking, and how to turn that off.
+- **GLM-4.7-Flash and Kanana-2 no longer stop on their first prompt with a long context.** A deepseek2-architecture model started
+  with a 32,768-token context exited with "계획의 띄움이 너무 많다" on its first prompt. Prompt attention splits the query rows into
+  smaller blocks as the context grows and so launches more kernels, but the size of the engine's prerecorded kernel launch list did
+  not count them; it now grows with the number of blocks. Output bits are unchanged.
+- **The chat-template interpreter returns an empty list for select, reject, selectattr, rejectattr and map on a falsy value**, as
+  jinja2 does; it used to stop with a "not iterable" error. Kakao's Kanana 1.5 template sets `tools` to none when no tools are given
+  and then calls `tools | selectattr(…)`, so every request failed in the template. Templates that rendered before render the same.
+- **k-quant files with an odd vocabulary size load on CUDA.** When the output matrix (or the token embedding) is Q6_K with an odd
+  vocabulary size, or Q5_K with one that is not a multiple of 4, the engine's weight layout left the high-bit rows off 16-byte
+  alignment and the kernels' asynchronous copies stopped with CUDA error 716 (misaligned address) — for example Llama 3 fine-tunes
+  with added tokens such as Kakao's Kanana 1.5 (vocabulary 128,259). The high-bit column stride is now padded to a multiple of 4,
+  and the kernel generator uses that stride only in modules whose vocabulary size is not a multiple of 4, so the modules and output
+  bits of the models GeulPU already accepts are unchanged.
+
 ## 0.23.0 — Research platform: experiments · CLI for AI agents · run, step and layer screens · reproduction files (2026-11-09)
 
 GeulPU becomes a research platform — experiment records, a CLI for people and AI agents, run, step and layer screens, and reproduction files that another PC checks bit for bit. The inference server is byte-identical to 0.22.0 (and, on CUDA, to 0.21.0), so every output bit is unchanged.
