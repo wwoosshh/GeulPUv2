@@ -6,6 +6,8 @@ Archived on Zenodo: [10.5281/zenodo.24184984](https://doi.org/10.5281/zenodo.241
 
 Korean version: [proposal.ko.md](proposal.ko.md) · Evidence so far: [evidence.md](evidence.md)
 
+> **Update, 2026-11-22.** Later measurements did not confirm this proposal. On memories from a public benchmark the advantage reported here did not carry over, and the design is not recommended in place of an index in the context. See [results.md](results.md). The text below is draft 1 of 2026-11-13, unchanged.
+
 ## Summary
 
 An agent's long-term memory today is a set of files plus an index of those files. The index is either loaded into the context at every session, or kept in a retrieval system outside the model.
