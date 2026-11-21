@@ -949,7 +949,7 @@
    "expect": {
     "error": {
      "message": "unknown parameter --bogus for run complete",
-     "next": "pass fields the registry does not list with --json; parameters of this command: prompt, model, max_tokens, temperature, top_p, top_k, min_p, seed, stream, stop, logprobs, echo, add_special_tokens, geulpu.logit_hash, geulpu.prompt_tokens, geulpu.record, geulpu.special, geulpu.speculative, geulpu.draft_tokens, geulpu.store, geulpu.top_logprobs, cache_prompt, ignore_eos"
+     "next": "pass fields the registry does not list with --json; parameters of this command: prompt, model, max_tokens, temperature, top_p, top_k, min_p, seed, stream, stop, logprobs, echo, add_special_tokens, geulpu.logit_hash, geulpu.logits, geulpu.prompt_tokens, geulpu.record, geulpu.special, geulpu.speculative, geulpu.draft_tokens, geulpu.store, geulpu.top_logprobs, cache_prompt, ignore_eos"
     }
    }
   },

@@ -577,6 +577,14 @@ of step 4 — bit-identical to the top-k and score values).
 
 - **Logit hash** (`logit_hashes`, `prompt_logit_hashes`): for each 32-bit value w of a logit row (V float32 values),
   h ← (h ^ w) × 1099511628211 (mod 2⁶⁴), starting from h = 0xcbf29ce484222325 (FNV-1a 64). Written as 16 hex digits.
+- **Logit rows** (`logits`, `prompt_logits` — requested with `geulpu.logits: true`): the very rows the logit hashes cover, returned in the
+  response's `geulpu` object. `logits` has one entry per step (same order and count as `logit_hashes`); `prompt_logits` has one entry per
+  row scored by echo (same order and count as `prompt_logit_hashes` — present only for an echo requested with `logprobs`). An entry is
+  one string: the row's V float32 values as little-endian bytes (4V bytes), base64-encoded (RFC 4648 standard alphabet, `=` padding). At
+  most 64 rows per request — a request whose `max_tokens` plus the number of rows scored by echo (prompt length − `echo_from`) exceeds 64
+  gets a 400, and so does one without `max_tokens`. With streaming the rows come in the final chunk's `geulpu` object. This is an output
+  format, not part of the arithmetic contract: tokens, log-probabilities and logit hashes equal those of the same request without the
+  field.
 - **Fingerprints and reproduction files** (run screen and Reproduce › Checks — a record format, not part of the arithmetic contract): token fingerprint
   = SHA-256(`geulpu-fp/1\nmodel <model file SHA-256>\nprompt <ids,…>\ntokens <ids,…>\n`), logit fingerprint = SHA-256(`<token
   fingerprint>\n<per-step logit hashes,…>\n`) — the device and backend are not included. A capsule (`geulpu-capsule/1`) holds the request
