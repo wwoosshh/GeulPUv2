@@ -5,7 +5,8 @@
 #
 # 1. 글 컴파일러: 파이썬 참조 구현 → 글로 쓴 컴파일러 → 같은 소스로 한 번 더(고정점).
 # 2. 빌드: GeulPU(앱/관리자.gl) · bin/ 의 server-cuda · server-vulkan · device-vulkan · device-cuda · diag-cuda · diag-vulkan ·
-#    kernel-gen · ptx-backend · spirv-backend, kernels/diag.ptx · diag-vulkan.spvs · diag-vulkan-coop-*.spvs(협력 행렬 셋).
+#    kernel-gen · ptx-backend · spirv-backend, kernels/diag.ptx · diag-sm70.ptx(계산 능력 7.x) · diag-vulkan.spvs ·
+#    diag-vulkan-coop-*.spvs(협력 행렬 셋).
 #    Vulkan 판(#135)은 엔진/리눅스/벌칸선언.gl 로 libvulkan.so.1 을 가져온다.
 # 3. web/ · data/(받을 모델 목록 · 교차검증 기준 · 모델 평가의 내장 데이터) · LICENSE · THIRD_PARTY_NOTICES.md · README.txt, version.json(판 ·
 #    커밋 · 빌드 때 · 파일마다 SHA-256).
@@ -70,6 +71,7 @@ run replay-llama-vulkan "$ROOT" "$COMP" 엔진/라마재현V.gl -o "$DIST/bin/re
 run llama-logprob "$ROOT" "$COMP" 엔진/라마확률.gl -o "$DIST/bin/llama-logprob"      # 재현 검증의 서버 로그 확률 셈(C 런타임 — 앱은 부르지 않는다)
 run kernel-gen "$ROOT" "$COMP" 커널/커널생성.gl -o "$DIST/bin/kernel-gen"
 run kernel-diag-ptx "$ROOT" "$DIST/bin/ptx-backend" 커널/진단.gl -o "$DIST/kernels/diag.ptx"
+run kernel-diag-ptx-sm70 "$ROOT" "$DIST/bin/ptx-backend" 커널/진단.gl -o "$DIST/kernels/diag-sm70.ptx" --target sm_70   # 계산 능력 7.x 의 CUDA
 run kernel-diag-vulkan "$ROOT" "$DIST/bin/spirv-backend" 커널/진단V.gl -o "$DIST/kernels/diag-vulkan.spvs"
 for s in 16x16x32 16x8x32 16x16x16; do
   run "kernel-diag-coop-$s" "$ROOT" "$DIST/bin/spirv-backend" 커널/진단협력.gl -o "$DIST/kernels/diag-vulkan-coop-$s.spvs" --협력 "$s"

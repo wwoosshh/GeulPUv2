@@ -1,0 +1,10 @@
+# 빠른 점검(시험/모듈점검.py · CI)이 계산 능력 7.0 대상의 PTX(ptx-backend --target sm_70)를 만들어 비교하는 SHA-256 — 이름(시험/모듈해시.txt 의 것) | PTX
+# 정수 텐서곱(k32 · k16 · 부호 없는 쪽) · 행렬조각읽기 · 비동기 복사를 쓰는 구조마다 하나씩. 그 PTX 에 mma.sync · cp.async · ldmatrix 가 남으면 못 미침.
+# 일부러 바꾼 커밋은 이 파일도 함께 고친다: python -X utf8 시험/빠른점검.py --해시갱신
+qwen2K_3584x28x4x18944x152064_먼 | 12cc97c18851f93015cdfca330d5ee970db420dac4c7a71bb28a7a856691e737
+qwen2Q8_7b | 96a7bbe35207fb9d1e7fbe296f695f0f5df578b3db07fc6726ab9ace469239ec
+qwen2K_3584x28x4x18944x152064_빠른_F2_KV8 | 81ab526059451f41e45131acbe6025172a1fe1397bfffb8d8b8bf408951be556
+qwen3K_4096x32x8x12288x151936_빠른_F2B_KV8 | 614da654f6eebf51b74f12b118ccfd835fe0def7c254ce9a16b14bd59ec982c3
+qwen35K_2560x16x4x9216x248320 | 5968003fbc2103674a95f71459092488e010ee6dd610af5bbcd277031ee959bd
+gemma4KW16_2816x16x8x2112x262144_MoEK8 | ee26ea3a66f69a716b38a41e590427d9e0fcf8fb01af45fa866b7b90b07c3aa0
+deepseek2KW16_2048x20x1x10240x154880_MLA768e5 | 82dc74c47832042b40217ca5e278880500a31e3ec82ae0a3bae15a302b140b6f

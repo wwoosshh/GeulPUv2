@@ -10,6 +10,8 @@
   (시험/GPU줄.py)에 서서 돌린다. 시험_7B 의 요약(경우마다 토큰 · 로짓 해시 · 생성 로짓 해시 · KV 해시 · 길끼리의 같음)과 모듈 PTX 의
   SHA-256 을 적는다.
 - --쓰기 면 기준 파일에 쓰고, 아니면 기준과 견준다 — 마지막 줄 '구조 회귀: 모두 같음' 또는 '구조 회귀: 다름 N'(종료 코드 1).
+--ptx-target sm_70: 모듈을 계산 능력 7.0 대상의 PTX(ptx-backend --target sm_70)로 만들어 돌린다 — 요약(로짓 · KV 해시)은 대상과 무관하게
+기준과 같아야 한다(Tesla V100 같은 카드에서 CUDA 경로를 확인할 때). --compiler: 글 컴파일러의 경로(build-linux.sh 가 만든 bin/geulc).
 모델 파일은 받지 않는다(--모델 아래의 경로 — 없는 경우는 건너뜀). Qwen3.5 MoE 는 시험/작은MoE.py 로 뗀 파일(층 4 · 전문가 32), Gemma 4 는
 시험/작은젬마.py 로 뗀 파일(12B 의 층 0 · 5 · 6 — 윈도 · 전체 · 윈도, Q8 은 --Q8 로 다시 양자화한 것, E2B · E4B 는 다섯 층씩), deepseek2 는 시험/작은deepseek2.py 로
 GLM-4.7-Flash Q4_K_M · Kanana-2-30B-A3B Q4_K_M 에서 뗀 파일(층 0 · 1 · 2 — dense · MoE · MoE).
@@ -134,10 +136,10 @@ def 돌리기(명령, 기록, **kw):
     return r.returncode, open(기록, "rb").read().decode("utf-8", "replace").strip().splitlines()[-3:]
 
 
-def 빌드(글, bin폴더):
+def 빌드(글, bin폴더, 컴파일러=None):
     os.makedirs(bin폴더, exist_ok=True)
     env = dict(os.environ, GEUL_ROOT=글)
-    컴 = os.path.join(글, "build", "self_컴파일러" + EXE)
+    컴 = 컴파일러 or os.path.join(글, "build", "self_컴파일러" + EXE)
 
     def 하나(항목):
         이름, 소스 = 항목
@@ -162,9 +164,16 @@ def 입력쓰기(경로, 어휘):
             f.write(struct.pack(f"<{p}q", *[r.randrange(상한) for _ in range(p)]))
 
 
-def 어휘수(gguf):
-    sys.path.insert(0, os.path.join(ROOT, "계약"))
-    import gguf읽기 as GR
+def 어휘수(gguf, 인자=None):
+    """모델 파일의 어휘 수. numpy 가 없는 PC(계약/gguf읽기.py 를 쓸 수 없다)에서는 그 경우의 커널 생성기 인자의 어휘 수를 쓴다 — 모듈이 그
+    어휘 수로 만들어지므로 같은 값이다"""
+    try:
+        sys.path.insert(0, os.path.join(ROOT, "계약"))
+        import gguf읽기 as GR
+    except ImportError:
+        if 인자 is None:
+            raise
+        return int(인자.split()[6])
     g = GR.GGUF(gguf)
     return g.tensors["token_embd.weight"][1][1]
 
@@ -178,11 +187,14 @@ def main():
     p.add_argument("--쓰기", action="store_true")
     p.add_argument("--경우", default="", help="쉼표로 가른 경우 이름(기본: 모두)")
     p.add_argument("--글", default=os.path.normpath(os.path.join(ROOT, "..", "geul-lang-v2")))
+    p.add_argument("--compiler", default=None, help="글(geul) 컴파일러의 경로(기본: <--글>/build/self_컴파일러 — build-linux.sh 로 만든 bin/geulc 를 줄 수 있다)")
+    p.add_argument("--ptx-target", dest="ptx_target", default=None, choices=("sm_70", "sm_80"),
+                   help="PTX 뒷단의 대상 — sm_70 이면 계산 능력 7.0(V100 …)의 모듈로 돌린다. 요약(로짓 · KV 해시)은 대상과 무관하게 같아야 한다")
     a = p.parse_args()
     고른 = [x for x in 경우들 if not a.경우 or x[0] in a.경우.split(",")]
     작업 = os.path.abspath(a.작업)
     bin폴더 = os.path.join(작업, "bin")
-    빌드(os.path.abspath(a.글), bin폴더)
+    빌드(os.path.abspath(a.글), bin폴더, a.compiler)
     print(f"빌드: {' · '.join(f'{k} {해시(os.path.join(bin폴더, k + EXE))[:12]}' for k in 도구들)}", flush=True)
 
     def 모듈(경우):
@@ -195,7 +207,8 @@ def main():
         rc, 끝 = 돌리기([os.path.join(bin폴더, "커널생성" + EXE)] + args[:i] + [gl] + args[i:], os.path.join(d, "생성.txt"))
         if rc != 0:
             return 이름, f"생성 실패: {끝}"
-        rc, 끝 = 돌리기([os.path.join(bin폴더, "ptx-backend" + EXE), gl, "-o", ptx], os.path.join(d, "PTX.txt"))
+        대상 = ["--target", a.ptx_target] if a.ptx_target else []
+        rc, 끝 = 돌리기([os.path.join(bin폴더, "ptx-backend" + EXE), gl, "-o", ptx] + 대상, os.path.join(d, "PTX.txt"))
         return 이름, None if rc == 0 else f"PTX 실패: {끝}"
     있는 = [x for x in 고른 if os.path.exists(os.path.join(a.모델, x[1]))]
     for x in 고른:
@@ -212,7 +225,7 @@ def main():
         d = os.path.join(작업, 이름)
         경로 = os.path.join(a.모델, gguf)
         입력 = os.path.join(d, "입력.bin")
-        입력쓰기(입력, 어휘수(경로))
+        입력쓰기(입력, 어휘수(경로, 인자))
         출력 = os.path.join(d, "출력")
         os.makedirs(출력, exist_ok=True)
         if os.path.exists(os.path.join(출력, "요약.txt")):

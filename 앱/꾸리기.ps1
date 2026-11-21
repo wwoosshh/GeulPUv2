@@ -104,6 +104,7 @@ Run $pyv.Source @('-X', 'utf8', '앱/버전정보.py', (Join-Path $Dist 'GeulPU.
 Say '진단 커널(PTX · SPIR-V)...'
 $K = Join-Path $Dist 'kernels'
 Run (Join-Path $Bin 'ptx-backend.exe') @('커널/진단.gl', '-o', (Join-Path $K 'diag.ptx')) $Root 'kernel-diag-ptx'
+Run (Join-Path $Bin 'ptx-backend.exe') @('커널/진단.gl', '-o', (Join-Path $K 'diag-sm70.ptx'), '--target', 'sm_70') $Root 'kernel-diag-ptx-sm70'   # 계산 능력 7.x 의 CUDA
 Run (Join-Path $Bin 'spirv-backend.exe') @('커널/진단V.gl', '-o', (Join-Path $K 'diag-vulkan.spvs')) $Root 'kernel-diag-vulkan'
 foreach ($s in @('16x16x32', '16x8x32', '16x16x16')) {
     Run (Join-Path $Bin 'spirv-backend.exe') @('커널/진단협력.gl', '-o', (Join-Path $K ('diag-vulkan-coop-' + $s + '.spvs')), '--협력', $s) $Root ('kernel-diag-coop-' + $s)
