@@ -4524,6 +4524,15 @@
      }
     },
     {
+     "name": "geulpu.logits",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "스텝마다 로짓 행 전체를 돌려받기(fp32 · base64, 한 요청에 64 행까지)",
+      "en": "return the full logit row per step (float32, base64; at most 64 rows per request)"
+     }
+    },
+    {
      "name": "geulpu.prompt_tokens",
      "type": "boolean",
      "required": false,
@@ -4759,6 +4768,15 @@
      "description": {
       "ko": "스텝마다 로짓 해시를 돌려받기",
       "en": "return a logit hash per step"
+     }
+    },
+    {
+     "name": "geulpu.logits",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "스텝마다 로짓 행 전체를 돌려받기(fp32 · base64, 한 요청에 64 행까지)",
+      "en": "return the full logit row per step (float32, base64; at most 64 rows per request)"
      }
     },
     {
@@ -5347,6 +5365,15 @@
      "description": {
       "ko": "스텝마다 로짓 해시를 돌려받기",
       "en": "return a logit hash per step"
+     }
+    },
+    {
+     "name": "geulpu.logits",
+     "type": "boolean",
+     "required": false,
+     "description": {
+      "ko": "점수를 매기는 위치마다 로짓 행 전체를 돌려받기(fp32 · base64, 한 요청에 64 행까지)",
+      "en": "return the full logit row per scored position (float32, base64; at most 64 rows per request)"
      }
     },
     {
