@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """빠른 점검의 모듈 · SASS 단계 — 시험/빠른점검.py 가 불러 쓴다(혼자 돌리지 않는다).
   5. 모듈(커널 소스 · PTX · SPIR-V 묶음)을 처음부터 만들어 시험/모듈해시.txt 와 바이트까지 견준다 — 바꾸려면 빠른점검.py --해시갱신
+     시험/모듈해시70.txt 에 적힌 모듈은 계산 능력 7.0 대상의 PTX(ptx-backend --target sm_70 — 정수 텐서곱 · ldmatrix · cp.async 를 대체
+     명령으로)도 만들어 그 해시와 견주고, 그 안에 8.0 전용 명령이 남지 않았는지 본다(GPU 없이 — 값이 같은지는 GPU 에서 구조 회귀가 본다).
   7. PTX → SASS(sm_89) — 커널마다 레지스터 · 넘침(spill)을 시험/SASS넘침.txt 와 견준다 — 바꾸려면 빠른점검.py --넘침갱신
 CI(.github/workflows/ci.yml)는 모듈을 정하는 파일(커널/ · 백엔드/ · 엔진/파일.gl · 엔진/리눅스/파일.gl · 시험/모듈해시.txt · 시험/SASS넘침.txt ·
 시험/글저장소커밋.txt)과 이 파일 · ci.yml 이 앞 커밋과 같으면 이 둘을 건너뛴다(빠른점검 --모듈없이). 그래서 이 둘의 코드는 빠른점검.py 와
@@ -56,6 +58,22 @@ def 모듈표읽기():
     return 표글풀기(open(os.path.join(ROOT, "시험", "모듈해시.txt"), encoding="utf-8").read())
 
 
+def 모듈표70읽기():
+    """시험/모듈해시70.txt → {이름: 계산 능력 7.0 대상의 PTX 해시} (이름은 시험/모듈해시.txt 의 것)"""
+    경로 = os.path.join(ROOT, "시험", "모듈해시70.txt")
+    표 = {}
+    if os.path.exists(경로):
+        for 줄 in open(경로, encoding="utf-8").read().splitlines():
+            if 줄.strip() and not 줄.startswith("#"):
+                이름, h = [x.strip() for x in 줄.split("|")]
+                표[이름] = h
+    return 표
+
+
+# 계산 능력 7.0 에 없는 명령 — sm_70 대상의 PTX 에 남아 있으면 안 된다
+명령80 = ("mma.sync", "cp.async", "ldmatrix")
+
+
 def 넘침글풀기(글):
     """시험/SASS넘침.txt 의 글 → {모듈: {커널: 넘침 바이트}}"""
     넘침 = {}
@@ -72,7 +90,8 @@ def 넘침표읽기():
 
 
 # 뒷단(PTX · SPIR-V)과 이 점검을 정하는 것 — 기준 커밋과 하나라도 다르면 바뀐 모듈만 보지 않고 모두 본다
-뒷단입력 = ["백엔드", "엔진/파일.gl", "엔진/리눅스/파일.gl", "시험/글저장소커밋.txt", "시험/모듈점검.py", ".github/workflows/ci.yml"]
+뒷단입력 = ["백엔드", "엔진/파일.gl", "엔진/리눅스/파일.gl", "시험/글저장소커밋.txt", "시험/모듈점검.py", "시험/모듈해시70.txt",
+            ".github/workflows/ci.yml"]
 
 
 def 기준읽기(기준커밋):
@@ -102,6 +121,8 @@ def 모듈(글, 출력, 병렬, 갱신, 알림, 기준커밋=""):
     뒷단 = os.path.join(출력, "ptx-backend" + EXE)         # 빠른점검.py 의 빌드()가 백엔드/ 에서 만든 것
     뒷단V = os.path.join(출력, "spirv-backend" + EXE)
     표 = 모듈표읽기()
+    표70 = 모듈표70읽기()
+    결과70 = {}                    # 이름 → (sm_70 대상의 PTX 해시 또는 None, 오류)
     기준행, 기준넘침, 까닭 = 기준읽기(기준커밋) if 기준커밋 else (None, None, "")
     지금넘침 = 넘침표읽기()
     if 기준커밋:
@@ -135,6 +156,20 @@ def 모듈(글, 출력, 병렬, 갱신, 알림, 기준커밋=""):
         rc, 꼬리 = 돌리기([뒷단, gl, "-o", ptx], os.path.join(출력, f"PTX_{이름}.txt"))
         if rc != 0 or not os.path.exists(ptx):
             return 이름, gl해시, None, None, f"PTX 실패(종료 {rc}): {꼬리[-300:]}", time.time() - t0, False
+        if 이름 in 표70:
+            ptx70 = os.path.join(출력, 이름 + ".sm70.ptx")
+            if os.path.exists(ptx70):
+                os.remove(ptx70)
+            rc, 꼬리 = 돌리기([뒷단, gl, "-o", ptx70, "--target", "sm_70"], os.path.join(출력, f"PTX70_{이름}.txt"))
+            if rc != 0 or not os.path.exists(ptx70):
+                결과70[이름] = (None, f"PTX(sm_70) 실패(종료 {rc}): {꼬리[-300:]}")
+            else:
+                글70 = open(ptx70, encoding="utf-8", errors="replace").read()
+                남은 = [x for x in 명령80 if x in 글70]
+                if ".target sm_70" not in 글70 or 남은:
+                    결과70[이름] = (None, f"sm_70 대상의 PTX 가 아니다 — 대상 줄 {'있음' if '.target sm_70' in 글70 else '없음'} · 남은 8.0 전용 명령 {남은}")
+                else:
+                    결과70[이름] = (해시(ptx70), "")
         # CUDA 만인 모듈 — SPIR-V 칸은 "-": 0.12.0 12-3g-2 MoE 의 판(원자 더하기). llama.cpp 의 CUDA 실행 재현(커널생성 라마재현)은
         # 3단계부터 SPIR-V 도 있다(근사 명령 · 텐서 코어를 흉내 — 문서/라마재현.md)
         if "--MoE" in 인자:
@@ -161,6 +196,36 @@ def 모듈(글, 출력, 병렬, 갱신, 알림, 기준커밋=""):
             if not 같음:
                 덧 += f" — 새 해시 {gl} | {ptx} | {spv} (일부러 바꿨다면 --해시갱신)"
             알림(f"모듈 {이름}", 같음, 덧)
+    # 계산 능력 7.0 대상의 PTX — 표에 있는 모듈만. 건너뛴 모듈(소스 · 뒷단이 기준과 같다)은 옛 해시를 그대로 둔다
+    이름들 = {x[0] for x in 표}
+    새줄70 = []
+    for 이름, 옛 in 표70.items():
+        if 이름 not in 이름들:
+            알림(f"모듈 {이름} (sm_70)", False, "시험/모듈해시.txt 에 없는 이름")
+            새줄70.append(f"{이름} | {옛}")
+            continue
+        if 이름 not in 결과70:
+            새줄70.append(f"{이름} | {옛}")
+            건너뜀70 = any(r[0] == 이름 and r[6] for r in 결과)
+            if not 건너뜀70:
+                알림(f"모듈 {이름} (sm_70)", False, "만들지 못했다 — 그 모듈의 소스 · PTX 단계를 보라")
+            continue
+        h, 오류70 = 결과70[이름]
+        새줄70.append(f"{이름} | {h or '?'}")
+        if 오류70:
+            알림(f"모듈 {이름} (sm_70)", False, 오류70)
+        elif 갱신:
+            알림(f"모듈 {이름} (sm_70)", True, "해시를 새로 적음")
+        else:
+            알림(f"모듈 {이름} (sm_70)", h == 옛, "PTX 같음 · 8.0 전용 명령 없음" if h == 옛 else f"PTX 다름 — 새 해시 {h} (일부러 바꿨다면 --해시갱신)")
+    if 표70:
+        경로70 = os.path.join(ROOT, "시험", "모듈해시70.txt")
+        머리70 = [줄 for 줄 in open(경로70, encoding="utf-8") if 줄.startswith("#")]
+        내용70 = "".join(머리70) + "\n".join(새줄70) + "\n"
+        open(os.path.join(출력, "모듈해시70.txt"), "w", encoding="utf-8", newline="\n").write(내용70)
+        if 갱신 and all(not r[4] for r in 결과) and all(not v[1] for v in 결과70.values()):
+            open(경로70, "w", encoding="utf-8", newline="\n").write(내용70)
+            print("시험/모듈해시70.txt 를 새 해시로 고쳤다", flush=True)
     머리 = [줄 for 줄 in open(os.path.join(ROOT, "시험", "모듈해시.txt"), encoding="utf-8") if 줄.startswith("#")]
     내용 = "".join(머리) + "\n".join(새줄) + "\n"
     open(os.path.join(출력, "모듈해시.txt"), "w", encoding="utf-8", newline="\n").write(내용)

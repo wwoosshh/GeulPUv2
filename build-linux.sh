@@ -19,6 +19,8 @@
 #   bin/kernel-gen qwen2 K 3584 28 4 18944 152064 qwen2K_3584x28x4x18944x152064.gl --fast --KV8 --F2
 #   bin/ptx-backend qwen2K_3584x28x4x18944x152064.gl -o qwen2K_3584x28x4x18944x152064.ptx
 #   bin/server-cuda model.gguf --slots 4 --ctx 4096 --port 8080        # English names are aliases of the Korean ones: see --help
+# On an NVIDIA card with compute capability 7.x (Tesla V100 · T4, RTX 20, GTX 16 — no integer tensor-product instruction), add
+# `--target sm_70` to the ptx-backend line: the module is then built with replacement instructions (same values, slower prompts).
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 GEUL=${1:-$HERE/../geul-lang-v2}
