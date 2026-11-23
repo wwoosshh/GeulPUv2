@@ -10,6 +10,7 @@
 6 · 8 · 16(무작위 캐시)에서 조각어텐션256 과.
 2026-10-25 속도 S5 — 프롬프트의 어텐션256텐서둘(같은 셈 — 짝이 키를 반씩 · 점수 블록 고리)도 프롬프트 경우들에서 CPU 참조 · 옛 판과, 그리고
 긴 프롬프트의 덩이(최대길이 32,768 의 무작위 캐시 — 덩이의 마지막 키 뒤는 넘는 지수)에서 어텐션256텐서 와.
+2026-11-23 속도 S9 — 프롬프트의 어텐션256텐서셋(같은 셈 — 키 · 값 사분을 버퍼 둘에 번갈아)도 같은 프롬프트 경우들에서(모듈에 있으면).
 
   python -I 시험/머리256.py <ptx> <output.json> [--행 300] [--덩이 0] [--빠른]
 --행: 토큰 수(1024 를 넘으면 묶음이 둘 — 두 층 병합). --덩이 n: 앞 덩이의 행 수(0 이면 반). --빠른: 모듈이 --빠른(실수자리로 가 자리 하나).
@@ -70,6 +71,17 @@ def main():
         rr = dr.cu.cuLaunchKernel(fn[이름], grid[0], grid[1], 1, block, 1, 1, 0, None, args, None)
         assert rr == 0, (이름, rr)
 
+    def 함수있음(이름):
+        """모듈에 그 커널이 있는가(2026-11-23 속도 S9 의 어텐션256텐서셋 — 그 앞의 모듈에는 없다)"""
+        try:
+            if 이름 not in fn:
+                fn[이름] = dr.함수(mod, 이름)
+            return True
+        except Exception:  # noqa: BLE001 — 없는 커널
+            return False
+
+    셋있음 = 함수있음("어텐션256텐서셋")
+
     def up(x):
         b = np.ascontiguousarray(x).tobytes()
         p = dr.할당(len(b))
@@ -115,12 +127,15 @@ def main():
 
     def 어텐션(n, 시작, pqd, pqE, pkd, pkE, pvd, pvE, po, 길이=None, 텐서=False):
         """프롬프트 판 — 텐서 = 거짓: 어텐션256묶음(옛 판), 참: 어텐션256텐서(2026-10-25 속도 S2 — 텐서 코어, 질의 32 블록),
-        "둘": 어텐션256텐서둘(2026-10-25 속도 S5 — 같은 셈, 짝이 키를 반씩) → 접기256"""
+        "둘": 어텐션256텐서둘(2026-10-25 속도 S5 — 같은 셈, 짝이 키를 반씩), "셋": 어텐션256텐서셋(2026-11-23 속도 S9 — 같은 셈, 키 · 값
+        사분을 버퍼 둘에 번갈아) → 접기256"""
         길이 = 길이 or 최대길이
         묶음수_ = (길이 + 1023) // 1024
         p묶 = dr.할당(n * H * 묶음수_ * 260 * 4)
         인자 = [(1, pqd), (1, pqE), (1, pkd), (1, pkE), (1, pvd), (1, pvE), (1, p묶), (0, n), (0, H), (0, HKV), (0, 시작), (0, 길이)]
-        if 텐서 == "둘":
+        if 텐서 == "셋":
+            띄우기("어텐션256텐서셋", (H * 묶음수_, (n + 31) // 32), 128, 인자)
+        elif 텐서 == "둘":
             띄우기("어텐션256텐서둘", (H * 묶음수_, (n + 31) // 32), 128, 인자)
         elif 텐서:
             띄우기("어텐션256텐서", (H * 묶음수_, (n + 31) // 32), 128, 인자)
@@ -199,15 +214,20 @@ def main():
     po텐, po둘 = dr.할당(T * H * HD * 4), dr.할당(T * H * HD * 4)
     어텐션(T, 0, pqd, pqE, pkd, pkE, pvd, pvE, po텐, 텐서=True)
     어텐션(T, 0, pqd, pqE, pkd, pkE, pvd, pvE, po둘, 텐서="둘")
+    if 셋있음:
+        po셋 = dr.할당(T * H * HD * 4)
+        어텐션(T, 0, pqd, pqE, pkd, pkE, pvd, pvE, po셋, 텐서="셋")
     dr.맞추기()
     다텐 = {"어텐션 O / L": 다른칸(down(po텐, (T, H * HD)), o참), "어텐션 O / L — 둘째 판": 다른칸(down(po둘, (T, H * HD)), o참)}
+    if 셋있음:
+        다텐["어텐션 O / L — 셋째 판"] = 다른칸(down(po셋, (T, H * HD)), o참)
     결과["경우"].append({"경우": f"한 번에({T} 행) — 텐서 코어 판", "다른 칸": 다텐})
     print("한 번에 · 텐서:", 다텐, flush=True)
 
     # ---- GPU: 덩이 둘(앞 덩이의 키 · 값을 캐시에) ----
     pkd2, pkE2 = dr.할당(2 * HKV * 최대길이 * HD), dr.할당(HKV * 최대길이 * 8 * 8)
     pvd2, pvE2 = dr.할당(2 * HKV * 최대길이 * HD), dr.할당(HKV * 최대길이 * 8 * 8)
-    os_, os텐, os둘 = [], [], []
+    os_, os텐, os둘, os셋 = [], [], [], []
     for s0, s1 in ((0, T1), (T1, T)):
         n = s1 - s0
         pq2 = up(qkv[s0:s1])
@@ -217,12 +237,19 @@ def main():
         어텐션(n, s0, pqd2, pqE2, pkd2, pkE2, pvd2, pvE2, po2)
         어텐션(n, s0, pqd2, pqE2, pkd2, pkE2, pvd2, pvE2, po2텐, 텐서=True)
         어텐션(n, s0, pqd2, pqE2, pkd2, pkE2, pvd2, pvE2, po2둘, 텐서="둘")
+        if 셋있음:
+            po2셋 = dr.할당(n * H * HD * 4)
+            어텐션(n, s0, pqd2, pqE2, pkd2, pkE2, pvd2, pvE2, po2셋, 텐서="셋")
         dr.맞추기()
         os_.append(down(po2, (n, H * HD)))
         os텐.append(down(po2텐, (n, H * HD)))
         os둘.append(down(po2둘, (n, H * HD)))
+        if 셋있음:
+            os셋.append(down(po2셋, (n, H * HD)))
     다2 = {"어텐션 O / L": 다른칸(np.concatenate(os_), o참), "어텐션 O / L — 텐서 코어 판": 다른칸(np.concatenate(os텐), o참),
           "어텐션 O / L — 둘째 판": 다른칸(np.concatenate(os둘), o참)}
+    if 셋있음:
+        다2["어텐션 O / L — 셋째 판"] = 다른칸(np.concatenate(os셋), o참)
     결과["경우"].append({"경우": f"덩이 둘({T1} · {T - T1} 행)", "다른 칸": 다2})
     print("덩이 둘:", 다2, flush=True)
 
@@ -333,8 +360,13 @@ def main():
         poa, pob = dr.할당(n5 * H * HD * 4), dr.할당(n5 * H * HD * 4)
         어텐션(n5, s5, pq5, pE5, pkd5, pkE6, pvd5, pvE6, poa, 길이4, 텐서=True)
         어텐션(n5, s5, pq5, pE5, pkd5, pkE6, pvd5, pvE6, pob, 길이4, 텐서="둘")
+        if 셋있음:
+            poc = dr.할당(n5 * H * HD * 4)
+            어텐션(n5, s5, pq5, pE5, pkd5, pkE6, pvd5, pvE6, poc, 길이4, 텐서="셋")
         dr.맞추기()
         다7[f"덩이 {n5} 행(위치 {s5} …) — 둘째 판 ↔ 텐서 코어 판"] = 다른칸(down(pob, (n5, H * HD)), down(poa, (n5, H * HD)))
+        if 셋있음:
+            다7[f"덩이 {n5} 행(위치 {s5} …) — 셋째 판 ↔ 텐서 코어 판"] = 다른칸(down(poc, (n5, H * HD)), down(poa, (n5, H * HD)))
     결과["경우"].append({"경우": f"긴 프롬프트의 덩이(최대길이 {길이4} — 무작위 캐시, 판끼리)", "다른 칸": 다7})
     print("긴 프롬프트의 덩이:", 다7, flush=True)
 
