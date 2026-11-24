@@ -85,6 +85,22 @@
    "quants": [
     "K"
    ]
+  },
+  {
+   "name": "inkling2_loop",
+   "vulkan_reason": "Inkling 2는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
+   "exact_only": true,
+   "quants": [
+    "Q8_0"
+   ]
+  },
+  {
+   "name": "inkling2",
+   "vulkan_reason": "Inkling 2는 아직 CUDA(NVIDIA GPU)에서만 실행합니다.",
+   "exact_only": true,
+   "quants": [
+    "Q8_0"
+   ]
   }
  ],
  "rows": [
