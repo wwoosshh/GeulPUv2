@@ -36,8 +36,13 @@ def main():
             몸["tools"] = [도구표[t] for t in c["tools"]]
         if c.get("tool_choice"):
             몸["tool_choice"] = c["tool_choice"]
+        kw = dict(c.get("chat_template_kwargs") or {})               # 0.25.0 25-2 — 경우의 틀 인자 · reasoning_effort 도 서버에
         if 생각끔:
-            몸["chat_template_kwargs"] = {"enable_thinking": False}
+            kw["enable_thinking"] = False
+        if kw:
+            몸["chat_template_kwargs"] = kw
+        if "reasoning_effort" in c:
+            몸["reasoning_effort"] = c["reasoning_effort"]
         코드, 답 = post(주소, "/tokenize", 몸)
         기대 = 참조[c["id"]]
         if isinstance(기대, dict):
