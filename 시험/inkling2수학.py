@@ -84,9 +84,9 @@ class 모델:
         구조 = self.구조 = m["general.architecture"]
         assert 구조 in ("inkling2_loop", "inkling2"), 구조
         k = lambda x, d=None: m.get(구조 + "." + x, d)               # noqa: E731
-        self.L, self.D, self.H = k("block_count"), k("embedding_length"), k("attention.head_count")
-        hkv = k("attention.head_count_kv")
-        self.Hkv = list(hkv) if isinstance(hkv, (list, tuple)) else [hkv] * self.L
+        self.L, self.D = k("block_count"), k("embedding_length")
+        층마다 = lambda v: list(v) if isinstance(v, (list, tuple)) else [v] * self.L    # noqa: E731 — 실제 파일은 머리 수를 층마다의 배열로 적는다
+        self.Hs, self.Hkv = 층마다(k("attention.head_count")), 층마다(k("attention.head_count_kv"))
         self.hd = {False: k("attention.key_length"), True: k("attention.key_length_swa", k("attention.key_length"))}
         self.eps = float(k("attention.layer_norm_rms_epsilon"))
         self.swa = [bool(x) for x in k("attention.sliding_window_pattern")]
@@ -143,7 +143,7 @@ class 모델:
         return (y + s) / math.sqrt(n * (2 if a is not None else 1) + 1)
 
     def 층(self, l, x, 블록들, τ, 메시지=None):
-        g, T, H = self.g, x.shape[0], self.H
+        g, T, H = self.g, x.shape[0], self.Hs[l]
         s = self.swa[l]
         Hk, hd = self.Hkv[l], self.hd[s]
         b = f"blk.{l}."

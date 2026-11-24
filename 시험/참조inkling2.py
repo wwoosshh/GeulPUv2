@@ -38,10 +38,10 @@ def 설정(g):
     assert 구조 in ("inkling2_loop", "inkling2"), 구조
     k = lambda x, d=None: m.get(구조 + "." + x, d)                       # noqa: E731
     L = k("block_count")
-    hkv = k("attention.head_count_kv")
+    층마다 = lambda v: list(v) if isinstance(v, (list, tuple)) else [v] * L    # noqa: E731 — 실제 파일은 머리 수를 층마다의 배열로 적는다
     hd = k("attention.key_length")
-    s = {"구조": 구조, "층": L, "너비": k("embedding_length"), "머리": k("attention.head_count"),
-         "KV머리": list(hkv) if isinstance(hkv, (list, tuple)) else [hkv] * L,
+    s = {"구조": 구조, "층": L, "너비": k("embedding_length"), "머리": 층마다(k("attention.head_count")),
+         "KV머리": 층마다(k("attention.head_count_kv")),
          "헤드": {False: hd, True: k("attention.key_length_swa", hd)},
          "윈도층": [bool(x) for x in k("attention.sliding_window_pattern")], "창": k("attention.sliding_window"),
          "eps": float(k("attention.layer_norm_rms_epsilon")), "R": k("attention.relative_length"),
@@ -97,7 +97,7 @@ def 헤드어텐션(q, k, v, s, swa, H, Hk, hd, 표, t):
 
 
 def 층(g, s, l, x, 블록들, τ, 메시지=None):
-    T, D, H, eps = x.shape[0], s["너비"], s["머리"], s["eps"]
+    T, D, H, eps = x.shape[0], s["너비"], s["머리"][l], s["eps"]
     swa = s["윈도층"][l]
     Hk, hd, R = s["KV머리"][l], s["헤드"][swa], s["R"]
     p = f"blk.{l}."

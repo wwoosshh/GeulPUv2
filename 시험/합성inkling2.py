@@ -52,7 +52,7 @@ def 키들():
         ("general.architecture", 8, 구조), ("general.name", 8, "inkling2-loop-synthetic"), ("general.alignment", 4, 32),
         u32("context_length", 256), u32("embedding_length", D), u32("block_count", L), u32("feed_forward_length", F),
         u32("expert_feed_forward_length", F), u32("expert_count", E), u32("expert_used_count", K), f("expert_weights_scale", 2.5),
-        u32("attention.head_count", H), u32("attention.head_count_kv", HKV),
+        (p + "attention.head_count", 9, (4, [H] * L)), (p + "attention.head_count_kv", 9, (4, [HKV] * L)),   # 실제 파일처럼 층마다의 배열
         u32("attention.key_length", HD), u32("attention.value_length", HD),
         u32("attention.key_length_swa", HD), u32("attention.value_length_swa", HD),
         f("attention.layer_norm_rms_epsilon", 1e-6),
