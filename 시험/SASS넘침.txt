@@ -1030,3 +1030,6 @@ deepseek2KW16_2048x32x1x6144x128256_MLA0K | 정수타일선형_그룹_Q4_K | 24
 deepseek2KW16_2048x32x1x6144x128256_MLA0K | 정수타일선형_잔차_Q4_K | 24
 deepseek2KW16_2048x32x1x6144x128256_MLA0K | 타일어텐션MLA | 1128
 deepseek2KW16_2048x32x1x6144x128256_MLA0K | 타일어텐션MLA둘 | 872
+inkling2Q8_2304x24x8x1152x201024 | 정수어텐션묶음 | 1092
+inkling2Q8_2304x24x8x1152x201024 | 정수어텐션묶음칸 | 1092
+inkling2Q8_2304x24x8x1152x201024 | 타일어텐션잉클링128 | 292
