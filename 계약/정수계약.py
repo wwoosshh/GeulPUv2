@@ -245,13 +245,15 @@ def 점수눈금(hd):
     return f32(0.125) if hd == 64 else f32(1.0 / np.sqrt(np.float64(hd)))
 
 
-def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None, 창=None):
+def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None, 창=None, 편향=None, 범위=0):
     """행 Rr(위치 — 모두 시작 이상)의 키 조각 [시작, 시작 + 64) 몫 (m, l, o) — 9단계 계약의 1~4(점수 · 최댓값 · 적힌지수 · 합 · e′ 자리 ·
     가중합). 헤드 크기 hd = nq 의 열 수(64 · 128 — 블록 hd/32 개를 b 오름차순으로, 22단계). 8비트 KV(③b-2 — 계약 F1A′)면 nk · nv 가 8비트
     정수이고 Pk · Pv 가 fp32 스케일이라, 그 곱(점수의 곱 · FMA, e′)마다 반올림 하나 — 식과 차례는 같다.
     0.12.0 12-3b — 눈금: 점수 스케일(없으면 점수눈금(hd)). 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 스케일을 준다.
     0.12.0 12-3h — 창: 슬라이딩 윈도(계약 4.12 — Gemma 4) — (행 위치 − 키 위치) ≥ 창 인 키도 가린다.
-    0.24.0 24-2 — 값의 폭(nv 의 열 수)이 키와 다를 수 있다(계약 4.13 — MLA: 키 576 · 값 512). 점수는 키의 블록, 가중합은 값의 블록."""
+    0.24.0 24-2 — 값의 폭(nv 의 열 수)이 키와 다를 수 있다(계약 4.13 — MLA: 키 576 · 값 512). 점수는 키의 블록, 가중합은 값의 블록.
+    0.25.0 25-1 — 편향(계약 4.15 — Inkling 2 의 상대 위치 편향): 이 헤드의 표 [n][범위] 가 있으면 점수의 눈금 곱 대신 s ← 곱해더하기(s, 눈금, β)
+    (β = 편향[행][행 위치 − 키 위치] — 0 ≤ 거리 < 범위, 그 밖은 +0). 없으면 앞의 계약 그대로."""
     hd = nq.shape[1]
     hv = nv.shape[1]
     keys = np.arange(시작, min(시작 + 64, n))
@@ -265,7 +267,14 @@ def _조각몫(nq, nk, nv, Pq, Pk, Pv, Rr, 시작, n, 눈금=None, 창=None):
         u = (nq[Rr][:, sl] @ nk[keys][:, sl].T).astype(f32)        # 정확한 정수 합 → 반올림 하나
         부분 = 곱(u, Pq[Rr, b][:, None])                            # 정확
         s = 곱(부분, Pk[keys, b][None, :]) if b == 0 else fma32(부분, np.broadcast_to(Pk[keys, b][None, :], 부분.shape), s)
-    s = 곱(s, 점수눈금(hd) if 눈금 is None else f32(눈금))
+    c = 점수눈금(hd) if 눈금 is None else f32(눈금)
+    if 편향 is None:
+        s = 곱(s, c)
+    else:                                                           # 0.25.0 25-1 — 계약 4.15: 상대 위치 편향
+        거리 = Rr[:, None] - keys[None, :]
+        안 = (거리 >= 0) & (거리 < 범위)
+        β = np.where(안, np.asarray(편향, f32)[Rr[:, None], np.clip(거리, 0, 범위 - 1)], f32(0)).astype(f32)
+        s = fma32(s, np.broadcast_to(c, s.shape), β)
     s = np.where(valid, s, f32(-3.0e38)).astype(f32)
     # 2. 최댓값 · 지수
     m = s.max(1)
@@ -299,7 +308,7 @@ def _접기(M, L, O, m, l, o):
     return M2, fma32(l, 나, 곱(L, 가)), fma32(o, 나[:, None], 곱(O, 가[:, None]))
 
 
-def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None, 창=None):
+def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None, 창=None, 편향=None, 범위=0, 싱크=None):
     """머리 하나의 어텐션(원인 가림, × 점수눈금(hd) — 머리 64 는 0.125) — 정수 KV 계약의 참조. q · k · v [n][hd] 짧은실수(hd 64 · 128) →
     출력 [n − 첫행][hd] 짧은실수(O / L).
     프롬프트 판(mma)과 생성 판(dp4a) 모두와 비트까지 같아야 한다(9a).
@@ -309,8 +318,11 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None, 창=None):
     첫행: 이 행부터만 계산한다(긴 문맥의 짧은 덩이 대조 — 앞 행은 건너뛴다; 값은 모든 행을 계산할 때의 그 행과 같다).
     눈금: 0.12.0 12-3b — 점수 스케일(없으면 점수눈금(hd)) — 헤드를 32 의 배수로 0 을 채웠을 때 실제 헤드 크기의 fp32(1/√h).
     창: 0.12.0 12-3h — 슬라이딩 윈도(계약 4.12): (행 위치 − 키 위치) ≥ 창 인 키도 가린다. 행마다 그 행이 보는 키가 하나도 없는 조각 · 묶음은
-    건너뛰고, 행이 보는 키가 있는 첫 조각 · 첫 묶음이 그 행의 처음 값이다(창이 없으면 언제나 묶음의 첫 조각 · 첫 묶음 — 앞의 계약 그대로)."""
+    건너뛰고, 행이 보는 키가 있는 첫 조각 · 첫 묶음이 그 행의 처음 값이다(창이 없으면 언제나 묶음의 첫 조각 · 첫 묶음 — 앞의 계약 그대로).
+    편향 · 범위: 0.25.0 25-1 — 이 헤드의 상대 위치 편향 표 [n][범위](계약 4.15 — _조각몫 의 점수). 싱크: 0.25.0 25-1 — 행마다 싱크 로짓 t [n]
+    (계약 4.15 — 값이 0 인 키 하나): 묶음끼리의 접기의 처음 값이 (M, L, O) = (t, 1, 0) 이고, 모든 묶음(첫 묶음도)을 그 상태에 차례로 접는다."""
     if F2:                                                          # GeulPUv2 빠른 어텐션 F2(시험용)
+        assert 편향 is None and 싱크 is None, "빠른 어텐션 F2 에는 편향 · 싱크가 없다"
         return 어텐션F2(q, k, v, 조각, 묶음, 첫행)
     q, k, v = (np.asarray(x, f32) for x in (q, k, v))
     n = q.shape[0]
@@ -333,6 +345,10 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None, 창=None):
             ok &= (R - np.minimum(b - 1, R)) < 창
         return ok
     처음 = np.ones(len(R_), bool)                                     # 아직 처음 값이 없는 행
+    if 싱크 is not None:                                             # 0.25.0 25-1 — 계약 4.15: 싱크가 처음 값
+        M = np.asarray(싱크, f32)[R_].copy()
+        L = np.ones(len(R_), f32)
+        처음[:] = False
     for g0 in range(0, n, 폭):
         g1 = min(g0 + 폭, n)
         selg = 보임(R_, g0, g1)                                       # 이 묶음에 보는 키가 있는 행
@@ -347,7 +363,7 @@ def 어텐션(q, k, v, 조각=64, 묶음=16, 첫행=0, 눈금=None, 창=None):
             sel = 보임(Rg, 시작, min(시작 + 조각, n))
             if not sel.any():
                 continue
-            m, l, o = _조각몫(nq, nk, nv, Pq, Pk, Pv, Rg[sel], 시작, n, 눈금, 창)
+            m, l, o = _조각몫(nq, nk, nv, Pq, Pk, Pv, Rg[sel], 시작, n, 눈금, 창, 편향, 범위)
             idx = np.nonzero(sel)[0]
             첫 = 처음g[idx]                                          # 이 행이 보는 첫 조각 — 처음 값
             Mg[idx[첫]], Lg[idx[첫]], Og[idx[첫]] = m[첫], l[첫], o[첫]
@@ -1398,3 +1414,128 @@ def J곱(J, x):
     if not 비정규수버림:
         return s.astype(f32)
     return np.where(np.abs(s) < _문턱, np.copysign(0.0, s), s).astype(f32)
+
+
+# ── 0.25.0 25-1 — 계약 4.15: Inkling 2(구조 inkling2_loop · inkling2 — 문서/0.25.0.md) ───────────────────────────────────────────────
+# 블록 어텐션 잔차 · 층 반복의 제어 · 짧은 합성곱(정적 · 동적 탭) · L2 노름 클리핑 · 로그 스케일 τ · 상대 위치 편향 · 어텐션 싱크(어텐션 의
+# 편향 · 싱크) · SITU. 행렬곱은 1 절(F32 행렬 — 블록 어텐션 잔차의 질의 · 반복 제어 · 라우터는 1.3 의 16비트 블록), 그 밖은 짧은실수 연산
+# (규칙 R)의 차례를 정한다.
+
+def 역제곱근상수(n):
+    """계약 4.15 — fp32(1 / √n) 을 1 ÷ 제곱근(짧은실수(n)) 으로(연산마다 IEEE 바른 반올림 — 라우터배율 과 같은 식): 짧은 합성곱의 √5 · √9,
+    블록 어텐션 잔차의 √너비."""
+    return 나눔(f32(1), 제곱근(f32(n)))
+
+
+def L2클립(x, c, hd):
+    """계약 4.15 — 헤드(hd 칸)마다 L2 노름 클리핑 x · min(1, c / (‖x‖ + 10⁻⁶)): S = 가닥합(rms정규화 와 같은 가닥 · 접기), 노름 = 제곱근(S),
+    d = 노름 + fp32(10⁻⁶), f = fp32(c) / d, f ← min(f, 1)(정확), y = x · f(곱 하나 — f = 1 이면 그대로). x [행][헤드 · hd]."""
+    x = np.asarray(x, f32)
+    n_, A = x.shape
+    y = x.reshape(n_ * (A // hd), hd)
+    d = 더(제곱근(_가닥합(y)), f32(1e-6))
+    f = np.minimum(나눔(f32(c), d), f32(1)).astype(f32)
+    return 곱(y, f[:, None]).reshape(n_, A)
+
+
+def 로그(x):
+    """계약 4.15 — ln x(x ≥ 1, 짧은실수): x = m · 2^k(m ∈ [1, 2) — 정확), L = 로그1p(m − 1)(4.10 의 식 — m − 1 은 정확),
+    결과 = 곱해더하기(k, ln2_hi, 곱해더하기(k, ln2_lo, L))(ln2_hi 의 가수는 16 비트라 k · ln2_hi 는 정확)."""
+    x = np.asarray(x, f32)
+    assert (x >= 1).all(), "로그 는 x ≥ 1"
+    m, e = np.frexp(x.astype(np.float64))                         # x = m · 2^e, m ∈ [0.5, 1)
+    k = (e - 1).astype(f32)
+    L = 로그1p(빼기((m * 2).astype(f32), f32(1)))
+    return fma32(k, np.broadcast_to(_L["ln2_hi"], k.shape), fma32(k, np.broadcast_to(_L["ln2_lo"], k.shape), L))
+
+
+def 로그스케일(위치, 바닥, 알파):
+    """계약 4.15 — 전체 어텐션 층의 τ(위치) = 1 + α · ln(max(1, (위치 + 1) / 바닥)): u = fp32(위치 + 1) / fp32(바닥)(나눗셈 하나 — 바닥이 2 의
+    거듭제곱이면 정확), u ≤ 1 이면 τ = 1, 아니면 τ = 곱해더하기(fp32(α), 로그(u), 1). 위치 [n](정수, 2²⁴ 미만) → τ [n]. 위치만의 함수라
+    엔진은 RoPE 표처럼 호스트에서 짓는다."""
+    위 = np.asarray(위치, np.int64)
+    assert 위.size == 0 or 위.max() < 2 ** 24
+    u = 나눔((위 + 1).astype(f32), f32(바닥))
+    τ = np.ones(u.shape, f32)
+    큼 = u > 1
+    if 큼.any():
+        τ[큼] = fma32(np.broadcast_to(f32(알파), int(큼.sum())), 로그(u[큼]), np.ones(int(큼.sum()), f32))
+    return τ
+
+
+def 상대편향표(r, W):
+    """계약 4.15 — 상대 위치 편향의 표: 행 · 헤드마다 거리 d(0 … 범위 − 1)의 β_d = Σ_k r_k · W[d][k] 를 k 오름차순의 곱해더하기 체인으로
+    (β = r₀ · W[d][0](곱), β ← 곱해더하기(r_k, W[d][k], β)). r [행][헤드][R](클리핑 · τ 뒤), W [범위][R](파일의 F32 값 그대로) → [행][헤드][범위]."""
+    r, W = np.asarray(r, f32), np.asarray(W, f32)
+    b = 곱(r[:, :, 0:1], W[None, None, :, 0])
+    for k in range(1, r.shape[2]):
+        b = fma32(np.broadcast_to(r[:, :, k:k + 1], b.shape), np.broadcast_to(W[None, None, :, k], b.shape), b)
+    return b
+
+
+def 블록섞기(상태들, x, Qn, QE, eps=1e-6):
+    """계약 4.15 — 블록 어텐션 잔차: S = [상태들 …, x](만든 차례, x 가 끝)마다 Ŝ_s = RMSNorm0(S_s)(4.1 — 무게 1), 점수 z_(s,j) = Ŝ_s · Q_j(1 절 —
+    질의 Q [nq][D] 는 1.3 의 16비트 블록 (Qn, QE)), z ← z · c_D(c_D = 역제곱근상수(D) — 곱 하나), 상태끼리 softmax: m = max_s z, e_s = 적힌지수(z_s − m),
+    합 = e₀ + e₁ + …(상태 차례), p_s = e_s / 합. 출력 o_j = p₀ · Ŝ₀(곱) 그다음 상태 차례로 o_j ← 곱해더하기(p_s, Ŝ_s, o_j).
+    상태 [행][D] 의 목록 · x [행][D] → [행][nq][D]."""
+    S = [np.asarray(s, f32) for s in list(상태들) + [x]]
+    T, D = S[0].shape
+    one = np.ones(D, f32)
+    Sh = [rms정규화(s, one, eps) for s in S]
+    nq = Qn.shape[0]
+    c = 역제곱근상수(D)
+    z = np.stack([곱(행렬곱16(s, Qn, QE, np.zeros(nq, f32)), c) for s in Sh])     # [상태][행][nq]
+    e = 적힌지수(빼기(z, z.max(0)[None]))
+    합 = e[0]
+    for s in range(1, len(S)):
+        합 = 더(합, e[s])
+    p = 나눔(e, 합[None])
+    o = 곱(p[0][:, :, None], Sh[0][:, None, :])
+    for s in range(1, len(S)):
+        o = fma32(np.broadcast_to(p[s][:, :, None], o.shape), np.broadcast_to(Sh[s][:, None, :], o.shape), o)
+    return o
+
+
+def 탄(x):
+    """계약 4.15 — tanh(x) = 2σ(2x) − 1 을 4.12 의 소프트캡(c = 1)으로: y = x · 2(정확), 결과 = 곱해더하기(2, σ(y), −1)."""
+    return 소프트캡(x, 1.0)
+
+
+def 반복제어(c, m, 아래, 이득, 잊기, eps=1e-6):
+    """계약 4.15 — 층 반복의 두 번째 패스부터 입력 c 와 메시지 m 을 섞는다: a = 아래 · [RMSNorm0(c) | RMSNorm0(m)](1 절), g = 탄(이득 · a),
+    f = 탄(잊기 · a), t = 곱해더하기(−f, c, c), 결과 = 곱해더하기(g, m, t). 아래 · 이득 · 잊기 는 1.3 의 16비트 블록 (n, E)."""
+    c, m = np.asarray(c, f32), np.asarray(m, f32)
+    one = np.ones(c.shape[1], f32)
+    a = 행렬곱16(np.concatenate([rms정규화(c, one, eps), rms정규화(m, one, eps)], 1), 아래[0], 아래[1], np.zeros(아래[0].shape[0], f32))
+    g = 탄(행렬곱16(a, 이득[0], 이득[1], np.zeros(이득[0].shape[0], f32)))
+    f = 탄(행렬곱16(a, 잊기[0], 잊기[1], np.zeros(잊기[0].shape[0], f32)))
+    return fma32(g, m, fma32(-f, c, c))
+
+
+def 짧은합성곱(y, w, 상태=None, 동적=None, 헤드=1):
+    """계약 4.15 — 짧은 인과 합성곱(탭 n)과 잔차: 정적 탭 w [채널][n](칸 0 이 가장 오래된 토큰 — 파일의 F32 값 그대로). 동적 탭 a [T][헤드 · n]
+    (lag 0 이 지금 토큰 — 1 절의 행렬곱)이 있으면 탭마다 w′_j = w_j + a_(n−1−j)(더하기 하나 — 채널은 그 헤드의 탭). 4.10 의 합성곱 체인
+    (s = w′₀ · y_(t−n+1), s ← 곱해더하기(w′_j, y_(t−n+1+j), s)), 결과 = (y_t + s) · c(c = 역제곱근상수(n · (동적이면 2) + 1)).
+    t 앞의 행은 상태(그 시퀀스의 앞 n − 1 행 — 처음 0). → (결과 [T][채널], 새 상태 [n − 1][채널])."""
+    y = np.asarray(y, f32)
+    T, Cn = y.shape
+    w = np.asarray(w, f32)
+    n = w.shape[1]
+    yp = np.concatenate([np.zeros((n - 1, Cn), f32) if 상태 is None else np.asarray(상태, f32), y], 0)
+    ww = np.broadcast_to(w[None], (T, Cn, n))
+    if 동적 is not None:
+        a = np.asarray(동적, f32).reshape(T, 헤드, n)[:, :, ::-1]
+        ww = 더(ww, np.repeat(a, Cn // 헤드, axis=1))
+    s = 곱(ww[:, :, 0], yp[0:T])
+    for j in range(1, n):
+        s = fma32(np.ascontiguousarray(ww[:, :, j]), yp[j:j + T], s)
+    c = 역제곱근상수(n * (2 if 동적 is not None else 1) + 1)
+    return 곱(더(y, s), c), yp[T:T + n - 1].copy()
+
+
+def SITU(g, u, 베타, 선베타):
+    """계약 4.15 — 전문가의 활성 SITU = β tanh(g/β) σ(g) · λ tanh(u/λ): a = 소프트캡(g, β)(4.12 의 식), s = a · σ(g)(곱 하나 — σ 는 4.9),
+    b = 소프트캡(u, λ)(λ ≤ 0 이면 u 그대로), 결과 = s · b(곱 하나). β · 2β · λ · 2λ 는 짧은실수로 정확해야 한다."""
+    s = 곱(소프트캡(g, 베타), 시그모이드(g))
+    b = 소프트캡(u, 선베타) if 선베타 > 0 else np.asarray(u, f32)
+    return 곱(s, b)

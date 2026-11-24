@@ -134,8 +134,12 @@ def 텐서들(씨앗):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
+    global E, K
     출력 = sys.argv[1]
     씨앗 = int(sys.argv[sys.argv.index("--seed") + 1]) if "--seed" in sys.argv else 7
+    if "--experts" in sys.argv:                                    # 전문가 수 · 고름 수(라우팅이 갈리지 않는 경우 — 전문가 2 중 2 — 의 비교용)
+        E = int(sys.argv[sys.argv.index("--experts") + 1])
+        K = int(sys.argv[sys.argv.index("--used") + 1]) if "--used" in sys.argv else min(K, E)
     b = W.짓기(키들(), 텐서들(씨앗), 32)
     with open(출력, "wb") as f:
         f.write(b)
