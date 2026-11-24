@@ -521,6 +521,8 @@ def 참조시작(gguf, 모, 길, 출력):
             cmd = 파이썬("시험/참조gemma4.py", gguf, "--엔진", o, 결과, "--입력", os.path.join(출력, "입력.bin"))
         elif 모["구조"] == "deepseek2":              # 0.24.0 24-2 — 같은 꼴(--입력 의 토큰열 · '모두 0: True')
             cmd = 파이썬("시험/참조deepseek2.py", gguf, "--엔진", o, 결과, "--입력", os.path.join(출력, "입력.bin"))
+        elif 모["구조"] in ("inkling2_loop", "inkling2"):   # 0.25.0 25-4 — 같은 꼴(패딩한 어휘의 칸은 −∞ 여야 한다)
+            cmd = 파이썬("시험/참조inkling2.py", gguf, "--엔진", o, 결과, "--입력", os.path.join(출력, "입력.bin"))
         else:
             판("ref", f"CPU 참조 {이름}", None, f"구조 {모['구조']} 의 CPU 참조를 이 도구가 아직 모른다")
             continue

@@ -5,6 +5,9 @@
 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다(문서/0.25.0.md).
 
   python -I -X utf8 시험/참조inkling2.py <gguf> --수학 <폴더> <출력.json> [--일꾼 3] [--저장된]
+  python -I -X utf8 시험/참조inkling2.py <gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--입력 <시험_7B 의 입력 파일>] [--일꾼 4]
+
+--엔진 <폴더>(0.25.0 25-4): 시험_7B 의 출력(경우마다 모든 행의 로짓)과 이 순전파를 비트까지 — 패딩한 어휘의 칸은 −∞ 여야 한다.
 
 --수학 <폴더>: 시험/inkling2수학.py 의 토큰.json · 수학{i}.npy(fp64 의 이상적인 모델) · 라마{i}.npy(llama.cpp), 그리고 있으면 채팅 확인의
 채팅토큰.json · 채팅수학{i}.npy · 채팅라마{i}.npy 와 견준다 — 계약의 손실 KL(수학 ‖ 계약) · 1위 일치, 같은 자리의 KL(수학 ‖ llama.cpp).
@@ -204,9 +207,93 @@ def _일(인자들):
     return z, np.stack(라우팅기록)
 
 
+def 입력경우들(경로):
+    """시험_7B 의 입력 파일 — [최대길이][로짓행][경우 수], 경우마다 [p][n][잡기시작][토큰 p 개](8 바이트 정수) → [(p, n, 잡기, 프롬프트)]
+    (참조gemma4.py 의 것과 같다)"""
+    import struct
+    b = open(경로, "rb").read()
+    _, _, k = struct.unpack_from("<qqq", b, 0)
+    o, 경우 = 24, []
+    for _ in range(k):
+        p, n, 잡기 = struct.unpack_from("<qqq", b, o)
+        경우.append((p, n, 잡기, np.frombuffer(b, np.int64, p, o + 24).copy()))
+        o += 24 + 8 * p
+    return 경우
+
+
+def _앞만(인자들):
+    gguf, ids = 인자들
+    g = GR.GGUF(gguf)
+    return 앞으로(g, 설정(g), ids)
+
+
+def 엔진대조(gguf, 폴더, 출력, 입력=None, 일꾼=1):
+    """0.25.0 25-4 — 시험_7B 의 출력(경우마다 토큰열과 모든 행의 로짓 — 엔진의 로짓은 패딩한 어휘까지)을 계약의 순전파와 비트까지.
+    앞 vocab_size_unpadded 칸은 계약의 로짓과 같아야 하고, 패딩한 칸은 −∞ 여야 한다(로짓가리기잉클링). 잡기시작 뒤의 행만 남긴 경우
+    (경우{i}_뒤로짓.bin)는 --입력 의 프롬프트와 요약.txt 의 생성 토큰으로(참조gemma4.py 의 엔진대조 와 같은 꼴)."""
+    g = GR.GGUF(gguf)
+    s = 설정(g)
+    입력경우 = 입력경우들(입력) if 입력 else None
+    생성 = {}
+    요약 = os.path.join(폴더, "요약.txt")
+    if os.path.exists(요약):
+        for 줄 in open(요약, encoding="utf-8"):
+            w = 줄.split()
+            if len(w) > 2 and w[0] == "경우" and w[2] == "토큰":
+                생성[int(w[1])] = [int(t) for t in w[3:]]
+    경우, 구간, 파일, 번호 = [], [], [], []
+    i = 0
+    while True:
+        tp, bp = os.path.join(폴더, f"경우{i}_토큰.bin"), os.path.join(폴더, f"경우{i}_뒤로짓.bin")
+        if os.path.exists(tp):
+            S = np.fromfile(tp, np.int64)
+            경우.append(S), 구간.append((0, len(S))), 파일.append(os.path.join(폴더, f"경우{i}_로짓.bin")), 번호.append(i)
+        elif os.path.exists(bp) and 입력경우 is not None:
+            p, n, 잡기, 프롬프트 = 입력경우[i]
+            S = np.concatenate([프롬프트, np.asarray(생성[i][:n - 1], np.int64)])
+            경우.append(S), 구간.append((잡기, len(S))), 파일.append(bp), 번호.append(i)
+        elif os.path.exists(bp):
+            print(f"경우 {i}: 잡기시작 뒤의 로짓만 있다 — --입력 이 없어 건너뜀", flush=True)
+        else:
+            break
+        i += 1
+    print("경우", [(번호[k], len(S), 구간[k]) for k, S in enumerate(경우)], flush=True)
+    t0 = time.time()
+    if 일꾼 > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(일꾼) as ex:
+            로짓들 = list(ex.map(_앞만, [(gguf, S) for S in 경우]))
+    else:
+        로짓들 = [앞으로(g, s, S) for S in 경우]
+    V0 = s["어휘"]
+    결과 = {"gguf": os.path.basename(gguf), "모드": "정밀", "쓰는 어휘": int(V0), "경우": []}
+    for k in range(len(경우)):
+        a, b = 구간[k]
+        A = np.fromfile(파일[k], np.float32)
+        V = A.size // (b - a)
+        A = A.reshape(b - a, V)
+        R = 로짓들[k][a:b]
+        패딩 = int(np.count_nonzero(A[:, V0:] != -np.inf))
+        한 = {"경우": 번호[k], "토큰": len(경우[k]), "행": [int(a), int(b)], "다른 칸": R7.다른칸(np.ascontiguousarray(A[:, :V0]), R),
+             "칸": int((b - a) * V0), "패딩 칸이 −∞ 가 아님": 패딩, "행마다 다른 칸": [R7.다른칸(np.ascontiguousarray(A[j, :V0]), R[j]) for j in range(b - a)]}
+        결과["경우"].append(한)
+        print(f"경우 {번호[k]}: 행 {a} … {b - 1} — 다른 칸 {한['다른 칸']} / {한['칸']} · 패딩 칸 {V - V0} 가운데 −∞ 가 아닌 것 {패딩}", flush=True)
+    결과["CPU 참조 초"] = round(time.time() - t0, 1)
+    결과["모두 0"] = bool(결과["경우"]) and all(c["다른 칸"] == 0 and c["패딩 칸이 −∞ 가 아님"] == 0 for c in 결과["경우"])
+    print("모두 0:", 결과["모두 0"], flush=True)
+    json.dump(결과, open(출력, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     gguf = sys.argv[1]
+    일꾼e = int(sys.argv[sys.argv.index("--일꾼") + 1]) if "--일꾼" in sys.argv else 1
+    if "--엔진" in sys.argv:
+        폴더e = sys.argv[sys.argv.index("--엔진") + 1]
+        입력 = sys.argv[sys.argv.index("--입력") + 1] if "--입력" in sys.argv else None
+        남은 = [a for a in sys.argv[2:] if not a.startswith("--") and a not in (폴더e, 입력, str(일꾼e))]
+        엔진대조(gguf, 폴더e, 남은[0], 입력, 일꾼e)
+        return
     폴더, 출력 = sys.argv[sys.argv.index("--수학") + 1], sys.argv[sys.argv.index("--수학") + 2]
     일꾼 = int(sys.argv[sys.argv.index("--일꾼") + 1]) if "--일꾼" in sys.argv else 1
     채팅 = os.path.exists(os.path.join(폴더, "채팅토큰.json"))
