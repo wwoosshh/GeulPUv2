@@ -4,11 +4,13 @@
 (loop.start 2 · loop.end 6 · loop.count 3 — 원래 반복의 층이라 loop_msg_query · loop_*_ctrl_* 이 있다), 반복 뒤 둘. 블록 크기는 2 로 줄여
 (attn_res.block_size — 블록 시작 0 · 2 · 4 · 6) 블록 상태 · 은행(앞 패스의 블록 상태 하나와 출력) · 메시지의 길이 모두 돈다.
 
-  python -I 시험/작은inkling2.py <inkling2_loop gguf> <출력.gguf> [--층 0,5,6,11,12,17,18,23] [--반복 2,6,3] [--블록 2]
+  python -I 시험/작은inkling2.py <inkling2_loop gguf> <출력.gguf> [--층 0,5,6,11,12,17,18,23] [--반복 2,6,3] [--블록 2] [--전문가 16]
 
 - 메타데이터는 바이트 그대로 옮기고 block_count · 층마다의 배열(attention.head_count · head_count_kv · sliding_window_pattern — 남긴 층의
   칸만) · loop.start · loop.end · loop.count · attn_res.block_size · general.name 만 바꾼다(토크나이저 · 헤드 · 창 · 전문가 그대로).
-- 텐서: 낱말표 · 출력 · 끝의 정규화 · 질의는 그대로, 남긴 층의 텐서는 새 번호(0, 1, …)로 날 바이트 그대로(전문가 128 개 모두).
+- 텐서: 낱말표 · 출력 · 끝의 정규화 · 질의는 그대로, 남긴 층의 텐서는 새 번호(0, 1, …)로 날 바이트 그대로. --전문가 E(기본 16 —
+  파일과 CPU 참조를 줄인다)면 앞 E 개의 전문가만: ffn_gate_up_exps · ffn_down_exps · 라우터(ffn_gate_inp)의 앞 E 행 · exp_probs_b 의 앞 E 값,
+  expert_count = E(expert_used_count 는 그대로 — E 이하여야 한다).
 - 반복의 층(새 번호 [시작, 끝))은 원래 반복의 층이어야 한다(그 층에만 반복 제어의 텐서가 있다). 층 0 이 아닌 원래 층을 새 층 0 으로 두면
   그 층의 attn_res_query 는 쓰이지 않는다(새 층 0 은 질의가 없다 — 계약 4.15 의 3).
 값은 실제 모델의 것이지만 층을 줄여 말이 되지 않는다 — 엔진 · CPU 참조의 비트 비교에만 쓴다.
@@ -56,7 +58,7 @@ def 배열자르기(b, o, 층들):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    값깃발 = ("--층", "--반복", "--블록")
+    값깃발 = ("--층", "--반복", "--블록", "--전문가")
     위치 = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] not in 값깃발]
     원본, 출력 = 위치[:2]
     g = GR.GGUF(원본)
@@ -65,6 +67,9 @@ def main():
     층들 = [int(x) for x in sys.argv[sys.argv.index("--층") + 1].split(",")] if "--층" in sys.argv else [0, 5, 6, 11, 12, 17, 18, 23]
     시작, 끝, 패스 = [int(x) for x in sys.argv[sys.argv.index("--반복") + 1].split(",")] if "--반복" in sys.argv else (2, 6, 3)
     블록 = int(sys.argv[sys.argv.index("--블록") + 1]) if "--블록" in sys.argv else 2
+    E0 = g.meta[구조 + ".expert_count"]
+    E = int(sys.argv[sys.argv.index("--전문가") + 1]) if "--전문가" in sys.argv else 16
+    assert g.meta[구조 + ".expert_used_count"] <= E <= E0, (E, E0)
     L = g.meta[구조 + ".block_count"]
     s0, e0 = g.meta[구조 + ".loop.start"], g.meta[구조 + ".loop.end"]
     assert 층들 == sorted(층들) and len(set(층들)) == len(층들) and all(0 <= l < L for l in 층들), (층들, L)
@@ -77,8 +82,8 @@ def main():
     o = 24
     층배열 = tuple(구조 + x for x in 층배열끝)
     바꿈 = {구조 + ".block_count": len(층들), 구조 + ".loop.start": 시작, 구조 + ".loop.end": 끝, 구조 + ".loop.count": 패스,
-          구조 + ".attn_res.block_size": 블록}
-    이름글 = (f"{g.meta.get('general.name', 구조)} — 층 {','.join(map(str, 층들))} · 반복 [{시작}, {끝}) × {패스} · 블록 {블록}"
+          구조 + ".attn_res.block_size": 블록, 구조 + ".expert_count": E}
+    이름글 = (f"{g.meta.get('general.name', 구조)} — 층 {','.join(map(str, 층들))} · 반복 [{시작}, {끝}) × {패스} · 블록 {블록} · 전문가 {E}"
            " (시험/작은inkling2.py)")
     kv = []
     for _ in range(nkv):
@@ -105,10 +110,15 @@ def main():
                 continue
             새 = f"blk.{번호[l]}." + ".".join(이름.split(".")[2:])
         vb, bb = GR.블록[t]
+        dims = [int(d) for d in dims]
+        꼬리 = ".".join(이름.split(".")[2:]) if 이름.startswith("blk.") else 이름
+        if 꼬리 in ("ffn_gate_up_exps.weight", "ffn_down_exps.weight", "ffn_gate_inp.weight", "exp_probs_b.bias"):
+            assert dims[-1] == E0, (이름, dims)                   # 바깥 차원이 전문가 — 앞 E 개가 파일의 앞부분
+            dims[-1] = E
         n = 1
         for d in dims:
-            n *= int(d)
-        텐서.append((새, t, list(dims), 이름, n // vb * bb))
+            n *= d
+        텐서.append((새, t, dims, 이름, n // vb * bb))
     머리 = bytearray(b"GGUF" + struct.pack("<IQQ", 3, len(텐서), len(kv)))
     for k, t, raw in kv:
         머리 += 문자열(k) + struct.pack("<I", t) + raw
@@ -123,7 +133,7 @@ def main():
             _, _, raw = g.원(이름)
             f.write(raw.tobytes()[:n])
             f.write(b"\0" * ((-n) % 정렬))
-    print(f"{출력}: 층 {층들} → {len(층들)} 층 · 반복 [{시작}, {끝}) × {패스} · 블록 {블록} · 텐서 {len(텐서)} · "
+    print(f"{출력}: 층 {층들} → {len(층들)} 층 · 반복 [{시작}, {끝}) × {패스} · 블록 {블록} · 전문가 {E} · 텐서 {len(텐서)} · "
           f"{os.path.getsize(출력) / 2 ** 20:.0f} MiB", flush=True)
 
 
