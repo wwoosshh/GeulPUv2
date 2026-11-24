@@ -11,7 +11,7 @@ trim_blocks · lstrip_blocks · loopcontrols, tojson = json.dumps(ensure_ascii=F
 v0.3) 맨 앞 system 말을 첫 user 말 앞에 '<system>\n\n' 으로. 맥락: bos_token · eos_token(GGUF 의 번호의 글), date_string '26 Jul 2024',
 --생각끔 이면 enable_thinking 거짓. tools 는 서버가 그 호출 꼴을 읽는 틀만(Qwen <tool_call> JSON · Llama 3 JSON · Qwen3.5 · Coder XML ·
 MiniCPM XML · 0.13.0 Gemma 4 의 <|tool_call>call: · 0.24.0 글로 쓴 <tool_call> JSON · functionary 의 <function=이름> · GLM 의
-<arg_key> · <arg_value> — 아니면
+<arg_key> · <arg_value> · 0.25.0 Inkling 2 의 <|content_invoke_tool_json|> — 아니면
 서버는 400 이라 참조도 오류). 출력: {경우 id: 그린 글 | {"error": 까닭}}. 대조는 시험/채팅틀대조.py(GPU 없이 —
 엔진/시험_채팅틀.gl) · 시험/도구틀.py(서버로).
 """
@@ -21,8 +21,23 @@ import struct
 import sys
 
 import jinja2
-from jinja2.ext import loopcontrols
+from jinja2 import nodes
+from jinja2.ext import Extension, loopcontrols
 from jinja2.sandbox import ImmutableSandboxedEnvironment
+
+
+class 생성블록(Extension):
+    """0.25.0 25-2 — transformers 의 {% generation %} … {% endgeneration %}(assistant 말의 자리를 적는 확장 — AssistantTracker): 내용을
+    그대로 낸다(Inkling 2 의 틀이 쓴다). 서버의 jinja 해석기(엔진/진풀기.gl)도 그대로 낸다"""
+    tags = {"generation"}
+
+    def parse(self, parser):
+        줄 = next(parser.stream).lineno
+        몸 = parser.parse_statements(("name:endgeneration",), drop_needle=True)
+        return nodes.CallBlock(self.call_method("_그대로"), [], [], 몸).set_lineno(줄)
+
+    def _그대로(self, caller):
+        return caller()
 
 
 def gguf_meta(path, keys):
@@ -122,10 +137,15 @@ def 고치기(msgs, 인자글, 시스템받음):
 def 도구꼴(틀글, 앞꼴, 낱말):
     """서버의 틀도구꼴 — 1 Qwen <tool_call> JSON · 2 Llama 3 JSON · 3 Qwen3.5 · Coder XML · 4 MiniCPM XML · 5 Gemma 4(0.13.0) ·
     0.24.0 6 <tool_call> JSON 을 글로(어휘에 그 토큰이 없다) · 7 functionary v3.1 의 <function=이름> · 8 GLM-4.5 · 4.7 의
-    <tool_call>이름<arg_key>키</arg_key><arg_value>값</arg_value>… · 0 받지 않음"""
+    <tool_call>이름<arg_key>키</arg_key><arg_value>값</arg_value>… · 0.25.0 9 Inkling 2 의 호출 블록(<|content_invoke_tool_json|>) ·
+    0 받지 않음"""
     낱 = set(낱말 or [])
     꼴 = 0
-    if "<|tool_call>call:" in 틀글:
+    블록 = (all(t in 틀글 for t in ("<|message_model|>", "<|content_text|>", "<|end_message|>"))
+          and {"<|message_model|>", "<|content_thinking|>", "<|content_text|>", "<|end_message|>"} <= 낱)
+    if 블록 and "<|content_invoke_tool_json|>" in 틀글 and "<|content_invoke_tool_json|>" in 낱:
+        꼴 = 9                                      # 0.25.0 25-2 — Inkling 2 의 호출 블록(서버의 틀블록 · 틀도구꼴 9)
+    elif "<|tool_call>call:" in 틀글:
         꼴 = 5
     elif "<function=" in 틀글 and "<parameter=" in 틀글:
         꼴 = 3
@@ -163,7 +183,7 @@ def 참조들(gguf, 경우, 생각끔):
     qwen3 = "enable_thinking" in 틀글
     꼴 = 도구꼴(틀글, meta.get("tokenizer.ggml.pre", ""), 낱말)
     인자글 = "arguments is string" in 틀글
-    env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[loopcontrols])
+    env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[loopcontrols, 생성블록])
     env.filters["tojson"] = tojson
     env.globals["raise_exception"] = raise_exception
     틀 = env.from_string(틀글)
@@ -201,6 +221,12 @@ def 참조들(gguf, 경우, 생각끔):
         for k, v in (c.get("chat_template_kwargs") or {}).items():
             if k not in ("enable_thinking", "date_string"):
                 kw[k] = v
+        노력 = c.get("reasoning_effort")                   # 0.25.0 25-2 — 요청의 reasoning_effort(글)가 chat_template_kwargs 의 것보다 앞선다
+        if 노력 is not None and not isinstance(노력, str):
+            out[c["id"]] = {"error": "reasoning_effort 는 글이어야 한다"}
+            continue
+        if 노력 is not None:
+            kw["reasoning_effort"] = 노력
         try:
             out[c["id"]] = 틀.render(**kw)
         except Exception as e:                      # noqa: BLE001 — Llama 의 호출 둘 등 — 서버도 400 이어야 한다

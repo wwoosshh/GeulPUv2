@@ -18,6 +18,7 @@
     {"id": "C10 생각 낀 호출(Qwen3)", "think_only": true, "tools": ["목록"], "messages": [{"role": "user", "content": "files?"}, {"role": "assistant", "content": "<think>\nNeed to list.\n</think>\n\n", "tool_calls": [{"id": "e", "type": "function", "function": {"name": "list_dir", "arguments": "{}"}}]}, {"role": "tool", "tool_call_id": "e", "content": "[]"}]},
     {"id": "C11 tool_response 를 담은 user 말", "tools": ["목록"], "messages": [{"role": "user", "content": "first question"}, {"role": "assistant", "content": "<think>\nhmm\n</think>\n\nok", "tool_calls": [{"id": "f", "type": "function", "function": {"name": "list_dir", "arguments": "{}"}}]}, {"role": "user", "content": "<tool_response>\n[]\n</tool_response>"}]},
     {"id": "C12 따옴표 · 줄바꿈 결과", "tools": ["쓰기"], "messages": [{"role": "user", "content": "write"}, {"role": "assistant", "content": null, "tool_calls": [{"id": "g", "type": "function", "function": {"name": "write_file", "arguments": "{\"path\": \"q.txt\", \"content\": \"say \\\"hi\\\"\\n\"}"}}]}, {"role": "tool", "tool_call_id": "g", "content": "line1\nline2 \"q\" \\ \t end"}]},
-    {"id": "C13 시스템 없이 도구 둘", "tools": ["목록", "쓰기"], "messages": [{"role": "user", "content": "hi"}]}
+    {"id": "C13 시스템 없이 도구 둘", "tools": ["목록", "쓰기"], "messages": [{"role": "user", "content": "hi"}]},
+    {"id": "C14 생각 · 글 · 호출이 든 앞 답(reasoning_content)", "tools": ["날씨"], "messages": [{"role": "user", "content": "서울 날씨 알려줘"}, {"role": "assistant", "content": "확인해 볼게요.", "reasoning_content": "날씨 도구를 부른다.", "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "get_weather", "arguments": "{\"city\": \"서울\"}"}}]}, {"role": "tool", "tool_call_id": "call_1", "content": "{\"temp\": 21}"}]}
   ]
 }

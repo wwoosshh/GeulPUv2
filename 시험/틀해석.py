@@ -165,6 +165,9 @@ def 견주기(이름, 참조, 글, 보기):
     ("오류-거르개참", "{{ true|map('upper')|list }}", [사람]),
     ("tojson", "{{ d|tojson }}|{{ tags|tojson(indent=2) }}|{{ {'한': '글', 'q': '\"'}|tojson }}|{{ {'한': 1}|tojson(ensure_ascii=true) }}|{{ score|tojson }}"
      "|{{ none|tojson }}{{ ok|tojson }}|{{ d|tojson(separators=(',', ':')) }}|{{ 1.0|tojson }}{{ 1e20|tojson }}{{ 0.1|tojson }}", [사람]),
+    ("tojson-정렬", "{{ d|tojson(sort_keys=true) }}|{{ {'b': {'d': 1, 'c': [{'z': 1, 'a': 2}]}, 'a': 0, '한': 1, 'A': 2, 'aa': none}"
+     "|tojson(sort_keys=true, separators=(',', ':')) }}|{{ {'y': {'b': 1, 'a': 2}}|tojson(sort_keys=true, indent=2) }}"
+     "|{{ {'y': 1, 'x': 2}|tojson(sort_keys=false) }}|{{ [{'b': 1, 'a': 2}]|tojson(sort_keys=true) }}{{ 'k'|tojson(sort_keys=true) }}", [사람]),
     ("시험", "{{ x is defined }}{{ name is defined }}{{ none is none }}{{ name is string }}{{ age is number }}{{ age is integer }}{{ score is float }}"
      "{{ ok is boolean }}{{ ok is true }}{{ ok is false }}{{ d is mapping }}{{ tags is iterable }}{{ name is iterable }}{{ tags is sequence }}"
      "{{ n is even }}{{ n is odd }}{{ 9 is divisibleby 3 }}{{ age is eq 31 }}{{ age is ne 3 }}{{ 1 is lt 2 }}{{ 3 is gt 2 }}{{ 'a' is in tags }}"
