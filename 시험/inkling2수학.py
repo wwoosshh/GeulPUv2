@@ -4,6 +4,11 @@
 
   python -I -X utf8 시험/inkling2수학.py <gguf> <llama.cpp 폴더> <작업 폴더> --random 48 [--seed 1] [--llama-bias]
   python -I -X utf8 시험/inkling2수학.py <gguf> <llama.cpp 폴더> <작업 폴더> [--text <경로[@바이트]> …] [--length 256] [--no-llama]
+  python -I -X utf8 시험/inkling2수학.py <gguf> <llama.cpp 폴더> <작업 폴더> --chat [--n 100] [--workers 3] [--llama-only | --saved-llama]
+
+--chat: 채팅 확인(gemma4수학.py 의 --채팅 과 같은 판정) — 채팅 프롬프트 셋(GGUF 의 채팅 템플릿대로, 생각의 정도 0.9)에 llama.cpp 가 그리디로
+이어 쓴 답 N 토큰을 붙여, 답을 예측하는 행에서 수학 참조의 1위가 그 그리디와 같은지 · KL. 끝 줄 '채팅 확인: 맞음' 은 1위 일치 ≥ 95 % ·
+평균 KL < 0.01. --workers 는 경우마다 프로세스 하나(같은 파일을 메모리 맵으로 함께 읽는다).
 
 --random N: 무작위 토큰 N 개(합성 파일 — 시험/합성inkling2.py)로 llama.cpp(플래시 어텐션 끔 · KV f32)의 모든 행 로짓과 비교한다.
 끝 줄 '수학 참조: 맞음' 은 평균 KL(참조 ‖ llama.cpp) < 0.01 · 1위 일치 ≥ 95 % (gemma4수학.py 와 같은 판정).
@@ -276,11 +281,104 @@ def 비교(p, z):
     return (np.exp(p) * (p - r)).sum(-1), int((p.argmax(1) == r.argmax(1)).sum())
 
 
+채팅질문 = ["What is the capital of France? Answer in one sentence, then list three famous landmarks there.",
+         "대한민국의 수도는 어디야? 한 문장으로 답하고, 그 도시의 유명한 곳 세 군데를 적어 줘.",
+         "Write a Python function that returns the n-th Fibonacci number iteratively."]
+
+
+def 채팅글(질문):
+    """GGUF 의 채팅 템플릿이 사용자 메시지 하나에 내는 글 — 생각의 정도(기본 0.9)를 적은 시스템 메시지 + 사용자 메시지. 템플릿은 생성
+    프롬프트를 붙이지 않는다(모델이 <|message_model|> 부터 낸다). BOS 는 없다(pre inkling2)."""
+    return ("<|message_system|><|content_text|>Thinking effort level: 0.9<|end_message|>"
+            f"<|message_user|><|content_text|>{질문}<|end_message|>")
+
+
+def 채팅라마(gguf, 판, N):
+    """llama.cpp(플래시 어텐션 끔 · KV f32)가 채팅 프롬프트 셋을 그리디로 N 토큰 이어 쓴 것 — [(토큰열, 프롬프트 길이, 모든 행의 로짓)]."""
+    import ctypes
+    LM = 라마부르기(판)
+    lm = LM.라마(gguf, n_ctx=512, n_batch=512, n_ubatch=512, n_seq_max=1, flash=0, kv형식=0)
+    L = lm.L
+    L.llama_model_get_vocab.restype = ctypes.c_void_p
+    L.llama_model_get_vocab.argtypes = [ctypes.c_void_p]
+    L.llama_tokenize.restype = ctypes.c_int32
+    L.llama_tokenize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int32, ctypes.POINTER(ctypes.c_int32), ctypes.c_int32,
+                                 ctypes.c_bool, ctypes.c_bool]
+    어휘 = L.llama_model_get_vocab(lm.model)
+    경우 = []
+    for 질문 in 채팅질문:
+        글 = 채팅글(질문).encode("utf-8")
+        buf = (ctypes.c_int32 * 1024)()
+        ids = [int(x) for x in buf[:L.llama_tokenize(어휘, 글, len(글), buf, 1024, True, True)]]       # 특수 토큰을 푼다
+        P = len(ids)
+        lm.지우기()
+        lm.넣기(ids, list(range(P)), [0] * P, [0] * (P - 1) + [1])
+        for _ in range(N):
+            t = int(np.argmax(lm.로짓(-1)))                              # 그리디
+            ids.append(t)
+            lm.넣기([t], [len(ids) - 1], [0], [1])
+        경우.append((ids, P, 라마로짓(lm, ids)))
+        print(f"프롬프트 {P} + 답 {N} 토큰 — 앞 {ids[:6]} … 답의 처음 {ids[P:P + 8]}", flush=True)
+    lm.닫기()
+    return 경우
+
+
+def _수학일(인자들):
+    """일꾼 프로세스 하나 — (gguf, 토큰열, llama.cpp 식의 편향인가) → (로그확률 fp32, 라우팅)."""
+    gguf, ids, l편향 = 인자들
+    m = 모델(gguf, llama편향=l편향)
+    p = Q.로그소프트맥스(m.앞으로(ids))
+    return p.astype(np.float32), np.stack(m.라우팅)
+
+
+def 채팅(gguf, 판, 작업, N, 일꾼):
+    토큰파일 = os.path.join(작업, "채팅토큰.json")
+    if "--saved-llama" in sys.argv:                                     # 앞의 --llama-only 가 남긴 토큰 · 로짓으로
+        경우 = [(ids, P, np.load(os.path.join(작업, f"채팅라마{i}.npy")))
+              for i, (ids, P) in enumerate(json.load(open(토큰파일, encoding="utf-8"))["경우"])]
+    else:
+        경우 = 채팅라마(gguf, 판, N)
+        json.dump({"경우": [[ids, P] for ids, P, _ in 경우]}, open(토큰파일, "w", encoding="utf-8"))
+        for i, (_, _, z) in enumerate(경우):
+            np.save(os.path.join(작업, f"채팅라마{i}.npy"), z)
+        if "--llama-only" in sys.argv:
+            return
+    t0 = time.time()
+    일들 = [(gguf, ids, "--llama-bias" in sys.argv) for ids, _, _ in 경우]
+    if 일꾼 > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(일꾼) as ex:
+            결과 = list(ex.map(_수학일, 일들))
+    else:
+        결과 = [_수학일(a) for a in 일들]
+    kls, 맞음, 행수 = [], 0, 0
+    for i, ((ids, P, z), (p, 라우팅)) in enumerate(zip(경우, 결과)):
+        np.save(os.path.join(작업, f"채팅수학{i}.npy"), p)
+        np.save(os.path.join(작업, f"채팅라우팅{i}.npy"), 라우팅)               # [층 실행][행][k]
+        p = p.astype(f64)
+        r = Q.로그소프트맥스(z)
+        kl = (np.exp(p) * (p - r)).sum(-1)
+        답 = slice(P - 1, len(ids) - 1)                                  # 행 P − 1 … 끝 − 2 가 답 토큰을 예측
+        같 = int((p[답].argmax(1) == np.array(ids[P:])).sum())
+        kls.append(kl[답])
+        맞음 += 같
+        행수 += len(ids) - P
+        print(f"경우 {i}: 답 구간 {len(ids) - P} 행: 수학 참조의 1위 = llama.cpp 의 그리디 {같}/{len(ids) - P} · KL 평균 {kl[답].mean():.3e} · "
+              f"최대 {kl[답].max():.3e} | 프롬프트 구간 KL 평균 {kl[:P - 1].mean():.3e}", flush=True)
+    평균 = float(np.concatenate(kls).mean())
+    print(f"모두({time.time() - t0:.0f} 초): 답 {행수} 행 — 1위 = 그리디 {100 * 맞음 / 행수:.2f} % · KL 평균 {평균:.3e}")
+    좋음 = 맞음 / 행수 >= 0.95 and 평균 < 0.01
+    print("채팅 확인: 맞음" if 좋음 else "채팅 확인: 다름")
+    sys.exit(0 if 좋음 else 1)
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     gguf, 판, 작업 = sys.argv[1:4]
     os.makedirs(작업, exist_ok=True)
     인자 = lambda 이름, d: sys.argv[sys.argv.index(이름) + 1] if 이름 in sys.argv else d    # noqa: E731
+    if "--chat" in sys.argv:
+        return 채팅(gguf, 판, 작업, int(인자("--n", 100)), int(인자("--workers", 1)))
     if "--random" in sys.argv:
         n, 씨앗 = int(인자("--random", 48)), int(인자("--seed", 1))
         m0 = 모델(gguf)
