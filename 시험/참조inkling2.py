@@ -5,7 +5,7 @@
 같음) 그대로이고, 연산마다 계약의 차례 · 반올림이다(문서/0.25.0.md).
 
   python -I -X utf8 시험/참조inkling2.py <gguf> --수학 <폴더> <출력.json> [--일꾼 3] [--저장된]
-  python -I -X utf8 시험/참조inkling2.py <gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--입력 <시험_7B 의 입력 파일>] [--일꾼 4]
+  python -I -X utf8 시험/참조inkling2.py <gguf> --엔진 <시험_7B 출력 폴더> <출력.json> [--입력 <시험_7B 의 입력 파일>] [--일꾼 4 | --머리일꾼 16]
 
 --엔진 <폴더>(0.25.0 25-4): 시험_7B 의 출력(경우마다 모든 행의 로짓)과 이 순전파를 비트까지 — 패딩한 어휘의 칸은 −∞ 여야 한다.
 
@@ -83,18 +83,29 @@ def 곱(h, g, 이름, 열):
     return R7.곱(np.ascontiguousarray(h, f32), R7.가중(g, 이름), np.zeros(열, f32))
 
 
+머리풀 = None                # 0.25.0 25-4 — 있으면(--머리일꾼 N) 헤드마다의 어텐션을 프로세스 여럿에(값은 같다 — 긴 입력의 엔진대조)
+
+
+def _머리일(인자들):
+    qh, kh, vh, 눈금, 창, 편향, 싱크 = 인자들
+    return C.어텐션(qh, kh, vh, 눈금=눈금, 창=창, 편향=편향, 범위=편향.shape[1], 싱크=싱크)
+
+
 def 헤드어텐션(q, k, v, s, swa, H, Hk, hd, 표, t):
     """헤드마다 계약 어텐션(4.15 — 편향 · 싱크) — 헤드 크기가 32 의 배수가 아니면 0 을 채워(계약 '헤드 크기 · RoPE 차원'의 1) 눈금은 실제 헤드의 것."""
     T = q.shape[0]
     hdp = (hd + 31) // 32 * 32
     o = np.zeros((T, H * hd), f32)
     눈금 = C.점수눈금(hd)
+    일들 = []
     for h in range(H):
         kv = h // (H // Hk)
         qh = R7.헤드채움(q[:, h * hd:(h + 1) * hd], hd, hdp)
         kh = R7.헤드채움(k[:, kv * hd:(kv + 1) * hd], hd, hdp)
         vh = R7.헤드채움(v[:, kv * hd:(kv + 1) * hd], hd, hdp)
-        oh = C.어텐션(qh, kh, vh, 눈금=눈금, 창=(s["창"] if swa else None), 편향=표[:, h, :], 범위=표.shape[2], 싱크=t[:, h])
+        일들.append((qh, kh, vh, 눈금, (s["창"] if swa else None), np.ascontiguousarray(표[:, h, :]), np.ascontiguousarray(t[:, h])))
+    결과들 = list(머리풀.map(_머리일, 일들)) if 머리풀 is not None else [_머리일(x) for x in 일들]
+    for h, oh in enumerate(결과들):
         o[:, h * hd:(h + 1) * hd] = oh[:, :hd]
     return o
 
@@ -291,7 +302,13 @@ def main():
     if "--엔진" in sys.argv:
         폴더e = sys.argv[sys.argv.index("--엔진") + 1]
         입력 = sys.argv[sys.argv.index("--입력") + 1] if "--입력" in sys.argv else None
-        남은 = [a for a in sys.argv[2:] if not a.startswith("--") and a not in (폴더e, 입력, str(일꾼e))]
+        머리일꾼 = sys.argv[sys.argv.index("--머리일꾼") + 1] if "--머리일꾼" in sys.argv else None
+        남은 = [a for a in sys.argv[2:] if not a.startswith("--") and a not in (폴더e, 입력, str(일꾼e), 머리일꾼)]
+        if 머리일꾼:                                   # 경우는 차례로, 헤드는 프로세스 여럿에(경우마다 일꾼을 띄우지 않는다)
+            global 머리풀
+            from concurrent.futures import ProcessPoolExecutor
+            머리풀 = ProcessPoolExecutor(int(머리일꾼))
+            일꾼e = 1
         엔진대조(gguf, 폴더e, 남은[0], 입력, 일꾼e)
         return
     폴더, 출력 = sys.argv[sys.argv.index("--수학") + 1], sys.argv[sys.argv.index("--수학") + 2]
