@@ -108,6 +108,7 @@ class 모델:
             self.패스 = 1
         self.llama편향 = llama편향
         self.라우팅 = []                                            # 층 실행마다 고른 전문가 [행][k]
+        self.점수차 = []                                            # 층 실행마다 k 번째 − (k+1) 번째 선택 점수 [행]
 
     def 풀(self, 이름):
         return self.g.풀기(이름).astype(f64)
@@ -216,8 +217,12 @@ class 모델:
         g, b, F = self.g, f"blk.{l}.", self.F
         p = 시그(h @ self.풀(b + "ffn_gate_inp.weight").T)               # [T][전문가]
         고름점수 = p + self.풀(b + "exp_probs_b.bias")[None] if b + "exp_probs_b.bias" in g.tensors else p
-        고른 = np.argsort(-고름점수, axis=-1, kind="stable")[:, :self.고름]
+        차례 = np.argsort(-고름점수, axis=-1, kind="stable")
+        고른 = 차례[:, :self.고름]
         self.라우팅.append(고른.astype(np.int16))
+        if 고름점수.shape[1] > self.고름:                              # 선택의 경계에서의 점수 차(판정 ③)
+            경계 = np.take_along_axis(고름점수, 차례[:, self.고름 - 1:self.고름 + 1], -1)
+            self.점수차.append(경계[:, 0] - 경계[:, 1])
         w = np.take_along_axis(p, 고른, -1)
         w = w / (w.sum(-1, keepdims=True) + 1e-20)
         if self.배율 not in (0.0, 1.0):
@@ -324,11 +329,11 @@ def 채팅라마(gguf, 판, N):
 
 
 def _수학일(인자들):
-    """일꾼 프로세스 하나 — (gguf, 토큰열, llama.cpp 식의 편향인가) → (로그확률 fp32, 라우팅)."""
+    """일꾼 프로세스 하나 — (gguf, 토큰열, llama.cpp 식의 편향인가) → (로그확률 fp32, 라우팅, 점수차)."""
     gguf, ids, l편향 = 인자들
     m = 모델(gguf, llama편향=l편향)
     p = Q.로그소프트맥스(m.앞으로(ids))
-    return p.astype(np.float32), np.stack(m.라우팅)
+    return p.astype(np.float32), np.stack(m.라우팅), (np.stack(m.점수차) if m.점수차 else None)
 
 
 def 채팅(gguf, 판, 작업, N, 일꾼):
@@ -352,9 +357,11 @@ def 채팅(gguf, 판, 작업, N, 일꾼):
     else:
         결과 = [_수학일(a) for a in 일들]
     kls, 맞음, 행수 = [], 0, 0
-    for i, ((ids, P, z), (p, 라우팅)) in enumerate(zip(경우, 결과)):
+    for i, ((ids, P, z), (p, 라우팅, 점수차)) in enumerate(zip(경우, 결과)):
         np.save(os.path.join(작업, f"채팅수학{i}.npy"), p)
         np.save(os.path.join(작업, f"채팅라우팅{i}.npy"), 라우팅)               # [층 실행][행][k]
+        if 점수차 is not None:
+            np.save(os.path.join(작업, f"채팅점수차{i}.npy"), 점수차)           # [층 실행][행] fp64
         p = p.astype(f64)
         r = Q.로그소프트맥스(z)
         kl = (np.exp(p) * (p - r)).sum(-1)
