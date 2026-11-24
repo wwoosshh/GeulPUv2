@@ -465,6 +465,67 @@ the reason short prompt chunks at long contexts became fast. Accuracy is unchang
    256-element k-quant blocks are stored as Q5_0 and Q8_0). CPU reference:
    [`시험/참조gemma4.py`](../시험/참조gemma4.py), math reference: [`시험/gemma4수학.py`](../시험/gemma4수학.py) — both also read the
    `gemma3` architecture.
+15. **Inkling 2** (0.25.0 25-1 — architectures `inkling2_loop` · `inkling2`: Inkling-2-Mini, [`문서/0.25.0.md`](../문서/0.25.0.md)): each layer is a
+   sliding-window layer (`attention.sliding_window_pattern` true — window W = `attention.sliding_window`) or a full-attention layer; there is no
+   RoPE. Head size h = `attention.key_length` (128), H query heads and H_kv KV heads (GQA as in 4). Matrix products follow section 1 (the F32
+   matrices — the queries of 2, the controls of 10 and the router — as 16-bit blocks of 1.3), RMSNorm follows 1 (RMSNorm0 has weight 1 — the
+   multiplication changes nothing), σ follows 9, the softcap follows 12.6, and eps is `attention.layer_norm_rms_epsilon`.
+   1. **Input**: x = RMSNorm(embedding; `token_embd_norm`) (the embedding is the file's value).
+   2. **Block attention residual** mix(B, x; Q): for the states S = [block states (in creation order) …, x], Ŝ_s = RMSNorm0(S_s), score
+      z_(s,j) = Ŝ_s · Q_j (section 1) × c_D (one multiplication — c_D = 1 ÷ sqrt(fp32(width)), fp32(1/48) for width 2,304), softmax over the
+      states: m = max_s z, e_s = written-exp(z_s − m), sum = e₀ + e₁ + … (state order), p_s = e_s / sum. Output o_j = p₀ · Ŝ₀ (one
+      multiplication), then in state order o_j ← fma(p_s, Ŝ_s, o_j).
+   3. **Attention inputs**: layer 0 takes x, every other layer the mix (`attn_res_query` — one query in sliding-window layers, three for q · k · v
+      in full-attention layers). From the second pass of the loop on, each input goes through the control of 10. Normalization: `attn_norm` in
+      sliding-window layers (all three when the inputs differ), `attn_q_inp_norm` · `attn_k_inp_norm` · `attn_v_inp_norm` in full-attention
+      layers → h_q · h_k · h_v.
+   4. **Short convolution** (taps n = `shortconv.l_cache`, 4): k = conv(`attn_k` · h_k), v = conv(`attn_v` · h_v). Static taps w (`attn_k_conv` ·
+      `attn_v_conv` — n per channel, tap 0 is the oldest token, F32 values as stored); in full-attention layers the dynamic taps a =
+      `attn_k_conv_proj` · h_k · `attn_v_conv_proj` · h_v (section 1 — n per KV head, lag 0 is the current token) are added per tap:
+      w′_j = w_j + a_(n−1−j) (one addition — a channel uses its KV head's taps). The chain is that of 10.2 (s = w′₀ · y_(t−n+1) (one
+      multiplication), s ← fma(w′_j, y_(t−n+1+j), s)), result = (y_t + s) · c (one addition, one multiplication — c = 1 ÷ sqrt(fp32(n · (2 if
+      dynamic) + 1)): √5 · √9). The rows before t are the convolution state of that sequence and that layer application (the previous n − 1
+      rows — zero at the start). The attention output (`attn_post_conv`) and the FFN output (`ffn_post_conv`) use the same formula with static
+      taps.
+   5. **q · k · v · r · t**: q = `attn_q` · h_q, r = `attn_rel` · h_q (R = `attention.relative_length` per head), t = `attn_sink_proj` · h_q (one per
+      head). L2-norm clipping clip(x; c) (per head: S = Σ x² by the strands and halving of item 1, d = sqrt(S) + fp32(10⁻⁶), f = min(fp32(c) / d, 1),
+      y = x · f — one multiplication, unchanged when f = 1): q ← clip(q ⊙ `attn_q_clip`; `attention.qk_clip`), k ← clip(k; `attention.qk_clip`),
+      r ← clip(r ⊙ `attn_rel_clip`; `attention.relative_clip`) (⊙ is one multiplication per element), v ← RMSNorm0 per head (the normalization
+      of 6, weight 1).
+   6. **Log scaling** (full-attention layers): q ← q · τ, r ← r · τ (one multiplication), τ = 1 + α · ln(max(1, (position + 1) / F)) (α =
+      `attention.log_scale_alpha`, F = `attention.log_scale_floor`): u = fp32(position + 1) / fp32(F) (one division — exact for F = 8,192),
+      τ = 1 if u ≤ 1, else τ = fma(fp32(α), ln u, 1) with ln u = fma(k, ln2_hi, fma(k, ln2_lo, log1p(m − 1))) (u = m · 2^k, m ∈ [1, 2) — exact;
+      log1p, ln2_hi and ln2_lo as in 10.4). It depends on the position only, so the engine builds it on the host per position (like the
+      RoPE table).
+   7. **Relative position bias**: per row and head β_d = Σ_k r_k · W[d][k] (W = `attn_rel_bias` [extent][R] — F32 values as stored; k ascending:
+      β = r₀ · W[d][0] (one multiplication), β ← fma(r_k, W[d][k], β)); extent = W in sliding-window layers, `attention.relative_extent` in
+      full-attention layers. In the score of sections 2 · 3, instead of multiplying the block-chain sum s by the scale c = fp32(1/√h),
+      s ← fma(s, c, β_(i−j)) (β = +0 when the distance i − j is outside [0, extent)).
+   8. **Attention sink**: in the merge of section 3, the state into which the groups are merged starts at (M, L, O) = (t, 1, 0), and every group
+      (the first one too) is merged into it in order — one key whose value is 0 (e^t in the softmax denominator). Masking and skipping in
+      sliding-window layers follow 12.2. Output o = O / L.
+   9. **After attention**: o ← o · σ(`attn_gate` · h_q) (the gate of 9), y = conv(`attn_output` · o; `attn_post_conv`) (4). Residual: if the layer
+      number p (the same physical layer in every pass of the loop) is a multiple of `attn_res.block_size`, the layer's input x is appended to the
+      block states and x ← y (the residual stream restarts); otherwise x ← x + y (one addition).
+   10. **Loop control** (from the second pass on — input c, message m): a = `loop_*_ctrl_down` · [RMSNorm0(c) | RMSNorm0(m)] (section 1),
+      g = tanh(`loop_*_ctrl_gain` · a), f = tanh(`loop_*_ctrl_forget` · a), result = fma(g, m, fma(−f, c, c)), with tanh(y) = fma(2, σ(2y), −1)
+      (the softcap of 12.6 with c = 1). The four messages (q · k · v · FFN) are mix(the previous pass's block states after the first one it
+      appended, the previous pass's output; the j-th query of `loop_msg_query`) (2).
+   11. **FFN**: h = RMSNorm(mix(`ffn_res_query`) (then the control of 10 in a loop pass); `ffn_norm`). MoE routing is that of 13.8 (top k by
+      σ(`ffn_gate_inp` · h) plus `exp_probs_b`, weights as in 11.4 — lower bound 2⁻¹⁴; llama.cpp adds 10⁻²⁰ to the sum, the same value when the
+      sum is at least 2⁻¹⁴ — then × `expert_weights_scale` (8 for Inkling-2-Mini — exact)). Expert [g | u] = `ffn_gate_up_exps`_e · h (the first F
+      rows are the gate — F = `expert_feed_forward_length`), activation SITU = (softcap(g; β) · σ(g)) · softcap(u; λ) (one multiplication each —
+      β = `activation.situ_beta`, λ = `activation.situ_linear_beta`, softcap of 12.6), y_e = `ffn_down_exps`_e · SITU (section 1), sum as in 11.6.
+      x ← x + conv(sum; `ffn_post_conv`).
+   12. **Loop** (`inkling2_loop` — order of layer applications): layers [0, s) → layers [s, e) `loop.count` times (from the second pass on,
+      restarting from the input of layer s and the block states at that point, with the control of 10 — each pass keeps its own KV cache and
+      convolution state) → layers [e, layer count). s = `loop.start`, e = `loop.end`. Files with `loop.varying` true are refused.
+   13. **End**: mix(`output_res_query`) → RMSNorm(·; `output_norm`) → logits = `output` · x (section 1) → softcap(`final_logit_softcapping`) → the first
+      `vocab_size_unpadded` entries (the padded vocabulary of the matrices is dropped).
+   This is transformers' `models/inkling2` · `models/inkling2_loop` and llama.cpp's `src/models/inkling2.cpp` · `inkling2-loop.cpp` (b12662 — KL
+   10⁻¹¹ against the math reference on a synthetic file) with their order fixed. CPU reference: [`시험/참조inkling2.py`](../시험/참조inkling2.py)
+   (`블록섞기` · `반복제어` · `짧은합성곱` · `L2클립` · `로그스케일` · `상대편향표` · `SITU` in `계약/정수계약.py`, and the bias and sink of
+   `어텐션`), math reference: [`시험/inkling2수학.py`](../시험/inkling2수학.py), synthetic file: [`시험/합성inkling2.py`](../시험/합성inkling2.py).
 
 ### Head size 128 (stage 22 — Qwen2.5-7B and larger)
 
@@ -682,6 +743,7 @@ steps of `--layer-lens`.
 | Gemma 3 — 0.24.0 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants fp32(1/√256), fp32(1/√168) and sqrt(fp32(2,560)); the sliding-window layer rule (P absent, 6, 0, an array); the RoPE table with linear scaling 8 equals the table with positions divided by 8 (same bits); attention with score scale 1/16 equals attention on q multiplied by 1/16 (same bits); the CPU reference (gemma-3-4b-it Q4_K_M) against the math reference (fp64) and llama.cpp — next-token distributions on chat answers and on text |
 | Gemma 4 E2B · E4B — 0.24.0, stage 24-5 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constants c_h, c_p (n = 256) and sqrt(fp32(1,536)) (the values of llama.cpp's fp32 expressions); the per-layer input (PLE) against a computation copied from the contract text; the contract's formula equals llama.cpp's folded one (double precision); the layer a KV-sharing layer reads (the layer patterns of the E2B and E4B); the math reference (gemma-4-E2B-it and E4B-it Q4_K_M) against llama.cpp — next-token distributions on chat answers and on text; the CPU reference (E2B) against the math reference |
 | Gemma 4 26B-A4B — 0.24.0, stage 24-5 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조gemma4.py`](../시험/참조gemma4.py) · [`시험/gemma4수학.py`](../시험/gemma4수학.py)) | the bits of the constant c_r (width 2,816 — the value of llama.cpp's fp32 expression and the correctly rounded 1/√width); the router input's weights and the per-expert scale of the weights against a computation copied from the contract text; the math reference (gemma-4-26B-A4B-it Q4_K_M) against llama.cpp — next-token distributions on chat answers and on text; the CPU reference against the math reference, and the experts picked in each layer |
+| Inkling 2 — 0.25.0, stage 25-1 ([`시험/계약자체.py`](../시험/계약자체.py) · [`시험/참조inkling2.py`](../시험/참조inkling2.py) · [`시험/inkling2수학.py`](../시험/inkling2수학.py) · [`시험/합성inkling2.py`](../시험/합성inkling2.py)) | the constants 1 ÷ sqrt(fp32(n)) (n = 5, 9, 2,304) are the correctly rounded 1/√n; the log and τ against the contract's sentence and the exact ln (within 2 ulp, exactly 1 below the floor); L2-norm clipping, the relative-position-bias table, the short convolution (static, dynamic, continuing the state), the block attention residual, the loop control and SITU against the contract's sentence per element (bits); the attention's bias and sink (without them the earlier contract unchanged, a tiny sink bit-identical to no sink, within 2⁻⁹ of fp64). On a synthetic file (random weights) the math reference equals llama.cpp b12662 (KL 10⁻¹¹) and the contract is at KL 10⁻⁵ from the math reference |
 | Log-probabilities (stage 38 — [`시험/로그확률38.py`](../시험/로그확률38.py) · [`시험/로그확률서버38.py`](../시험/로그확률서버38.py)) | the geul version (many rows at once and one at a time) against the Python reference — target logprob, entropy and top 20 of synthetic and real logit rows; the reference computed from the logit rows the server recorded (generation steps and echo rows) against the response values, and the rows' FNV hashes; the same tokens scored with echo (cache on and off) against the values from generation; concurrent against one at a time; CUDA against Vulkan |
 | Layer lens (#96 — [`시험/렌즈.py`](../시험/렌즈.py) · [`도구/repro_check.py`](../도구/repro_check.py) `--layer-lens`) | the server's per-layer (all L layers) logit hash, target logprob, entropy, top k and rank against the CPU reference (5.3); the last layer against the echo values of the same response; the echo of the lens path (the plan path, also for four rows or fewer) against the echo of the whole answer without the lens; CUDA against Vulkan (exact); refusals (no echo, echo_from at the end, top_k 21, wrong type); inside the CPU reference, the last layer against the final logits |
 | Jacobian lens (#96 phase 2 — [`시험/계약자체.py`](../시험/계약자체.py) · [`시험/렌즈.py`](../시험/렌즈.py) `--jlens` · [`도구/repro_check.py`](../도구/repro_check.py) `--jlens`) | the server's per-layer jacobian_lens (logit hash, 5.2 values, rank) against the CPU reference (5.4 — the same J file), the layer_lens of a response that asked for J against one that did not (bits), the last layer against the logit lens's last layer, CUDA against Vulkan (exact), refusal (wrong type of jacobian); J곱 (item 2 of 5.4) against the contract's sentences carried out element by element — the ordered double sum and the rule-R rounding of the exact rational (subnormal halves, −0, 65504, a cancellation whose result depends on the order, values around the 2⁻¹²⁶ threshold), one row at a time against all rows at once, u = x (bits) when J is the identity; the J file (safetensors): write and read, a file built by hand from the specification, refusal of wrong files; in repro_check, the last layer against the final logits |

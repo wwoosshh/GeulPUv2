@@ -1069,6 +1069,151 @@ def 시험_J파일(r):
         확인("J 파일 — 틀린 파일의 거절", not 못, f"받아 버린 것 {못}" if 못 else f"{len(틀림들)} 가지")
 
 
+def 시험_inkling2(r):
+    """0.25.0 25-1 — 계약 4.15(Inkling 2): 상수의 비트, 로그 · τ 대 정확한 값(decimal)과 계약 문장, L2 클리핑 · 상대 위치 편향 표 · 짧은 합성곱
+    (정적 · 동적) · 블록 어텐션 잔차 · 반복 제어 · SITU 대 계약 문장을 칸 하나씩 옮긴 스칼라 계산(비트), 어텐션의 편향 · 싱크 — 넣지 않으면
+    앞의 계약 그대로, 아주 작은 싱크는 싱크 없는 것과 비트가 같다, fp64 와의 차이."""
+    decimal.getcontext().prec = 60
+    # 상수 — 1 ÷ 제곱근(fp32(n)) 은 1/√n 의 바른 반올림(n = 5 · 9 · 2,304)
+    좋음 = True
+    for n in (5, 9, 2304):
+        c = C.역제곱근상수(n)
+        참 = decimal.Decimal(1) / decimal.Decimal(n).sqrt()
+        반ulp = (decimal.Decimal(float(np.nextafter(c, f32(1)))) - decimal.Decimal(float(c))) / 2
+        좋음 &= abs(decimal.Decimal(float(c)) - 참) <= 반ulp
+    확인("계약 4.15 — 상수 1 ÷ 제곱근(fp32(n)) 은 n = 5 · 9 · 2,304 에서 1/√n 의 바른 반올림", 좋음)
+    # 로그 — 문장(스칼라)과 비트, 정확한 ln 과 2 ulp 안, ln 1 = 0
+    x = np.concatenate([[1.0, np.nextafter(f32(1), f32(2)), 1.5, 2.0, 1.99999988, 128.0], r.uniform(1, 200, 300)]).astype(f32)
+    y = C.로그(x)
+    문장 = []
+    for v in x:
+        m, e = math.frexp(float(v))
+        k = f32(e - 1)
+        L = C.로그1p(C.빼기(f32(m * 2), f32(1)))
+        문장.append(C.fma32(k, C._L["ln2_hi"], C.fma32(k, C._L["ln2_lo"], L)))
+    ulp = max(abs(decimal.Decimal(float(a)) - decimal.Decimal(float(v)).ln()) /
+              (decimal.Decimal(float(np.nextafter(a, f32(1e9)))) - decimal.Decimal(float(a))) for a, v in zip(y[1:], x[1:]))
+    확인("계약 4.15 — 로그(x ≥ 1) 대 계약 문장(칸마다), 정확한 ln 과의 차이 2 ulp 안, 로그(1) = 0",
+         다른칸(y, np.array(문장, f32)) == 0 and ulp <= 2 and float(y[0]) == 0.0, f"최대 {float(ulp):.2f} ulp")
+    # τ — 바닥 안은 정확히 1, 그 밖은 곱해더하기(α, 로그(u), 1)
+    위치 = np.array([0, 1, 8190, 8191, 8192, 12345, 100000, 1048575])
+    τ = C.로그스케일(위치, 8192, 0.1)
+    문장 = [f32(1) if (p + 1) / 8192 <= 1 else C.fma32(f32(0.1), C.로그(np.array([C.나눔(f32(p + 1), f32(8192))], f32))[0], f32(1)) for p in 위치]
+    확인("계약 4.15 — τ(위치) 대 계약 문장(위치마다), 바닥 안(위치 + 1 ≤ 8,192)은 정확히 1",
+         다른칸(τ, np.array(문장, f32)) == 0 and (τ[:4] == 1).all())
+    # L2 클립 — 가닥 · 접기의 합, 노름 + 10⁻⁶, min(1, c/d), 곱 하나
+    hd, H = 128, 3
+    q = (r.standard_normal((4, H * hd)) * r.uniform(0.01, 4, (4, 1))).astype(f32)
+    y = C.L2클립(q, 22.627416997969522, hd)
+    문장 = np.empty_like(q)
+    for i in range(4):
+        for h in range(H):
+            v = q[i, h * hd:(h + 1) * hd]
+            p = [C.곱(v[t], v[t]) if t < hd else f32(0) for t in range(256)]
+            접기 = 128
+            while 접기:
+                p = [C.더(p[t], p[t + 접기]) for t in range(접기)] + p[접기:]
+                접기 //= 2
+            f = min(C.나눔(f32(22.627416997969522), C.더(C.제곱근(p[0]), f32(1e-6))), f32(1))
+            문장[i, h * hd:(h + 1) * hd] = [C.곱(v[t], f) for t in range(hd)]
+    작은 = (q * f32(1e-3)).astype(f32)
+    확인("계약 4.15 — L2 노름 클리핑 대 계약 문장(헤드마다), 노름이 문턱보다 작은 헤드는 그대로",
+         다른칸(y, 문장) == 0 and 다른칸(C.L2클립(작은, 22.627416997969522, hd), 작은) == 0)
+    # 상대 위치 편향 표 — r₀ · W(곱) 그다음 k 차례의 곱해더하기
+    rr = r.standard_normal((3, 2, 16)).astype(f32)
+    W = r.standard_normal((40, 16)).astype(f32)
+    표 = C.상대편향표(rr, W)
+    문장 = np.empty(표.shape, f32)
+    for t in range(3):
+        for h in range(2):
+            for d in range(40):
+                b = C.곱(rr[t, h, 0], W[d, 0])
+                for kk in range(1, 16):
+                    b = C.fma32(rr[t, h, kk], W[d, kk], b)
+                문장[t, h, d] = b
+    확인("계약 4.15 — 상대 위치 편향 표 대 계약 문장(행 · 헤드 · 거리마다)", 다른칸(표, 문장) == 0)
+    # 짧은 합성곱 — 정적 · 동적(탭마다 w + a 의 더하기 하나), 체인, (y + s) · c, 상태 이어 쓰기
+    T, Cn, Hk = 6, 64, 2
+    yy = r.standard_normal((T, Cn)).astype(f32)
+    w = r.standard_normal((Cn, 4)).astype(f32)
+    a = r.standard_normal((T, Hk * 4)).astype(f32)
+    좋음 = True
+    for 동적 in (None, a):
+        o, 상태 = C.짧은합성곱(yy, w, None, 동적, Hk)
+        yp = np.concatenate([np.zeros((3, Cn), f32), yy])
+        c = C.역제곱근상수(9 if 동적 is not None else 5)
+        for t in range(T):
+            for ch in range(Cn):
+                ww = [w[ch, j] if 동적 is None else C.더(w[ch, j], a[t, (ch // (Cn // Hk)) * 4 + 3 - j]) for j in range(4)]
+                s = C.곱(ww[0], yp[t, ch])
+                for j in range(1, 4):
+                    s = C.fma32(ww[j], yp[t + j, ch], s)
+                좋음 &= int(np.asarray(C.곱(C.더(yy[t, ch], s), c), f32).view(np.int32)) == int(o[t, ch:ch + 1].view(np.int32)[0])
+        앞, s1 = C.짧은합성곱(yy[:4], w, None, None if 동적 is None else 동적[:4], Hk)
+        뒤, _ = C.짧은합성곱(yy[4:], w, s1, None if 동적 is None else 동적[4:], Hk)
+        좋음 &= 다른칸(np.concatenate([앞, 뒤]), o) == 0
+    확인("계약 4.15 — 짧은 합성곱(정적 · 동적 탭) 대 계약 문장(칸마다), 두 번에 나눠 상태를 이어 쓰면 한 번과 같다", 좋음)
+    # 블록 어텐션 잔차 — 상태 하나면 RMSNorm0(x) 그대로, 셋이면 계약 문장(행 · 질의마다)
+    D = 64
+    상태들 = [(r.standard_normal((3, D)) * 2).astype(f32) for _ in range(2)]
+    x = (r.standard_normal((3, D)) * 2).astype(f32)
+    Qm = r.standard_normal((2, D)).astype(f32)
+    Qn, QE = C.가중치16(Qm)
+    o = C.블록섞기(상태들, x, Qn, QE)
+    한 = np.ones(D, f32)
+    Sh = [C.rms정규화(s, 한, 1e-6) for s in 상태들 + [x]]
+    z = [C.곱(C.행렬곱16(s, Qn, QE, np.zeros(2, f32)), C.역제곱근상수(D)) for s in Sh]
+    문장 = np.empty(o.shape, f32)
+    for t in range(3):
+        for j in range(2):
+            zs = [z[s][t, j] for s in range(3)]
+            m = max(zs)
+            e = [C.적힌지수(np.array([C.빼기(v, m)], f32))[0] for v in zs]
+            합 = C.더(C.더(e[0], e[1]), e[2])
+            p = [C.나눔(v, 합) for v in e]
+            v = C.곱(p[0], Sh[0][t])
+            for s in (1, 2):
+                v = C.fma32(np.full(D, p[s], f32), Sh[s][t], v)
+            문장[t, j] = v
+    확인("계약 4.15 — 블록 어텐션 잔차 대 계약 문장(행 · 질의마다), 상태가 x 하나면 RMSNorm0(x) 그대로",
+         다른칸(o, 문장) == 0 and 다른칸(C.블록섞기([], x, Qn, QE)[:, 0], C.rms정규화(x, 한, 1e-6)) == 0)
+    # 반복 제어 · SITU · tanh
+    c_, m_ = (r.standard_normal((3, D)).astype(f32) for _ in range(2))
+    아래, 이득, 잊기 = (C.가중치16(r.standard_normal(s).astype(f32) / 8) for s in ((32, 2 * D), (D, 32), (D, 32)))
+    out = C.반복제어(c_, m_, 아래, 이득, 잊기)
+    aa = C.행렬곱16(np.concatenate([C.rms정규화(c_, 한, 1e-6), C.rms정규화(m_, 한, 1e-6)], 1), 아래[0], 아래[1], np.zeros(32, f32))
+    g_ = C.소프트캡(C.행렬곱16(aa, 이득[0], 이득[1], np.zeros(D, f32)), 1.0)
+    f_ = C.소프트캡(C.행렬곱16(aa, 잊기[0], 잊기[1], np.zeros(D, f32)), 1.0)
+    gg = (r.standard_normal(500) * 5).astype(f32)
+    uu = (r.standard_normal(500) * 40).astype(f32)
+    tt = (r.standard_normal(2000) * 3).astype(f32)
+    확인("계약 4.15 — 반복 제어 = 곱해더하기(g, m, 곱해더하기(−f, c, c)), SITU = (소프트캡(g, β) · σ(g)) · 소프트캡(u, λ), "
+         "tanh = 소프트캡(x, 1) 이 fp64 의 tanh 와 2⁻²² 안",
+         다른칸(out, C.fma32(g_, m_, C.fma32(-f_, c_, c_))) == 0 and
+         다른칸(C.SITU(gg, uu, 4.0, 25.0), C.곱(C.곱(C.소프트캡(gg, 4.0), C.시그모이드(gg)), C.소프트캡(uu, 25.0))) == 0 and
+         float(np.max(np.abs(C.탄(tt).astype(np.float64) - np.tanh(tt.astype(np.float64))))) <= 2.0 ** -22)
+    # 어텐션의 편향 · 싱크
+    n, hd = 140, 128
+    q, k, v = (r.standard_normal((n, hd)).astype(f32) for _ in range(3))
+    a0 = C.어텐션(q, k, v)
+    a1 = C.어텐션(q, k, v, 편향=None, 범위=0, 싱크=None)
+    a2 = C.어텐션(q, k, v, 싱크=np.full(n, -1e30, f32))
+    표 = r.standard_normal((n, 100)).astype(f32)
+    t = r.standard_normal(n).astype(f32)
+    a3 = C.어텐션(q, k, v, 창=90, 편향=표, 범위=100, 싱크=t)
+    i = np.arange(n)
+    dist = i[:, None] - i[None, :]
+    sc = (q.astype(np.float64) @ k.astype(np.float64).T) * float(C.점수눈금(hd))
+    sc += np.where((dist >= 0) & (dist < 100), 표[i[:, None], np.clip(dist, 0, 99)], 0.0)
+    sc = np.where((dist < 0) | (dist >= 90), -np.inf, sc)
+    mx = np.maximum(sc.max(1), t.astype(np.float64))
+    e = np.exp(sc - mx[:, None])
+    참 = (e @ v.astype(np.float64)) / (e.sum(1) + np.exp(t - mx))[:, None]
+    차 = float(np.max(np.abs(a3 - 참)))
+    확인("계약 4.15 — 어텐션: 편향 · 싱크를 넣지 않으면 앞의 계약 그대로, 아주 작은 싱크(−10³⁰)는 싱크 없는 것과 비트가 같다, 편향 · 싱크 · 창의 "
+         "결과가 fp64 와 2⁻⁹ 안", 다른칸(a0, a1) == 0 and 다른칸(a0, a2) == 0 and 차 <= 2.0 ** -9, f"fp64 와 최대 {차:.1e}")
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     r = np.random.default_rng(27)
@@ -1089,6 +1234,7 @@ def main():
     시험_gemma4e(r)
     시험_gemma4moe(r)
     시험_deepseek2(r)
+    시험_inkling2(r)
     시험_J곱(r)
     시험_J파일(r)
     print("계약 자체 시험:", "모두 통과" if not 실패 else f"못 미침 {실패}", flush=True)
