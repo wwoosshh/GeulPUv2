@@ -40,8 +40,8 @@ This page is for building GeulPU from source and finding your way around the cod
 
 1. **Requirements**: Windows (or Linux x86-64 — see 4) with an NVIDIA driver (Ampere or newer) or a Vulkan driver. The app and the
    server need only this and the geul compiler; the tests need Python 3.12 and `pip install -r requirements.txt` (numpy).
-2. **geul compiler and backends**: clone the geul repository next to this one as `../geul-lang-v2`, check out the pinned commit
-   ([`시험/글저장소커밋.txt`](../시험/글저장소커밋.txt) — commit `bee0235` on geul's v2, after 1.4.0 (tag `2g-1.4.0`): D-52, no limit on the number of included files; CI, packaging and the cross-check
+2. **geul compiler and backends**: clone the geul repository next to this one as `../geul-lang-v2`, check out the pinned release
+   ([`시험/글저장소커밋.txt`](../시험/글저장소커밋.txt) — the commit of geul 1.4.1, tag `2g-1.4.1`; CI, packaging and the cross-check
    reference all use it) and build the self-hosted compiler. The PTX and SPIR-V backends live in this repository under
    [`백엔드/`](../백엔드/) and are built with that compiler (the front end they include, `self/하강.gl`, comes from the geul repository
    in `GEUL_ROOT`):
